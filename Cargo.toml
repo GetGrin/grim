@@ -22,24 +22,25 @@ grin_p2p = "5.1.2"
 grin_servers = "5.1.2"
 grin_store = "5.1.2"
 grin_util = "5.1.2"
-openssl-sys = { version = "0.9.82", features = ["vendored"]}
+openssl-sys = { version = "0.9.82", features = ["vendored"] }
 #grin_wallet_api = "5.1.0"
 #grin_wallet_libwallet = "5.1.0"
 #grin_wallet_controller = "5.1.0"
 #grin_wallet_config = "5.1.0"
 #grin_wallet_util = "5.1.0"
-
 egui = "0.21.0"
-egui-winit = "0.21.1"
+egui-winit = { version = "0.21.1", features = ['default', 'bytemuck', 'android-game-activity'] }
 wgpu = "0.15.1"
 egui_wgpu_backend = "0.22.0"
-epi = "0.17.0"
 egui_winit_platform = "0.18.0"
 pollster = "0.3.0"
 egui_demo_lib = "0.21.0"
 
 ## grin_servers
 futures = "0.3"
+
+[patch.crates-io]
+egui-winit = { path = '../egui/crates/egui-winit' }
 
 [build-dependencies]
 built = { version = "0.6.0", features = ["git2"]}
@@ -50,7 +51,7 @@ winit = { version = "0.28.3" }
 
 [target.'cfg(target_os = "android")'.dependencies]
 android_logger = "0.13.1"
-winit = { version = "0.28.3", features = [ "android-native-activity" ] }
+winit = { version = "0.28.3", features = [ "android-game-activity" ] }
 
 [lib]
 name="grin_android"
