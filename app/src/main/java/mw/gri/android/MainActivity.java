@@ -1,12 +1,12 @@
 package mw.gri.android;
 
-import android.app.NativeActivity;
 import android.os.Bundle;
 import android.system.ErrnoException;
 import android.system.Os;
-import android.view.WindowManager;
+import androidx.core.view.WindowCompat;
+import com.google.androidgamesdk.GameActivity;
 
-public class MainActivity extends NativeActivity {
+public class MainActivity extends GameActivity {
 
     static {
         System.loadLibrary("grin_android");
@@ -19,6 +19,7 @@ public class MainActivity extends NativeActivity {
         } catch (ErrnoException e) {
             throw new RuntimeException(e);
         }
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), true);
         super.onCreate(savedInstanceState);
     }
 }
