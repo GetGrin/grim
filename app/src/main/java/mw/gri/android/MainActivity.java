@@ -1,11 +1,11 @@
 package mw.gri.android;
 
-import android.app.NativeActivity;
 import android.os.Bundle;
 import android.system.ErrnoException;
 import android.system.Os;
+import com.google.androidgamesdk.GameActivity;
 
-public class MainActivity extends NativeActivity {
+public class MainActivity extends GameActivity {
 
     static {
         System.loadLibrary("grin_android");
