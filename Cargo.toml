@@ -13,14 +13,14 @@ build = "src/build/build.rs"
 [dependencies]
 log = "0.4"
 #android-activity = { version = "0.4", features = ["game-activity"] }
-grin_api = "5.1.2"
-grin_chain = "5.1.2"
+#grin_api = "5.1.2"
+#grin_chain = "5.1.2"
 grin_config = "5.1.2"
 grin_core = "5.1.2"
-grin_keychain = "5.1.2"
-grin_p2p = "5.1.2"
+#grin_keychain = "5.1.2"
+#grin_p2p = "5.1.2"
 grin_servers = "5.1.2"
-grin_store = "5.1.2"
+#grin_store = "5.1.2"
 grin_util = "5.1.2"
 openssl-sys = { version = "0.9.82", features = ["vendored"] }
 #grin_wallet_api = "5.1.0"
@@ -29,31 +29,30 @@ openssl-sys = { version = "0.9.82", features = ["vendored"] }
 #grin_wallet_config = "5.1.0"
 #grin_wallet_util = "5.1.0"
 
-egui = "0.21.0"
-egui-winit = { version = "0.21.1", features = ['default', 'bytemuck', 'android-game-activity'] }
-wgpu = "0.15.1"
-egui_wgpu_backend = "0.22.0"
-epi = "0.17.0"
-egui_winit_platform = "0.18.0"
+egui = "0.20.1"
 pollster = "0.3.0"
-egui_demo_lib = "0.21.0"
+tracing-subscriber = "0.3"
+egui_demo_lib = "0.20.0"
+
+eframe = { version = "0.20.1", features = [ "wgpu" ] }
 
 ## grin_servers
 futures = "0.3"
 
 [patch.crates-io]
-egui-winit = { path = '../egui/crates/egui-winit' }
+winit = { git = "https://github.com/rib/winit", branch = "android-activity" }
 
 [build-dependencies]
 built = { version = "0.6.0", features = ["git2"]}
 
 [target.'cfg(not(target_os = "android"))'.dependencies]
 env_logger = "0.10.0"
-winit = { version = "0.28.3" }
+winit = { version = "0.27.2" }
 
 [target.'cfg(target_os = "android")'.dependencies]
 android_logger = "0.13.1"
-winit = { version = "0.28.3", features = [ "android-game-activity" ] }
+jni = "0.21.1"
+winit = { version = "0.27.2", features = [ "android-game-activity" ] }
 
 [lib]
 name="grin_android"

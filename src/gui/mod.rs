@@ -12,6 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub mod renderer;
+mod app;
+pub mod root;
 
-pub use self::renderer::start;
+pub use app::MainApp;
+
+#[cfg(target_os = "android")]
+pub trait AndroidUi {
+    fn with_status_bar_height(self, value: f32) -> Self;
+}

@@ -17,7 +17,8 @@ use log::LevelFilter::{Debug, Info, Trace, Warn};
 #[cfg(target_os = "android")]
 use winit::platform::android::activity::AndroidApp;
 
-use crate::gui::renderer::Event;
+use eframe::{AppCreator, CreationContext, NativeOptions, Renderer};
+use crate::gui::{MainApp};
 
 #[allow(dead_code)]
 #[cfg(target_os = "android")]
@@ -32,10 +33,15 @@ fn android_main(app: AndroidApp) {
     }
 
     use winit::platform::android::EventLoopBuilderExtAndroid;
-    let event_loop = winit::event_loop::EventLoopBuilder::<Event>::with_user_event()
-        .with_android_app(app)
-        .build();
-    crate::gui::start(event_loop);
+    let mut options = NativeOptions::default();
+    options.event_loop_builder = Some(Box::new(move |builder| {
+        builder.with_android_app(app);
+    }));
+
+    use crate::gui::AndroidUi;
+    start(options, Box::new(|_cc| Box::new(MainApp::new(_cc)
+        .with_status_bar_height(24.0)
+    )));
 }
 
 #[allow(dead_code)]
@@ -47,8 +53,13 @@ fn main() {
         .parse_default_env()
         .init();
 
-    let event_loop = winit::event_loop::EventLoopBuilder::<Event>::with_user_event().build();
-    crate::gui::start(event_loop);
+    let options = NativeOptions::default();
+    start(options, Box::new(|_cc| Box::new(MainApp::new(_cc))));
+}
+
+fn start(mut options: NativeOptions, app_creator: AppCreator) {
+    options.renderer = Renderer::Wgpu;
+    eframe::run_native("Grim", options, app_creator);
 }
 
 mod built_info {

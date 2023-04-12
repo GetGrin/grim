@@ -22,7 +22,10 @@ public class MainActivity extends GameActivity {
         super.onCreate(savedInstanceState);
 
         int navBarHeight = Utils.getNavigationBarHeight(getApplicationContext());
-//        int statusBarHeight = Utils.getStatusBarHeight(getApplicationContext());
         findViewById(android.R.id.content).setPadding(0, 0, 0, navBarHeight);
+    }
+
+    public Integer getStatusBarHeight() {
+        return Utils.getStatusBarHeight(getApplicationContext());
     }
 }
