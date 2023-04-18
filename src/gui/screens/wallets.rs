@@ -11,4 +11,35 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-pub mod main;
+
+use egui::ScrollArea;
+use crate::gui::Ui;
+
+pub struct Wallets {
+}
+
+impl Default for Wallets {
+    fn default() -> Self {
+        Self {
+
+        }
+    }
+}
+
+impl Ui for Wallets {
+    fn ui(&mut self, ui: &mut egui::Ui) {
+        ScrollArea::vertical()
+            .auto_shrink([false; 2])
+            .show(ui, |ui| {
+                for item in 1..=50 {
+                    ui.heading(format!("This is future Wallet {}", item));
+                }
+            });
+    }
+}
+
+impl super::Screen for Wallets {
+    fn name(&self) -> &'static str {
+        "Wallets"
+    }
+}

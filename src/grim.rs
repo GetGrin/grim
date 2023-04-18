@@ -39,7 +39,7 @@ unsafe fn android_main(app: AndroidApp) {
         builder.with_android_app(app);
     }));
 
-    use crate::gui::platform::app::Android;
+    use crate::gui::platform::Android;
     start(options, Box::new(|_cc| Box::new(
         PlatformApp::new(_cc, Android::new(_app))
     )));

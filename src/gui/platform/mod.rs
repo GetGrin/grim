@@ -11,10 +11,11 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+pub use self::platform::*;
 
 #[cfg(target_os = "android")]
 #[path = "android/mod.rs"]
-pub mod app;
+pub mod platform;
 #[cfg(not(target_os = "android"))]
 #[path = "desktop/mod.rs"]
 pub mod app;

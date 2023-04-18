@@ -14,11 +14,14 @@
 
 use egui::{Color32, FontTweak, Visuals};
 use egui::epaint::Shadow;
-use jni::objects::{JObject, JPrimitiveArray};
-use crate::gui::PlatformApp;
 
+use jni::objects::{JObject, JPrimitiveArray};
 use winit::platform::android::activity::AndroidApp;
 
+use crate::gui::{PlatformApp, PlatformCallbacks};
+use crate::gui::app::Screens;
+
+#[derive(Clone)]
 pub struct Android {
     pub android_app: AndroidApp,
     pub cutouts: [i32; 4],
@@ -27,7 +30,7 @@ pub struct Android {
 
 impl Android {
     pub fn new(app: AndroidApp) -> Self {
-        Android {
+        Self {
             android_app: app,
             cutouts: Default::default(),
             window_size: Default::default()
@@ -35,35 +38,29 @@ impl Android {
     }
 }
 
+impl PlatformCallbacks for Android {
+    fn show_keyboard(&mut self) {
+        self.android_app.show_soft_input(true);
+    }
+
+    fn hide_keyboard(&mut self) {
+        self.android_app.hide_soft_input(true);
+    }
+
+    fn copy_string_to_buffer(&mut self, data: String) {
+
+    }
+
+    fn get_string_from_buffer(&mut self) -> String {
+        "".to_string()
+    }
+}
+
 impl PlatformApp<Android> {
     pub fn new(cc: &eframe::CreationContext<'_>, platform: Android) -> Self {
         setup_fonts(&cc.egui_ctx);
-        // cc.egui_ctx.set_visuals(Visuals {
-        //     dark_mode: false,
-        //     override_text_color: None,
-        //     widgets: Default::default(),
-        //     selection: Default::default(),
-        //     hyperlink_color: Default::default(),
-        //     faint_bg_color: Default::default(),
-        //     extreme_bg_color: Default::default(),
-        //     code_bg_color: Default::default(),
-        //     warn_fg_color: Default::default(),
-        //     error_fg_color: Default::default(),
-        //     window_rounding: Default::default(),
-        //     window_shadow: Default::default(),
-        //     window_fill: Default::default(),
-        //     window_stroke: Default::default(),
-        //     panel_fill: Default::default(),
-        //     popup_shadow: Default::default(),
-        //     resize_corner_size: 0.0,
-        //     text_cursor_width: 0.0,
-        //     text_cursor_preview: false,
-        //     clip_rect_margin: 0.0,
-        //     button_frame: false,
-        //     collapsing_header_frame: false,
-        // });
         Self {
-            root: Default::default(),
+            screens: Screens::default(),
             platform,
         }
     }
@@ -91,9 +88,6 @@ fn setup_fonts(ctx: &egui::Context) {
 
 impl eframe::App for PlatformApp<Android> {
     fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
-        println!("12345 - X {}", frame.info().window_info.size.x);
-        println!("12345 - Y {}", frame.info().window_info.size.y);
-
         let _x = frame.info().window_info.size.x;
         let _y = frame.info().window_info.size.y;
         if _x != self.platform.window_size[0] || _y != self.platform.window_size[1] {
@@ -102,10 +96,11 @@ impl eframe::App for PlatformApp<Android> {
             self.platform.cutouts = get_display_cutouts(&self.platform.android_app);
         }
 
+        let is_dark = ctx.style().visuals.dark_mode;
         egui::TopBottomPanel::top("top_padding_panel")
             .frame(egui::Frame {
                 shadow: Shadow::NONE,
-                fill: Color32::TRANSPARENT,
+                fill: if is_dark {Color32::BLACK} else {Color32::WHITE},
                 ..Default::default()
             })
             .show_separator_line(false)
@@ -113,21 +108,10 @@ impl eframe::App for PlatformApp<Android> {
             .exact_height(self.platform.cutouts[0] as f32)
             .show(ctx, |ui| {});
 
-        egui::SidePanel::right("right_padding_panel")
-            .frame(egui::Frame {
-                shadow: Shadow::NONE,
-                fill: Color32::TRANSPARENT,
-                ..Default::default()
-            })
-            .show_separator_line(false)
-            .resizable(false)
-            .default_width(self.platform.cutouts[1] as f32)
-            .show(ctx, |ui| {});
-
         egui::TopBottomPanel::bottom("bottom_padding_panel")
             .frame(egui::Frame {
                 shadow: Shadow::NONE,
-                fill: Color32::TRANSPARENT,
+                fill: if is_dark {Color32::BLACK} else {Color32::WHITE},
                 ..Default::default()
             })
             .show_separator_line(false)
@@ -135,10 +119,21 @@ impl eframe::App for PlatformApp<Android> {
             .exact_height(self.platform.cutouts[2] as f32)
             .show(ctx, |ui| {});
 
+        egui::SidePanel::right("right_padding_panel")
+            .frame(egui::Frame {
+                shadow: Shadow::NONE,
+                fill: if is_dark {Color32::BLACK} else {Color32::WHITE},
+                ..Default::default()
+            })
+            .show_separator_line(false)
+            .resizable(false)
+            .default_width(self.platform.cutouts[1] as f32)
+            .show(ctx, |ui| {});
+
         egui::SidePanel::left("left_padding_panel")
             .frame(egui::Frame {
                 shadow: Shadow::NONE,
-                fill: Color32::TRANSPARENT,
+                fill: if is_dark {Color32::BLACK} else {Color32::WHITE},
                 ..Default::default()
             })
             .show_separator_line(false)
@@ -147,7 +142,7 @@ impl eframe::App for PlatformApp<Android> {
             .show(ctx, |ui| {});
 
         egui::CentralPanel::default().show(ctx, |ui| {
-            self.root.ui(ctx);
+            self.screens.ui(ctx, frame, &self.platform);
         });
     }
 }

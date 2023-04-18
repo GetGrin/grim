@@ -12,8 +12,40 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::any::Any;
+use eframe::Frame;
+use egui::Context;
+use crate::gui::PlatformCallbacks;
+use crate::gui::screens::{Screen};
+
 pub struct PlatformApp<Platform> {
-    pub(crate) root: egui_demo_lib::DemoWindows,
-    // root: super::views::main
+    pub(crate) screens: Screens,
     pub(crate) platform: Platform,
+}
+
+pub struct Screens {
+    screens: Vec<Box<dyn Screen>>,
+    current: String,
+}
+
+impl Default for Screens {
+    fn default() -> Self {
+        Self::from_screens(vec![
+            Box::new(super::screens::Wallets::default())
+        ])
+    }
+}
+
+impl Screens {
+    pub fn from_screens(screens: Vec<Box<dyn Screen>>) -> Self {
+        let current = screens[0].name().to_string();
+        Self {
+            screens,
+            current,
+        }
+    }
+
+    pub fn ui(&mut self, ctx: &Context, frame: &mut Frame, cb: &dyn PlatformCallbacks) {
+
+    }
 }
