@@ -12,8 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-mod app;
-pub use crate::gui::app::PlatformApp;
+#[cfg(target_os = "android")]
+#[path = "android/mod.rs"]
+pub mod app;
+#[cfg(not(target_os = "android"))]
+#[path = "desktop/mod.rs"]
+pub mod app;
 
-pub mod views;
-pub mod platform;

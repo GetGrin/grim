@@ -1,5 +1,6 @@
 package mw.gri.android;
 
+import android.graphics.Color;
 import android.os.Bundle;
 import android.system.ErrnoException;
 import android.system.Os;
@@ -18,14 +19,11 @@ public class MainActivity extends GameActivity {
         } catch (ErrnoException e) {
             throw new RuntimeException(e);
         }
-
+//        getDisplayCutouts();
         super.onCreate(savedInstanceState);
-
-        int navBarHeight = Utils.getNavigationBarHeight(getApplicationContext());
-        findViewById(android.R.id.content).setPadding(0, 0, 0, navBarHeight);
     }
 
-    public Integer getStatusBarHeight() {
-        return Utils.getStatusBarHeight(getApplicationContext());
+    public int[] getDisplayCutouts() {
+        return Utils.getDisplayCutouts(this);
     }
 }

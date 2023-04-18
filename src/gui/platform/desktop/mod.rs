@@ -12,8 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-mod app;
-pub use crate::gui::app::PlatformApp;
+use crate::gui::PlatformApp;
 
-pub mod views;
-pub mod platform;
+#[derive(Default)]
+pub struct Desktop;
+
+impl PlatformApp<Desktop> {
+    pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
+        Self::default()
+    }
+}

@@ -17,13 +17,13 @@ use log::LevelFilter::{Debug, Info, Trace, Warn};
 #[cfg(target_os = "android")]
 use winit::platform::android::activity::AndroidApp;
 
-use eframe::{AppCreator, CreationContext, NativeOptions, Renderer};
-use crate::gui::{MainApp};
+use eframe::{AppCreator, NativeOptions, Renderer};
+use crate::gui::PlatformApp;
 
 #[allow(dead_code)]
 #[cfg(target_os = "android")]
 #[no_mangle]
-fn android_main(app: AndroidApp) {
+unsafe fn android_main(app: AndroidApp) {
     #[cfg(debug_assertions)]
     {
         std::env::set_var("RUST_BACKTRACE", "full");
@@ -31,6 +31,7 @@ fn android_main(app: AndroidApp) {
             android_logger::Config::default().with_max_level(Info).with_tag("grim"),
         );
     }
+    let _app = app.clone();
 
     use winit::platform::android::EventLoopBuilderExtAndroid;
     let mut options = NativeOptions::default();
@@ -38,9 +39,9 @@ fn android_main(app: AndroidApp) {
         builder.with_android_app(app);
     }));
 
-    use crate::gui::AndroidUi;
-    start(options, Box::new(|_cc| Box::new(MainApp::new(_cc)
-        .with_status_bar_height(24.0)
+    use crate::gui::platform::app::Android;
+    start(options, Box::new(|_cc| Box::new(
+        PlatformApp::new(_cc, Android::new(_app))
     )));
 }
 
@@ -54,7 +55,7 @@ fn main() {
         .init();
 
     let options = NativeOptions::default();
-    start(options, Box::new(|_cc| Box::new(MainApp::new(_cc))));
+    start(options, Box::new(|_cc| Box::new(App::new(_cc))));
 }
 
 fn start(mut options: NativeOptions, app_creator: AppCreator) {
