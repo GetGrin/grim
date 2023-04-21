@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use egui::FontFamily;
 use winit::platform::android::activity::AndroidApp;
 
 use crate::gui::{PlatformApp, PlatformCallbacks};
@@ -71,33 +72,35 @@ impl PlatformApp<Android> {
 
         let mut fonts = egui::FontDefinitions::default();
         fonts.font_data.insert(
-            "roboto".to_owned(),
+            "noto".to_owned(),
             egui::FontData::from_static(include_bytes!(
-                "../../../../fonts/roboto.ttf"
+                "../../../../fonts/noto_light.ttf"
             )).tweak(egui::FontTweak {
                 scale: 1.0,
                 y_offset_factor: -0.20,
                 y_offset: 0.0
             }),
         );
+
         fonts
             .families
             .entry(Proportional)
             .or_default()
-            .insert(0, "roboto".to_owned());
+            .insert(0, "noto".to_owned());
+
         ctx.set_fonts(fonts);
 
         use egui::FontId;
         use egui::TextStyle::*;
 
         let mut style = (*ctx.style()).clone();
-
         style.text_styles = [
-          (Heading, FontId::new(24.0, Proportional)),
-          (Body, FontId::new(18.0, Proportional)),
-          (Monospace, FontId::new(18.0, Proportional)),
-          (Button, FontId::new(18.0, Proportional)),
-          (Small, FontId::new(12.0, Proportional)),
+            (Heading, FontId::new(20.0, Proportional)),
+            (Name("icon".into()), FontId::new(24.0, Proportional)),
+            (Body, FontId::new(16.0, Proportional)),
+            (Button, FontId::new(20.0, Proportional)),
+            (Small, FontId::new(12.0, Proportional)),
+            (Monospace, FontId::new(16.0, Proportional)),
         ].into();
 
         ctx.set_style(style);

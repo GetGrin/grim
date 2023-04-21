@@ -15,13 +15,16 @@
 use std::any::Any;
 use std::collections::BTreeSet;
 use eframe::emath::Align;
+use eframe::epaint::FontFamily;
 use eframe::Frame;
-use egui::{Color32, Context, Id, Layout, RichText, Sense, Separator, Stroke, Ui, Widget};
+use egui::{Color32, Context, Direction, Id, Layout, RichText, Rounding, Sense, Separator, Stroke, TextStyle, Ui, Widget};
 use egui::epaint::Shadow;
 use egui::panel::PanelState;
 use egui::style::Margin;
+use egui_extras::Size;
+use egui_extras::StripBuilder;
 use wgpu::Color;
-use crate::gui::PlatformCallbacks;
+use crate::gui::{COLOR_YELLOW, PlatformCallbacks, SYM_ADD, SYM_ARROW_BACK, SYM_ARROW_FORWARD, SYM_MENU};
 use crate::gui::screens::{Screen};
 
 pub struct PlatformApp<Platform> {
@@ -78,61 +81,112 @@ impl Screens {
     }
 
     fn menu_is_open(&mut self, frame: &mut Frame) -> bool {
-        return self.menu_open || is_landscape(frame);
+        return self.menu_open;
     }
 
     pub fn ui(&mut self, ui: &mut Ui, frame: &mut Frame, cb: &dyn PlatformCallbacks) {
         let menu_open = self.menu_is_open(frame);
 
+        let bg_stroke_default = ui.style().visuals.widgets.noninteractive.bg_stroke;
+        ui.style_mut().visuals.widgets.noninteractive.bg_stroke = Stroke::NONE;
+        ui.style_mut().visuals.widgets.active.bg_stroke = Stroke::NONE;
+
+        egui::SidePanel::left("menu_panel")
+            .resizable(false)
+            .exact_width(if !is_landscape(frame) {
+                frame.info().window_info.size.x - 58.0
+            } else {
+                frame.info().window_info.size.y - 58.0
+            })
+            .frame(egui::Frame {
+                inner_margin: Margin::same(0.0),
+                outer_margin: Margin::same(0.0),
+                rounding: Default::default(),
+                shadow: Shadow::NONE,
+                fill: COLOR_YELLOW,
+                stroke: Stroke::NONE,
+            })
+            .show_animated_inside(ui, menu_open, |ui| {
+                //TODO: Menu content
+                ui.vertical_centered(|ui| {
+                    ui.heading("💻 Backend");
+                });
+
+                ui.separator();
+            });
+
+
         egui::TopBottomPanel::top("title_panel")
             .resizable(false)
             // .default_height(120.0)
             .frame(egui::Frame {
+                fill: COLOR_YELLOW,
                 inner_margin: Margin::same(0.0),
                 outer_margin: Margin::same(0.0),
                 rounding: Default::default(),
                 ..Default::default()
             })
             .show_inside(ui, |ui| {
-                ui.with_layout(Layout::right_to_left(Align::Min), |ui| {
-                    let b = egui::widgets::Button::new(
-                        RichText::new(" + ").size(38.0)
-                    ).fill(Color32::TRANSPARENT).ui(ui).interact(Sense::click_and_drag());
-                    if b.drag_released() || b.clicked() {
-                        //TODO: Add wallet
-                        //self.menu_open = !menu_open
-                    };
-                });
-                ui.with_layout(Layout::top_down(Align::Center), |ui| {
-                    ui.heading(self.current_screen_title())
-                });
-                ui.with_layout(Layout::left_to_right(Align::Min), |ui| {
-                    let b = egui::widgets::Button::new(
-                        RichText::new(" = ").size(38.0)
-                    ).fill(Color32::TRANSPARENT).ui(ui).interact(Sense::click_and_drag());
-                    if b.drag_released() || b.clicked() {
-                        self.menu_open = !menu_open
-                    };
-                });
+                StripBuilder::new(ui)
+                    .size(Size::exact(58.0))
+                    .vertical(|mut strip| {
+                        strip.strip(|builder| {
+                            builder
+                                .size(Size::exact(58.0))
+                                .size(Size::remainder())
+                                .size(Size::exact(58.0))
+                                .horizontal(|mut strip| {
+                                    strip.cell(|ui| {
+                                        ui.centered_and_justified(|ui| {
+                                            let b = egui::widgets::Button::new(
+                                                RichText::new(if !menu_open || is_landscape(frame) {
+                                                    SYM_MENU
+                                                } else {
+                                                    SYM_ARROW_FORWARD
+                                                }).size(24.0)
+                                            ).fill(Color32::TRANSPARENT)
+                                                .ui(ui)
+                                                .interact(Sense::click_and_drag());
+                                            if b.drag_released() || b.clicked() {
+                                                self.menu_open = !menu_open
+                                            };
+                                        });
+                                    });
+                                    if !menu_open || is_landscape(frame) {
+                                        strip.strip(|builder| {
+                                            builder
+                                                .size(Size::remainder())
+                                                .vertical(|mut strip| {
+                                                    strip.cell(|ui| {
+                                                        ui.centered_and_justified(|ui| {
+                                                            ui.label(RichText::new(self.current_screen_title()
+                                                                .to_uppercase())
+                                                                .size(20.0)
+                                                                .color(Color32::BLACK)
+                                                            );
+                                                        });
+                                                    });
+                                                });
+                                        });
+                                        strip.cell(|ui| {
+                                            ui.centered_and_justified(|ui| {
+                                                let b = egui::widgets::Button::new(
+                                                    RichText::new(SYM_ADD).size(24.0)
+                                                ).fill(Color32::TRANSPARENT).ui(ui).interact(Sense::click_and_drag());
+                                                if b.drag_released() || b.clicked() {
+                                                    //TODO: Add wallet
+                                                    //self.menu_open = !menu_open
+                                                };
+                                            });
+                                        });
+                                    }
+                                });
+                        });
+                    });
             });
 
-        egui::CentralPanel::default().frame(egui::containers::Frame{
-            outer_margin: Margin {
-                left: 0.0,
-                right: 0.0,
-                // top: 120.0,
-                top: 0.0,
-                bottom: 0.0,
-            },
-            inner_margin: Margin::same(3.0),
-            fill: ui.ctx().style().visuals.panel_fill,
-            ..Default::default()
-        })
-            .show_inside(ui, |ui| {
-            self.show_screens(ui, frame, cb);
-        });
+        // ui.style_mut().visuals.widgets.noninteractive.bg_stroke = bg_stroke_default;
 
-        ui.style_mut().visuals.widgets.noninteractive.bg_stroke = Stroke::NONE;
 
         // egui::SidePanel::right("screens_content")
         //     .resizable(false)
@@ -149,23 +203,34 @@ impl Screens {
         //         self.show_screens(ui, frame, cb);
         //     });
 
-        egui::SidePanel::left("menu_panel")
-            .resizable(false)
-            .frame(egui::Frame {
-                inner_margin: Margin::same(0.0),
-                outer_margin: Margin::same(0.0),
-                rounding: Default::default(),
-                shadow: Shadow::NONE,
-                fill: Color32::YELLOW,
-                stroke: Stroke::NONE,
-            })
-            .show_animated_inside(ui, menu_open, |ui| {
-                //TODO: Menu content
-                ui.vertical_centered(|ui| {
-                    ui.heading("💻 Backend");
-                });
 
-                ui.separator();
+        egui::CentralPanel::default().frame(egui::containers::Frame {
+            outer_margin: Margin {
+                left: 0.0,
+                right: 0.0,
+                // top: 120.0,
+                top: 0.0,
+                bottom: 0.0,
+            },
+            rounding: if menu_open {
+                Rounding {
+                    nw: 5.0,
+                    ne: 0.0,
+                    sw: 0.0,
+                    se: 0.0,
+                }
+            } else {
+                Rounding::none()
+            },
+            inner_margin: Margin::same(3.0),
+            fill: ui.ctx().style().visuals.panel_fill,
+            stroke: bg_stroke_default,
+            ..Default::default()
+        })
+            .show_inside(ui, |ui| {
+                if !menu_open || is_landscape(frame) {
+                    self.show_screens(ui, frame, cb);
+                }
             });
     }
 }

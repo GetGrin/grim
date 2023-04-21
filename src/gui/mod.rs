@@ -18,7 +18,18 @@ pub use app::is_landscape;
 
 pub mod platform;
 pub mod screens;
-pub mod views;
+pub mod nav;
+
+pub const COLOR_YELLOW: egui::Color32 = egui::Color32::from_rgb(254, 241, 2);
+
+pub const SYM_ARROW_BACK: &str = "⇦";
+pub const SYM_ARROW_FORWARD: &str = "⇨";
+pub const SYM_ADD: &str = "＋";
+pub const SYM_MENU: &str = "∷";//≡
+
+pub trait Ui {
+
+}
 
 pub trait PlatformCallbacks {
     fn show_keyboard(&mut self);
