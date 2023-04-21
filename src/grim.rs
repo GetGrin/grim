@@ -1,4 +1,4 @@
-// Copyright 2023 The Grin Developers
+// Copyright 2023 The Grim Developers
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -59,8 +59,23 @@ fn main() {
 }
 
 fn start(mut options: NativeOptions, app_creator: AppCreator) {
+    setup_i18n();
+
     options.renderer = Renderer::Wgpu;
     eframe::run_native("Grim", options, app_creator);
+}
+
+fn setup_i18n() {
+    const DEFAULT_LOCALE: &str = "en";
+    let locale = sys_locale::get_locale().unwrap_or(String::from(DEFAULT_LOCALE));
+    let locale_str = if locale.contains("-") {
+        locale.split("-").next().unwrap_or(DEFAULT_LOCALE)
+    } else {
+        DEFAULT_LOCALE
+    };
+    if crate::available_locales().contains(&locale_str) {
+        rust_i18n::set_locale(locale_str);
+    }
 }
 
 mod built_info {

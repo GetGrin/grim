@@ -13,8 +13,13 @@
 // limitations under the License.
 
 mod wallets;
+
 pub use wallets::Wallets;
+use crate::gui::PlatformCallbacks;
 
 pub trait Screen {
-    fn name(&self) -> &'static str;
+    fn name(&self) -> String;
+    fn show(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame, cb: &dyn PlatformCallbacks);
+
+    // fn option_on_panel(&mut self, ui: &mut egui::Ui);
 }

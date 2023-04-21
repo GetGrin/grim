@@ -8,7 +8,7 @@ import com.google.androidgamesdk.GameActivity;
 public class MainActivity extends GameActivity {
 
     static {
-        System.loadLibrary("grin_android");
+        System.loadLibrary("grim_android");
     }
 
     @Override

@@ -12,17 +12,3 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-mod app;
-pub use app::PlatformApp;
-pub use app::is_landscape;
-
-pub mod platform;
-pub mod screens;
-pub mod views;
-
-pub trait PlatformCallbacks {
-    fn show_keyboard(&mut self);
-    fn hide_keyboard(&mut self);
-    fn copy_string_to_buffer(&mut self, data: String);
-    fn get_string_from_buffer(&mut self) -> String;
-}

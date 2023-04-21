@@ -12,34 +12,36 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::ScrollArea;
-use crate::gui::Ui;
+use std::ops::Deref;
+use eframe::Frame;
+use egui::{ScrollArea, Ui};
+
+use crate::gui::app::Screens;
+use crate::gui::{PlatformCallbacks};
 
 pub struct Wallets {
+
 }
 
 impl Default for Wallets {
     fn default() -> Self {
         Self {
-
         }
     }
 }
 
-impl Ui for Wallets {
-    fn ui(&mut self, ui: &mut egui::Ui) {
+impl super::Screen for Wallets {
+    fn name(&self) -> String {
+        t!("wallets")
+    }
+
+    fn show(&mut self, ui: &mut Ui, frame: &mut Frame, cb: &dyn PlatformCallbacks) {
         ScrollArea::vertical()
             .auto_shrink([false; 2])
             .show(ui, |ui| {
-                for item in 1..=50 {
-                    ui.heading(format!("This is future Wallet {}", item));
+                for item in 1..=55 {
+                    ui.heading(format!("This is longest future Wallet #{}", item));
                 }
             });
-    }
-}
-
-impl super::Screen for Wallets {
-    fn name(&self) -> &'static str {
-        "Wallets"
     }
 }
