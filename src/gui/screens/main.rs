@@ -11,16 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+pub struct Main {
 
-mod wallets;
-mod main;
-
-pub use wallets::Wallets;
-use crate::gui::PlatformCallbacks;
-
-pub trait Screen {
-    fn name(&self) -> String;
-    fn show(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame, cb: &dyn PlatformCallbacks);
-
-    // fn option_on_panel(&mut self, ui: &mut egui::Ui);
 }
+

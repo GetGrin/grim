@@ -14,7 +14,7 @@
 
 use std::ops::Deref;
 use eframe::Frame;
-use egui::{ScrollArea, Ui};
+use egui::{Color32, ScrollArea, Ui, Widget};
 
 use crate::gui::app::Screens;
 use crate::gui::{PlatformCallbacks};
@@ -36,11 +36,15 @@ impl super::Screen for Wallets {
     }
 
     fn show(&mut self, ui: &mut Ui, frame: &mut Frame, cb: &dyn PlatformCallbacks) {
+        // ui.visuals_mut().widgets = Color32::TRANSPARENT;
         ScrollArea::vertical()
-            .auto_shrink([false; 2])
+            .auto_shrink([false, true])
             .show(ui, |ui| {
-                for item in 1..=55 {
+                for item in 1..=4 {
                     ui.heading(format!("This is longest future Wallet #{}", item));
+                    egui::Button::new("TEXT").shortcut_text("Shortcut").ui(ui);
+                    ui.button("OK");
+                    ui.button("Test");
                 }
             });
     }

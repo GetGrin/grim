@@ -12,11 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::FontFamily;
 use winit::platform::android::activity::AndroidApp;
 
-use crate::gui::{PlatformApp, PlatformCallbacks};
-use crate::gui::app::Screens;
+use crate::gui::{PlatformApp, PlatformCallbacks, Screens};
 
 #[derive(Clone)]
 pub struct Android {
@@ -71,13 +69,27 @@ impl PlatformApp<Android> {
         use egui::FontFamily::Proportional;
 
         let mut fonts = egui::FontDefinitions::default();
+
+        // Tweak emoji icons to look nice against main font y-offset
+        fonts.font_data.insert(
+            "emoji-icon-font".to_owned(),
+            egui::FontData {
+                font: fonts.font_data.get("emoji-icon-font").unwrap().clone().font,
+                index: 0,
+                tweak: egui::FontTweak {
+                    scale: 0.88,
+                    y_offset_factor: 0.26,
+                    y_offset: 0.0,
+                },
+            });
+
         fonts.font_data.insert(
             "noto".to_owned(),
             egui::FontData::from_static(include_bytes!(
                 "../../../../fonts/noto_light.ttf"
             )).tweak(egui::FontTweak {
                 scale: 1.0,
-                y_offset_factor: -0.20,
+                y_offset_factor: -0.25,
                 y_offset: 0.0
             }),
         );
@@ -142,19 +154,8 @@ impl eframe::App for PlatformApp<Android> {
             self.platform.window_size[1] = _y;
             self.platform.cutouts = Self::get_display_cutouts(&self.platform.android_app);
         }
-
         padding_panels(self, ctx);
-
-        egui::CentralPanel::default()
-            .frame(egui::Frame {
-                inner_margin: egui::style::Margin::same(0.0),
-                outer_margin: egui::style::Margin::same(0.0),
-                fill: ctx.style().visuals.panel_fill,
-                .. Default::default()
-            })
-            .show(ctx, |ui| {
-                self.screens.ui(ui, frame, &self.platform);
-            });
+        self.screens.ui(ctx, frame, &self.platform);
     }
 }
 

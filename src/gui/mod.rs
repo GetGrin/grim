@@ -13,7 +13,9 @@
 // limitations under the License.
 
 mod app;
+
 pub use app::PlatformApp;
+pub use app::Screens;
 pub use app::is_landscape;
 
 pub mod platform;
@@ -25,11 +27,9 @@ pub const COLOR_YELLOW: egui::Color32 = egui::Color32::from_rgb(254, 241, 2);
 pub const SYM_ARROW_BACK: &str = "⇦";
 pub const SYM_ARROW_FORWARD: &str = "⇨";
 pub const SYM_ADD: &str = "＋";
-pub const SYM_MENU: &str = "∷";//≡
-
-pub trait Ui {
-
-}
+pub const SYM_MENU: &str = "∷";
+pub const SYM_WALLET: &str = "💼";
+pub const SYM_NETWORK: &str = "🖧";
 
 pub trait PlatformCallbacks {
     fn show_keyboard(&mut self);
