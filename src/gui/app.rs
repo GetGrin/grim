@@ -85,7 +85,7 @@ impl App {
                     stroke: Stroke::new(1.0, Color32::from_gray(5)),
                     ..Default::default()
                 }).show_inside(ui, |ui| {
-                    self.root.show(ui, None, cb);
+                    self.root.ui(ui, cb);
                 });
             });
     }
