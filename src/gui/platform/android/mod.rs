@@ -12,9 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use egui::Context;
 use winit::platform::android::activity::AndroidApp;
 
-use crate::gui::{PlatformApp, PlatformCallbacks, Screens};
+use crate::gui::{App, PlatformApp};
+use crate::gui::platform::PlatformCallbacks;
 
 #[derive(Clone)]
 pub struct Android {
@@ -43,20 +45,41 @@ impl PlatformCallbacks for Android {
     }
 
     fn copy_string_to_buffer(&mut self, data: String) {
-
+        //TODO
     }
 
     fn get_string_from_buffer(&mut self) -> String {
+        //TODO
         "".to_string()
     }
 }
+
+//TODO
+
+// pub trait PlatformSetup<T> {
+//     fn new(cc: &eframe::CreationContext<'_>, platform: T) -> Box<Self> {
+//         Self::setup_visuals(&cc.egui_ctx);
+//         return Self {
+//             app: App::default(),
+//             platform
+//         }
+//     }
+//     fn setup_visuals(ctx: &egui::Context);
+//
+// }
+//
+// impl PlatformSetup<Android> for PlatformApp<Android> {
+//     fn setup_visuals(ctx: &Context) {
+//
+//     }
+// }
 
 impl PlatformApp<Android> {
     pub fn new(cc: &eframe::CreationContext<'_>, platform: Android) -> Self {
         Self::setup_visuals(&cc.egui_ctx);
         Self::setup_fonts(&cc.egui_ctx);
         Self {
-            screens: Screens::default(),
+            app: App::default(),
             platform,
         }
     }
@@ -155,7 +178,7 @@ impl eframe::App for PlatformApp<Android> {
             self.platform.cutouts = Self::get_display_cutouts(&self.platform.android_app);
         }
         padding_panels(self, ctx);
-        self.screens.ui(ctx, frame, &self.platform);
+        self.app.ui(ctx, frame, &self.platform);
     }
 }
 

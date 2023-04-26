@@ -12,15 +12,37 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-mod wallets;
-mod main;
+pub use navigator::Navigator;
+pub use root::Root;
+pub use accounts::Accounts;
+pub use account::Account;
 
-pub use wallets::Wallets;
-use crate::gui::PlatformCallbacks;
+use crate::gui::App;
+use crate::gui::platform::PlatformCallbacks;
+
+mod navigator;
+mod root;
+mod accounts;
+mod account;
+
+// pub trait TitlePanelActions {
+//     fn left(&self) -> Option<PanelAction>;
+//     fn right(&self) -> Option<PanelAction>;
+// }
+
+#[derive(Ord, Eq, PartialOrd, PartialEq)]
+pub enum ScreenId {
+    Root,
+    Accounts,
+    Account
+}
 
 pub trait Screen {
-    fn name(&self) -> String;
-    fn show(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame, cb: &dyn PlatformCallbacks);
-
-    // fn option_on_panel(&mut self, ui: &mut egui::Ui);
+    fn id(&self) -> ScreenId;
+    fn show(
+        &mut self,
+        ui: &mut egui::Ui,
+        navigator: Option<&mut Navigator>,
+        cb: &dyn PlatformCallbacks
+    );
 }

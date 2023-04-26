@@ -29,7 +29,7 @@ pub fn start(chain_type: &ChainTypes) {
     );
 
     let config = node_config.clone().unwrap();
-    let mut server_config = config.members.as_ref().unwrap().server.clone();
+    let server_config = config.members.as_ref().unwrap().server.clone();
 
     // Initialize our global chain_type, feature flags (NRD kernel support currently), accept_fee_base, and future_time_limit.
     // These are read via global and not read from config beyond this point.

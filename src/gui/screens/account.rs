@@ -11,7 +11,32 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-pub struct Main {
+
+use crate::gui::App;
+use crate::gui::platform::PlatformCallbacks;
+use crate::gui::screens::{Navigator, ScreenId};
+
+pub struct Account {
 
 }
 
+impl Default for Account {
+    fn default() -> Self {
+        Self {
+
+        }
+    }
+}
+
+impl super::Screen for Account {
+    fn id(&self) -> ScreenId {
+        ScreenId::Account
+    }
+
+    fn show(&mut self,
+            ui: &mut egui::Ui,
+            nav: Option<&mut Navigator>,
+            cb: &dyn PlatformCallbacks) {
+        todo!()
+    }
+}

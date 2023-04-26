@@ -20,3 +20,9 @@ pub mod platform;
 #[path = "desktop/mod.rs"]
 pub mod app;
 
+pub trait PlatformCallbacks {
+    fn show_keyboard(&mut self);
+    fn hide_keyboard(&mut self);
+    fn copy_string_to_buffer(&mut self, data: String);
+    fn get_string_from_buffer(&mut self) -> String;
+}

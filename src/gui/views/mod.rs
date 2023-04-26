@@ -12,23 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+pub mod buttons;
+pub mod title_panel;
 
-pub use app::App;
-pub use app::is_landscape;
-pub use app::PlatformApp;
-
-pub mod platform;
-pub mod screens;
-pub mod views;
-
-mod app;
-
-pub const COLOR_YELLOW: egui::Color32 = egui::Color32::from_rgb(254, 241, 2);
-
-pub const SYM_ARROW_BACK: &str = "⇦";
-pub const SYM_ARROW_FORWARD: &str = "⇨";
-pub const SYM_ADD: &str = "＋";
-pub const SYM_MENU: &str = "∷";
-pub const SYM_ACCOUNTS: &str = "🗄";
-pub const SYM_NETWORK: &str = "🖧";
-
+pub trait View {
+    fn ui(&mut self, ui: &mut egui::Ui);
+}

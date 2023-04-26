@@ -12,12 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use eframe::{AppCreator, NativeOptions, Renderer, Theme};
 use log::LevelFilter::{Debug, Info, Trace, Warn};
-
 #[cfg(target_os = "android")]
 use winit::platform::android::activity::AndroidApp;
 
-use eframe::{AppCreator, NativeOptions, Renderer};
 use crate::gui::PlatformApp;
 
 #[allow(dead_code)]
@@ -31,7 +30,9 @@ unsafe fn android_main(app: AndroidApp) {
             android_logger::Config::default().with_max_level(Info).with_tag("grim"),
         );
     }
-    let _app = app.clone();
+
+    use crate::gui::platform::Android;
+    let platform = Android::new(app.clone());
 
     use winit::platform::android::EventLoopBuilderExtAndroid;
     let mut options = NativeOptions::default();
@@ -39,9 +40,8 @@ unsafe fn android_main(app: AndroidApp) {
         builder.with_android_app(app);
     }));
 
-    use crate::gui::platform::Android;
     start(options, Box::new(|_cc| Box::new(
-        PlatformApp::new(_cc, Android::new(_app))
+        PlatformApp::new(_cc, platform)
     )));
 }
 
@@ -54,14 +54,19 @@ fn main() {
         .parse_default_env()
         .init();
 
+    use crate::gui::platform::Desktop;
     let options = NativeOptions::default();
-    start(options, Box::new(|_cc| Box::new(App::new(_cc))));
+    start(options, Box::new(|_cc| Box::new(
+        PlatformApp::new(_cc, Desktop::default())
+    )));
 }
 
 fn start(mut options: NativeOptions, app_creator: AppCreator) {
+    options.default_theme = Theme::Light;
+    options.renderer = Renderer::Wgpu;
+
     setup_i18n();
 
-    options.renderer = Renderer::Wgpu;
     eframe::run_native("Grim", options, app_creator);
 }
 
