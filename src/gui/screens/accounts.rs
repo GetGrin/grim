@@ -12,9 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::gui::app::App;
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::screens::{Account, Navigator, Screen, ScreenId};
+use crate::gui::screens::{Navigator, Screen, ScreenId};
 use crate::gui::views::title_panel::TitlePanel;
 use crate::gui::views::View;
 
@@ -38,17 +37,14 @@ impl Screen for Accounts {
 
     fn show(&mut self,
             ui: &mut egui::Ui,
-            nav: Option<&mut Navigator>,
+            nav: &mut Navigator,
             cb: &dyn PlatformCallbacks) {
         TitlePanel::default()
             .title(self.title.to_owned())
             .ui(ui);
         if ui.button("test").clicked() {
-            nav.unwrap().to(ScreenId::Account)
+            nav.to(ScreenId::Account)
         };
-
-
-        //TODO: content
     }
 
 }

@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::gui::App;
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::screens::{Navigator, ScreenId};
 
@@ -35,8 +34,8 @@ impl super::Screen for Account {
 
     fn show(&mut self,
             ui: &mut egui::Ui,
-            nav: Option<&mut Navigator>,
+            nav: &mut Navigator,
             cb: &dyn PlatformCallbacks) {
-        todo!()
+
     }
 }

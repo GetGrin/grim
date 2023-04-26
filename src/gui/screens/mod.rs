@@ -42,7 +42,7 @@ pub trait Screen {
     fn show(
         &mut self,
         ui: &mut egui::Ui,
-        navigator: Option<&mut Navigator>,
+        navigator: &mut Navigator,
         cb: &dyn PlatformCallbacks
     );
 }

@@ -12,43 +12,30 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
-
-
 use std::collections::BTreeSet;
-use crate::gui::platform::PlatformCallbacks;
-use crate::gui::screens::{Accounts, Screen, ScreenId};
+
+use crate::gui::screens::ScreenId;
 
 pub struct Navigator {
-    stack: BTreeSet<ScreenId>,
-    screens: Vec<Box<dyn Screen>>,
+    pub(crate) stack: BTreeSet<ScreenId>,
+}
+
+impl Default for Navigator {
+    fn default() -> Self {
+        let mut stack = BTreeSet::new();
+        stack.insert(ScreenId::Accounts);
+        Self {
+            stack
+        }
+    }
 }
 
 impl Navigator {
-    pub fn new(screens: Vec<Box<dyn Screen>>) -> Self {
-        let mut stack = BTreeSet::new();
-        stack.insert(ScreenId::Accounts);
-        Self { stack, screens }
-    }
-
     pub fn to(&mut self, id: ScreenId) {
         self.stack.insert(id);
     }
 
     pub fn back(&mut self) {
         self.stack.pop_last();
-    }
-
-    pub fn get_current_screen(&mut self) -> Option<&Box<dyn Screen>> {
-        let Self { stack, screens } = self;
-        let current = stack.last().unwrap();
-        let mut result = screens.get(0);
-        for screen in screens.iter() {
-            if screen.id() == *current {
-                result = Some(screen);
-                break;
-            }
-        }
-        return result;
     }
 }

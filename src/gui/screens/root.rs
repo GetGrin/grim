@@ -18,13 +18,14 @@ use crate::gui::screens::{Account, Accounts, Navigator, Screen, ScreenId};
 
 pub struct Root {
     navigator: Navigator,
-    // screens: Vec<Box<dyn Screen>>,
+    screens: Vec<Box<dyn Screen>>,
 }
 
 impl Default for Root {
     fn default() -> Self {
         Self {
-            navigator: Navigator::new(vec![
+            navigator: Navigator::new(),
+            screens: (vec![
                 Box::new(Accounts::default()),
                 Box::new(Account::default())
             ])
@@ -32,12 +33,25 @@ impl Default for Root {
     }
 }
 
-impl Screen for Root {
+impl Root {
     fn id(&self) -> ScreenId {
         ScreenId::Root
     }
 
-    fn show(&mut self, ui: &mut Ui, navigator: Option<&mut Navigator>, cb: &dyn PlatformCallbacks) {
-        let screen = self.navigator.get_current_screen();
+    pub fn ui(&mut self, ui: &mut Ui, cb: &dyn PlatformCallbacks) {
+        self.show_current_screen(ui, cb);
+    }
+
+    pub fn show_current_screen(&mut self,
+                               ui: &mut Ui,
+                               cb: &dyn PlatformCallbacks) {
+        let Self { navigator, screens } = self;
+        let current = navigator.stack.last().unwrap();
+        for screen in screens.iter_mut() {
+            if screen.id() == *current {
+                screen.show(ui, navigator, cb);
+                break;
+            }
+        }
     }
 }
