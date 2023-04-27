@@ -46,16 +46,16 @@ impl Screen for Accounts {
         let Self { title } = self;
 
         let mut panel: TitlePanel = TitlePanel::default()
-            .title(title.to_owned())
+            .title(title)
             .right_action(PanelAction {
                 icon: SYM_SETTINGS.into(),
-                on_click: Box::new(on_right_click),
+                on_click: Box::new(on_settings_click),
             })
             .with_navigator(nav);
         if !dual_panel_mode(frame) {
             panel = panel.left_action(PanelAction {
                 icon: SYM_NETWORK.into(),
-                on_click: Box::new(on_left_click),
+                on_click: Box::new(on_network_click),
             });
         }
         panel.ui(ui);
@@ -70,10 +70,10 @@ impl Screen for Accounts {
     }
 }
 
-fn on_left_click(nav: &mut Option<&mut Navigator>) {
+fn on_network_click(nav: &mut Option<&mut Navigator>) {
     nav.as_mut().unwrap().toggle_left_panel();
 }
 
-fn on_right_click(nav: &mut Option<&mut Navigator>) {
-    nav.as_mut().unwrap().toggle_left_panel();
+fn on_settings_click(nav: &mut Option<&mut Navigator>) {
+    //TODO: Open settings
 }

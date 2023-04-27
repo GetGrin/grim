@@ -34,13 +34,13 @@ pub struct PanelActions {
 
 #[derive(Default)]
 pub struct TitlePanel<'screen> {
-    title: Option<String>,
+    title: Option<&'screen String>,
     actions: PanelActions,
     navigator: Option<&'screen mut Navigator>
 }
 
 impl<'screen> TitlePanel<'screen> {
-    pub fn title(mut self, title: String) -> Self {
+    pub fn title(mut self, title: &'screen String) -> Self {
         self.title = Some(title);
         self
     }
