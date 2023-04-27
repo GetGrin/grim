@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use std::ops::{Deref, DerefMut};
+use egui::Widget;
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::screens::{Navigator, Screen, ScreenId};
 use crate::gui::{SYM_ACCOUNTS, SYM_ARROW_BACK, SYM_NETWORK, SYM_SETTINGS};
@@ -44,22 +45,21 @@ impl Screen for Accounts {
             cb: &dyn PlatformCallbacks) {
         let Self { title } = self;
 
-        TitlePanel::default()
+        let mut panel: TitlePanel = TitlePanel::default()
             .title(title.to_owned())
-            .left_action(if !dual_panel_mode(frame) {
-                Some(PanelAction {
-                    icon: SYM_NETWORK.into(),
-                    on_click: Box::new(on_left_click),
-                })
-            } else {
-                None
-            })
-            .right_action(Some(PanelAction {
+            .right_action(PanelAction {
                 icon: SYM_SETTINGS.into(),
                 on_click: Box::new(on_right_click),
-            }))
-            .with_navigator(nav)
-            .ui(ui);
+            })
+            .with_navigator(nav);
+        if !dual_panel_mode(frame) {
+            panel = panel.left_action(PanelAction {
+                icon: SYM_NETWORK.into(),
+                on_click: Box::new(on_left_click),
+            });
+        }
+        panel.ui(ui);
+
         ui.label(format!("{}Here we go 10000 ツ", SYM_ARROW_BACK));
         if ui.button("TEST").clicked() {
             nav.to(ScreenId::Account)

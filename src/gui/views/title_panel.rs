@@ -45,13 +45,13 @@ impl<'screen> TitlePanel<'screen> {
         self
     }
 
-    pub fn left_action(mut self, action: Option<PanelAction>) -> Self {
-        self.actions.left = action;
+    pub fn left_action(mut self, action: PanelAction) -> Self {
+        self.actions.left = Some(action);
         self
     }
 
-    pub fn right_action(mut self, action: Option<PanelAction>) -> Self {
-        self.actions.right = action;
+    pub fn right_action(mut self, action: PanelAction) -> Self {
+        self.actions.right = Some(action);
         self
     }
 
@@ -61,8 +61,8 @@ impl<'screen> TitlePanel<'screen> {
     }
 }
 
-impl TitlePanel<'_> {
-    pub(crate) fn ui(&mut self, ui: &mut egui::Ui) {
+impl View for TitlePanel<'_> {
+    fn ui(&mut self, ui: &mut egui::Ui) {
         // Disable stroke around panel
         ui.style_mut().visuals.widgets.noninteractive.bg_stroke = Stroke::NONE;
 
