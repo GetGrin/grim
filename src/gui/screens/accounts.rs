@@ -58,7 +58,8 @@ impl Screen for Accounts {
                 icon: SYM_SETTINGS.into(),
                 on_click: Box::new(on_right_click),
             }))
-            .ui(ui, &mut Some(nav));
+            .with_navigator(nav)
+            .ui(ui);
         ui.label(format!("{}Here we go 10000 ツ", SYM_ARROW_BACK));
         if ui.button("TEST").clicked() {
             nav.to(ScreenId::Account)

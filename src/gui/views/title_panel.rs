@@ -33,12 +33,13 @@ pub struct PanelActions {
 }
 
 #[derive(Default)]
-pub struct TitlePanel {
+pub struct TitlePanel<'screen> {
     title: Option<String>,
-    actions: PanelActions
+    actions: PanelActions,
+    navigator: Option<&'screen mut Navigator>
 }
 
-impl TitlePanel {
+impl<'screen> TitlePanel<'screen> {
     pub fn title(mut self, title: String) -> Self {
         self.title = Some(title);
         self
@@ -53,17 +54,22 @@ impl TitlePanel {
         self.actions.right = action;
         self
     }
+
+    pub fn with_navigator(mut self, nav: &'screen mut Navigator) -> Self {
+        self.navigator = Some(nav);
+        self
+    }
 }
 
-impl TitlePanel {
-    pub(crate) fn ui(&mut self, ui: &mut egui::Ui, nav: &mut Option<&mut Navigator>) {
+impl TitlePanel<'_> {
+    pub(crate) fn ui(&mut self, ui: &mut egui::Ui) {
         // Disable stroke around panel
         ui.style_mut().visuals.widgets.noninteractive.bg_stroke = Stroke::NONE;
 
         // Disable stroke around buttons on hover
         ui.style_mut().visuals.widgets.active.bg_stroke = Stroke::NONE;
 
-        let Self { actions, title } = self;
+        let Self { actions, title, navigator } = self;
 
         egui::TopBottomPanel::top("title_panel")
             .resizable(false)
@@ -96,7 +102,7 @@ impl TitlePanel {
                                                     .ui(ui)
                                                     .interact(Sense::click_and_drag());
                                                 if b.drag_released() || b.clicked() {
-                                                    (action.on_click)(nav);
+                                                    (action.on_click)(navigator);
                                                 };
                                             });
                                         }
@@ -125,7 +131,7 @@ impl TitlePanel {
                                                 ).fill(Color32::TRANSPARENT)
                                                     .ui(ui).interact(Sense::click_and_drag());
                                                 if b.drag_released() || b.clicked() {
-                                                    (action.on_click)(nav);
+                                                    (action.on_click)(navigator);
                                                 };
                                             });
                                         }
