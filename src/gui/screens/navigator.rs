@@ -18,6 +18,7 @@ use crate::gui::screens::ScreenId;
 
 pub struct Navigator {
     pub(crate) stack: BTreeSet<ScreenId>,
+    pub(crate) left_panel_open: bool,
 }
 
 impl Default for Navigator {
@@ -25,7 +26,8 @@ impl Default for Navigator {
         let mut stack = BTreeSet::new();
         stack.insert(ScreenId::Accounts);
         Self {
-            stack
+            stack,
+            left_panel_open: false
         }
     }
 }
@@ -37,5 +39,9 @@ impl Navigator {
 
     pub fn back(&mut self) {
         self.stack.pop_last();
+    }
+
+    pub fn toggle_left_panel(&mut self) {
+        self.left_panel_open = !self.left_panel_open;
     }
 }

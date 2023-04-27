@@ -12,18 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::ops::{Deref, DerefMut};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::screens::{Navigator, Screen, ScreenId};
-use crate::gui::views::title_panel::TitlePanel;
+use crate::gui::{SYM_ACCOUNTS, SYM_ARROW_BACK, SYM_NETWORK, SYM_SETTINGS};
+use crate::gui::screens::root::dual_panel_mode;
+use crate::gui::views::title_panel::{PanelAction, TitlePanel};
 use crate::gui::views::View;
 
-#[derive(Default)]
 pub struct Accounts {
     title: String,
 }
 
-impl Accounts {
-    pub(crate) fn new() -> Self {
+impl Default for Accounts {
+    fn default() -> Self {
         Self {
             title: t!("accounts"),
         }
@@ -37,14 +39,40 @@ impl Screen for Accounts {
 
     fn show(&mut self,
             ui: &mut egui::Ui,
+            frame: &mut eframe::Frame,
             nav: &mut Navigator,
             cb: &dyn PlatformCallbacks) {
+        let Self { title } = self;
+
         TitlePanel::default()
-            .title(self.title.to_owned())
-            .ui(ui);
-        if ui.button("test").clicked() {
+            .title(title.to_owned())
+            .left_action(if !dual_panel_mode(frame) {
+                Some(PanelAction {
+                    icon: SYM_NETWORK.into(),
+                    on_click: Box::new(on_left_click),
+                })
+            } else {
+                None
+            })
+            .right_action(Some(PanelAction {
+                icon: SYM_SETTINGS.into(),
+                on_click: Box::new(on_right_click),
+            }))
+            .ui(ui, &mut Some(nav));
+        ui.label(format!("{}Here we go 10000 ツ", SYM_ARROW_BACK));
+        if ui.button("TEST").clicked() {
+            nav.to(ScreenId::Account)
+        };
+        if ui.button(format!("{}BACK ", SYM_ARROW_BACK)).clicked() {
             nav.to(ScreenId::Account)
         };
     }
+}
 
+fn on_left_click(nav: &mut Option<&mut Navigator>) {
+    nav.as_mut().unwrap().toggle_left_panel();
+}
+
+fn on_right_click(nav: &mut Option<&mut Navigator>) {
+    nav.as_mut().unwrap().toggle_left_panel();
 }

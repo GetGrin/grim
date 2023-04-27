@@ -94,34 +94,61 @@ impl PlatformApp<Android> {
         let mut fonts = egui::FontDefinitions::default();
 
         // Tweak emoji icons to look nice against main font y-offset
+        // fonts.font_data.insert(
+        //     "emoji-icon-font".to_owned(),
+        //     egui::FontData {
+        //         font: fonts.font_data.get("emoji-icon-font").unwrap().clone().font,
+        //         index: 0,
+        //         tweak: egui::FontTweak {
+        //             scale: 0.88,
+        //             y_offset_factor: 0.26,
+        //             y_offset: 0.0,
+        //         },
+        //     });
+
+        // fonts.font_data.insert(
+        //     "material".to_owned(),
+        //     egui::FontData::from_static(include_bytes!(
+        //         "../../../../fonts/material-light.ttf"
+        //     )).tweak(egui::FontTweak {
+        //         scale: 1.0,
+        //         y_offset_factor: 0.06,
+        //         y_offset: 0.0
+        //     }),
+        // );
         fonts.font_data.insert(
-            "emoji-icon-font".to_owned(),
-            egui::FontData {
-                font: fonts.font_data.get("emoji-icon-font").unwrap().clone().font,
-                index: 0,
-                tweak: egui::FontTweak {
-                    scale: 0.88,
-                    y_offset_factor: 0.26,
-                    y_offset: 0.0,
-                },
-            });
+            "material".to_owned(),
+            egui::FontData::from_static(include_bytes!(
+                "../../../../fonts/material.otf"
+            )).tweak(egui::FontTweak {
+                scale: 1.0,
+                y_offset_factor: 0.16,
+                y_offset: 0.0
+            }),
+        );
+        fonts
+            .families
+            .entry(Proportional)
+            .or_default()
+            .insert(0, "material".to_owned());
 
         fonts.font_data.insert(
             "noto".to_owned(),
             egui::FontData::from_static(include_bytes!(
-                "../../../../fonts/noto_light.ttf"
+                "../../../../fonts/noto_sc_reg.otf"
             )).tweak(egui::FontTweak {
                 scale: 1.0,
                 y_offset_factor: -0.25,
                 y_offset: 0.0
             }),
         );
-
         fonts
             .families
             .entry(Proportional)
             .or_default()
             .insert(0, "noto".to_owned());
+
+
 
         ctx.set_fonts(fonts);
 

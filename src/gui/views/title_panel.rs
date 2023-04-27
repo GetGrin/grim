@@ -13,15 +13,17 @@
 // limitations under the License.
 
 
-use egui::{Color32, RichText, Sense, Stroke, Widget};
+use eframe::epaint::text::{LayoutJob, TextFormat, TextWrapping};
+use egui::{Color32, FontId, RichText, Sense, Stroke, Widget};
 use egui::style::Margin;
 use egui_extras::{Size, StripBuilder};
-use crate::gui::COLOR_YELLOW;
+use crate::gui::{COLOR_DARK, COLOR_YELLOW};
+use crate::gui::screens::Navigator;
 use crate::gui::views::View;
 
 pub struct PanelAction {
-    icon: Box<str>,
-    on_click: Box<dyn Fn()>
+    pub(crate) icon: Box<str>,
+    pub(crate) on_click: Box<dyn Fn(&mut Option<&mut Navigator>)>,
 }
 
 #[derive(Default)]
@@ -42,25 +44,23 @@ impl TitlePanel {
         self
     }
 
-    pub fn left_action(mut self, action: PanelAction) -> Self {
-        self.actions.left = Some(action);
+    pub fn left_action(mut self, action: Option<PanelAction>) -> Self {
+        self.actions.left = action;
         self
     }
 
-    pub fn right_action(mut self, action: PanelAction) -> Self {
-        self.actions.right = Some(action);
+    pub fn right_action(mut self, action: Option<PanelAction>) -> Self {
+        self.actions.right = action;
         self
     }
 }
 
-impl View for TitlePanel {
-    fn ui(&mut self, ui: &mut egui::Ui) {
-        // Disable stroke around panels
-        let panel_stroke_default = ui.style().visuals.widgets.noninteractive.bg_stroke;
+impl TitlePanel {
+    pub(crate) fn ui(&mut self, ui: &mut egui::Ui, nav: &mut Option<&mut Navigator>) {
+        // Disable stroke around panel
         ui.style_mut().visuals.widgets.noninteractive.bg_stroke = Stroke::NONE;
 
         // Disable stroke around buttons on hover
-        let button_hover_stroke_default = ui.style().visuals.widgets.active.bg_stroke;
         ui.style_mut().visuals.widgets.active.bg_stroke = Stroke::NONE;
 
         let Self { actions, title } = self;
@@ -71,30 +71,32 @@ impl View for TitlePanel {
                 fill: COLOR_YELLOW,
                 inner_margin: Margin::same(0.0),
                 outer_margin: Margin::same(0.0),
-                rounding: Default::default(),
+                stroke: Stroke::NONE,
                 ..Default::default()
             })
             .show_inside(ui, |ui| {
                 StripBuilder::new(ui)
-                    .size(Size::exact(58.0))
+                    .size(Size::exact(52.0))
                     .vertical(|mut strip| {
                         strip.strip(|builder| {
                             builder
-                                .size(Size::exact(58.0))
+                                .size(Size::exact(52.0))
                                 .size(Size::remainder())
-                                .size(Size::exact(58.0))
+                                .size(Size::exact(52.0))
                                 .horizontal(|mut strip| {
                                     strip.cell(|ui| {
                                         if actions.left.is_some() {
                                             let action = actions.left.as_ref().unwrap();
                                             ui.centered_and_justified(|ui| {
                                                 let b = egui::widgets::Button::new(
-                                                    RichText::new(&action.icon.to_string()).size(24.0)
+                                                    RichText::new(&action.icon.to_string())
+                                                        .size(24.0)
+                                                        .color(COLOR_DARK)
                                                 ).fill(Color32::TRANSPARENT)
                                                     .ui(ui)
                                                     .interact(Sense::click_and_drag());
                                                 if b.drag_released() || b.clicked() {
-                                                    (action.on_click)();
+                                                    (action.on_click)(nav);
                                                 };
                                             });
                                         }
@@ -106,9 +108,7 @@ impl View for TitlePanel {
                                                 strip.cell(|ui| {
                                                     if title.is_some() {
                                                         ui.centered_and_justified(|ui| {
-                                                            ui.label(RichText::new(
-                                                                title.as_ref().unwrap().to_uppercase()
-                                                            ).size(20.0).color(Color32::BLACK));
+                                                            show_title(title.as_ref().unwrap(), ui);
                                                         });
                                                     }
                                                 });
@@ -119,11 +119,13 @@ impl View for TitlePanel {
                                             let action = actions.right.as_ref().unwrap();
                                             ui.centered_and_justified(|ui| {
                                                 let b = egui::widgets::Button::new(
-                                                    RichText::new(action.icon.to_string()).size(24.0)
+                                                    RichText::new(action.icon.to_string())
+                                                        .size(24.0)
+                                                        .color(COLOR_DARK)
                                                 ).fill(Color32::TRANSPARENT)
                                                     .ui(ui).interact(Sense::click_and_drag());
                                                 if b.drag_released() || b.clicked() {
-                                                    (action.on_click)();
+                                                    (action.on_click)(nav);
                                                 };
                                             });
                                         }
@@ -132,11 +134,20 @@ impl View for TitlePanel {
                         });
                     });
             });
-
-        // Enable stroke around panels
-        ui.style_mut().visuals.widgets.noninteractive.bg_stroke = panel_stroke_default;
-
-        // Enable stroke around buttons on hover
-        ui.style_mut().visuals.widgets.active.bg_stroke = button_hover_stroke_default;
     }
+}
+
+fn show_title(title: &String, ui: &mut egui::Ui) {
+    let mut job = LayoutJob::single_section(title.to_uppercase(), TextFormat {
+        font_id: FontId::proportional(20.0),
+        color: COLOR_DARK,
+        .. Default::default()
+    });
+    job.wrap = TextWrapping {
+        max_rows: 1,
+        break_anywhere: false,
+        overflow_character: Option::from('…'),
+        ..Default::default()
+    };
+    ui.label(job);
 }

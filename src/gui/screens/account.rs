@@ -34,6 +34,7 @@ impl super::Screen for Account {
 
     fn show(&mut self,
             ui: &mut egui::Ui,
+            frame: &mut eframe::Frame,
             nav: &mut Navigator,
             cb: &dyn PlatformCallbacks) {
 

@@ -19,16 +19,12 @@ pub use account::Account;
 
 use crate::gui::App;
 use crate::gui::platform::PlatformCallbacks;
+use crate::gui::views::title_panel::PanelAction;
 
 mod navigator;
 mod root;
 mod accounts;
 mod account;
-
-// pub trait TitlePanelActions {
-//     fn left(&self) -> Option<PanelAction>;
-//     fn right(&self) -> Option<PanelAction>;
-// }
 
 #[derive(Ord, Eq, PartialOrd, PartialEq)]
 pub enum ScreenId {
@@ -39,10 +35,9 @@ pub enum ScreenId {
 
 pub trait Screen {
     fn id(&self) -> ScreenId;
-    fn show(
-        &mut self,
+    fn show(&mut self,
         ui: &mut egui::Ui,
+        frame: &mut eframe::Frame,
         navigator: &mut Navigator,
-        cb: &dyn PlatformCallbacks
-    );
+        cb: &dyn PlatformCallbacks);
 }
