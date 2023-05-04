@@ -17,7 +17,7 @@ use std::collections::BTreeSet;
 use crate::gui::screens::ScreenId;
 
 pub struct Navigator {
-    pub(crate) stack: BTreeSet<ScreenId>,
+    stack: BTreeSet<ScreenId>,
     pub(crate) left_panel_open: bool,
 }
 
@@ -33,6 +33,10 @@ impl Default for Navigator {
 }
 
 impl Navigator {
+    pub fn current(&mut self) -> &ScreenId {
+        self.stack.last().unwrap()
+    }
+
     pub fn to(&mut self, id: ScreenId) {
         self.stack.insert(id);
     }

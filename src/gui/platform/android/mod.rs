@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::Context;
+use eframe::epaint::Stroke;
 use winit::platform::android::activity::AndroidApp;
 
 use crate::gui::{App, PlatformApp};
@@ -85,7 +85,10 @@ impl PlatformApp<Android> {
     }
 
     fn setup_visuals(ctx: &egui::Context) {
-        ctx.set_visuals(egui::Visuals::light());
+        let mut visuals = egui::Visuals::light();
+        // Disable stroke around panels by default
+        visuals.widgets.noninteractive.bg_stroke = Stroke::NONE;
+        ctx.set_visuals(visuals);
     }
 
     fn setup_fonts(ctx: &egui::Context) {
@@ -106,16 +109,6 @@ impl PlatformApp<Android> {
         //         },
         //     });
 
-        // fonts.font_data.insert(
-        //     "material".to_owned(),
-        //     egui::FontData::from_static(include_bytes!(
-        //         "../../../../fonts/material-light.ttf"
-        //     )).tweak(egui::FontTweak {
-        //         scale: 1.0,
-        //         y_offset_factor: 0.06,
-        //         y_offset: 0.0
-        //     }),
-        // );
         fonts.font_data.insert(
             "material".to_owned(),
             egui::FontData::from_static(include_bytes!(
@@ -160,7 +153,7 @@ impl PlatformApp<Android> {
             (Heading, FontId::new(20.0, Proportional)),
             (Name("icon".into()), FontId::new(24.0, Proportional)),
             (Body, FontId::new(16.0, Proportional)),
-            (Button, FontId::new(20.0, Proportional)),
+            (Button, FontId::new(18.0, Proportional)),
             (Small, FontId::new(12.0, Proportional)),
             (Monospace, FontId::new(16.0, Proportional)),
         ].into();

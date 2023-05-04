@@ -56,3 +56,11 @@ impl App {
     }
 }
 
+pub fn is_dual_panel_mode(frame: &mut Frame) -> bool {
+    is_landscape(frame) && frame.info().window_info.size.x > 400.0
+}
+
+pub fn is_landscape(frame: &mut Frame) -> bool {
+    return frame.info().window_info.size.x > frame.info().window_info.size.y
+}
+

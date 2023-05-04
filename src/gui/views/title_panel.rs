@@ -12,61 +12,55 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
 use eframe::epaint::text::{LayoutJob, TextFormat, TextWrapping};
 use egui::{Color32, FontId, RichText, Sense, Stroke, Widget};
 use egui::style::Margin;
 use egui_extras::{Size, StripBuilder};
+
 use crate::gui::{COLOR_DARK, COLOR_YELLOW};
 use crate::gui::screens::Navigator;
-use crate::gui::views::View;
 
-pub struct PanelAction {
+pub struct TitlePanelAction {
     pub(crate) icon: Box<str>,
     pub(crate) on_click: Box<dyn Fn(&mut Option<&mut Navigator>)>,
 }
 
 #[derive(Default)]
-pub struct PanelActions {
-    left: Option<PanelAction>,
-    right: Option<PanelAction>
+pub struct TitlePanelActions {
+    left: Option<TitlePanelAction>,
+    right: Option<TitlePanelAction>
 }
 
 #[derive(Default)]
-pub struct TitlePanel<'screen> {
-    title: Option<&'screen String>,
-    actions: PanelActions,
-    navigator: Option<&'screen mut Navigator>
+pub struct TitlePanel<'nav> {
+    title: Option<&'nav str>,
+    actions: TitlePanelActions,
+    navigator: Option<&'nav mut Navigator>
 }
 
-impl<'screen> TitlePanel<'screen> {
-    pub fn title(mut self, title: &'screen String) -> Self {
+impl<'nav> TitlePanel<'nav> {
+    pub fn title(mut self, title: &'nav str) -> Self {
         self.title = Some(title);
         self
     }
 
-    pub fn left_action(mut self, action: PanelAction) -> Self {
+    pub fn left_action(mut self, action: TitlePanelAction) -> Self {
         self.actions.left = Some(action);
         self
     }
 
-    pub fn right_action(mut self, action: PanelAction) -> Self {
+    pub fn right_action(mut self, action: TitlePanelAction) -> Self {
         self.actions.right = Some(action);
         self
     }
 
-    pub fn with_navigator(mut self, nav: &'screen mut Navigator) -> Self {
+    pub fn with_navigator(mut self, nav: &'nav mut Navigator) -> Self {
         self.navigator = Some(nav);
         self
     }
-}
 
-impl View for TitlePanel<'_> {
-    fn ui(&mut self, ui: &mut egui::Ui) {
-        // Disable stroke around panel
-        ui.style_mut().visuals.widgets.noninteractive.bg_stroke = Stroke::NONE;
-
-        // Disable stroke around buttons on hover
+    pub fn ui(&mut self, ui: &mut egui::Ui) {
+        // Disable stroke around panel buttons on hover
         ui.style_mut().visuals.widgets.active.bg_stroke = Stroke::NONE;
 
         let Self { actions, title, navigator } = self;
@@ -114,7 +108,7 @@ impl View for TitlePanel<'_> {
                                                 strip.cell(|ui| {
                                                     if title.is_some() {
                                                         ui.centered_and_justified(|ui| {
-                                                            show_title(title.as_ref().unwrap(), ui);
+                                                            Self::show_title(title.unwrap(), ui);
                                                         });
                                                     }
                                                 });
@@ -141,19 +135,20 @@ impl View for TitlePanel<'_> {
                     });
             });
     }
+
+    fn show_title(title: &str, ui: &mut egui::Ui) {
+        let mut job = LayoutJob::single_section(title.to_uppercase(), TextFormat {
+            font_id: FontId::proportional(20.0),
+            color: COLOR_DARK,
+            .. Default::default()
+        });
+        job.wrap = TextWrapping {
+            max_rows: 1,
+            break_anywhere: false,
+            overflow_character: Option::from('…'),
+            ..Default::default()
+        };
+        ui.label(job);
+    }
 }
 
-fn show_title(title: &String, ui: &mut egui::Ui) {
-    let mut job = LayoutJob::single_section(title.to_uppercase(), TextFormat {
-        font_id: FontId::proportional(20.0),
-        color: COLOR_DARK,
-        .. Default::default()
-    });
-    job.wrap = TextWrapping {
-        max_rows: 1,
-        break_anywhere: false,
-        overflow_character: Option::from('…'),
-        ..Default::default()
-    };
-    ui.label(job);
-}

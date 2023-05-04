@@ -13,8 +13,18 @@
 // limitations under the License.
 
 pub mod buttons;
-pub mod title_panel;
 
-pub trait View {
-    fn ui(&mut self, ui: &mut egui::Ui);
+mod title_panel;
+pub use crate::gui::views::title_panel::{TitlePanel, TitlePanelAction, TitlePanelActions};
+
+mod network;
+pub use crate::gui::views::network::Network;
+
+mod network_node;
+mod network_tuning;
+mod network_metrics;
+
+pub trait NetworkTab {
+    fn ui(&mut self, ui: &mut egui::Ui, node: &mut crate::node::Node);
+    fn title(&self) -> &String;
 }

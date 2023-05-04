@@ -27,9 +27,10 @@ pub const COLOR_LIGHT: egui::Color32 = egui::Color32::from_gray(240);
 pub const COLOR_DARK: egui::Color32 = egui::Color32::from_gray(60);
 
 // Material icons chars
-pub const SYM_ARROW_BACK: &str = "";//"";
-pub const SYM_ADD: &str = "＋";
+pub const SYM_ARROW_BACK: &str = "";
 pub const SYM_ACCOUNTS: &str = "";
 pub const SYM_NETWORK: &str = "";
-pub const SYM_SETTINGS: &str = "";//"";
+pub const SYM_SETTINGS: &str = "";
+pub const SYM_TUNING: &str = "";
+pub const SYM_METRICS: &str = "";
 

@@ -14,7 +14,7 @@ build = "src/build/build.rs"
 log = "0.4"
 #android-activity = { version = "0.4", features = ["game-activity"] }
 #grin_api = "5.1.2"
-#grin_chain = "5.1.2"
+grin_chain = "5.1.2"
 grin_config = "5.1.2"
 grin_core = "5.1.2"
 #grin_keychain = "5.1.2"
@@ -33,17 +33,19 @@ openssl-sys = { version = "0.9.82", features = ["vendored"] }
 pollster = "0.3.0"
 wgpu = "0.14.0"
 egui = "0.20.1"
-egui_extras = { version = "0.20.0", features = [ "svg" ] }
+egui_extras = { version = "0.20.0" }
 eframe = { version = "0.20.1", features = [ "wgpu" ] }
 egui_demo_lib = "0.20.0"
 
 ## grin_servers
 futures = "0.3"
+dirs = "2.0"
 
 ## other
 once_cell = "1.10.0"
 rust-i18n = "1.1.4"
 sys-locale = "0.3.0"
+chrono = "0.4.11"
 
 [patch.crates-io]
 winit = { git = "https://github.com/rib/winit", branch = "android-activity" }

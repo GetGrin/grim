@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+pub use account::Account;
+pub use accounts::Accounts;
 pub use navigator::Navigator;
 pub use root::Root;
-pub use accounts::Accounts;
-pub use account::Account;
 
 use crate::gui::App;
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::title_panel::PanelAction;
+use crate::gui::views::TitlePanelAction;
 
 mod navigator;
 mod root;
@@ -30,14 +30,14 @@ mod account;
 pub enum ScreenId {
     Root,
     Accounts,
-    Account
+    Account,
 }
 
 pub trait Screen {
     fn id(&self) -> ScreenId;
-    fn show(&mut self,
-        ui: &mut egui::Ui,
-        frame: &mut eframe::Frame,
-        navigator: &mut Navigator,
-        cb: &dyn PlatformCallbacks);
+    fn ui(&mut self,
+          ui: &mut egui::Ui,
+          frame: &mut eframe::Frame,
+          navigator: &mut Navigator,
+          cb: &dyn PlatformCallbacks);
 }

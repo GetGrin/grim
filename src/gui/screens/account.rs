@@ -32,11 +32,11 @@ impl super::Screen for Account {
         ScreenId::Account
     }
 
-    fn show(&mut self,
-            ui: &mut egui::Ui,
-            frame: &mut eframe::Frame,
-            nav: &mut Navigator,
-            cb: &dyn PlatformCallbacks) {
+    fn ui(&mut self,
+          ui: &mut egui::Ui,
+          frame: &mut eframe::Frame,
+          nav: &mut Navigator,
+          cb: &dyn PlatformCallbacks) {
 
     }
 }

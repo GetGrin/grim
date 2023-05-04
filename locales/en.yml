@@ -1,1 +1,4 @@
 accounts: Accounts
+node: Node
+metrics: Metrics
+settings: Settings

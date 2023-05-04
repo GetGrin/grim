@@ -13,13 +13,15 @@
 // limitations under the License.
 
 use std::ops::{Deref, DerefMut};
-use egui::Widget;
+use eframe::epaint::{Color32, Stroke};
+
+use egui::{Frame, Widget};
+
+use crate::gui::{SYM_ARROW_BACK, SYM_NETWORK, SYM_SETTINGS};
+use crate::gui::app::is_dual_panel_mode;
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::screens::{Navigator, Screen, ScreenId};
-use crate::gui::{SYM_ACCOUNTS, SYM_ARROW_BACK, SYM_NETWORK, SYM_SETTINGS};
-use crate::gui::screens::root::dual_panel_mode;
-use crate::gui::views::title_panel::{PanelAction, TitlePanel};
-use crate::gui::views::View;
+use crate::gui::views::{TitlePanel, TitlePanelAction};
 
 pub struct Accounts {
     title: String,
@@ -38,42 +40,43 @@ impl Screen for Accounts {
         ScreenId::Accounts
     }
 
-    fn show(&mut self,
-            ui: &mut egui::Ui,
-            frame: &mut eframe::Frame,
-            nav: &mut Navigator,
-            cb: &dyn PlatformCallbacks) {
+    fn ui(&mut self,
+          ui: &mut egui::Ui,
+          frame: &mut eframe::Frame,
+          nav: &mut Navigator,
+          cb: &dyn PlatformCallbacks) {
         let Self { title } = self;
 
         let mut panel: TitlePanel = TitlePanel::default()
             .title(title)
-            .right_action(PanelAction {
+            .right_action(TitlePanelAction {
                 icon: SYM_SETTINGS.into(),
-                on_click: Box::new(on_settings_click),
+                on_click: Box::new(|nav| {
+                    //TODO: open settings
+                }),
             })
             .with_navigator(nav);
-        if !dual_panel_mode(frame) {
-            panel = panel.left_action(PanelAction {
+        if !is_dual_panel_mode(frame) {
+            panel = panel.left_action(TitlePanelAction {
                 icon: SYM_NETWORK.into(),
-                on_click: Box::new(on_network_click),
+                on_click: Box::new(|nav|{
+                    nav.as_mut().unwrap().toggle_left_panel();
+                }),
             });
         }
         panel.ui(ui);
 
-        ui.label(format!("{}Here we go 10000 ツ", SYM_ARROW_BACK));
-        if ui.button("TEST").clicked() {
-            nav.to(ScreenId::Account)
-        };
-        if ui.button(format!("{}BACK ", SYM_ARROW_BACK)).clicked() {
-            nav.to(ScreenId::Account)
-        };
+        egui::CentralPanel::default().frame(Frame {
+            stroke: Stroke::new(1.0, Color32::from_gray(190)),
+            .. Default::default()
+        }).show_inside(ui, |ui| {
+            ui.label(format!("{}Here we go 10000 ツ", SYM_ARROW_BACK));
+            if ui.button("TEST").clicked() {
+                nav.to(ScreenId::Account)
+            };
+            if ui.button(format!("{}BACK ", SYM_ARROW_BACK)).clicked() {
+                nav.to(ScreenId::Account)
+            };
+        });
     }
-}
-
-fn on_network_click(nav: &mut Option<&mut Navigator>) {
-    nav.as_mut().unwrap().toggle_left_panel();
-}
-
-fn on_settings_click(nav: &mut Option<&mut Navigator>) {
-    //TODO: Open settings
 }
