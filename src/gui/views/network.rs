@@ -14,7 +14,9 @@
 
 use std::borrow::Cow;
 use std::collections::hash_map::DefaultHasher;
+use std::sync::atomic::Ordering;
 use std::time::Duration;
+use chrono::Utc;
 use eframe::epaint::{Color32, FontId, Stroke};
 use eframe::epaint::text::{LayoutJob, TextFormat, TextWrapping};
 use egui::{Response, RichText, Sense, Spinner, Widget};
@@ -160,6 +162,8 @@ impl Network {
     }
 
     fn draw_title_text(&self, mut builder: StripBuilder) {
+        let Self { node, ..} = self;
+
         let title_text = match &self.current_mode {
             Mode::Node => {
                 self.node_view.title()
@@ -172,10 +176,9 @@ impl Network {
             }
         };
 
-
-        let state = self.node.acquire_state();
-        let syncing = state.stats.is_some() &&
-            state.stats.as_ref().unwrap().sync_status != SyncStatus::NoSync;
+        let r_stats = node.state.read_stats();
+        let syncing = r_stats.is_some() &&
+            r_stats.as_ref().unwrap().sync_status != SyncStatus::NoSync;
 
         let mut b = builder.size(Size::remainder());
         if syncing {
@@ -188,15 +191,14 @@ impl Network {
                 });
             });
             if syncing {
-                let stats = state.stats.as_ref().unwrap();
                 strip.cell(|ui| {
                     ui.centered_and_justified(|ui| {
-                        let status_text = if state.is_stopping() {
+                        let status_text = if node.state.is_stopping() {
                             get_sync_status(SyncStatus::Shutdown).to_string()
-                        } else if state.is_restarting() {
+                        } else if node.state.is_restarting() {
                             "Restarting".to_string()
                         } else {
-                            get_sync_status(stats.sync_status).to_string()
+                            get_sync_status(r_stats.as_ref().unwrap().sync_status).to_string()
                         };
                         let mut job = LayoutJob::single_section(status_text, TextFormat {
                             font_id: FontId::proportional(15.0),
@@ -228,17 +230,22 @@ fn get_sync_status(sync_status: SyncStatus) -> Cow<'static, str> {
             ..
         } => {
             if highest_height == 0 {
-                Cow::Borrowed("Downloading headers data")
+                Cow::Borrowed("Downloading headers")
             } else {
                 let percent = sync_head.height * 100 / highest_height;
                 Cow::Owned(format!("Downloading headers: {}%", percent))
             }
         }
         SyncStatus::TxHashsetDownload(stat) => {
-            Cow::Borrowed("Downloading chain state")
+            if stat.total_size > 0 {
+                let percent = stat.downloaded_size * 100 / stat.total_size;
+                Cow::Owned(format!("Downloading chain state: {}%", percent))
+            } else {
+                Cow::Borrowed("Downloading chain state")
+            }
         }
         SyncStatus::TxHashsetSetup => {
-            Cow::Borrowed("Preparing chain state for validation")
+            Cow::Borrowed("Preparing state for validation")
         }
         SyncStatus::TxHashsetRangeProofsValidation {
             rproofs,
