@@ -62,7 +62,7 @@ impl NetworkTab for NetworkNode {
         }
 
         if ui.button("re-start").clicked() {
-            node.restart(ChainTypes::Mainnet);
+            node.restart();
         }
 
         if ui.button("start").clicked() {
@@ -70,7 +70,7 @@ impl NetworkTab for NetworkNode {
         }
     }
 
-    fn title(&self) -> &String {
+    fn name(&self) -> &String {
         &self.title
     }
 }

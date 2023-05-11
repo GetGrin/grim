@@ -42,7 +42,7 @@ impl Node {
     pub fn new(chain_type: ChainTypes, start: bool) -> Self {
         let state = Arc::new(NodeState::new(chain_type));
         if start {
-            Self::start_server(state.clone(), chain_type);
+            start_server_thread(state.clone(), chain_type);
         }
         Self { state }
     }
@@ -54,22 +54,17 @@ impl Node {
 
     /// Start server with provided chain type
     pub fn start(&self, chain_type: ChainTypes) {
-        if !self.state.is_restarting() && !self.state.is_running() {
-            Self::start_server(self.state.clone(), chain_type);
+        if !self.state.is_running() {
+            start_server_thread(self.state.clone(), chain_type);
         }
     }
 
-    fn start_server(state: Arc<NodeState>, chain_type: ChainTypes) {
-        let server = start_server(&chain_type);
-        start_server_thread(state, server);
-    }
-
-    /// Restart server with provided chain type
-    pub fn restart(&mut self, chain_type: ChainTypes) {
+    /// Restart server or start when not running
+    pub fn restart(&mut self) {
         if self.state.is_running() {
             self.state.restart_needed.store(true, Ordering::Relaxed);
         } else {
-            self.start(chain_type);
+            self.start(*self.state.chain_type);
         }
     }
 }
@@ -96,23 +91,83 @@ impl NodeState {
         }
     }
 
+    /// Check if server is running when stats are not empty
+    pub fn is_running(&self) -> bool {
+        self.get_stats().is_some()
+    }
+
     /// Check if server is stopping
     pub fn is_stopping(&self) -> bool {
-        return self.stop_needed.load(Ordering::Relaxed)
+        self.stop_needed.load(Ordering::Relaxed)
     }
 
     /// Check if server is restarting
     pub fn is_restarting(&self) -> bool {
-        return self.restart_needed.load(Ordering::Relaxed)
+        self.restart_needed.load(Ordering::Relaxed)
     }
 
-    pub fn is_running(&self) -> bool {
-        self.read_stats().is_some()
-    }
-
-    pub fn read_stats(&self) -> RwLockReadGuard<'_, Option<ServerStats>> {
+    /// Get server stats
+    pub fn get_stats(&self) -> RwLockReadGuard<'_, Option<ServerStats>> {
         self.stats.read().unwrap()
     }
+
+    /// Get server sync status, empty when server is not running
+    pub fn get_sync_status(&self) -> Option<SyncStatus> {
+        // return shutdown status when node is stopping
+        if self.is_stopping() {
+            return Some(SyncStatus::Shutdown)
+        }
+
+        let stats = self.get_stats();
+        // return sync status when server is running (stats are not empty)
+        if stats.is_some() {
+            return Some(stats.as_ref().unwrap().sync_status)
+        }
+        None
+    }
+
+    /// Check if server is syncing based on sync status
+    pub fn is_syncing(&self) -> bool {
+        let sync_status = self.get_sync_status();
+        match sync_status {
+            None => { self.is_restarting() }
+            Some(s) => { s!= SyncStatus::NoSync }
+        }
+    }
+}
+
+/// Start a thread to launch server and update node state with server stats
+fn start_server_thread(state: Arc<NodeState>, chain_type: ChainTypes) -> JoinHandle<()> {
+    thread::spawn(move || {
+        let mut server = start_server(&chain_type);
+
+        loop {
+            thread::sleep(Duration::from_millis(500));
+
+            if state.is_restarting() {
+                server.stop();
+
+                // Create new server with current chain type
+                server = start_server(&state.chain_type);
+
+                state.restart_needed.store(false, Ordering::Relaxed);
+            } else if state.is_stopping() {
+                server.stop();
+
+                let mut w_stats = state.stats.write().unwrap();
+                *w_stats = None;
+
+                state.stop_needed.store(false, Ordering::Relaxed);
+                break;
+            } else {
+                let stats = server.get_server_stats();
+                if stats.is_ok() {
+                    let mut w_stats = state.stats.write().unwrap();
+                    *w_stats = Some(stats.as_ref().ok().unwrap().clone());
+                }
+            }
+        }
+    })
 }
 
 /// Start server with provided chain type
@@ -135,9 +190,11 @@ fn start_server(chain_type: &ChainTypes) -> Server {
     let server_config = config.members.as_ref().unwrap().server.clone();
 
     // Remove lock file (in case if we have running node from another app)
-    let mut db_path = PathBuf::from(&server_config.db_root);
-    db_path.push("grin.lock");
-    fs::remove_file(db_path).unwrap();
+    {
+        let mut db_path = PathBuf::from(&server_config.db_root);
+        db_path.push("grin.lock");
+        fs::remove_file(db_path).unwrap();
+    }
 
     // Initialize our global chain_type, feature flags (NRD kernel support currently),
     // accept_fee_base, and future_time_limit.
@@ -184,7 +241,7 @@ fn start_server(chain_type: &ChainTypes) -> Server {
         fs::remove_file(db_path).unwrap();
 
         // Remove chain data on server start error
-        let dirs_to_remove: Vec<&str> = vec!["header", "lmdb", "txhashset", "peer"];
+        let dirs_to_remove: Vec<&str> = vec!["header", "lmdb", "txhashset"];
         for dir in dirs_to_remove {
             let mut path = PathBuf::from(&server_config.db_root);
             path.push(dir);
@@ -200,34 +257,4 @@ fn start_server(chain_type: &ChainTypes) -> Server {
     }
 
     server_result.unwrap()
-}
-
-/// Start a thread to launch server and update node state with server stats
-fn start_server_thread(state: Arc<NodeState>, mut server: Server) -> JoinHandle<()> {
-    thread::spawn(move || loop {
-        thread::sleep(Duration::from_millis(500));
-
-        if state.is_restarting() {
-            server.stop();
-
-            // Create new server with current chain type
-            server = start_server(&state.chain_type);
-
-            state.restart_needed.store(false, Ordering::Relaxed);
-        } else if state.is_stopping() {
-            server.stop();
-
-            let mut w_stats = state.stats.write().unwrap();
-            *w_stats = None;
-
-            state.stop_needed.store(false, Ordering::Relaxed);
-            break;
-        } else {
-            let stats = server.get_server_stats();
-            if stats.is_ok() {
-                let mut w_stats = state.stats.write().unwrap();
-                *w_stats = Some(stats.as_ref().ok().unwrap().clone());
-            }
-        }
-    })
 }

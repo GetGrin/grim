@@ -26,5 +26,5 @@ mod network_metrics;
 
 pub trait NetworkTab {
     fn ui(&mut self, ui: &mut egui::Ui, node: &mut crate::node::Node);
-    fn title(&self) -> &String;
+    fn name(&self) -> &String;
 }

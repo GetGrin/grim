@@ -98,7 +98,7 @@ impl Network {
                 self.draw_tabs(ui);
             });
 
-        ui.ctx().request_repaint_after(Duration::from_millis(500));
+        ui.ctx().request_repaint_after(Duration::from_millis(1000));
     }
 
     fn draw_tabs(&self, ui: &mut egui::Ui) {
@@ -166,19 +166,17 @@ impl Network {
 
         let title_text = match &self.current_mode {
             Mode::Node => {
-                self.node_view.title()
+                self.node_view.name()
             }
             Mode::Metrics => {
-                self.node_view.title()
+                self.node_view.name()
             }
             Mode::Tuning => {
-                self.node_view.title()
+                self.node_view.name()
             }
         };
 
-        let r_stats = node.state.read_stats();
-        let syncing = r_stats.is_some() &&
-            r_stats.as_ref().unwrap().sync_status != SyncStatus::NoSync;
+        let syncing = node.state.is_syncing();
 
         let mut b = builder.size(Size::remainder());
         if syncing {
@@ -193,12 +191,11 @@ impl Network {
             if syncing {
                 strip.cell(|ui| {
                     ui.centered_and_justified(|ui| {
-                        let status_text = if node.state.is_stopping() {
-                            get_sync_status(SyncStatus::Shutdown).to_string()
-                        } else if node.state.is_restarting() {
+                        let status_text = if node.state.is_restarting() {
                             "Restarting".to_string()
                         } else {
-                            get_sync_status(r_stats.as_ref().unwrap().sync_status).to_string()
+                            let sync_status = node.state.get_sync_status();
+                            get_sync_status_text(sync_status.unwrap()).to_string()
                         };
                         let mut job = LayoutJob::single_section(status_text, TextFormat {
                             font_id: FontId::proportional(15.0),
@@ -219,7 +216,7 @@ impl Network {
     }
 }
 
-fn get_sync_status(sync_status: SyncStatus) -> Cow<'static, str> {
+fn get_sync_status_text(sync_status: SyncStatus) -> Cow<'static, str> {
     match sync_status {
         SyncStatus::Initial => Cow::Borrowed("Initializing"),
         SyncStatus::NoSync => Cow::Borrowed("Running"),
