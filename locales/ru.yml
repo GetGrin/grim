@@ -1,1 +1,33 @@
 accounts: Аккаунты
+integrated_node: Встроенный узел
+metrics: Метрики
+settings: Настройки
+server_restarting: Сервер перезапускается
+server_down: Сервер выключен
+header: Заголовок
+block: Блок
+hash: Хэш
+height: Высота
+difficulty: Сложность
+time_utc: Время (UTC)
+transactions: Транзакции
+main_pool: Основной пул
+stem_pool: Stem пул
+data: Данные
+size: Размер (ГБ)
+peers: Пиры
+sync_status:
+  initial: Запуск сервера
+  no_sync: Сервер запущен
+  awaiting_peers: Ожидание пиров
+  header_sync: Загрузка заголовков
+  header_sync_percent: 'Загрузка заголовков: %{percent}%'
+  tx_hashset_download: Загрузка состояния цепи
+  tx_hashset_download_percent: 'Загрузка состояния цепи: %{percent}%'
+  tx_hashset_setup: Подготовка состояния для проверки
+  tx_hashset_range_proofs_validation: 'Проверка доказательств: %{percent}%'
+  tx_hashset_kernels_validation: 'Проверка ядер: %{percent}%'
+  tx_hashset_save: Сохранение состояния цепи
+  body_sync: Загрузка блоков
+  body_sync_percent: 'Загрузка блоков: %{percent}%'
+  shutdown: Выключение

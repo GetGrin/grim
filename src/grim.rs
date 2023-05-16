@@ -13,7 +13,7 @@
 // limitations under the License.
 
 use eframe::{AppCreator, NativeOptions, Renderer, Theme};
-use log::LevelFilter::{Debug, Info, Trace, Warn};
+use log::LevelFilter::Info;
 #[cfg(target_os = "android")]
 use winit::platform::android::activity::AndroidApp;
 

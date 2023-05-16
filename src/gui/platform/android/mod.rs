@@ -96,26 +96,13 @@ impl PlatformApp<Android> {
 
         let mut fonts = egui::FontDefinitions::default();
 
-        // Tweak emoji icons to look nice against main font y-offset
-        // fonts.font_data.insert(
-        //     "emoji-icon-font".to_owned(),
-        //     egui::FontData {
-        //         font: fonts.font_data.get("emoji-icon-font").unwrap().clone().font,
-        //         index: 0,
-        //         tweak: egui::FontTweak {
-        //             scale: 0.88,
-        //             y_offset_factor: 0.26,
-        //             y_offset: 0.0,
-        //         },
-        //     });
-
         fonts.font_data.insert(
-            "material".to_owned(),
+            "phosphor".to_owned(),
             egui::FontData::from_static(include_bytes!(
-                "../../../../fonts/material.otf"
+                "../../../../fonts/phosphor.ttf"
             )).tweak(egui::FontTweak {
                 scale: 1.0,
-                y_offset_factor: 0.16,
+                y_offset_factor: 0.14,
                 y_offset: 0.0
             }),
         );
@@ -123,7 +110,7 @@ impl PlatformApp<Android> {
             .families
             .entry(Proportional)
             .or_default()
-            .insert(0, "material".to_owned());
+            .insert(0, "phosphor".to_owned());
 
         fonts.font_data.insert(
             "noto".to_owned(),
@@ -141,8 +128,6 @@ impl PlatformApp<Android> {
             .or_default()
             .insert(0, "noto".to_owned());
 
-
-
         ctx.set_fonts(fonts);
 
         use egui::FontId;
@@ -151,7 +136,6 @@ impl PlatformApp<Android> {
         let mut style = (*ctx.style()).clone();
         style.text_styles = [
             (Heading, FontId::new(20.0, Proportional)),
-            (Name("icon".into()), FontId::new(24.0, Proportional)),
             (Body, FontId::new(16.0, Proportional)),
             (Button, FontId::new(18.0, Proportional)),
             (Small, FontId::new(12.0, Proportional)),

@@ -12,14 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub mod buttons;
+use eframe::epaint::{Color32, Stroke};
 
-mod title_panel;
+pub use crate::gui::views::network::Network;
 pub use crate::gui::views::title_panel::{TitlePanel, TitlePanelAction, TitlePanelActions};
 
-mod network;
-pub use crate::gui::views::network::Network;
+pub mod common;
 
+mod title_panel;
+
+mod network;
 mod network_node;
 mod network_tuning;
 mod network_metrics;
@@ -28,3 +30,6 @@ pub trait NetworkTab {
     fn ui(&mut self, ui: &mut egui::Ui, node: &mut crate::node::Node);
     fn name(&self) -> &String;
 }
+
+pub const DEFAULT_STROKE: Stroke = Stroke { width: 1.0, color: Color32::from_gray(190) };
+

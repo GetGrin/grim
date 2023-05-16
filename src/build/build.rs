@@ -13,8 +13,7 @@
 // limitations under the License.
 
 use std::env;
-use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::path::Path;
 
 fn main() {
     // build and versioning information

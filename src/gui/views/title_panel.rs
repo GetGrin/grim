@@ -12,17 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use eframe::epaint::{FontId, Stroke};
 use eframe::epaint::text::{LayoutJob, TextFormat, TextWrapping};
-use egui::{Color32, FontId, RichText, Sense, Stroke, Widget};
 use egui::style::Margin;
 use egui_extras::{Size, StripBuilder};
+use crate::gui::colors::{COLOR_DARK, COLOR_YELLOW};
 
-use crate::gui::{COLOR_DARK, COLOR_YELLOW};
 use crate::gui::screens::Navigator;
+use crate::gui::views::common::title_button;
 
 pub struct TitlePanelAction {
     pub(crate) icon: Box<str>,
-    pub(crate) on_click: Box<dyn Fn(&mut Option<&mut Navigator>)>,
+    pub(crate) on_click: Box<dyn Fn(&mut Navigator)>,
 }
 
 #[derive(Default)]
@@ -31,15 +32,22 @@ pub struct TitlePanelActions {
     right: Option<TitlePanelAction>
 }
 
-#[derive(Default)]
 pub struct TitlePanel<'nav> {
-    title: Option<&'nav str>,
+    title: Option<String>,
     actions: TitlePanelActions,
-    navigator: Option<&'nav mut Navigator>
+    nav: &'nav mut Navigator
 }
 
 impl<'nav> TitlePanel<'nav> {
-    pub fn title(mut self, title: &'nav str) -> Self {
+    pub fn new(nav: &'nav mut Navigator) -> TitlePanel<'nav> {
+        Self {
+            title: None,
+            actions: Default::default(),
+            nav,
+        }
+    }
+
+    pub fn title(mut self, title: String) -> Self {
         self.title = Some(title);
         self
     }
@@ -54,16 +62,11 @@ impl<'nav> TitlePanel<'nav> {
         self
     }
 
-    pub fn with_navigator(mut self, nav: &'nav mut Navigator) -> Self {
-        self.navigator = Some(nav);
-        self
-    }
-
     pub fn ui(&mut self, ui: &mut egui::Ui) {
         // Disable stroke around panel buttons on hover
         ui.style_mut().visuals.widgets.active.bg_stroke = Stroke::NONE;
 
-        let Self { actions, title, navigator } = self;
+        let Self { actions, title, nav } = self;
 
         egui::TopBottomPanel::top("title_panel")
             .resizable(false)
@@ -85,50 +88,19 @@ impl<'nav> TitlePanel<'nav> {
                                 .size(Size::exact(52.0))
                                 .horizontal(|mut strip| {
                                     strip.cell(|ui| {
-                                        if actions.left.is_some() {
-                                            let action = actions.left.as_ref().unwrap();
-                                            ui.centered_and_justified(|ui| {
-                                                let b = egui::widgets::Button::new(
-                                                    RichText::new(&action.icon.to_string())
-                                                        .size(24.0)
-                                                        .color(COLOR_DARK)
-                                                ).fill(Color32::TRANSPARENT)
-                                                    .ui(ui)
-                                                    .interact(Sense::click_and_drag());
-                                                if b.drag_released() || b.clicked() {
-                                                    (action.on_click)(navigator);
-                                                };
-                                            });
-                                        }
+                                        Self::show_action(ui, actions.left.as_ref(), nav);
                                     });
                                     strip.strip(|builder| {
                                         builder
                                             .size(Size::remainder())
                                             .vertical(|mut strip| {
                                                 strip.cell(|ui| {
-                                                    if title.is_some() {
-                                                        ui.centered_and_justified(|ui| {
-                                                            Self::show_title(title.unwrap(), ui);
-                                                        });
-                                                    }
+                                                    Self::show_title(&*title, ui);
                                                 });
                                             });
                                     });
                                     strip.cell(|ui| {
-                                        if actions.right.is_some() {
-                                            let action = actions.right.as_ref().unwrap();
-                                            ui.centered_and_justified(|ui| {
-                                                let b = egui::widgets::Button::new(
-                                                    RichText::new(action.icon.to_string())
-                                                        .size(24.0)
-                                                        .color(COLOR_DARK)
-                                                ).fill(Color32::TRANSPARENT)
-                                                    .ui(ui).interact(Sense::click_and_drag());
-                                                if b.drag_released() || b.clicked() {
-                                                    (action.on_click)(navigator);
-                                                };
-                                            });
-                                        }
+                                        Self::show_action(ui, actions.right.as_ref(), nav);
                                     });
                                 });
                         });
@@ -136,19 +108,38 @@ impl<'nav> TitlePanel<'nav> {
             });
     }
 
-    fn show_title(title: &str, ui: &mut egui::Ui) {
-        let mut job = LayoutJob::single_section(title.to_uppercase(), TextFormat {
-            font_id: FontId::proportional(20.0),
-            color: COLOR_DARK,
-            .. Default::default()
-        });
-        job.wrap = TextWrapping {
-            max_rows: 1,
-            break_anywhere: false,
-            overflow_character: Option::from('…'),
-            ..Default::default()
-        };
-        ui.label(job);
+    fn show_action(ui: &mut egui::Ui,
+                   action: Option<&TitlePanelAction>,
+                   navigator: &mut Navigator) {
+        if action.is_some() {
+            let action = action.unwrap();
+            ui.centered_and_justified(|ui| {
+                title_button(ui, &action.icon, || {
+                    (action.on_click)(navigator);
+                });
+            });
+        }
+    }
+
+    fn show_title(title: &Option<String>, ui: &mut egui::Ui) {
+        if title.is_some() {
+            ui.centered_and_justified(|ui| {
+                let title_text = title.as_ref().unwrap().to_uppercase();
+                let mut job = LayoutJob::single_section(title_text, TextFormat {
+                    font_id: FontId::proportional(20.0),
+                    color: COLOR_DARK,
+                    .. Default::default()
+                });
+                job.wrap = TextWrapping {
+                    max_rows: 1,
+                    break_anywhere: false,
+                    overflow_character: Option::from('﹍'),
+                    ..Default::default()
+                };
+                ui.label(job);
+
+            });
+        }
     }
 }
 

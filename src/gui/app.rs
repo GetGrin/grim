@@ -12,15 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::cmp::min;
-
-use eframe::Frame;
-use egui::{Color32, Context, Stroke};
+use eframe::epaint::Stroke;
+use egui::{Context, Frame};
 use egui::style::Margin;
 
-use crate::gui::{COLOR_LIGHT, COLOR_YELLOW};
+use crate::gui::colors::COLOR_LIGHT;
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::screens::{Root, Screen};
+use crate::gui::screens::Root;
 
 pub struct PlatformApp<Platform> {
     pub(crate) app: App,
@@ -40,10 +38,10 @@ impl Default for App {
 }
 
 impl App {
-    pub fn ui(&mut self, ctx: &Context, frame: &mut Frame, cb: &dyn PlatformCallbacks) {
+    pub fn ui(&mut self, ctx: &Context, frame: &mut eframe::Frame, cb: &dyn PlatformCallbacks) {
         let Self { root } = self;
         egui::CentralPanel::default()
-            .frame(egui::Frame {
+            .frame(Frame {
                 inner_margin: Margin::same(0.0),
                 outer_margin: Margin::same(0.0),
                 stroke: Stroke::NONE,
@@ -56,11 +54,11 @@ impl App {
     }
 }
 
-pub fn is_dual_panel_mode(frame: &mut Frame) -> bool {
+pub fn is_dual_panel_mode(frame: &mut eframe::Frame) -> bool {
     is_landscape(frame) && frame.info().window_info.size.x > 400.0
 }
 
-pub fn is_landscape(frame: &mut Frame) -> bool {
+pub fn is_landscape(frame: &mut eframe::Frame) -> bool {
     return frame.info().window_info.size.x > frame.info().window_info.size.y
 }
 

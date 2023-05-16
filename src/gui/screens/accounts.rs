@@ -12,28 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::ops::{Deref, DerefMut};
-use eframe::epaint::{Color32, Stroke};
+use egui::Frame;
 
-use egui::{Frame, Widget};
-
-use crate::gui::{SYM_ARROW_BACK, SYM_NETWORK, SYM_SETTINGS};
 use crate::gui::app::is_dual_panel_mode;
+use crate::gui::icons::{ARROW_CIRCLE_LEFT, GEAR_SIX, GLOBE};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::screens::{Navigator, Screen, ScreenId};
-use crate::gui::views::{TitlePanel, TitlePanelAction};
+use crate::gui::views::{DEFAULT_STROKE, TitlePanel, TitlePanelAction};
 
-pub struct Accounts {
-    title: String,
-}
-
-impl Default for Accounts {
-    fn default() -> Self {
-        Self {
-            title: t!("accounts"),
-        }
-    }
-}
+#[derive(Default)]
+pub struct Accounts {}
 
 impl Screen for Accounts {
     fn id(&self) -> ScreenId {
@@ -45,36 +33,33 @@ impl Screen for Accounts {
           frame: &mut eframe::Frame,
           nav: &mut Navigator,
           cb: &dyn PlatformCallbacks) {
-        let Self { title } = self;
-
-        let mut panel: TitlePanel = TitlePanel::default()
-            .title(title)
+        let mut panel: TitlePanel = TitlePanel::new(nav)
+            .title(t!("accounts"))
             .right_action(TitlePanelAction {
-                icon: SYM_SETTINGS.into(),
+                icon: GEAR_SIX.into(),
                 on_click: Box::new(|nav| {
                     //TODO: open settings
                 }),
-            })
-            .with_navigator(nav);
+            });
         if !is_dual_panel_mode(frame) {
             panel = panel.left_action(TitlePanelAction {
-                icon: SYM_NETWORK.into(),
+                icon: GLOBE.into(),
                 on_click: Box::new(|nav|{
-                    nav.as_mut().unwrap().toggle_left_panel();
+                    nav.toggle_left_panel();
                 }),
             });
         }
         panel.ui(ui);
 
         egui::CentralPanel::default().frame(Frame {
-            stroke: Stroke::new(1.0, Color32::from_gray(190)),
+            stroke: DEFAULT_STROKE,
             .. Default::default()
         }).show_inside(ui, |ui| {
-            ui.label(format!("{}Here we go 10000 ツ", SYM_ARROW_BACK));
+            ui.label(format!("{}Here we go 10000 ツ", ARROW_CIRCLE_LEFT));
             if ui.button("TEST").clicked() {
                 nav.to(ScreenId::Account)
             };
-            if ui.button(format!("{}BACK ", SYM_ARROW_BACK)).clicked() {
+            if ui.button(format!("{}BACK ", ARROW_CIRCLE_LEFT)).clicked() {
                 nav.to(ScreenId::Account)
             };
         });

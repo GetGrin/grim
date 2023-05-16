@@ -19,18 +19,8 @@ pub use app::PlatformApp;
 pub mod platform;
 pub mod screens;
 pub mod views;
+pub mod icons;
+pub mod colors;
 
 mod app;
-
-pub const COLOR_YELLOW: egui::Color32 = egui::Color32::from_rgb(254, 241, 2);
-pub const COLOR_LIGHT: egui::Color32 = egui::Color32::from_gray(240);
-pub const COLOR_DARK: egui::Color32 = egui::Color32::from_gray(60);
-
-// Material icons chars
-pub const SYM_ARROW_BACK: &str = "";
-pub const SYM_ACCOUNTS: &str = "";
-pub const SYM_NETWORK: &str = "";
-pub const SYM_SETTINGS: &str = "";
-pub const SYM_TUNING: &str = "";
-pub const SYM_METRICS: &str = "";
 

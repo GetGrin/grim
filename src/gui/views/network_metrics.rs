@@ -11,3 +11,29 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
+use egui::Ui;
+use crate::gui::views::NetworkTab;
+use crate::node::Node;
+
+pub struct NetworkMetrics {
+    title: String
+}
+
+impl Default for NetworkMetrics {
+    fn default() -> Self {
+        Self {
+            title: t!("metrics"),
+        }
+    }
+}
+
+impl NetworkTab for NetworkMetrics {
+    fn ui(&mut self, ui: &mut Ui, node: &mut Node) {
+
+    }
+
+    fn name(&self) -> &String {
+        &self.title
+    }
+}

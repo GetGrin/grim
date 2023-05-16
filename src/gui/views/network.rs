@@ -12,40 +12,39 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::borrow::Cow;
-use std::collections::hash_map::DefaultHasher;
-use std::sync::atomic::Ordering;
 use std::time::Duration;
-use chrono::Utc;
-use eframe::epaint::{Color32, FontId, Stroke};
+
+use eframe::emath::lerp;
+use eframe::epaint::{Color32, FontId, Rgba, Stroke};
 use eframe::epaint::text::{LayoutJob, TextFormat, TextWrapping};
-use egui::{Response, RichText, Sense, Spinner, Widget};
+use egui::RichText;
 use egui::style::Margin;
 use egui_extras::{Size, StripBuilder};
 use grin_chain::SyncStatus;
-
 use grin_core::global::ChainTypes;
-use grin_servers::ServerStats;
+
 use crate::gui::app::is_dual_panel_mode;
+use crate::gui::colors::{COLOR_DARK, COLOR_YELLOW};
+use crate::gui::icons::{CARDHOLDER, DATABASE, DOTS_THREE_OUTLINE_VERTICAL, FACTORY, FADERS, GAUGE};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::screens::Navigator;
-use crate::gui::{COLOR_DARK, COLOR_LIGHT, COLOR_YELLOW, SYM_ACCOUNTS, SYM_METRICS, SYM_NETWORK};
-
-use crate::gui::views::{NetworkTab, TitlePanel, TitlePanelAction};
+use crate::gui::views::{DEFAULT_STROKE, NetworkTab};
+use crate::gui::views::common::{tab_button, title_button};
 use crate::gui::views::network_node::NetworkNode;
-use crate::node;
 use crate::node::Node;
 
+#[derive(PartialEq)]
 enum Mode {
     Node,
-    // Miner,
     Metrics,
+    Miner,
     Tuning
 }
 
 pub struct Network {
-    current_mode: Mode,
     node: Node,
+
+    current_mode: Mode,
     node_view: NetworkNode,
 }
 
@@ -80,17 +79,9 @@ impl Network {
                 self.draw_title(ui, frame, nav);
             });
 
-        egui::CentralPanel::default().frame(egui::Frame {
-            stroke: Stroke::new(1.0, Color32::from_gray(190)),
-            fill: Color32::WHITE,
-            .. Default::default()
-        }).show_inside(ui, |ui| {
-            self.draw_tab_content(ui);
-        });
-
         egui::TopBottomPanel::bottom("network_tabs")
             .frame(egui::Frame {
-                stroke: Stroke::new(1.0, Color32::from_gray(190)),
+                outer_margin: Margin::same(6.0),
                 .. Default::default()
             })
             .resizable(false)
@@ -98,19 +89,41 @@ impl Network {
                 self.draw_tabs(ui);
             });
 
-        ui.ctx().request_repaint_after(Duration::from_millis(1000));
+        egui::CentralPanel::default().frame(egui::Frame {
+            stroke: DEFAULT_STROKE,
+            inner_margin: Margin::same(4.0),
+            fill: Color32::WHITE,
+            .. Default::default()
+        }).show_inside(ui, |ui| {
+            self.draw_tab_content(ui);
+        });
+
+
     }
 
-    fn draw_tabs(&self, ui: &mut egui::Ui) {
-        ui.vertical_centered(|ui| {
-            ui.columns(3, |columns| {
-                columns[0].horizontal_wrapped(|ui| {
-                });
-                columns[1].vertical_centered(|ui| {
-                });
-                columns[2].horizontal_wrapped(|ui| {
+    fn draw_tabs(&mut self, ui: &mut egui::Ui) {
+        ui.columns(4, |columns| {
+            columns[0].vertical_centered(|ui| {
+                tab_button(ui, DATABASE, self.current_mode == Mode::Node, || {
+                    self.current_mode = Mode::Node;
                 });
             });
+            columns[1].vertical_centered(|ui| {
+                tab_button(ui, GAUGE, self.current_mode == Mode::Metrics, || {
+                    self.current_mode = Mode::Metrics;
+                });
+            });
+            columns[2].vertical_centered(|ui| {
+                tab_button(ui, FACTORY, self.current_mode == Mode::Miner, || {
+                    self.current_mode = Mode::Miner;
+                });
+            });
+            columns[3].vertical_centered(|ui| {
+                tab_button(ui, FADERS, self.current_mode == Mode::Tuning, || {
+                    self.current_mode = Mode::Tuning;
+                });
+            });
+
         });
     }
 
@@ -121,6 +134,7 @@ impl Network {
             }
             Mode::Metrics => {}
             Mode::Tuning => {}
+            Mode::Miner => {}
         }
     }
 
@@ -137,22 +151,22 @@ impl Network {
                         .size(Size::remainder())
                         .size(Size::exact(52.0))
                         .horizontal(|mut strip| {
-                            strip.empty();
+                            strip.cell(|ui| {
+                                ui.centered_and_justified(|ui| {
+                                    title_button(ui, DOTS_THREE_OUTLINE_VERTICAL, || {
+                                        //TODO: Actions for node
+                                    });
+                                });
+                            });
                             strip.strip(|builder| {
                                 self.draw_title_text(builder);
                             });
                             strip.cell(|ui| {
                                 if !is_dual_panel_mode(frame) {
                                     ui.centered_and_justified(|ui| {
-                                        let b = egui::widgets::Button::new(
-                                            RichText::new(SYM_ACCOUNTS)
-                                                .size(24.0)
-                                                .color(COLOR_DARK)
-                                        ).fill(Color32::TRANSPARENT)
-                                            .ui(ui).interact(Sense::click_and_drag());
-                                        if b.drag_released() || b.clicked() {
+                                        title_button(ui, CARDHOLDER, || {
                                             nav.toggle_left_panel();
-                                        };
+                                        });
                                     });
                                 }
                             });
@@ -161,9 +175,7 @@ impl Network {
             });
     }
 
-    fn draw_title_text(&self, mut builder: StripBuilder) {
-        let Self { node, ..} = self;
-
+    fn draw_title_text(&self, builder: StripBuilder) {
         let title_text = match &self.current_mode {
             Mode::Node => {
                 self.node_view.name()
@@ -171,78 +183,107 @@ impl Network {
             Mode::Metrics => {
                 self.node_view.name()
             }
+            Mode::Miner => {
+                self.node_view.name()
+            }
             Mode::Tuning => {
                 self.node_view.name()
             }
         };
 
-        let syncing = node.state.is_syncing();
-
-        let mut b = builder.size(Size::remainder());
-        if syncing {
-            b = b.size(Size::remainder());
-        }
-        b.vertical(|mut strip| {
-            strip.cell(|ui| {
-                ui.centered_and_justified(|ui| {
-                    ui.heading(title_text.to_uppercase());
-                });
-            });
-            if syncing {
+        builder
+            .size(Size::exact(19.0))
+            .size(Size::remainder())
+            .vertical(|mut strip| {
                 strip.cell(|ui| {
                     ui.centered_and_justified(|ui| {
-                        let status_text = if node.state.is_restarting() {
-                            "Restarting".to_string()
+                        ui.label(RichText::new(title_text.to_uppercase())
+                            .size(19.0)
+                            .color(COLOR_DARK));
+                    });
+                });
+                strip.cell(|ui| {
+                    ui.centered_and_justified(|ui| {
+                        // Select sync status text
+                        let sync_status = self.node.state.get_sync_status();
+                        let status_text = if self.node.state.is_restarting() {
+                            t!("server_restarting")
                         } else {
-                            let sync_status = node.state.get_sync_status();
-                            get_sync_status_text(sync_status.unwrap()).to_string()
+                            match sync_status {
+                                None => {
+                                    t!("server_down")
+                                }
+                                Some(ss) => {
+                                    get_sync_status_text(ss).to_string()
+                                }
+                            }
                         };
+
+                        // Setup text color animation based on sync status
+                        let idle = match sync_status {
+                            None => { !self.node.state.is_starting() }
+                            Some(ss) => { ss == SyncStatus::NoSync }
+                        };
+                        let (dark, bright) = (0.3, 1.0);
+                        let color_factor = if !idle {
+                            lerp(dark..=bright, ui.input().time.cos().abs())
+                        } else {
+                            bright
+                        };
+
+                        // Repaint based on sync status
+                        if idle {
+                            ui.ctx().request_repaint_after(Duration::from_millis(600));
+                        } else {
+                            ui.ctx().request_repaint();
+                        }
+
+                        // Draw sync text
                         let mut job = LayoutJob::single_section(status_text, TextFormat {
                             font_id: FontId::proportional(15.0),
-                            color: COLOR_DARK,
+                            color: Color32::from(Rgba::from(COLOR_DARK) * color_factor as f32),
                             .. Default::default()
                         });
                         job.wrap = TextWrapping {
                             max_rows: 1,
                             break_anywhere: false,
-                            overflow_character: Option::from('…'),
+                            overflow_character: Option::from('﹍'),
                             ..Default::default()
                         };
                         ui.label(job);
                     });
                 });
-            }
-        });
+            });
     }
 }
 
-fn get_sync_status_text(sync_status: SyncStatus) -> Cow<'static, str> {
+fn get_sync_status_text(sync_status: SyncStatus) -> String {
     match sync_status {
-        SyncStatus::Initial => Cow::Borrowed("Initializing"),
-        SyncStatus::NoSync => Cow::Borrowed("Running"),
-        SyncStatus::AwaitingPeers(_) => Cow::Borrowed("Waiting for peers"),
+        SyncStatus::Initial => t!("sync_status.initial"),
+        SyncStatus::NoSync => t!("sync_status.no_sync"),
+        SyncStatus::AwaitingPeers(_) => t!("sync_status.awaiting_peers"),
         SyncStatus::HeaderSync {
             sync_head,
             highest_height,
             ..
         } => {
             if highest_height == 0 {
-                Cow::Borrowed("Downloading headers")
+                t!("sync_status.header_sync")
             } else {
                 let percent = sync_head.height * 100 / highest_height;
-                Cow::Owned(format!("Downloading headers: {}%", percent))
+                t!("sync_status.header_sync_percent", "percent" => percent)
             }
         }
         SyncStatus::TxHashsetDownload(stat) => {
             if stat.total_size > 0 {
                 let percent = stat.downloaded_size * 100 / stat.total_size;
-                Cow::Owned(format!("Downloading chain state: {}%", percent))
+                t!("sync_status.tx_hashset_download_percent", "percent" => percent)
             } else {
-                Cow::Borrowed("Downloading chain state")
+                t!("sync_status.tx_hashset_download")
             }
         }
         SyncStatus::TxHashsetSetup => {
-            Cow::Borrowed("Preparing state for validation")
+            t!("sync_status.tx_hashset_setup")
         }
         SyncStatus::TxHashsetRangeProofsValidation {
             rproofs,
@@ -253,7 +294,7 @@ fn get_sync_status_text(sync_status: SyncStatus) -> Cow<'static, str> {
             } else {
                 0
             };
-            Cow::Owned(format!("Validating state - range proofs: {}%", r_percent))
+            t!("sync_status.tx_hashset_range_proofs_validation", "percent" => r_percent)
         }
         SyncStatus::TxHashsetKernelsValidation {
             kernels,
@@ -264,28 +305,23 @@ fn get_sync_status_text(sync_status: SyncStatus) -> Cow<'static, str> {
             } else {
                 0
             };
-            Cow::Owned(format!("Validating state - kernels: {}%", k_percent))
+            t!("sync_status.tx_hashset_kernels_validation", "percent" => k_percent)
         }
-        SyncStatus::TxHashsetSave => {
-            Cow::Borrowed("Finalizing chain state")
-        }
-        SyncStatus::TxHashsetDone => {
-            Cow::Borrowed("Finalized chain state")
+        SyncStatus::TxHashsetSave | SyncStatus::TxHashsetDone => {
+            t!("sync_status.tx_hashset_save")
         }
         SyncStatus::BodySync {
             current_height,
             highest_height,
         } => {
             if highest_height == 0 {
-                Cow::Borrowed("Downloading blocks data")
+                t!("sync_status.body_sync")
             } else {
-                Cow::Owned(format!(
-                    "Downloading blocks: {}%",
-                    current_height * 100 / highest_height
-                ))
+                let percent = current_height * 100 / highest_height;
+                t!("sync_status.body_sync_percent", "percent" => percent)
             }
         }
-        SyncStatus::Shutdown => Cow::Borrowed("Shutting down"),
+        SyncStatus::Shutdown => t!("sync_status.shutdown"),
     }
 }
 

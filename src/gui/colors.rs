@@ -12,3 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+pub const COLOR_YELLOW: egui::Color32 = egui::Color32::from_rgb(254, 241, 2);
+pub const COLOR_LIGHT: egui::Color32 = egui::Color32::from_gray(240);
+pub const COLOR_DARK: egui::Color32 = egui::Color32::from_gray(60);
+pub const COLOR_GRAY: egui::Color32 = egui::Color32::from_gray(120);

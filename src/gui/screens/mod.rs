@@ -17,9 +17,7 @@ pub use accounts::Accounts;
 pub use navigator::Navigator;
 pub use root::Root;
 
-use crate::gui::App;
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::TitlePanelAction;
 
 mod navigator;
 mod root;
@@ -28,7 +26,6 @@ mod account;
 
 #[derive(Ord, Eq, PartialOrd, PartialEq)]
 pub enum ScreenId {
-    Root,
     Accounts,
     Account,
 }

@@ -14,10 +14,6 @@
 
 use std::cmp::min;
 
-use eframe::epaint::{Color32, Shadow, Stroke};
-use egui::style::Margin;
-
-use crate::gui::{App, COLOR_YELLOW};
 use crate::gui::app::is_dual_panel_mode;
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::screens::{Account, Accounts, Navigator, Screen, ScreenId};
@@ -43,10 +39,6 @@ impl Default for Root {
 }
 
 impl Root {
-    fn id(&self) -> ScreenId {
-        ScreenId::Root
-    }
-
     pub fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame, cb: &dyn PlatformCallbacks) {
         let is_network_panel_open = self.navigator.left_panel_open || is_dual_panel_mode(frame);
 
