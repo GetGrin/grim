@@ -260,7 +260,9 @@ fn draw_peer_stats(ui: &mut egui::Ui, peer: &PeerStats, rounding: [bool; 2]) {
         ui.heading(RichText::new(peer.total_difficulty.to_string())
             .color(COLOR_DARK)
             .size(16.0));
+        ui.add_space(2.0);
         ui.heading(RichText::new(AT).color(COLOR_DARK).size(16.0));
+        ui.add_space(2.0);
         ui.heading(RichText::new(peer.height.to_string())
             .color(COLOR_DARK)
             .size(16.0));
