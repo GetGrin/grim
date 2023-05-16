@@ -13,11 +13,9 @@
 // limitations under the License.
 
 use std::{fs, thread};
-use std::fmt::format;
-use std::ops::Deref;
-use std::path::{Path, PathBuf};
-use std::sync::{Arc, LockResult, RwLock, RwLockReadGuard};
-use std::sync::atomic::{AtomicBool, AtomicPtr, Ordering};
+use std::path::PathBuf;
+use std::sync::{Arc, RwLock, RwLockReadGuard};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread::JoinHandle;
 use std::time::Duration;
 
@@ -27,9 +25,6 @@ use grin_config::config;
 use grin_core::global;
 use grin_core::global::ChainTypes;
 use grin_servers::{Server, ServerStats};
-use grin_servers::common::types::Error;
-use grin_util::logger::LogEntry;
-use grin_util::StopState;
 use log::info;
 
 pub struct Node {
@@ -70,10 +65,12 @@ impl Node {
 }
 
 pub struct NodeState {
-    /// Data for UI, None means server is not running
+    /// Data for UI
     stats: Arc<RwLock<Option<ServerStats>>>,
     /// Chain type of launched server
     chain_type: Arc<ChainTypes>,
+    /// Indicator if server is starting
+    starting: AtomicBool,
     /// Thread flag to stop the server and start it again
     restart_needed: AtomicBool,
     /// Thread flag to stop the server
@@ -88,12 +85,18 @@ impl NodeState {
             chain_type: Arc::new(chain_type),
             restart_needed: AtomicBool::new(false),
             stop_needed: AtomicBool::new(false),
+            starting: AtomicBool::new(false)
         }
     }
 
-    /// Check if server is running when stats are not empty
+    /// Check if server is starting
+    pub fn is_starting(&self) -> bool {
+        self.starting.load(Ordering::Relaxed)
+    }
+
+    /// Check if server is running
     pub fn is_running(&self) -> bool {
-        self.get_stats().is_some()
+        self.get_stats().is_some() || self.is_starting()
     }
 
     /// Check if server is stopping
@@ -113,9 +116,14 @@ impl NodeState {
 
     /// Get server sync status, empty when server is not running
     pub fn get_sync_status(&self) -> Option<SyncStatus> {
-        // return shutdown status when node is stopping
+        // return Shutdown status when node is stopping
         if self.is_stopping() {
             return Some(SyncStatus::Shutdown)
+        }
+
+        // return Initial status when node is starting
+        if self.is_starting() {
+            return Some(SyncStatus::Initial)
         }
 
         let stats = self.get_stats();
@@ -125,25 +133,16 @@ impl NodeState {
         }
         None
     }
-
-    /// Check if server is syncing based on sync status
-    pub fn is_syncing(&self) -> bool {
-        let sync_status = self.get_sync_status();
-        match sync_status {
-            None => { self.is_restarting() }
-            Some(s) => { s!= SyncStatus::NoSync }
-        }
-    }
 }
 
 /// Start a thread to launch server and update node state with server stats
 fn start_server_thread(state: Arc<NodeState>, chain_type: ChainTypes) -> JoinHandle<()> {
     thread::spawn(move || {
+        state.starting.store(true, Ordering::Relaxed);
         let mut server = start_server(&chain_type);
+        let mut first_start = true;
 
         loop {
-            thread::sleep(Duration::from_millis(500));
-
             if state.is_restarting() {
                 server.stop();
 
@@ -164,8 +163,14 @@ fn start_server_thread(state: Arc<NodeState>, chain_type: ChainTypes) -> JoinHan
                 if stats.is_ok() {
                     let mut w_stats = state.stats.write().unwrap();
                     *w_stats = Some(stats.as_ref().ok().unwrap().clone());
+
+                    if first_start {
+                        state.starting.store(false, Ordering::Relaxed);
+                        first_start = false;
+                    }
                 }
             }
+            thread::sleep(Duration::from_millis(300));
         }
     })
 }
@@ -191,9 +196,27 @@ fn start_server(chain_type: &ChainTypes) -> Server {
 
     // Remove lock file (in case if we have running node from another app)
     {
-        let mut db_path = PathBuf::from(&server_config.db_root);
-        db_path.push("grin.lock");
-        fs::remove_file(db_path).unwrap();
+        let mut lock_file = PathBuf::from(&server_config.db_root);
+        lock_file.push("grin.lock");
+        if lock_file.exists() {
+            match fs::remove_file(lock_file) {
+                Ok(_) => {}
+                Err(_) => { println!("Cannot remove grin.lock file") }
+            };
+        }
+    }
+
+    // Remove temporary file dir
+    {
+        let mut tmp_dir = PathBuf::from(&server_config.db_root);
+        tmp_dir = tmp_dir.parent().unwrap().to_path_buf();
+        tmp_dir.push("tmp");
+        if tmp_dir.exists() {
+            match fs::remove_dir_all(tmp_dir) {
+                Ok(_) => {}
+                Err(_) => { println!("Cannot remove tmp dir") }
+            }
+        }
     }
 
     // Initialize our global chain_type, feature flags (NRD kernel support currently),
