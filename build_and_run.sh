@@ -1,7 +1,8 @@
-export CPPFLAGS="-DMDB_USE_ROBUST=0" && export CFLAGS="-DMDB_USE_ROBUST=0" && cargo ndk -t arm64-v8a build
+mode="release"
+export CPPFLAGS="-DMDB_USE_ROBUST=0" && export CFLAGS="-DMDB_USE_ROBUST=0" && cargo ndk -t arm64-v8a build --${mode}
 if [ $? -eq 0 ]
 then
-  yes | cp -f target/aarch64-linux-android/debug/libgrim_android.so app/src/main/jniLibs/arm64-v8a
+  yes | cp -f target/aarch64-linux-android/${mode}/libgrim_android.so app/src/main/jniLibs/arm64-v8a
   ./gradlew clean
   ./gradlew build
   #./gradlew installDebug
