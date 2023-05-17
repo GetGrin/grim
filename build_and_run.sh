@@ -14,7 +14,7 @@ export CPPFLAGS="-DMDB_USE_ROBUST=0" && export CFLAGS="-DMDB_USE_ROBUST=0" && ca
 
 if [ $? -eq 0 ]
 then
-  yes | cp -f target/aarch64-linux-android/${mode}/libgrim_android.so app/src/main/jniLibs/arm64-v8a
+  yes | cp -f target/aarch64-linux-android/${type}/libgrim_android.so app/src/main/jniLibs/arm64-v8a
   ./gradlew clean
   ./gradlew build
   #./gradlew installDebug
