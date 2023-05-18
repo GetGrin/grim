@@ -17,7 +17,7 @@ use egui::{Color32, RichText, Rounding, ScrollArea, Spinner, Widget};
 use grin_servers::common::stats::TxStats;
 use grin_servers::PeerStats;
 
-use crate::gui::colors::{COLOR_DARK, COLOR_GRAY};
+use crate::gui::colors::{COLOR_DARK, COLOR_GRAY, COLOR_GRAY_LIGHT};
 use crate::gui::icons::{AT, CUBE, DEVICES, FLOW_ARROW, HANDSHAKE, PACKAGE, PLUGS_CONNECTED, SHARE_NETWORK};
 use crate::gui::views::{NetworkTab, View};
 use crate::node::Node;
@@ -55,7 +55,7 @@ impl NetworkTab for NetworkNode {
             .show(ui, |ui| {
                 // Show header stats
                 ui.vertical_centered_justified(|ui| {
-                    View::sub_title(ui, format!("{} {}", FLOW_ARROW, t!("header")), COLOR_DARK);
+                    View::sub_title(ui, format!("{} {}", FLOW_ARROW, t!("header")));
                 });
                 ui.add_space(4.0);
                 ui.columns(2, |columns| {
@@ -89,9 +89,9 @@ impl NetworkTab for NetworkNode {
                 });
 
                 // Show block stats
-                ui.add_space(5.0);
+                ui.add_space(6.0);
                 ui.vertical_centered_justified(|ui| {
-                    View::sub_title(ui, format!("{} {}", CUBE, t!("block")), COLOR_DARK);
+                    View::sub_title(ui, format!("{} {}", CUBE, t!("block")));
                 });
                 ui.add_space(4.0);
                 ui.columns(2, |columns| {
@@ -125,9 +125,9 @@ impl NetworkTab for NetworkNode {
                 });
 
                 // Show data stats
-                ui.add_space(5.0);
+                ui.add_space(6.0);
                 ui.vertical_centered_justified(|ui| {
-                    View::sub_title(ui, format!("{} {}", SHARE_NETWORK, t!("data")), COLOR_DARK);
+                    View::sub_title(ui, format!("{} {}", SHARE_NETWORK, t!("data")));
                 });
                 ui.add_space(4.0);
                 ui.columns(2, |columns| {
@@ -174,13 +174,14 @@ impl NetworkTab for NetworkNode {
 
                 // Show peers stats when available
                 if stats.peer_count > 0 {
-                    ui.add_space(5.0);
+                    ui.add_space(6.0);
                     ui.vertical_centered_justified(|ui| {
-                        View::sub_title(ui,format!("{} {}", HANDSHAKE, t!("peers")), COLOR_DARK);
+                        View::sub_title(ui,format!("{} {}", HANDSHAKE, t!("peers")));
                     });
                     ui.add_space(4.0);
 
-                    for (index, ps) in stats.peer_stats.iter().enumerate() {
+                    for index in 0..stats.peer_stats.len() {
+                        let ps = stats.peer_stats.get(index).unwrap();
                         let rounding = if stats.peer_count == 1 {
                             [true, true]
                         } else if index == 0 {
@@ -200,64 +201,73 @@ impl NetworkTab for NetworkNode {
 }
 
 fn draw_peer_stats(ui: &mut egui::Ui, peer: &PeerStats, rounding: [bool; 2]) {
-    let mut rect = ui.available_rect_before_wrap();
-    rect.set_height(77.0);
+    ui.vertical(|ui| {
+        let mut rect = ui.available_rect_before_wrap();
+        rect.set_height(77.0);
 
-    ui.painter().rect(
-        rect,
-        Rounding {
-            nw: if rounding[0] { 8.0 } else { 0.0 },
-            ne: if rounding[0] { 8.0 } else { 0.0 },
-            sw: if rounding[1] { 8.0 } else { 0.0 },
-            se: if rounding[1] { 8.0 } else { 0.0 },
-        },
-        Color32::WHITE,
-        Stroke { width: 1.0, color: Color32::from_gray(230) }
-    );
+        ui.painter().rect(
+            rect,
+            Rounding {
+                nw: if rounding[0] { 8.0 } else { 0.0 },
+                ne: if rounding[0] { 8.0 } else { 0.0 },
+                sw: if rounding[1] { 8.0 } else { 0.0 },
+                se: if rounding[1] { 8.0 } else { 0.0 },
+            },
+            Color32::WHITE,
+            Stroke { width: 1.0, color: COLOR_GRAY_LIGHT }
+        );
 
-    ui.add_space(2.0);
-    ui.horizontal_top(|ui| {
-        ui.add_space(6.0);
-        ui.heading(RichText::new(PLUGS_CONNECTED)
-            .color(Color32::BLACK)
-            .size(18.0));
-        ui.add_space(6.0);
-
-        // Draw peer address
-        ui.heading(RichText::new(&peer.addr)
-            .color(Color32::BLACK)
-            .size(18.0));
-    });
-    ui.horizontal_top(|ui| {
-        ui.add_space(6.0);
-        ui.heading(RichText::new(PACKAGE)
-            .color(COLOR_DARK)
-            .size(16.0));
-        ui.add_space(6.0);
-
-        // Draw peer difficulty and height
-        ui.heading(RichText::new(peer.total_difficulty.to_string())
-            .color(COLOR_DARK)
-            .size(16.0));
         ui.add_space(2.0);
-        ui.heading(RichText::new(AT).color(COLOR_DARK).size(16.0));
+        ui.horizontal_top(|ui| {
+            ui.add_space(5.0);
+            ui.heading(RichText::new(PLUGS_CONNECTED)
+                .color(Color32::BLACK)
+                .size(18.0));
+            ui.add_space(3.0);
+
+            // Draw peer address
+            ui.heading(RichText::new(&peer.addr)
+                .color(Color32::BLACK)
+                .size(18.0));
+        });
+        ui.horizontal_top(|ui| {
+            ui.add_space(6.0);
+            ui.heading(RichText::new(PACKAGE)
+                .color(COLOR_DARK)
+                .size(16.0));
+            ui.add_space(4.0);
+
+            // Draw peer difficulty and height
+            ui.heading(RichText::new(peer.total_difficulty.to_string())
+                .color(COLOR_DARK)
+                .size(16.0));
+            ui.add_space(2.0);
+            ui.heading(RichText::new(AT).color(COLOR_DARK).size(16.0));
+            ui.add_space(2.0);
+            ui.heading(RichText::new(peer.height.to_string())
+                .color(COLOR_DARK)
+                .size(16.0));
+        });
+
+        ui.horizontal_top(|ui| {
+            ui.add_space(6.0);
+            ui.heading(RichText::new(DEVICES)
+                .color(COLOR_GRAY)
+                .size(16.0));
+            ui.add_space(4.0);
+
+            // Draw peer user-agent
+            ui.heading(RichText::new(&peer.user_agent)
+                .color(COLOR_GRAY)
+                .size(16.0));
+        });
         ui.add_space(2.0);
-        ui.heading(RichText::new(peer.height.to_string())
-            .color(COLOR_DARK)
-            .size(16.0));
     });
 
-    ui.horizontal_top(|ui| {
-        ui.add_space(6.0);
-        ui.heading(RichText::new(DEVICES)
-            .color(COLOR_GRAY)
-            .size(16.0));
-        ui.add_space(6.0);
-
-        // Draw peer user-agent
-        ui.heading(RichText::new(&peer.user_agent)
-            .color(COLOR_GRAY)
-            .size(16.0));
-    });
-    ui.add_space(2.0);
+    // Add space after last item
+    if !rounding[0] && rounding[1] {
+        ui.add_space(5.0);
+    } else if rounding[0] && rounding[1] {
+        ui.add_space(2.0);
+    }
 }

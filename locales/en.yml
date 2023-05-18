@@ -36,4 +36,4 @@ inflation: Inflation
 supply: Supply
 block_time: Block time
 reward: Reward
-difficulty_at_blocks: 'Difficulty on %{size} blocks'
+difficulty_at_window: 'Difficulty at window %{size}'

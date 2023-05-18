@@ -16,7 +16,7 @@ use eframe::epaint::{Color32, FontId, Rounding, Stroke};
 use eframe::epaint::text::{LayoutJob, TextFormat, TextWrapping};
 use egui::{RichText, Sense, Widget};
 
-use crate::gui::colors::{COLOR_DARK, COLOR_GRAY, COLOR_LIGHT};
+use crate::gui::colors::{COLOR_DARK, COLOR_GRAY, COLOR_LIGHT, COLOR_GRAY_LIGHT, COLOR_GRAY_DARK};
 
 pub struct View;
 
@@ -64,8 +64,8 @@ impl View {
         };
     }
 
-    pub fn sub_title(ui: &mut egui::Ui, text: String, color: Color32) {
-        ui.label(RichText::new(text).size(17.0).color(color));
+    pub fn sub_title(ui: &mut egui::Ui, text: String) {
+        ui.label(RichText::new(text.to_uppercase()).size(16.0).color(COLOR_GRAY_DARK));
     }
 
     /// Draw rounded box with some value and label in the middle
@@ -86,7 +86,7 @@ impl View {
                 se: if r[3] { 8.0 } else { 0.0 },
             },
             Color32::WHITE,
-            Stroke { width: 1.0, color: Color32::from_gray(230) },
+            Stroke { width: 1.0, color: COLOR_GRAY_LIGHT },
         );
 
         ui.vertical_centered_justified(|ui| {

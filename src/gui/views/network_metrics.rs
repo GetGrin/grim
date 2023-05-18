@@ -17,7 +17,7 @@ use eframe::epaint::{Color32, Rounding, Stroke};
 use egui::{RichText, ScrollArea, Spinner, Widget};
 use grin_servers::DiffBlock;
 
-use crate::gui::colors::{COLOR_DARK, COLOR_GRAY};
+use crate::gui::colors::{COLOR_DARK, COLOR_GRAY, COLOR_GRAY_LIGHT};
 use crate::gui::icons::{AT, CALENDAR_PLUS, COINS, CUBE, CUBE_TRANSPARENT, HASH, HOURGLASS_LOW, HOURGLASS_MEDIUM, TIMER};
 use crate::gui::views::{NetworkTab, View};
 use crate::node::Node;
@@ -56,7 +56,7 @@ impl NetworkTab for NetworkMetrics {
 
         // Show emission info
         ui.vertical_centered_justified(|ui| {
-            View::sub_title(ui, format!("{} {}", COINS, t!("emission")), COLOR_DARK);
+            View::sub_title(ui, format!("{} {}", COINS, t!("emission")));
         });
         ui.add_space(4.0);
 
@@ -83,12 +83,12 @@ impl NetworkTab for NetworkMetrics {
                                   [false, true, false, true]);
             });
         });
-        ui.add_space(5.0);
+        ui.add_space(6.0);
 
         // Show difficulty window info
         ui.vertical_centered_justified(|ui| {
-            let title = t!("difficulty_at_blocks", "size" => stats.diff_stats.window_size);
-            View::sub_title(ui, format!("{} {}", HOURGLASS_MEDIUM, title), COLOR_DARK);
+            let title = t!("difficulty_at_window", "size" => stats.diff_stats.window_size);
+            View::sub_title(ui, format!("{} {}", HOURGLASS_MEDIUM, title));
         });
         ui.add_space(4.0);
         ui.columns(3, |columns| {
@@ -117,7 +117,7 @@ impl NetworkTab for NetworkMetrics {
         let blocks_size = stats.diff_stats.last_blocks.len();
         ScrollArea::vertical().auto_shrink([false; 2]).stick_to_bottom(true).show_rows(
             ui,
-            DIFF_BLOCK_HEIGHT,
+            DIFF_BLOCK_UI_HEIGHT,
             blocks_size,
             |ui, row_range| {
                 for index in row_range {
@@ -138,20 +138,19 @@ impl NetworkTab for NetworkMetrics {
     }
 }
 
-const DIFF_BLOCK_HEIGHT: f32 = 75.0;
+const DIFF_BLOCK_UI_HEIGHT: f32 = 77.0;
 
 fn draw_diff_block(ui: &mut egui::Ui, db: &DiffBlock, rounding: [bool; 2]) {
     // Add space before first item
     if rounding[0] {
-        ui.add_space(5.0);
+        ui.add_space(4.0);
     }
 
     ui.horizontal(|ui| {
         ui.add_space(6.0);
         ui.vertical(|ui| {
             let mut rect = ui.available_rect_before_wrap();
-            rect.set_height(DIFF_BLOCK_HEIGHT);
-
+            rect.set_height(DIFF_BLOCK_UI_HEIGHT);
             ui.painter().rect(
                 rect,
                 Rounding {
@@ -161,21 +160,21 @@ fn draw_diff_block(ui: &mut egui::Ui, db: &DiffBlock, rounding: [bool; 2]) {
                     se: if rounding[1] { 8.0 } else { 0.0 },
                 },
                 Color32::WHITE,
-                Stroke { width: 1.0, color: Color32::from_gray(230) }
+                Stroke { width: 1.0, color: COLOR_GRAY_LIGHT }
             );
 
             ui.add_space(2.0);
             ui.horizontal_top(|ui| {
-                ui.add_space(6.0);
+                ui.add_space(5.0);
                 ui.heading(RichText::new(HASH)
                     .color(Color32::BLACK)
-                    .size(16.0));
-                ui.add_space(3.0);
+                    .size(18.0));
+                ui.add_space(2.0);
 
                 // Draw block hash
                 ui.heading(RichText::new(db.block_hash.to_string())
                     .color(Color32::BLACK)
-                    .size(16.0));
+                    .size(18.0));
             });
             ui.horizontal_top(|ui| {
                 ui.add_space(6.0);
@@ -218,12 +217,7 @@ fn draw_diff_block(ui: &mut egui::Ui, db: &DiffBlock, rounding: [bool; 2]) {
                         .size(16.0));
                 }
             });
-            ui.add_space(4.0);
+            ui.add_space(2.0);
         });
     });
-
-    // Add space after last item
-    if rounding[1] {
-        ui.add_space(5.0);
-    }
 }

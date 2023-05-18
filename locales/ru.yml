@@ -36,4 +36,4 @@ inflation: Инфляция
 supply: Предложение
 block_time: Время блока
 reward: Награда
-difficulty_at_blocks: 'Сложность на %{size} блоках'
+difficulty_at_window: 'Сложность в окне %{size}'
