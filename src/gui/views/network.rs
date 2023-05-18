@@ -28,8 +28,8 @@ use crate::gui::colors::{COLOR_DARK, COLOR_YELLOW};
 use crate::gui::icons::{CARDHOLDER, DATABASE, DOTS_THREE_OUTLINE_VERTICAL, FACTORY, FADERS, GAUGE};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::screens::Navigator;
-use crate::gui::views::{DEFAULT_STROKE, NetworkTab};
-use crate::gui::views::common::{tab_button, title_button};
+use crate::gui::views::{NetworkTab, View};
+use crate::gui::views::network_metrics::NetworkMetrics;
 use crate::gui::views::network_node::NetworkNode;
 use crate::node::Node;
 
@@ -45,7 +45,9 @@ pub struct Network {
     node: Node,
 
     current_mode: Mode,
+
     node_view: NetworkNode,
+    metrics_view: NetworkMetrics,
 }
 
 impl Default for Network {
@@ -54,7 +56,8 @@ impl Default for Network {
         Self {
             node,
             current_mode: Mode::Node,
-            node_view: NetworkNode::default()
+            node_view: NetworkNode::default(),
+            metrics_view: NetworkMetrics::default()
         }
     }
 }
@@ -90,7 +93,7 @@ impl Network {
             });
 
         egui::CentralPanel::default().frame(egui::Frame {
-            stroke: DEFAULT_STROKE,
+            stroke: View::DEFAULT_STROKE,
             inner_margin: Margin::same(4.0),
             fill: Color32::WHITE,
             .. Default::default()
@@ -102,24 +105,27 @@ impl Network {
     }
 
     fn draw_tabs(&mut self, ui: &mut egui::Ui) {
+        //Setup spacing between tabs
+        ui.style_mut().spacing.item_spacing = egui::vec2(6.0, 0.0);
+
         ui.columns(4, |columns| {
             columns[0].vertical_centered(|ui| {
-                tab_button(ui, DATABASE, self.current_mode == Mode::Node, || {
+                View::tab_button(ui, DATABASE, self.current_mode == Mode::Node, || {
                     self.current_mode = Mode::Node;
                 });
             });
             columns[1].vertical_centered(|ui| {
-                tab_button(ui, GAUGE, self.current_mode == Mode::Metrics, || {
+                View::tab_button(ui, GAUGE, self.current_mode == Mode::Metrics, || {
                     self.current_mode = Mode::Metrics;
                 });
             });
             columns[2].vertical_centered(|ui| {
-                tab_button(ui, FACTORY, self.current_mode == Mode::Miner, || {
+                View::tab_button(ui, FACTORY, self.current_mode == Mode::Miner, || {
                     self.current_mode = Mode::Miner;
                 });
             });
             columns[3].vertical_centered(|ui| {
-                tab_button(ui, FADERS, self.current_mode == Mode::Tuning, || {
+                View::tab_button(ui, FADERS, self.current_mode == Mode::Tuning, || {
                     self.current_mode = Mode::Tuning;
                 });
             });
@@ -132,8 +138,12 @@ impl Network {
             Mode::Node => {
                 self.node_view.ui(ui, &mut self.node);
             }
-            Mode::Metrics => {}
-            Mode::Tuning => {}
+            Mode::Metrics => {
+                self.metrics_view.ui(ui, &mut self.node);
+            }
+            Mode::Tuning => {
+                self.node_view.ui(ui, &mut self.node);
+            }
             Mode::Miner => {}
         }
     }
@@ -153,7 +163,7 @@ impl Network {
                         .horizontal(|mut strip| {
                             strip.cell(|ui| {
                                 ui.centered_and_justified(|ui| {
-                                    title_button(ui, DOTS_THREE_OUTLINE_VERTICAL, || {
+                                    View::title_button(ui, DOTS_THREE_OUTLINE_VERTICAL, || {
                                         //TODO: Actions for node
                                     });
                                 });
@@ -164,7 +174,7 @@ impl Network {
                             strip.cell(|ui| {
                                 if !is_dual_panel_mode(frame) {
                                     ui.centered_and_justified(|ui| {
-                                        title_button(ui, CARDHOLDER, || {
+                                        View::title_button(ui, CARDHOLDER, || {
                                             nav.toggle_left_panel();
                                         });
                                     });
@@ -181,7 +191,7 @@ impl Network {
                 self.node_view.name()
             }
             Mode::Metrics => {
-                self.node_view.name()
+                self.metrics_view.name()
             }
             Mode::Miner => {
                 self.node_view.name()

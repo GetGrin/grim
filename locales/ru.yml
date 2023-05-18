@@ -31,3 +31,9 @@ sync_status:
   body_sync: Загрузка блоков
   body_sync_percent: 'Загрузка блоков: %{percent}%'
   shutdown: Выключение
+emission: Эмиссия
+inflation: Инфляция
+supply: Предложение
+block_time: Время блока
+reward: Награда
+difficulty_at_blocks: 'Сложность на %{size} блоках'

@@ -16,10 +16,10 @@ use eframe::epaint::{FontId, Stroke};
 use eframe::epaint::text::{LayoutJob, TextFormat, TextWrapping};
 use egui::style::Margin;
 use egui_extras::{Size, StripBuilder};
-use crate::gui::colors::{COLOR_DARK, COLOR_YELLOW};
 
+use crate::gui::colors::{COLOR_DARK, COLOR_YELLOW};
 use crate::gui::screens::Navigator;
-use crate::gui::views::common::title_button;
+use crate::gui::views::View;
 
 pub struct TitlePanelAction {
     pub(crate) icon: Box<str>,
@@ -88,58 +88,56 @@ impl<'nav> TitlePanel<'nav> {
                                 .size(Size::exact(52.0))
                                 .horizontal(|mut strip| {
                                     strip.cell(|ui| {
-                                        Self::show_action(ui, actions.left.as_ref(), nav);
+                                        show_action(ui, actions.left.as_ref(), nav);
                                     });
                                     strip.strip(|builder| {
                                         builder
                                             .size(Size::remainder())
                                             .vertical(|mut strip| {
                                                 strip.cell(|ui| {
-                                                    Self::show_title(&*title, ui);
+                                                    show_title(&*title, ui);
                                                 });
                                             });
                                     });
                                     strip.cell(|ui| {
-                                        Self::show_action(ui, actions.right.as_ref(), nav);
+                                        show_action(ui, actions.right.as_ref(), nav);
                                     });
                                 });
                         });
                     });
             });
     }
+}
 
-    fn show_action(ui: &mut egui::Ui,
-                   action: Option<&TitlePanelAction>,
-                   navigator: &mut Navigator) {
-        if action.is_some() {
-            let action = action.unwrap();
-            ui.centered_and_justified(|ui| {
-                title_button(ui, &action.icon, || {
-                    (action.on_click)(navigator);
-                });
+fn show_action(ui: &mut egui::Ui, action: Option<&TitlePanelAction>, navigator: &mut Navigator) {
+    if action.is_some() {
+        let action = action.unwrap();
+        ui.centered_and_justified(|ui| {
+            View::title_button(ui, &action.icon, || {
+                (action.on_click)(navigator);
             });
-        }
+        });
     }
+}
 
-    fn show_title(title: &Option<String>, ui: &mut egui::Ui) {
-        if title.is_some() {
-            ui.centered_and_justified(|ui| {
-                let title_text = title.as_ref().unwrap().to_uppercase();
-                let mut job = LayoutJob::single_section(title_text, TextFormat {
-                    font_id: FontId::proportional(20.0),
-                    color: COLOR_DARK,
-                    .. Default::default()
-                });
-                job.wrap = TextWrapping {
-                    max_rows: 1,
-                    break_anywhere: false,
-                    overflow_character: Option::from('﹍'),
-                    ..Default::default()
-                };
-                ui.label(job);
-
+fn show_title(title: &Option<String>, ui: &mut egui::Ui) {
+    if title.is_some() {
+        ui.centered_and_justified(|ui| {
+            let title_text = title.as_ref().unwrap().to_uppercase();
+            let mut job = LayoutJob::single_section(title_text, TextFormat {
+                font_id: FontId::proportional(20.0),
+                color: COLOR_DARK,
+                .. Default::default()
             });
-        }
+            job.wrap = TextWrapping {
+                max_rows: 1,
+                break_anywhere: false,
+                overflow_character: Option::from('﹍'),
+                ..Default::default()
+            };
+            ui.label(job);
+
+        });
     }
 }
 

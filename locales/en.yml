@@ -31,3 +31,9 @@ sync_status:
   body_sync: Downloading blocks
   body_sync_percent: 'Downloading blocks: %{percent}%'
   shutdown: Shutting down
+emission: Emission
+inflation: Inflation
+supply: Supply
+block_time: Block time
+reward: Reward
+difficulty_at_blocks: 'Difficulty on %{size} blocks'

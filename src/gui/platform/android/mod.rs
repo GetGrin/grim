@@ -85,7 +85,18 @@ impl PlatformApp<Android> {
     }
 
     fn setup_visuals(ctx: &egui::Context) {
+        // Setup style
+        let mut style = (*ctx.style()).clone();
+
+        // Make scroll-bar thinner
+        style.spacing.scroll_bar_width = 4.0;
+        //
+        style.spacing.item_spacing = egui::vec2(0.0, 0.0);
+        ctx.set_style(style);
+
+        // Setup visuals
         let mut visuals = egui::Visuals::light();
+
         // Disable stroke around panels by default
         visuals.widgets.noninteractive.bg_stroke = Stroke::NONE;
         ctx.set_visuals(visuals);

@@ -18,7 +18,7 @@ use crate::gui::app::is_dual_panel_mode;
 use crate::gui::icons::{ARROW_CIRCLE_LEFT, GEAR_SIX, GLOBE};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::screens::{Navigator, Screen, ScreenId};
-use crate::gui::views::{DEFAULT_STROKE, TitlePanel, TitlePanelAction};
+use crate::gui::views::{TitlePanel, TitlePanelAction, View};
 
 #[derive(Default)]
 pub struct Accounts {}
@@ -52,7 +52,7 @@ impl Screen for Accounts {
         panel.ui(ui);
 
         egui::CentralPanel::default().frame(Frame {
-            stroke: DEFAULT_STROKE,
+            stroke: View::DEFAULT_STROKE,
             .. Default::default()
         }).show_inside(ui, |ui| {
             ui.label(format!("{}Here we go 10000 ツ", ARROW_CIRCLE_LEFT));
