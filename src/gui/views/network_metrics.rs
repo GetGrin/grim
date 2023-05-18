@@ -83,7 +83,7 @@ impl NetworkTab for NetworkMetrics {
                                   [false, true, false, true]);
             });
         });
-        ui.add_space(4.0);
+        ui.add_space(5.0);
 
         // Show difficulty window info
         ui.vertical_centered_justified(|ui| {
@@ -120,7 +120,8 @@ impl NetworkTab for NetworkMetrics {
             DIFF_BLOCK_HEIGHT,
             blocks_size,
             |ui, row_range| {
-                for (index, db) in stats.diff_stats.last_blocks.iter().enumerate() {
+                for index in row_range {
+                    let db = stats.diff_stats.last_blocks.get(index).unwrap();
                     let rounding = if blocks_size == 1 {
                         [true, true]
                     } else if index == 0 {
@@ -137,9 +138,14 @@ impl NetworkTab for NetworkMetrics {
     }
 }
 
-const DIFF_BLOCK_HEIGHT: f32 = 77.0;
+const DIFF_BLOCK_HEIGHT: f32 = 75.0;
 
 fn draw_diff_block(ui: &mut egui::Ui, db: &DiffBlock, rounding: [bool; 2]) {
+    // Add space before first item
+    if rounding[0] {
+        ui.add_space(5.0);
+    }
+
     ui.horizontal(|ui| {
         ui.add_space(6.0);
         ui.vertical(|ui| {
@@ -213,6 +219,11 @@ fn draw_diff_block(ui: &mut egui::Ui, db: &DiffBlock, rounding: [bool; 2]) {
                 }
             });
             ui.add_space(4.0);
-        })
+        });
     });
+
+    // Add space after last item
+    if rounding[1] {
+        ui.add_space(5.0);
+    }
 }
