@@ -45,7 +45,8 @@ impl NetworkTab for NetworkMetrics {
 
     fn ui(&mut self, ui: &mut egui::Ui, node: &mut Node) {
         let server_stats = node.state.get_stats();
-        if !server_stats.is_some() {
+        // Show loading widget if server is not working or difficulty height is zero.
+        if !server_stats.is_some() || server_stats.as_ref().unwrap().diff_stats.height == 0 {
             ui.centered_and_justified(|ui| {
                 Spinner::new().size(42.0).color(COLOR_GRAY).ui(ui);
             });
