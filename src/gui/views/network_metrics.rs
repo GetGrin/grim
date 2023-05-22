@@ -18,7 +18,7 @@ use egui::{RichText, ScrollArea, Spinner, Widget};
 use grin_servers::DiffBlock;
 
 use crate::gui::colors::{COLOR_DARK, COLOR_GRAY, COLOR_GRAY_LIGHT};
-use crate::gui::icons::{AT, CALENDAR_PLUS, COINS, CUBE, CUBE_TRANSPARENT, HASH, HOURGLASS_LOW, HOURGLASS_MEDIUM, TIMER};
+use crate::gui::icons::{AT, COINS, CUBE_TRANSPARENT, HASH, HOURGLASS_LOW, HOURGLASS_MEDIUM, TIMER};
 use crate::gui::views::{NetworkTab, View};
 use crate::node::Node;
 
@@ -43,8 +43,8 @@ impl NetworkTab for NetworkMetrics {
         &self.title
     }
 
-    fn ui(&mut self, ui: &mut egui::Ui, node: &mut Node) {
-        let server_stats = node.state.get_stats();
+    fn ui(&mut self, ui: &mut egui::Ui) {
+        let server_stats = Node::get_stats();
         // Show loading widget if server is not working or difficulty height is zero.
         if !server_stats.is_some() || server_stats.as_ref().unwrap().diff_stats.height == 0 {
             ui.centered_and_justified(|ui| {
@@ -86,7 +86,7 @@ impl NetworkTab for NetworkMetrics {
         });
         ui.add_space(6.0);
 
-        // Show difficulty window info
+        // Show difficulty adjustment window info
         ui.vertical_centered_justified(|ui| {
             let title = t!("difficulty_at_window", "size" => stats.diff_stats.window_size);
             View::sub_title(ui, format!("{} {}", HOURGLASS_MEDIUM, title));
@@ -114,28 +114,32 @@ impl NetworkTab for NetworkMetrics {
         });
         ui.add_space(6.0);
 
-        // Draw difficulty window blocks
+        // Show difficulty adjustment window blocks
         let blocks_size = stats.diff_stats.last_blocks.len();
-        ScrollArea::vertical().auto_shrink([false; 2]).stick_to_bottom(true).show_rows(
-            ui,
-            DIFF_BLOCK_UI_HEIGHT,
-            blocks_size,
-            |ui, row_range| {
-                for index in row_range {
-                    let db = stats.diff_stats.last_blocks.get(index).unwrap();
-                    let rounding = if blocks_size == 1 {
-                        [true, true]
-                    } else if index == 0 {
-                        [true, false]
-                    } else if index == blocks_size - 1 {
-                        [false, true]
-                    } else {
-                        [false, false]
-                    };
-                    draw_diff_block(ui, db, rounding)
-                }
-            },
-        );
+        ScrollArea::vertical()
+            .auto_shrink([false; 2])
+            .stick_to_bottom(true)
+            .id_source("diff_scroll")
+            .show_rows(
+                ui,
+                DIFF_BLOCK_UI_HEIGHT,
+                blocks_size,
+                |ui, row_range| {
+                    for index in row_range {
+                        let db = stats.diff_stats.last_blocks.get(index).unwrap();
+                        let rounding = if blocks_size == 1 {
+                            [true, true]
+                        } else if index == 0 {
+                            [true, false]
+                        } else if index == blocks_size - 1 {
+                            [false, true]
+                        } else {
+                            [false, false]
+                        };
+                        draw_diff_block(ui, db, rounding)
+                    }
+                },
+            );
     }
 }
 

@@ -25,50 +25,20 @@ use grin_config::config;
 use grin_core::global;
 use grin_core::global::ChainTypes;
 use grin_servers::{Server, ServerStats};
+use jni::objects::JString;
+use jni::sys::jstring;
+use lazy_static::lazy_static;
 use log::info;
 
+lazy_static! {
+    static ref NODE_STATE: Arc<Node> = Arc::new(Node::default());
+}
+
 pub struct Node {
-    /// Node state updated from the separate thread
-    pub(crate) state: Arc<NodeState>,
-}
-
-impl Node {
-    /// Instantiate new node with provided chain type, start server if needed
-    pub fn new(chain_type: ChainTypes, start: bool) -> Self {
-        let state = Arc::new(NodeState::new(chain_type));
-        if start {
-            start_server_thread(state.clone(), chain_type);
-        }
-        Self { state }
-    }
-
-    /// Stop server
-    pub fn stop(&self) {
-        self.state.stop_needed.store(true, Ordering::Relaxed);
-    }
-
-    /// Start server with provided chain type
-    pub fn start(&self, chain_type: ChainTypes) {
-        if !self.state.is_running() {
-            start_server_thread(self.state.clone(), chain_type);
-        }
-    }
-
-    /// Restart server or start when not running
-    pub fn restart(&mut self) {
-        if self.state.is_running() {
-            self.state.restart_needed.store(true, Ordering::Relaxed);
-        } else {
-            self.start(*self.state.chain_type);
-        }
-    }
-}
-
-pub struct NodeState {
     /// Data for UI
     stats: Arc<RwLock<Option<ServerStats>>>,
     /// Chain type of launched server
-    chain_type: Arc<ChainTypes>,
+    chain_type: Arc<RwLock<ChainTypes>>,
     /// Indicator if server is starting
     starting: AtomicBool,
     /// Thread flag to stop the server and start it again
@@ -77,102 +47,206 @@ pub struct NodeState {
     stop_needed: AtomicBool,
 }
 
-impl NodeState {
-    /// Instantiate new node state with provided chain type and server state
-    pub fn new(chain_type: ChainTypes) -> Self {
+impl Default for Node {
+    fn default() -> Self {
         Self {
             stats: Arc::new(RwLock::new(None)),
-            chain_type: Arc::new(chain_type),
+            chain_type: Arc::new(RwLock::new(ChainTypes::Mainnet)),
+            starting: AtomicBool::new(false),
             restart_needed: AtomicBool::new(false),
             stop_needed: AtomicBool::new(false),
-            starting: AtomicBool::new(false)
+        }
+    }
+}
+
+impl Node {
+    /// Stop server
+    pub fn stop() {
+        NODE_STATE.stop_needed.store(true, Ordering::Relaxed);
+    }
+
+    /// Start server with provided chain type
+    pub fn start(chain_type: ChainTypes) {
+        if !Self::is_running() {
+            let mut w_chain_type = NODE_STATE.chain_type.write().unwrap();
+            *w_chain_type = chain_type;
+            Self::start_server_thread();
+        }
+    }
+
+    /// Restart server with provided chain type
+    pub fn restart(chain_type: ChainTypes) {
+        if Self::is_running() {
+            let mut w_chain_type = NODE_STATE.chain_type.write().unwrap();
+            *w_chain_type = chain_type;
+            NODE_STATE.restart_needed.store(true, Ordering::Relaxed);
+        } else {
+            Node::start(chain_type);
         }
     }
 
     /// Check if server is starting
-    pub fn is_starting(&self) -> bool {
-        self.starting.load(Ordering::Relaxed)
+    pub fn is_starting() -> bool {
+        NODE_STATE.starting.load(Ordering::Relaxed)
     }
 
     /// Check if server is running
-    pub fn is_running(&self) -> bool {
-        self.get_stats().is_some() || self.is_starting()
+    pub fn is_running() -> bool {
+        Self::get_stats().is_some() || Self::is_starting()
     }
 
     /// Check if server is stopping
-    pub fn is_stopping(&self) -> bool {
-        self.stop_needed.load(Ordering::Relaxed)
+    pub fn is_stopping() -> bool {
+        NODE_STATE.stop_needed.load(Ordering::Relaxed)
     }
 
     /// Check if server is restarting
-    pub fn is_restarting(&self) -> bool {
-        self.restart_needed.load(Ordering::Relaxed)
+    pub fn is_restarting() -> bool {
+        NODE_STATE.restart_needed.load(Ordering::Relaxed)
     }
 
     /// Get server stats
-    pub fn get_stats(&self) -> RwLockReadGuard<'_, Option<ServerStats>> {
-        self.stats.read().unwrap()
+    pub fn get_stats() -> RwLockReadGuard<'static, Option<ServerStats>> {
+        NODE_STATE.stats.read().unwrap()
     }
 
     /// Get server sync status, empty when server is not running
-    pub fn get_sync_status(&self) -> Option<SyncStatus> {
+    pub fn get_sync_status() -> Option<SyncStatus> {
         // return Shutdown status when node is stopping
-        if self.is_stopping() {
+        if Self::is_stopping() {
             return Some(SyncStatus::Shutdown)
         }
 
         // return Initial status when node is starting
-        if self.is_starting() {
+        if Self::is_starting() {
             return Some(SyncStatus::Initial)
         }
 
-        let stats = self.get_stats();
+        let stats = Self::get_stats();
         // return sync status when server is running (stats are not empty)
         if stats.is_some() {
             return Some(stats.as_ref().unwrap().sync_status)
         }
         None
     }
-}
 
-/// Start a thread to launch server and update node state with server stats
-fn start_server_thread(state: Arc<NodeState>, chain_type: ChainTypes) -> JoinHandle<()> {
-    thread::spawn(move || {
-        state.starting.store(true, Ordering::Relaxed);
-        let mut server = start_server(&chain_type);
-        let mut first_start = true;
+    /// Start a thread to launch server and update state with server stats
+    fn start_server_thread() -> JoinHandle<()> {
+        thread::spawn(move || {
+            NODE_STATE.starting.store(true, Ordering::Relaxed);
 
-        loop {
-            if state.is_restarting() {
-                server.stop();
+            let mut server = start_server(&NODE_STATE.chain_type.read().unwrap());
+            let mut first_start = true;
 
-                // Create new server with current chain type
-                server = start_server(&state.chain_type);
+            loop {
+                if Self::is_restarting() {
+                    server.stop();
 
-                state.restart_needed.store(false, Ordering::Relaxed);
-            } else if state.is_stopping() {
-                server.stop();
+                    // Create new server with current chain type
+                    server = start_server(&NODE_STATE.chain_type.read().unwrap());
 
-                let mut w_stats = state.stats.write().unwrap();
-                *w_stats = None;
+                    NODE_STATE.restart_needed.store(false, Ordering::Relaxed);
+                } else if Self::is_stopping() {
+                    server.stop();
 
-                state.stop_needed.store(false, Ordering::Relaxed);
-                break;
-            } else {
-                let stats = server.get_server_stats();
-                if stats.is_ok() {
-                    let mut w_stats = state.stats.write().unwrap();
-                    *w_stats = Some(stats.as_ref().ok().unwrap().clone());
+                    let mut w_stats = NODE_STATE.stats.write().unwrap();
+                    *w_stats = None;
 
-                    if first_start {
-                        state.starting.store(false, Ordering::Relaxed);
-                        first_start = false;
+                    NODE_STATE.stop_needed.store(false, Ordering::Relaxed);
+                    break;
+                } else {
+                    let stats = server.get_server_stats();
+                    if stats.is_ok() {
+                        let mut w_stats = NODE_STATE.stats.write().unwrap();
+                        *w_stats = Some(stats.as_ref().ok().unwrap().clone());
+
+                        if first_start {
+                            NODE_STATE.starting.store(false, Ordering::Relaxed);
+                            first_start = false;
+                        }
                     }
                 }
+                thread::sleep(Duration::from_millis(300));
             }
-            thread::sleep(Duration::from_millis(300));
+        })
+    }
+
+    pub fn get_sync_status_text(sync_status: Option<SyncStatus>) -> String {
+        if Node::is_restarting() {
+            return t!("server_restarting")
         }
-    })
+
+        if sync_status.is_none() {
+            return t!("server_down")
+        }
+
+        match sync_status.unwrap() {
+            SyncStatus::Initial => t!("sync_status.initial"),
+            SyncStatus::NoSync => t!("sync_status.no_sync"),
+            SyncStatus::AwaitingPeers(_) => t!("sync_status.awaiting_peers"),
+            SyncStatus::HeaderSync {
+                sync_head,
+                highest_height,
+                ..
+            } => {
+                if highest_height == 0 {
+                    t!("sync_status.header_sync")
+                } else {
+                    let percent = sync_head.height * 100 / highest_height;
+                    t!("sync_status.header_sync_percent", "percent" => percent)
+                }
+            }
+            SyncStatus::TxHashsetDownload(stat) => {
+                if stat.total_size > 0 {
+                    let percent = stat.downloaded_size * 100 / stat.total_size;
+                    t!("sync_status.tx_hashset_download_percent", "percent" => percent)
+                } else {
+                    t!("sync_status.tx_hashset_download")
+                }
+            }
+            SyncStatus::TxHashsetSetup => {
+                t!("sync_status.tx_hashset_setup")
+            }
+            SyncStatus::TxHashsetRangeProofsValidation {
+                rproofs,
+                rproofs_total,
+            } => {
+                let r_percent = if rproofs_total > 0 {
+                    (rproofs * 100) / rproofs_total
+                } else {
+                    0
+                };
+                t!("sync_status.tx_hashset_range_proofs_validation", "percent" => r_percent)
+            }
+            SyncStatus::TxHashsetKernelsValidation {
+                kernels,
+                kernels_total,
+            } => {
+                let k_percent = if kernels_total > 0 {
+                    (kernels * 100) / kernels_total
+                } else {
+                    0
+                };
+                t!("sync_status.tx_hashset_kernels_validation", "percent" => k_percent)
+            }
+            SyncStatus::TxHashsetSave | SyncStatus::TxHashsetDone => {
+                t!("sync_status.tx_hashset_save")
+            }
+            SyncStatus::BodySync {
+                current_height,
+                highest_height,
+            } => {
+                if highest_height == 0 {
+                    t!("sync_status.body_sync")
+                } else {
+                    let percent = current_height * 100 / highest_height;
+                    t!("sync_status.body_sync_percent", "percent" => percent)
+                }
+            }
+            SyncStatus::Shutdown => t!("sync_status.shutdown"),
+        }
+    }
+
 }
 
 /// Start server with provided chain type
@@ -280,4 +354,32 @@ fn start_server(chain_type: &ChainTypes) -> Server {
     }
 
     server_result.unwrap()
+}
+
+#[allow(dead_code)]
+#[cfg(target_os = "android")]
+#[allow(non_snake_case)]
+#[no_mangle]
+pub extern "C" fn Java_mw_gri_android_BackgroundService_getSyncStatusText(
+    _env: jni::JNIEnv,
+    _class: jni::objects::JObject,
+    _activity: jni::objects::JObject,
+) -> jstring {
+    let sync_status = Node::get_sync_status();
+    let status_text = Node::get_sync_status_text(sync_status);
+    let j_text = _env.new_string(status_text);
+    return j_text.unwrap().into_raw();
+}
+
+#[allow(dead_code)]
+#[cfg(target_os = "android")]
+#[allow(non_snake_case)]
+#[no_mangle]
+pub extern "C" fn Java_mw_gri_android_BackgroundService_getSyncTitle(
+    _env: jni::JNIEnv,
+    _class: jni::objects::JObject,
+    _activity: jni::objects::JObject,
+) -> jstring {
+    let j_text = _env.new_string(t!("integrated_node"));
+    return j_text.unwrap().into_raw();
 }

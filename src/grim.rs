@@ -22,7 +22,7 @@ use crate::gui::PlatformApp;
 #[allow(dead_code)]
 #[cfg(target_os = "android")]
 #[no_mangle]
-unsafe fn android_main(app: AndroidApp) {
+fn android_main(app: AndroidApp) {
     #[cfg(debug_assertions)]
     {
         std::env::set_var("RUST_BACKTRACE", "full");

@@ -11,24 +11,3 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
-mod views;
-pub use self::views::View;
-
-mod title_panel;
-pub use self::title_panel::{TitlePanel, TitlePanelAction};
-
-mod network;
-mod network_node;
-mod network_tuning;
-mod network_metrics;
-mod network_mining;
-
-pub use self::network::Network;
-
-pub trait NetworkTab {
-    fn name(&self) -> &String;
-    fn ui(&mut self, ui: &mut egui::Ui);
-}
-
-

@@ -42,8 +42,6 @@ enum Mode {
 }
 
 pub struct Network {
-    node: Node,
-
     current_mode: Mode,
 
     node_view: NetworkNode,
@@ -52,9 +50,8 @@ pub struct Network {
 
 impl Default for Network {
     fn default() -> Self {
-        let node = Node::new(ChainTypes::Mainnet, true);
+        Node::start(ChainTypes::Mainnet);
         Self {
-            node,
             current_mode: Mode::Node,
             node_view: NetworkNode::default(),
             metrics_view: NetworkMetrics::default()
@@ -67,7 +64,7 @@ impl Network {
               ui: &mut egui::Ui,
               frame: &mut eframe::Frame,
               nav: &mut Navigator,
-              cb: &dyn PlatformCallbacks) {
+              _: &dyn PlatformCallbacks) {
 
         egui::TopBottomPanel::top("network_title")
             .resizable(false)
@@ -136,13 +133,13 @@ impl Network {
     fn draw_tab_content(&mut self, ui: &mut egui::Ui) {
         match self.current_mode {
             Mode::Node => {
-                self.node_view.ui(ui, &mut self.node);
+                self.node_view.ui(ui);
             }
             Mode::Metrics => {
-                self.metrics_view.ui(ui, &mut self.node);
+                self.metrics_view.ui(ui);
             }
             Mode::Tuning => {
-                self.node_view.ui(ui, &mut self.node);
+                self.node_view.ui(ui);
             }
             Mode::Miner => {}
         }
@@ -215,23 +212,12 @@ impl Network {
                 strip.cell(|ui| {
                     ui.centered_and_justified(|ui| {
                         // Select sync status text
-                        let sync_status = self.node.state.get_sync_status();
-                        let status_text = if self.node.state.is_restarting() {
-                            t!("server_restarting")
-                        } else {
-                            match sync_status {
-                                None => {
-                                    t!("server_down")
-                                }
-                                Some(ss) => {
-                                    get_sync_status_text(ss).to_string()
-                                }
-                            }
-                        };
+                        let sync_status = Node::get_sync_status();
+                        let status_text = Node::get_sync_status_text(sync_status);
 
                         // Setup text color animation based on sync status
                         let idle = match sync_status {
-                            None => { !self.node.state.is_starting() }
+                            None => { !Node::is_starting() }
                             Some(ss) => { ss == SyncStatus::NoSync }
                         };
                         let (dark, bright) = (0.3, 1.0);
@@ -266,73 +252,4 @@ impl Network {
             });
     }
 }
-
-fn get_sync_status_text(sync_status: SyncStatus) -> String {
-    match sync_status {
-        SyncStatus::Initial => t!("sync_status.initial"),
-        SyncStatus::NoSync => t!("sync_status.no_sync"),
-        SyncStatus::AwaitingPeers(_) => t!("sync_status.awaiting_peers"),
-        SyncStatus::HeaderSync {
-            sync_head,
-            highest_height,
-            ..
-        } => {
-            if highest_height == 0 {
-                t!("sync_status.header_sync")
-            } else {
-                let percent = sync_head.height * 100 / highest_height;
-                t!("sync_status.header_sync_percent", "percent" => percent)
-            }
-        }
-        SyncStatus::TxHashsetDownload(stat) => {
-            if stat.total_size > 0 {
-                let percent = stat.downloaded_size * 100 / stat.total_size;
-                t!("sync_status.tx_hashset_download_percent", "percent" => percent)
-            } else {
-                t!("sync_status.tx_hashset_download")
-            }
-        }
-        SyncStatus::TxHashsetSetup => {
-            t!("sync_status.tx_hashset_setup")
-        }
-        SyncStatus::TxHashsetRangeProofsValidation {
-            rproofs,
-            rproofs_total,
-        } => {
-            let r_percent = if rproofs_total > 0 {
-                (rproofs * 100) / rproofs_total
-            } else {
-                0
-            };
-            t!("sync_status.tx_hashset_range_proofs_validation", "percent" => r_percent)
-        }
-        SyncStatus::TxHashsetKernelsValidation {
-            kernels,
-            kernels_total,
-        } => {
-            let k_percent = if kernels_total > 0 {
-                (kernels * 100) / kernels_total
-            } else {
-                0
-            };
-            t!("sync_status.tx_hashset_kernels_validation", "percent" => k_percent)
-        }
-        SyncStatus::TxHashsetSave | SyncStatus::TxHashsetDone => {
-            t!("sync_status.tx_hashset_save")
-        }
-        SyncStatus::BodySync {
-            current_height,
-            highest_height,
-        } => {
-            if highest_height == 0 {
-                t!("sync_status.body_sync")
-            } else {
-                let percent = current_height * 100 / highest_height;
-                t!("sync_status.body_sync_percent", "percent" => percent)
-            }
-        }
-        SyncStatus::Shutdown => t!("sync_status.shutdown"),
-    }
-}
-
 

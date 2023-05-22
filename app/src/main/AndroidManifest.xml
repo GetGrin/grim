@@ -2,28 +2,35 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
 >
 
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
     <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <application
-        android:allowBackup="true"
-        android:icon="@mipmap/ic_launcher"
-        android:label="Grim"
-        android:roundIcon="@mipmap/ic_launcher_round"
-        android:supportsRtl="true"
-        android:theme="@style/Theme.Main">
+            android:hardwareAccelerated="true"
+            android:largeHeap="true"
+            android:allowBackup="true"
+            android:icon="@mipmap/ic_launcher"
+            android:label="Grim"
+            android:roundIcon="@mipmap/ic_launcher_round"
+            android:supportsRtl="true"
+            android:theme="@style/Theme.Main">
 
         <activity
-            android:name=".MainActivity"
-            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|uiMode|keyboard"
-            android:exported="true">
+                android:launchMode="singleTask"
+                android:name=".MainActivity"
+                android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|uiMode|keyboard"
+                android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
-            <meta-data android:name="android.app.lib_name" android:value="grim_android" />
+            <meta-data android:name="android.app.lib_name" android:value="grim" />
         </activity>
+        <service android:name=".BackgroundService" android:stopWithTask="true" />
     </application>
 
 </manifest>

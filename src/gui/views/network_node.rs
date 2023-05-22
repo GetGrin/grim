@@ -14,7 +14,6 @@
 
 use eframe::epaint::Stroke;
 use egui::{Color32, RichText, Rounding, ScrollArea, Spinner, Widget};
-use grin_servers::common::stats::TxStats;
 use grin_servers::PeerStats;
 
 use crate::gui::colors::{COLOR_DARK, COLOR_GRAY, COLOR_GRAY_LIGHT};
@@ -39,8 +38,8 @@ impl NetworkTab for NetworkNode {
         &self.title
     }
 
-    fn ui(&mut self, ui: &mut egui::Ui, node: &mut Node) {
-        let server_stats = node.state.get_stats();
+    fn ui(&mut self, ui: &mut egui::Ui) {
+        let server_stats = Node::get_stats();
         if !server_stats.is_some() {
             ui.centered_and_justified(|ui| {
                 Spinner::new().size(42.0).color(COLOR_GRAY).ui(ui);
@@ -80,9 +79,9 @@ impl NetworkTab for NetworkNode {
                                           [false, false, true, false]);
                     });
                     columns[1].vertical_centered(|ui| {
-                        let ts = stats.header_stats.latest_timestamp;
+                        let h_ts = stats.header_stats.latest_timestamp;
                         View::rounded_box(ui,
-                                          format!("{}", ts.format("%d/%m/%Y %H:%M")),
+                                          format!("{}", h_ts.format("%d/%m/%Y %H:%M")),
                                           t!("time_utc"),
                                           [false, false, false, true]);
                     });
@@ -116,9 +115,9 @@ impl NetworkTab for NetworkNode {
                                           [false, false, true, false]);
                     });
                     columns[1].vertical_centered(|ui| {
-                        let ts = stats.chain_stats.latest_timestamp;
+                        let b_ts = stats.chain_stats.latest_timestamp;
                         View::rounded_box(ui,
-                                          format!("{}", ts.format("%d/%m/%Y %H:%M")),
+                                          format!("{}", b_ts.format("%d/%m/%Y %H:%M")),
                                           t!("time_utc"),
                                           [false, false, false, true]);
                     });
@@ -265,9 +264,7 @@ fn draw_peer_stats(ui: &mut egui::Ui, peer: &PeerStats, rounding: [bool; 2]) {
     });
 
     // Add space after last item
-    if !rounding[0] && rounding[1] {
-        ui.add_space(5.0);
-    } else if rounding[0] && rounding[1] {
-        ui.add_space(2.0);
+    if rounding[1] {
+        ui.add_space(3.0);
     }
 }

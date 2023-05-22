@@ -15,4 +15,3 @@
 mod node;
 
 pub use self::node::Node;
-pub use self::node::NodeState;

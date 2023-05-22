@@ -9,7 +9,7 @@ android {
     defaultConfig {
         applicationId "mw.gri.android"
         minSdk 24
-        targetSdk 31
+        targetSdk 33
         versionCode 1
         versionName "0.1.0"
     }

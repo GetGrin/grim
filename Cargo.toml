@@ -46,6 +46,7 @@ once_cell = "1.10.0"
 rust-i18n = "1.1.4"
 sys-locale = "0.3.0"
 chrono = "0.4.23"
+lazy_static = "1.4.0"
 
 [patch.crates-io]
 winit = { git = "https://github.com/rib/winit", branch = "android-activity" }
@@ -63,5 +64,5 @@ jni = "0.21.1"
 winit = { version = "0.27.2", features = [ "android-game-activity" ] }
 
 [lib]
-name="grim_android"
+name="grim"
 crate_type=["cdylib"]
