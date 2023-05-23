@@ -4,6 +4,8 @@ import android.os.Bundle;
 import android.os.Process;
 import android.system.ErrnoException;
 import android.system.Os;
+import android.util.Log;
+import android.view.KeyEvent;
 import com.google.androidgamesdk.GameActivity;
 
 public class MainActivity extends GameActivity {
@@ -45,4 +47,15 @@ public class MainActivity extends GameActivity {
         BackgroundService.stop(getApplicationContext());
         finish();
     }
+
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        if (keyCode == KeyEvent.KEYCODE_BACK)   {
+            onBackButtonPress();
+            return true;
+        }
+        return super.onKeyDown(keyCode, event);
+    }
+
+    public native void onBackButtonPress();
 }

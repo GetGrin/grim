@@ -63,7 +63,6 @@ impl Network {
     pub fn ui(&mut self,
               ui: &mut egui::Ui,
               frame: &mut eframe::Frame,
-              nav: &mut Navigator,
               _: &dyn PlatformCallbacks) {
 
         egui::TopBottomPanel::top("network_title")
@@ -76,7 +75,7 @@ impl Network {
                 ..Default::default()
             })
             .show_inside(ui, |ui| {
-                self.draw_title(ui, frame, nav);
+                self.draw_title(ui, frame);
             });
 
         egui::TopBottomPanel::bottom("network_tabs")
@@ -145,10 +144,7 @@ impl Network {
         }
     }
 
-    fn draw_title(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame, nav: &mut Navigator) {
-        // Disable stroke around title buttons on hover
-        ui.style_mut().visuals.widgets.active.bg_stroke = Stroke::NONE;
-
+    fn draw_title(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame) {
         StripBuilder::new(ui)
             .size(Size::exact(52.0))
             .vertical(|mut strip| {
@@ -172,7 +168,7 @@ impl Network {
                                 if !is_dual_panel_mode(frame) {
                                     ui.centered_and_justified(|ui| {
                                         View::title_button(ui, CARDHOLDER, || {
-                                            nav.toggle_left_panel();
+                                            Navigator::toggle_side_panel();
                                         });
                                     });
                                 }

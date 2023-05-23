@@ -31,25 +31,19 @@ impl Screen for Accounts {
     fn ui(&mut self,
           ui: &mut egui::Ui,
           frame: &mut eframe::Frame,
-          nav: &mut Navigator,
           cb: &dyn PlatformCallbacks) {
-        let mut panel: TitlePanel = TitlePanel::new(nav)
-            .title(t!("accounts"))
-            .right_action(TitlePanelAction {
-                icon: GEAR_SIX.into(),
-                on_click: Box::new(|nav| {
-                    //TODO: open settings
-                }),
-            });
-        if !is_dual_panel_mode(frame) {
-            panel = panel.left_action(TitlePanelAction {
-                icon: GLOBE.into(),
-                on_click: Box::new(|nav|{
-                    nav.toggle_left_panel();
-                }),
-            });
-        }
-        panel.ui(ui);
+        TitlePanel::new(t!("accounts"))
+            .left_action(
+                if !is_dual_panel_mode(frame) {
+                    TitlePanelAction::new(GLOBE.into(), || {
+                        Navigator::toggle_side_panel();
+                    })
+                } else {
+                    None
+                }
+            ).right_action(TitlePanelAction::new(GEAR_SIX.into(), || {
+                //TODO: settings
+            })).ui(ui);
 
         egui::CentralPanel::default().frame(Frame {
             stroke: View::DEFAULT_STROKE,
@@ -57,10 +51,10 @@ impl Screen for Accounts {
         }).show_inside(ui, |ui| {
             ui.label(format!("{}Here we go 10000 ツ", ARROW_CIRCLE_LEFT));
             if ui.button("TEST").clicked() {
-                nav.to(ScreenId::Account)
+                Navigator::to(ScreenId::Account)
             };
             if ui.button(format!("{}BACK ", ARROW_CIRCLE_LEFT)).clicked() {
-                nav.to(ScreenId::Account)
+                Navigator::to(ScreenId::Account)
             };
         });
     }

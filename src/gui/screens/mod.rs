@@ -35,6 +35,5 @@ pub trait Screen {
     fn ui(&mut self,
           ui: &mut egui::Ui,
           frame: &mut eframe::Frame,
-          navigator: &mut Navigator,
           cb: &dyn PlatformCallbacks);
 }

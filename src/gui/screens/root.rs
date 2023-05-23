@@ -20,15 +20,15 @@ use crate::gui::screens::{Account, Accounts, Navigator, Screen, ScreenId};
 use crate::gui::views::Network;
 
 pub struct Root {
-    navigator: Navigator,
     screens: Vec<Box<dyn Screen>>,
     network: Network
 }
 
 impl Default for Root {
     fn default() -> Self {
+        Navigator::init_from(ScreenId::Accounts);
+
         Self {
-            navigator: Navigator::default(),
             screens: (vec![
                 Box::new(Accounts::default()),
                 Box::new(Account::default())
@@ -40,7 +40,7 @@ impl Default for Root {
 
 impl Root {
     pub fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame, cb: &dyn PlatformCallbacks) {
-        let is_network_panel_open = self.navigator.left_panel_open || is_dual_panel_mode(frame);
+        let is_network_panel_open = Navigator::is_side_panel_open() || is_dual_panel_mode(frame);
 
         egui::SidePanel::left("network_panel")
             .resizable(false)
@@ -53,7 +53,7 @@ impl Root {
                 .. Default::default()
             })
             .show_animated_inside(ui, is_network_panel_open, |ui| {
-                self.network.ui(ui, frame, &mut self.navigator, cb);
+                self.network.ui(ui, frame, cb);
             });
 
         egui::CentralPanel::default().frame(egui::Frame {
@@ -68,13 +68,24 @@ impl Root {
                                ui: &mut egui::Ui,
                                frame: &mut eframe::Frame,
                                cb: &dyn PlatformCallbacks) {
-        let Self { navigator, screens, .. } = self;
-        let current = navigator.current();
+        let Self { screens, .. } = self;
         for screen in screens.iter_mut() {
-            if screen.id() == *current {
-                screen.ui(ui, frame, navigator, cb);
+            if Navigator::is_current(&screen.id()) {
+                screen.ui(ui, frame, cb);
                 break;
             }
         }
     }
+}
+
+#[allow(dead_code)]
+#[cfg(target_os = "android")]
+#[allow(non_snake_case)]
+#[no_mangle]
+pub extern "C" fn Java_mw_gri_android_MainActivity_onBackButtonPress(
+    _env: jni::JNIEnv,
+    _class: jni::objects::JObject,
+    _activity: jni::objects::JObject,
+) {
+    Navigator::back();
 }

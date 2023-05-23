@@ -24,15 +24,20 @@ impl View {
     pub const DEFAULT_STROKE: Stroke = Stroke { width: 1.0, color: Color32::from_gray(190) };
 
     pub fn title_button(ui: &mut egui::Ui, icon: &str, action: impl FnOnce()) {
-        let b = egui::widgets::Button::new(
-            RichText::new(icon.to_string()).size(24.0).color(COLOR_DARK)
-        ).fill(Color32::TRANSPARENT)
-            .ui(ui).interact(Sense::click_and_drag());
+        ui.scope(|ui| {
+            // Disable stroke around title buttons on hover
+            ui.style_mut().visuals.widgets.active.bg_stroke = Stroke::NONE;
 
-        // Click optimization for touch screens
-        if b.drag_released() || b.clicked() {
-            (action)();
-        };
+            let b = egui::widgets::Button::new(
+                RichText::new(icon.to_string()).size(24.0).color(COLOR_DARK)
+            ).fill(Color32::TRANSPARENT)
+                .ui(ui).interact(Sense::click_and_drag());
+
+            // Click optimization for touch screens
+            if b.drag_released() || b.clicked() {
+                (action)();
+            };
+        });
     }
 
     pub fn tab_button(ui: &mut egui::Ui, icon: &str, active: bool, mut action: impl FnMut()) {
@@ -52,11 +57,6 @@ impl View {
             .stroke(stroke)
             .fill(color)
             .ui(ui).interact(Sense::click_and_drag());
-
-
-        let vel_y = ui.ctx().input().pointer.delta().y;
-        let vel_x = ui.ctx().input().pointer.delta().x;
-        println!("12345, vel {}, {}", vel_y, vel_x);
 
         // Click optimization for touch screens
         if b.drag_released() || b.clicked() {

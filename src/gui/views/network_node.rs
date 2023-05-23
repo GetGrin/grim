@@ -163,7 +163,6 @@ impl NetworkTab for NetworkNode {
                                           [false, false, true, false]);
                     });
                     columns[1].vertical_centered(|ui| {
-                        let ts = stats.chain_stats.latest_timestamp;
                         View::rounded_box(ui,
                                           stats.peer_count.to_string(),
                                           t!("peers"),
