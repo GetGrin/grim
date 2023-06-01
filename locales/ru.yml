@@ -1,22 +1,13 @@
-accounts: Аккаунты
-integrated_node: Встроенный узел
-metrics: Метрики
-settings: Настройки
-server_restarting: Сервер перезапускается
-server_down: Сервер выключен
-header: Заголовок
-block: Блок
-hash: Хэш
-height: Высота
-difficulty: Сложность
-time_utc: Время (UTC)
-transactions: Транзакции
-main_pool: Основной пул
-stem_pool: Stem пул
-data: Данные
-size: Размер (ГБ)
-peers: Пиры
+screen_accounts:
+  title: Аккаунты
+network:
+  node: Встроенный узел
+  metrics: Метрики
+  mining: Майнинг
+  settings: Настройки сервера
 sync_status:
+  server_restarting: Сервер перезапускается
+  server_down: Сервер выключен
   initial: Запуск сервера
   no_sync: Сервер запущен
   awaiting_peers: Ожидание пиров
@@ -30,10 +21,29 @@ sync_status:
   tx_hashset_save: Сохранение состояния цепи
   body_sync: Загрузка блоков
   body_sync_percent: 'Загрузка блоков: %{percent}%'
-  shutdown: Выключение
-emission: Эмиссия
-inflation: Инфляция
-supply: Предложение
-block_time: Время блока
-reward: Награда
-difficulty_at_window: 'Сложность в окне %{size}'
+  shutdown: Выключение сервера
+network_node:
+  header: Заголовок
+  block: Блок
+  hash: Хэш
+  height: Высота
+  difficulty: Сложность
+  time_utc: Время (UTC)
+  transactions: Транзакции
+  main_pool: Основной пул
+  stem_pool: Stem пул
+  data: Данные
+  size: Размер (ГБ)
+  peers: Пиры
+network_metrics:
+  emission: Эмиссия
+  inflation: Инфляция
+  supply: Предложение
+  block_time: Время блока
+  reward: Награда
+  difficulty_window: 'Сложность в окне %{size}'
+modal:
+  cancel: Отмена
+modal_exit:
+  description: Вы уверены, что хотите выйти из приложения?
+  exit: Выход

@@ -29,7 +29,7 @@ pub struct NetworkMetrics {
 impl Default for NetworkMetrics {
     fn default() -> Self {
         Self {
-            title: t!("metrics"),
+            title: t!("network.metrics").to_uppercase(),
         }
     }
 }
@@ -57,7 +57,7 @@ impl NetworkTab for NetworkMetrics {
 
         // Show emission info
         ui.vertical_centered_justified(|ui| {
-            View::sub_title(ui, format!("{} {}", COINS, t!("emission")));
+            View::sub_header(ui, format!("{} {}", COINS, t!("network_metrics.emission")));
         });
         ui.add_space(4.0);
 
@@ -68,19 +68,19 @@ impl NetworkTab for NetworkMetrics {
             columns[0].vertical_centered(|ui| {
                 View::rounded_box(ui,
                                   format!("{}ツ", BLOCK_REWARD),
-                                  t!("reward"),
+                                  t!("network_metrics.reward"),
                                   [true, false, true, false]);
             });
             columns[1].vertical_centered(|ui| {
                 View::rounded_box(ui,
                                   format!("{:.2}%", rate),
-                                  t!("inflation"),
+                                  t!("network_metrics.inflation"),
                                   [false, false, false, false]);
             });
             columns[2].vertical_centered(|ui| {
                 View::rounded_box(ui,
                                   supply.to_string(),
-                                  t!("supply"),
+                                  t!("network_metrics.supply"),
                                   [false, true, false, true]);
             });
         });
@@ -88,27 +88,30 @@ impl NetworkTab for NetworkMetrics {
 
         // Show difficulty adjustment window info
         ui.vertical_centered_justified(|ui| {
-            let title = t!("difficulty_at_window", "size" => stats.diff_stats.window_size);
-            View::sub_title(ui, format!("{} {}", HOURGLASS_MEDIUM, title));
+            let title = t!(
+                "network_metrics.difficulty_window",
+                "size" => stats.diff_stats.window_size
+            );
+            View::sub_header(ui, format!("{} {}", HOURGLASS_MEDIUM, title));
         });
         ui.add_space(4.0);
         ui.columns(3, |columns| {
             columns[0].vertical_centered(|ui| {
                 View::rounded_box(ui,
                                   stats.diff_stats.height.to_string(),
-                                  t!("height"),
+                                  t!("network_node.height"),
                                   [true, false, true, false]);
             });
             columns[1].vertical_centered(|ui| {
                 View::rounded_box(ui,
                                   format!("{}s", stats.diff_stats.average_block_time),
-                                  t!("block_time"),
+                                  t!("network_metrics.block_time"),
                                   [false, false, false, false]);
             });
             columns[2].vertical_centered(|ui| {
                 View::rounded_box(ui,
                                   stats.diff_stats.average_difficulty.to_string(),
-                                  t!("difficulty"),
+                                  t!("network_node.difficulty"),
                                   [false, true, false, true]);
             });
         });
@@ -119,7 +122,7 @@ impl NetworkTab for NetworkMetrics {
         ScrollArea::vertical()
             .auto_shrink([false; 2])
             .stick_to_bottom(true)
-            .id_source("diff_scroll")
+            .id_source("difficulty_scroll")
             .show_rows(
                 ui,
                 DIFF_BLOCK_UI_HEIGHT,

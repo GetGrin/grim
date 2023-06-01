@@ -88,15 +88,14 @@ public class BackgroundService extends Service {
     public void onStop() {
         mStopped = true;
 
+        stopForeground(Service.STOP_FOREGROUND_REMOVE);
+
         if (mWakeLock.isHeld()) {
             mWakeLock.release();
             mWakeLock = null;
         }
 
         mHandler.removeCallbacks(mUpdateSyncStatus);
-
-        stopForeground(Service.STOP_FOREGROUND_REMOVE);
-        stopSelf();
     }
 
     public static void start(Context context) {

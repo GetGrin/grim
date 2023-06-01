@@ -14,20 +14,16 @@
 
 use std::time::Duration;
 
-use eframe::emath::lerp;
-use eframe::epaint::{Color32, FontId, Rgba, Stroke};
-use eframe::epaint::text::{LayoutJob, TextFormat, TextWrapping};
-use egui::RichText;
+use egui::{Color32, lerp, Rgba, RichText, Stroke};
 use egui::style::Margin;
 use egui_extras::{Size, StripBuilder};
 use grin_chain::SyncStatus;
 use grin_core::global::ChainTypes;
 
-use crate::gui::app::is_dual_panel_mode;
-use crate::gui::colors::{COLOR_DARK, COLOR_YELLOW};
+use crate::gui::colors::{COLOR_DARK, COLOR_GRAY_DARK, COLOR_YELLOW};
 use crate::gui::icons::{CARDHOLDER, DATABASE, DOTS_THREE_OUTLINE_VERTICAL, FACTORY, FADERS, GAUGE};
+use crate::gui::Navigator;
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::screens::Navigator;
 use crate::gui::views::{NetworkTab, View};
 use crate::gui::views::network_metrics::NetworkMetrics;
 use crate::gui::views::network_node::NetworkNode;
@@ -50,7 +46,6 @@ pub struct Network {
 
 impl Default for Network {
     fn default() -> Self {
-        Node::start(ChainTypes::Mainnet);
         Self {
             current_mode: Mode::Node,
             node_view: NetworkNode::default(),
@@ -60,11 +55,7 @@ impl Default for Network {
 }
 
 impl Network {
-    pub fn ui(&mut self,
-              ui: &mut egui::Ui,
-              frame: &mut eframe::Frame,
-              _: &dyn PlatformCallbacks) {
-
+    pub fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame, _: &dyn PlatformCallbacks) {
         egui::TopBottomPanel::top("network_title")
             .resizable(false)
             .frame(egui::Frame {
@@ -88,44 +79,45 @@ impl Network {
                 self.draw_tabs(ui);
             });
 
-        egui::CentralPanel::default().frame(egui::Frame {
-            stroke: View::DEFAULT_STROKE,
-            inner_margin: Margin::same(4.0),
-            fill: Color32::WHITE,
-            .. Default::default()
-        }).show_inside(ui, |ui| {
-            self.draw_tab_content(ui);
-        });
-
-
+        egui::CentralPanel::default()
+            .frame(egui::Frame {
+                stroke: View::DEFAULT_STROKE,
+                inner_margin: Margin::same(4.0),
+                fill: Color32::WHITE,
+                .. Default::default()
+            })
+            .show_inside(ui, |ui| {
+                self.draw_tab_content(ui);
+            });
     }
 
     fn draw_tabs(&mut self, ui: &mut egui::Ui) {
-        //Setup spacing between tabs
-        ui.style_mut().spacing.item_spacing = egui::vec2(6.0, 0.0);
+        ui.scope(|ui| {
+            //Setup spacing between tabs
+            ui.style_mut().spacing.item_spacing = egui::vec2(6.0, 0.0);
 
-        ui.columns(4, |columns| {
-            columns[0].vertical_centered(|ui| {
-                View::tab_button(ui, DATABASE, self.current_mode == Mode::Node, || {
-                    self.current_mode = Mode::Node;
+            ui.columns(4, |columns| {
+                columns[0].vertical_centered(|ui| {
+                    View::tab_button(ui, DATABASE, self.current_mode == Mode::Node, || {
+                        self.current_mode = Mode::Node;
+                    });
+                });
+                columns[1].vertical_centered(|ui| {
+                    View::tab_button(ui, GAUGE, self.current_mode == Mode::Metrics, || {
+                        self.current_mode = Mode::Metrics;
+                    });
+                });
+                columns[2].vertical_centered(|ui| {
+                    View::tab_button(ui, FACTORY, self.current_mode == Mode::Miner, || {
+                        self.current_mode = Mode::Miner;
+                    });
+                });
+                columns[3].vertical_centered(|ui| {
+                    View::tab_button(ui, FADERS, self.current_mode == Mode::Tuning, || {
+                        self.current_mode = Mode::Tuning;
+                    });
                 });
             });
-            columns[1].vertical_centered(|ui| {
-                View::tab_button(ui, GAUGE, self.current_mode == Mode::Metrics, || {
-                    self.current_mode = Mode::Metrics;
-                });
-            });
-            columns[2].vertical_centered(|ui| {
-                View::tab_button(ui, FACTORY, self.current_mode == Mode::Miner, || {
-                    self.current_mode = Mode::Miner;
-                });
-            });
-            columns[3].vertical_centered(|ui| {
-                View::tab_button(ui, FADERS, self.current_mode == Mode::Tuning, || {
-                    self.current_mode = Mode::Tuning;
-                });
-            });
-
         });
     }
 
@@ -165,7 +157,7 @@ impl Network {
                                 self.draw_title_text(builder);
                             });
                             strip.cell(|ui| {
-                                if !is_dual_panel_mode(frame) {
+                                if !View::is_dual_panel_mode(frame) {
                                     ui.centered_and_justified(|ui| {
                                         View::title_button(ui, CARDHOLDER, || {
                                             Navigator::toggle_side_panel();
@@ -195,13 +187,14 @@ impl Network {
         };
 
         builder
-            .size(Size::exact(19.0))
             .size(Size::remainder())
+            .size(Size::exact(32.0))
             .vertical(|mut strip| {
                 strip.cell(|ui| {
-                    ui.centered_and_justified(|ui| {
-                        ui.label(RichText::new(title_text.to_uppercase())
-                            .size(19.0)
+                    ui.add_space(2.0);
+                    ui.vertical_centered(|ui| {
+                        ui.label(RichText::new(title_text)
+                            .size(18.0)
                             .color(COLOR_DARK));
                     });
                 });
@@ -223,26 +216,17 @@ impl Network {
                             bright
                         };
 
+                        // Draw sync text
+                        let status_color_rgba = Rgba::from(COLOR_GRAY_DARK) * color_factor as f32;
+                        let status_color = Color32::from(status_color_rgba);
+                        View::ellipsize_text(ui, status_text, 15.0, status_color);
+
                         // Repaint based on sync status
                         if idle {
                             ui.ctx().request_repaint_after(Duration::from_millis(600));
                         } else {
                             ui.ctx().request_repaint();
                         }
-
-                        // Draw sync text
-                        let mut job = LayoutJob::single_section(status_text, TextFormat {
-                            font_id: FontId::proportional(15.0),
-                            color: Color32::from(Rgba::from(COLOR_DARK) * color_factor as f32),
-                            .. Default::default()
-                        });
-                        job.wrap = TextWrapping {
-                            max_rows: 1,
-                            break_anywhere: false,
-                            overflow_character: Option::from('﹍'),
-                            ..Default::default()
-                        };
-                        ui.label(job);
                     });
                 });
             });

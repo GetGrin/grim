@@ -28,7 +28,7 @@ pub struct NetworkNode {
 impl Default for NetworkNode {
     fn default() -> Self {
         Self {
-            title: t!("integrated_node"),
+            title: t!("network.node").to_uppercase(),
         }
     }
 }
@@ -54,20 +54,20 @@ impl NetworkTab for NetworkNode {
             .show(ui, |ui| {
                 // Show header stats
                 ui.vertical_centered_justified(|ui| {
-                    View::sub_title(ui, format!("{} {}", FLOW_ARROW, t!("header")));
+                    View::sub_header(ui, format!("{} {}", FLOW_ARROW, t!("network_node.header")));
                 });
                 ui.add_space(4.0);
                 ui.columns(2, |columns| {
                     columns[0].vertical_centered(|ui| {
                         View::rounded_box(ui,
                                           stats.header_stats.last_block_h.to_string(),
-                                          t!("hash"),
+                                          t!("network_node.hash"),
                                           [true, false, false, false]);
                     });
                     columns[1].vertical_centered(|ui| {
                         View::rounded_box(ui,
                                           stats.header_stats.height.to_string(),
-                                          t!("height"),
+                                          t!("network_node.height"),
                                           [false, true, false, false]);
                     });
                 });
@@ -75,14 +75,14 @@ impl NetworkTab for NetworkNode {
                     columns[0].vertical_centered(|ui| {
                         View::rounded_box(ui,
                                           stats.header_stats.total_difficulty.to_string(),
-                                          t!("difficulty"),
+                                          t!("network_node.difficulty"),
                                           [false, false, true, false]);
                     });
                     columns[1].vertical_centered(|ui| {
                         let h_ts = stats.header_stats.latest_timestamp;
                         View::rounded_box(ui,
                                           format!("{}", h_ts.format("%d/%m/%Y %H:%M")),
-                                          t!("time_utc"),
+                                          t!("network_node.time_utc"),
                                           [false, false, false, true]);
                     });
                 });
@@ -90,20 +90,20 @@ impl NetworkTab for NetworkNode {
                 // Show block stats
                 ui.add_space(6.0);
                 ui.vertical_centered_justified(|ui| {
-                    View::sub_title(ui, format!("{} {}", CUBE, t!("block")));
+                    View::sub_header(ui, format!("{} {}", CUBE, t!("network_node.block")));
                 });
                 ui.add_space(4.0);
                 ui.columns(2, |columns| {
                     columns[0].vertical_centered(|ui| {
                         View::rounded_box(ui,
                                           stats.chain_stats.last_block_h.to_string(),
-                                          t!("hash"),
+                                          t!("network_node.hash"),
                                           [true, false, false, false]);
                     });
                     columns[1].vertical_centered(|ui| {
                         View::rounded_box(ui,
                                           stats.chain_stats.height.to_string(),
-                                          t!("height"),
+                                          t!("network_node.height"),
                                           [false, true, false, false]);
                     });
                 });
@@ -111,14 +111,14 @@ impl NetworkTab for NetworkNode {
                     columns[0].vertical_centered(|ui| {
                         View::rounded_box(ui,
                                           stats.chain_stats.total_difficulty.to_string(),
-                                          t!("difficulty"),
+                                          t!("network_node.difficulty"),
                                           [false, false, true, false]);
                     });
                     columns[1].vertical_centered(|ui| {
                         let b_ts = stats.chain_stats.latest_timestamp;
                         View::rounded_box(ui,
                                           format!("{}", b_ts.format("%d/%m/%Y %H:%M")),
-                                          t!("time_utc"),
+                                          t!("network_node.time_utc"),
                                           [false, false, false, true]);
                     });
                 });
@@ -126,7 +126,7 @@ impl NetworkTab for NetworkNode {
                 // Show data stats
                 ui.add_space(6.0);
                 ui.vertical_centered_justified(|ui| {
-                    View::sub_title(ui, format!("{} {}", SHARE_NETWORK, t!("data")));
+                    View::sub_header(ui, format!("{} {}", SHARE_NETWORK, t!("network_node.data")));
                 });
                 ui.add_space(4.0);
                 ui.columns(2, |columns| {
@@ -139,7 +139,7 @@ impl NetworkTab for NetworkNode {
                         };
                         View::rounded_box(ui,
                                           tx_stat,
-                                          t!("main_pool"),
+                                          t!("network_node.main_pool"),
                                           [true, false, false, false]);
                     });
                     columns[1].vertical_centered(|ui| {
@@ -151,7 +151,7 @@ impl NetworkTab for NetworkNode {
                         };
                         View::rounded_box(ui,
                                           stem_tx_stat,
-                                          t!("stem_pool"),
+                                          t!("network_node.stem_pool"),
                                           [false, true, false, false]);
                     });
                 });
@@ -159,13 +159,13 @@ impl NetworkTab for NetworkNode {
                     columns[0].vertical_centered(|ui| {
                         View::rounded_box(ui,
                                           stats.disk_usage_gb.to_string(),
-                                          t!("size"),
+                                          t!("network_node.size"),
                                           [false, false, true, false]);
                     });
                     columns[1].vertical_centered(|ui| {
                         View::rounded_box(ui,
                                           stats.peer_count.to_string(),
-                                          t!("peers"),
+                                          t!("network_node.peers"),
                                           [false, false, false, true]);
                     });
                 });
@@ -174,7 +174,7 @@ impl NetworkTab for NetworkNode {
                 if stats.peer_count > 0 {
                     ui.add_space(6.0);
                     ui.vertical_centered_justified(|ui| {
-                        View::sub_title(ui,format!("{} {}", HANDSHAKE, t!("peers")));
+                        View::sub_header(ui, format!("{} {}", HANDSHAKE, t!("network_node.peers")));
                     });
                     ui.add_space(4.0);
 

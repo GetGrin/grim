@@ -13,7 +13,7 @@
 // limitations under the License.
 
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::screens::{Navigator, ScreenId};
+use crate::gui::screens::ScreenId;
 
 pub struct Account {
 

@@ -13,22 +13,25 @@
 // limitations under the License.
 
 mod views;
-pub use self::views::View;
+pub use views::View;
 
 mod title_panel;
-pub use self::title_panel::{TitlePanel, TitlePanelAction};
+pub use title_panel::*;
+
+mod modal;
+pub use modal::*;
 
 mod network;
 mod network_node;
-mod network_tuning;
+mod network_settings;
 mod network_metrics;
 mod network_mining;
+pub use network::Network;
 
-pub use self::network::Network;
+mod progress_loading;
+pub use progress_loading::ProgressLoading;
 
 pub trait NetworkTab {
     fn name(&self) -> &String;
     fn ui(&mut self, ui: &mut egui::Ui);
 }
-
-

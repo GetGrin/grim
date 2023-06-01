@@ -14,10 +14,10 @@
 
 use std::cmp::min;
 
-use crate::gui::app::is_dual_panel_mode;
+use crate::gui::Navigator;
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::screens::{Account, Accounts, Navigator, Screen, ScreenId};
-use crate::gui::views::Network;
+use crate::gui::screens::{Account, Accounts, Screen, ScreenId};
+use crate::gui::views::{Network, View};
 
 pub struct Root {
     screens: Vec<Box<dyn Screen>>,
@@ -26,7 +26,7 @@ pub struct Root {
 
 impl Default for Root {
     fn default() -> Self {
-        Navigator::init_from(ScreenId::Accounts);
+        Navigator::init(ScreenId::Accounts);
 
         Self {
             screens: (vec![
@@ -40,31 +40,23 @@ impl Default for Root {
 
 impl Root {
     pub fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame, cb: &dyn PlatformCallbacks) {
-        let is_network_panel_open = Navigator::is_side_panel_open() || is_dual_panel_mode(frame);
-
+        let (is_panel_open, panel_width) = dual_panel_state_width(frame);
         egui::SidePanel::left("network_panel")
             .resizable(false)
-            .exact_width(if is_dual_panel_mode(frame) {
-                min(frame.info().window_info.size.x as i64, 400) as f32
-            } else {
-                frame.info().window_info.size.x
-            })
-            .frame(egui::Frame {
-                .. Default::default()
-            })
-            .show_animated_inside(ui, is_network_panel_open, |ui| {
+            .exact_width(panel_width)
+            .frame(egui::Frame::default())
+            .show_animated_inside(ui, is_panel_open, |ui| {
                 self.network.ui(ui, frame, cb);
             });
 
-        egui::CentralPanel::default().frame(egui::Frame {
-            ..Default::default()
-        }).show_inside(ui, |ui| {
-            self.show_current_screen(ui, frame, cb);
-        });
-
+        egui::CentralPanel::default()
+            .frame(egui::Frame::default())
+            .show_inside(ui, |ui| {
+                self.show_current_screen(ui, frame, cb);
+            });
     }
 
-    pub fn show_current_screen(&mut self,
+    fn show_current_screen(&mut self,
                                ui: &mut egui::Ui,
                                frame: &mut eframe::Frame,
                                cb: &dyn PlatformCallbacks) {
@@ -76,6 +68,18 @@ impl Root {
             }
         }
     }
+}
+
+/// Get dual panel state and width
+fn dual_panel_state_width(frame: &mut eframe::Frame) -> (bool, f32) {
+    let dual_panel_mode = View::is_dual_panel_mode(frame);
+    let is_panel_open = dual_panel_mode || Navigator::is_side_panel_open();
+    let panel_width = if dual_panel_mode {
+        min(frame.info().window_info.size.x as i64, View::SIDE_PANEL_MIN_WIDTH) as f32
+    } else {
+        frame.info().window_info.size.x
+    };
+    (is_panel_open, panel_width)
 }
 
 #[allow(dead_code)]

@@ -21,8 +21,9 @@ pub mod platform;
 pub mod app;
 
 pub trait PlatformCallbacks {
-    fn show_keyboard(&mut self);
-    fn hide_keyboard(&mut self);
-    fn copy_string_to_buffer(&mut self, data: String);
-    fn get_string_from_buffer(&mut self) -> String;
+    fn show_keyboard(&self);
+    fn hide_keyboard(&self);
+    fn copy_string_to_buffer(&self, data: String);
+    fn get_string_from_buffer(&self) -> String;
+    fn exit(&self);
 }

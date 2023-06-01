@@ -14,48 +14,56 @@
 
 use egui::Frame;
 
-use crate::gui::app::is_dual_panel_mode;
-use crate::gui::icons::{ARROW_CIRCLE_LEFT, GEAR_SIX, GLOBE};
+use crate::gui::icons::{ARROW_CIRCLE_LEFT, GLOBE, PLUS};
+use crate::gui::Navigator;
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::screens::{Navigator, Screen, ScreenId};
+use crate::gui::screens::{Screen, ScreenId};
 use crate::gui::views::{TitlePanel, TitlePanelAction, View};
 
-#[derive(Default)]
-pub struct Accounts {}
+pub struct Accounts {
+    title: String
+}
+
+impl Default for Accounts {
+    fn default() -> Self {
+        Self {
+            title: t!("screen_accounts.title").to_uppercase(),
+        }
+    }
+}
 
 impl Screen for Accounts {
     fn id(&self) -> ScreenId {
         ScreenId::Accounts
     }
 
-    fn ui(&mut self,
-          ui: &mut egui::Ui,
-          frame: &mut eframe::Frame,
-          cb: &dyn PlatformCallbacks) {
-        TitlePanel::new(t!("accounts"))
-            .left_action(
-                if !is_dual_panel_mode(frame) {
-                    TitlePanelAction::new(GLOBE.into(), || {
-                        Navigator::toggle_side_panel();
-                    })
-                } else {
-                    None
-                }
-            ).right_action(TitlePanelAction::new(GEAR_SIX.into(), || {
-                //TODO: settings
-            })).ui(ui);
+    fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame, cb: &dyn PlatformCallbacks) {
+        let Self { title } = self;
 
-        egui::CentralPanel::default().frame(Frame {
-            stroke: View::DEFAULT_STROKE,
-            .. Default::default()
-        }).show_inside(ui, |ui| {
-            ui.label(format!("{}Here we go 10000 ツ", ARROW_CIRCLE_LEFT));
-            if ui.button("TEST").clicked() {
-                Navigator::to(ScreenId::Account)
-            };
-            if ui.button(format!("{}BACK ", ARROW_CIRCLE_LEFT)).clicked() {
-                Navigator::to(ScreenId::Account)
-            };
-        });
+        TitlePanel::new(title)
+            .ui(if !View::is_dual_panel_mode(frame) {
+                TitlePanelAction::new(GLOBE, || {
+                    Navigator::toggle_side_panel();
+                })
+            } else {
+                None
+            }, TitlePanelAction::new(PLUS, || {
+                //TODO: add account
+            }), ui);
+
+        egui::CentralPanel::default()
+            .frame(Frame {
+                stroke: View::DEFAULT_STROKE,
+                ..Default::default()
+            })
+            .show_inside(ui, |ui| {
+                ui.label(format!("{}Here we go 10000 ツ", ARROW_CIRCLE_LEFT));
+                if ui.button("TEST").clicked() {
+                    Navigator::to(ScreenId::Account)
+                };
+                if ui.button(format!("{}BACK ", ARROW_CIRCLE_LEFT)).clicked() {
+                    Navigator::to(ScreenId::Account)
+                };
+            });
     }
 }

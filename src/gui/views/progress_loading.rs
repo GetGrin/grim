@@ -12,26 +12,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub use account::Account;
-pub use accounts::Accounts;
-pub use root::Root;
+use egui::{Response, RichText, Spinner, Ui, Widget};
 
-use crate::gui::platform::PlatformCallbacks;
+use crate::gui::colors::COLOR_DARK;
 
-mod root;
-mod accounts;
-mod account;
-
-#[derive(Ord, Eq, PartialOrd, PartialEq)]
-pub enum ScreenId {
-    Accounts,
-    Account,
+pub struct ProgressLoading {
+    text: String
 }
 
-pub trait Screen {
-    fn id(&self) -> ScreenId;
-    fn ui(&mut self,
-          ui: &mut egui::Ui,
-          frame: &mut eframe::Frame,
-          cb: &dyn PlatformCallbacks);
+impl ProgressLoading {
+    pub fn new(text: String) -> Self {
+        Self {
+            text
+        }
+    }
+}
+
+impl Widget for ProgressLoading {
+    fn ui(self, ui: &mut Ui) -> Response {
+        ui.vertical_centered_justified(|ui| {
+            Spinner::new().size(36.0).color(COLOR_DARK).ui(ui);
+            ui.add_space(10.0);
+            ui.label(RichText::new(self.text).size(18.0).color(COLOR_DARK));
+        }).response
+    }
 }

@@ -25,25 +25,26 @@ use grin_config::config;
 use grin_core::global;
 use grin_core::global::ChainTypes;
 use grin_servers::{Server, ServerStats};
-use jni::objects::JString;
 use jni::sys::jstring;
 use lazy_static::lazy_static;
 use log::info;
 
 lazy_static! {
+    /// Static thread-aware state of [Node] to be updated from another thread.
     static ref NODE_STATE: Arc<Node> = Arc::new(Node::default());
 }
 
+/// Provides [Server] control, holds current status and statistics.
 pub struct Node {
-    /// Data for UI
+    /// Statistics data for UI.
     stats: Arc<RwLock<Option<ServerStats>>>,
-    /// Chain type of launched server
+    /// Chain type of launched server.
     chain_type: Arc<RwLock<ChainTypes>>,
-    /// Indicator if server is starting
+    /// Indicator if server is starting.
     starting: AtomicBool,
-    /// Thread flag to stop the server and start it again
+    /// Thread flag to stop the server and start it again.
     restart_needed: AtomicBool,
-    /// Thread flag to stop the server
+    /// Thread flag to stop the server.
     stop_needed: AtomicBool,
 }
 
@@ -60,12 +61,12 @@ impl Default for Node {
 }
 
 impl Node {
-    /// Stop server
+    /// Stop [Server].
     pub fn stop() {
         NODE_STATE.stop_needed.store(true, Ordering::Relaxed);
     }
 
-    /// Start server with provided chain type
+    /// Start [Server] with provided chain type.
     pub fn start(chain_type: ChainTypes) {
         if !Self::is_running() {
             let mut w_chain_type = NODE_STATE.chain_type.write().unwrap();
@@ -74,7 +75,7 @@ impl Node {
         }
     }
 
-    /// Restart server with provided chain type
+    /// Restart [Server] with provided chain type.
     pub fn restart(chain_type: ChainTypes) {
         if Self::is_running() {
             let mut w_chain_type = NODE_STATE.chain_type.write().unwrap();
@@ -85,52 +86,52 @@ impl Node {
         }
     }
 
-    /// Check if server is starting
+    /// Check if [Server] is starting.
     pub fn is_starting() -> bool {
         NODE_STATE.starting.load(Ordering::Relaxed)
     }
 
-    /// Check if server is running
+    /// Check if [Server] is running.
     pub fn is_running() -> bool {
         Self::get_stats().is_some() || Self::is_starting()
     }
 
-    /// Check if server is stopping
+    /// Check if [Server] is stopping.
     pub fn is_stopping() -> bool {
         NODE_STATE.stop_needed.load(Ordering::Relaxed)
     }
 
-    /// Check if server is restarting
+    /// Check if [Server] is restarting.
     pub fn is_restarting() -> bool {
         NODE_STATE.restart_needed.load(Ordering::Relaxed)
     }
 
-    /// Get server stats
+    /// Get [Server] statistics.
     pub fn get_stats() -> RwLockReadGuard<'static, Option<ServerStats>> {
         NODE_STATE.stats.read().unwrap()
     }
 
-    /// Get server sync status, empty when server is not running
+    /// Get [Server] synchronization status, empty when it is not running.
     pub fn get_sync_status() -> Option<SyncStatus> {
-        // return Shutdown status when node is stopping
+        // Return Shutdown status when node is stopping.
         if Self::is_stopping() {
             return Some(SyncStatus::Shutdown)
         }
 
-        // return Initial status when node is starting
+        // Return Initial status when node is starting.
         if Self::is_starting() {
             return Some(SyncStatus::Initial)
         }
 
         let stats = Self::get_stats();
-        // return sync status when server is running (stats are not empty)
+        // Return sync status when server is running (stats are not empty).
         if stats.is_some() {
             return Some(stats.as_ref().unwrap().sync_status)
         }
         None
     }
 
-    /// Start a thread to launch server and update state with server stats
+    /// Start a thread to launch [Server] and update [NODE_STATE] with server statistics.
     fn start_server_thread() -> JoinHandle<()> {
         thread::spawn(move || {
             NODE_STATE.starting.store(true, Ordering::Relaxed);
@@ -142,7 +143,7 @@ impl Node {
                 if Self::is_restarting() {
                     server.stop();
 
-                    // Create new server with current chain type
+                    // Create new server with current chain type.
                     server = start_server(&NODE_STATE.chain_type.read().unwrap());
 
                     NODE_STATE.restart_needed.store(false, Ordering::Relaxed);
@@ -152,6 +153,7 @@ impl Node {
                     let mut w_stats = NODE_STATE.stats.write().unwrap();
                     *w_stats = None;
 
+                    NODE_STATE.starting.store(false, Ordering::Relaxed);
                     NODE_STATE.stop_needed.store(false, Ordering::Relaxed);
                     break;
                 } else {
@@ -166,18 +168,23 @@ impl Node {
                         }
                     }
                 }
-                thread::sleep(Duration::from_millis(300));
+                thread::sleep(Duration::from_millis(250));
             }
         })
     }
 
+    /// Get synchronization status i18n text.
     pub fn get_sync_status_text(sync_status: Option<SyncStatus>) -> String {
         if Node::is_restarting() {
-            return t!("server_restarting")
+            return t!("sync_status.server_restarting")
+        }
+
+        if Node::is_stopping() {
+            return t!("sync_status.shutdown")
         }
 
         if sync_status.is_none() {
-            return t!("server_down")
+            return t!("sync_status.server_down")
         }
 
         match sync_status.unwrap() {
@@ -249,8 +256,9 @@ impl Node {
 
 }
 
-/// Start server with provided chain type
+/// Start [Server] with provided chain type.
 fn start_server(chain_type: &ChainTypes) -> Server {
+    // Initialize config
     let mut node_config_result = config::initial_setup_server(chain_type);
     if node_config_result.is_err() {
         // Remove config file on init error
@@ -267,18 +275,6 @@ fn start_server(chain_type: &ChainTypes) -> Server {
     let node_config = node_config_result.ok();
     let config = node_config.clone().unwrap();
     let server_config = config.members.as_ref().unwrap().server.clone();
-
-    // Remove lock file (in case if we have running node from another app)
-    {
-        let mut lock_file = PathBuf::from(&server_config.db_root);
-        lock_file.push("grin.lock");
-        if lock_file.exists() {
-            match fs::remove_file(lock_file) {
-                Ok(_) => {}
-                Err(_) => { println!("Cannot remove grin.lock file") }
-            };
-        }
-    }
 
     // Remove temporary file dir
     {
@@ -332,26 +328,28 @@ fn start_server(chain_type: &ChainTypes) -> Server {
     let api_chan: &'static mut (oneshot::Sender<()>, oneshot::Receiver<()>) =
         Box::leak(Box::new(oneshot::channel::<()>()));
     let mut server_result = Server::new(server_config.clone(), None, api_chan);
-    if server_result.is_err() {
-        let mut db_path = PathBuf::from(&server_config.db_root);
-        db_path.push("grin.lock");
-        fs::remove_file(db_path).unwrap();
-
-        // Remove chain data on server start error
-        let dirs_to_remove: Vec<&str> = vec!["header", "lmdb", "txhashset"];
-        for dir in dirs_to_remove {
-            let mut path = PathBuf::from(&server_config.db_root);
-            path.push(dir);
-            fs::remove_dir_all(path).unwrap();
-        }
-
-        // Recreate server
-        let config = node_config.clone().unwrap();
-        let server_config = config.members.as_ref().unwrap().server.clone();
-        let api_chan: &'static mut (oneshot::Sender<()>, oneshot::Receiver<()>) =
-            Box::leak(Box::new(oneshot::channel::<()>()));
-        server_result = Server::new(server_config.clone(), None, api_chan);
-    }
+    //TODO: handle server errors
+    //
+    // if server_result.is_err() {
+    //     let mut db_path = PathBuf::from(&server_config.db_root);
+    //     db_path.push("grin.lock");
+    //     fs::remove_file(db_path).unwrap();
+    //
+    //     // Remove chain data on server start error
+    //     let dirs_to_remove: Vec<&str> = vec!["header", "lmdb", "txhashset"];
+    //     for dir in dirs_to_remove {
+    //         let mut path = PathBuf::from(&server_config.db_root);
+    //         path.push(dir);
+    //         fs::remove_dir_all(path).unwrap();
+    //     }
+    //
+    //     // Recreate server
+    //     let config = node_config.clone().unwrap();
+    //     let server_config = config.members.as_ref().unwrap().server.clone();
+    //     let api_chan: &'static mut (oneshot::Sender<()>, oneshot::Receiver<()>) =
+    //         Box::leak(Box::new(oneshot::channel::<()>()));
+    //     server_result = Server::new(server_config.clone(), None, api_chan);
+    // }
 
     server_result.unwrap()
 }
@@ -360,6 +358,7 @@ fn start_server(chain_type: &ChainTypes) -> Server {
 #[cfg(target_os = "android")]
 #[allow(non_snake_case)]
 #[no_mangle]
+/// Get sync status text for Android notification from [NODE_STATE] in Java string format.
 pub extern "C" fn Java_mw_gri_android_BackgroundService_getSyncStatusText(
     _env: jni::JNIEnv,
     _class: jni::objects::JObject,
@@ -375,11 +374,25 @@ pub extern "C" fn Java_mw_gri_android_BackgroundService_getSyncStatusText(
 #[cfg(target_os = "android")]
 #[allow(non_snake_case)]
 #[no_mangle]
+/// Get sync title for Android notification in Java string format.
 pub extern "C" fn Java_mw_gri_android_BackgroundService_getSyncTitle(
     _env: jni::JNIEnv,
     _class: jni::objects::JObject,
     _activity: jni::objects::JObject,
 ) -> jstring {
-    let j_text = _env.new_string(t!("integrated_node"));
+    let j_text = _env.new_string(t!("network.node"));
     return j_text.unwrap().into_raw();
+}
+
+#[allow(dead_code)]
+#[cfg(target_os = "android")]
+#[allow(non_snake_case)]
+#[no_mangle]
+/// Calling on unexpected application termination (removal from recent apps)
+pub extern "C" fn Java_mw_gri_android_MainActivity_onTermination(
+    _env: jni::JNIEnv,
+    _class: jni::objects::JObject,
+    _activity: jni::objects::JObject,
+) {
+    Node::stop();
 }

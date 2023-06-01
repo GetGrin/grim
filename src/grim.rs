@@ -13,11 +13,13 @@
 // limitations under the License.
 
 use eframe::{AppCreator, NativeOptions, Renderer, Theme};
+use grin_core::global::ChainTypes;
 use log::LevelFilter::Info;
 #[cfg(target_os = "android")]
 use winit::platform::android::activity::AndroidApp;
 
 use crate::gui::PlatformApp;
+use crate::node::Node;
 
 #[allow(dead_code)]
 #[cfg(target_os = "android")]
@@ -66,6 +68,9 @@ fn start(mut options: NativeOptions, app_creator: AppCreator) {
     options.renderer = Renderer::Wgpu;
 
     setup_i18n();
+
+    //TODO: Take network type and server check from config
+    Node::start(ChainTypes::Mainnet);
 
     eframe::run_native("Grim", options, app_creator);
 }

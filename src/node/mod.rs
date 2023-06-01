@@ -14,4 +14,4 @@
 
 mod node;
 
-pub use self::node::Node;
+pub use node::Node;

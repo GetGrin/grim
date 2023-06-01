@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::sync::atomic::{AtomicBool, AtomicI32, Ordering};
+use std::sync::atomic::{AtomicI32, Ordering};
 use eframe::epaint::Stroke;
 use lazy_static::lazy_static;
 use winit::platform::android::activity::AndroidApp;
@@ -34,21 +34,32 @@ impl Android {
 }
 
 impl PlatformCallbacks for Android {
-    fn show_keyboard(&mut self) {
+    fn show_keyboard(&self) {
         self.android_app.show_soft_input(true);
     }
 
-    fn hide_keyboard(&mut self) {
+    fn hide_keyboard(&self) {
         self.android_app.hide_soft_input(true);
     }
 
-    fn copy_string_to_buffer(&mut self, data: String) {
+    fn copy_string_to_buffer(&self, data: String) {
         //TODO
     }
 
-    fn get_string_from_buffer(&mut self) -> String {
+    fn get_string_from_buffer(&self) -> String {
         //TODO
         "".to_string()
+    }
+
+    fn exit(&self) {
+        use jni::objects::{JObject};
+
+        let vm = unsafe { jni::JavaVM::from_raw(self.android_app.vm_as_ptr() as _) }.unwrap();
+        let mut env = vm.attach_current_thread().unwrap();
+        let activity = unsafe {
+            JObject::from_raw(self.android_app.activity_as_ptr() as jni::sys::jobject)
+        };
+        env.call_method(activity, "onExit", "()V", &[]).unwrap();
     }
 }
 

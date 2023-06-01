@@ -12,53 +12,109 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use eframe::epaint::Stroke;
-use egui::{Context, Frame};
+use egui::{Context, Stroke, Widget};
+use egui::os::OperatingSystem;
 use egui::style::Margin;
 
 use crate::gui::colors::COLOR_LIGHT;
+use crate::gui::Navigator;
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::screens::Root;
+use crate::gui::views::{Modal, ModalId, ModalLocation, ProgressLoading, View};
+use crate::node::Node;
 
 pub struct PlatformApp<Platform> {
     pub(crate) app: App,
     pub(crate) platform: Platform,
 }
 
+#[derive(Default)]
 pub struct App {
     root: Root,
-}
-
-impl Default for App {
-    fn default() -> Self {
-        Self {
-            root: Root::default(),
-        }
-    }
+    show_exit_progress: bool
 }
 
 impl App {
     pub fn ui(&mut self, ctx: &Context, frame: &mut eframe::Frame, cb: &dyn PlatformCallbacks) {
-        let Self { root } = self;
+        let modal_open = Navigator::is_modal_open(ModalLocation::Global);
         egui::CentralPanel::default()
-            .frame(Frame {
-                inner_margin: Margin::same(0.0),
-                outer_margin: Margin::same(0.0),
-                stroke: Stroke::NONE,
+            .frame(egui::Frame {
                 fill: COLOR_LIGHT,
                 .. Default::default()
             })
             .show(ctx, |ui| {
-                root.ui(ui, frame, cb)
-            });
+                if modal_open {
+                    self.show_global_modal(ui, frame, cb);
+                }
+                self.root.ui(ui, frame, cb);
+            }).response.enabled = !modal_open;
     }
-}
 
-pub fn is_dual_panel_mode(frame: &mut eframe::Frame) -> bool {
-    is_landscape(frame) && frame.info().window_info.size.x > 400.0
-}
+    fn show_global_modal(&mut self,
+                         ui: &mut egui::Ui,
+                         frame: &mut eframe::Frame,
+                         cb: &dyn PlatformCallbacks) {
+        let location = ModalLocation::Global;
+        Navigator::modal_ui(ui, frame, location, |ui, frame, modal| {
+            match modal.id {
+                ModalId::Exit => {
+                    if self.show_exit_progress {
+                        if !Node::is_running() {
+                            Self::exit(frame, cb);
+                        } else {
+                            ui.add_space(10.0);
+                            let text = Node::get_sync_status_text(Node::get_sync_status());
+                            ProgressLoading::new(text).ui(ui);
+                            ui.add_space(10.0);
+                        }
+                    } else {
+                        ui.add_space(8.0);
+                        ui.vertical_centered(|ui| {
+                            ui.label(t!("modal_exit.description"));
+                        });
+                        ui.add_space(10.0);
+                        // Setup spacing between buttons
+                        ui.spacing_mut().item_spacing = egui::Vec2::new(6.0, 0.0);
+                        ui.columns(2, |columns| {
+                            columns[0].vertical_centered_justified(|ui| {
+                                View::modal_button(ui, t!("modal_exit.exit"), || {
+                                    if !Node::is_running() {
+                                        Self::exit(frame, cb);
+                                        modal.close();
+                                    } else {
+                                        modal.disable_closing();
+                                        Node::stop();
+                                        self.show_exit_progress = true;
+                                    }
+                                });
+                            });
+                            columns[1].vertical_centered_justified(|ui| {
+                                View::modal_button(ui, t!("modal.cancel"), || {
+                                    modal.close();
+                                });
+                            });
+                        });
+                        ui.add_space(6.0);
+                    }
+                }
+            }
+        });
+    }
 
-pub fn is_landscape(frame: &mut eframe::Frame) -> bool {
-    return frame.info().window_info.size.x > frame.info().window_info.size.y
+    fn exit(frame: &mut eframe::Frame, cb: &dyn PlatformCallbacks) {
+        match OperatingSystem::from_target_os() {
+            OperatingSystem::Android => {
+                cb.exit();
+            }
+            OperatingSystem::IOS => {
+                //TODO: exit on iOS
+            }
+            OperatingSystem::Nix | OperatingSystem::Mac | OperatingSystem::Windows => {
+                frame.close();
+            }
+            // Web
+            OperatingSystem::Unknown => {}
+        }
+    }
 }
 

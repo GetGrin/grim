@@ -1,22 +1,13 @@
-accounts: Accounts
-integrated_node: Integrated Node
-metrics: Metrics
-settings: Settings
-server_restarting: Server is restarting
-server_down: Server is down
-header: Header
-block: Block
-hash: Hash
-height: Height
-difficulty: Difficulty
-time_utc: Time (UTC)
-transactions: Transactions
-main_pool: Main pool
-stem_pool: Stem pool
-data: Data
-size: Size (GB)
-peers: Peers
+screen_accounts:
+  title: Accounts
+network:
+  node: Integrated node
+  metrics: Metrics
+  mining: Mining
+  settings: Server settings
 sync_status:
+  server_restarting: Server is restarting
+  server_down: Server is down
   initial: Server is starting
   no_sync: Server is running
   awaiting_peers: Waiting for peers
@@ -30,10 +21,29 @@ sync_status:
   tx_hashset_save: Finalizing chain state
   body_sync: Downloading blocks
   body_sync_percent: 'Downloading blocks: %{percent}%'
-  shutdown: Shutting down
-emission: Emission
-inflation: Inflation
-supply: Supply
-block_time: Block time
-reward: Reward
-difficulty_at_window: 'Difficulty at window %{size}'
+  shutdown: Server is shutting down
+network_node:
+  header: Header
+  block: Block
+  hash: Hash
+  height: Height
+  difficulty: Difficulty
+  time_utc: Time (UTC)
+  transactions: Transactions
+  main_pool: Main pool
+  stem_pool: Stem pool
+  data: Data
+  size: Size (GB)
+  peers: Peers
+network_metrics:
+  emission: Emission
+  inflation: Inflation
+  supply: Supply
+  block_time: Block time
+  reward: Reward
+  difficulty_window: 'Difficulty at window %{size}'
+modal:
+  cancel: Cancel
+modal_exit:
+  description: Are you sure you want to quit the app?
+  exit: Exit

@@ -13,14 +13,14 @@
 // limitations under the License.
 
 
-pub use app::App;
-pub use app::PlatformApp;
+mod app;
+pub use app::{App, PlatformApp};
+
+mod navigator;
+pub use navigator::Navigator;
 
 pub mod platform;
 pub mod screens;
 pub mod views;
 pub mod icons;
 pub mod colors;
-
-mod app;
-

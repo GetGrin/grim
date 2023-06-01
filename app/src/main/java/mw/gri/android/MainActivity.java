@@ -9,6 +9,8 @@ import android.view.KeyEvent;
 import android.view.OrientationEventListener;
 import com.google.androidgamesdk.GameActivity;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+
 public class MainActivity extends GameActivity {
 
     static {
@@ -17,13 +19,15 @@ public class MainActivity extends GameActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        // Setup HOME environment variable for native code configurations.
         try {
             Os.setenv("HOME", getExternalFilesDir("").getPath(), true);
         } catch (ErrnoException e) {
             throw new RuntimeException(e);
         }
-        super.onCreate(savedInstanceState);
+        super.onCreate(null);
 
+        // Callback to update display cutouts at native code.
         OrientationEventListener orientationEventListener = new OrientationEventListener(this,
                 SensorManager.SENSOR_DELAY_GAME) {
             @Override
@@ -34,9 +38,10 @@ public class MainActivity extends GameActivity {
         if (orientationEventListener.canDetectOrientation()) {
             orientationEventListener.enable();
         }
-        onDisplayCutoutsChanged(Utils.getDisplayCutouts(MainActivity.this));
+        onDisplayCutoutsChanged(Utils.getDisplayCutouts(this));
 
-        BackgroundService.start(getApplicationContext());
+        // Start notification service.
+        BackgroundService.start(this);
     }
 
     native void onDisplayCutoutsChanged(int[] cutouts);
@@ -52,23 +57,35 @@ public class MainActivity extends GameActivity {
 
     public native void onBackButtonPress();
 
+    private boolean mManualExit;
+    private final AtomicBoolean mActivityDestroyed = new AtomicBoolean(false);
+
     @Override
     protected void onDestroy() {
         if (!mManualExit) {
-            BackgroundService.stop(getApplicationContext());
-            // Temporary fix to prevent app hanging when closed from recent apps
-            Process.killProcess(Process.myPid());
+            onTermination();
         }
+        // Temp fix: kill process after 3 seconds to prevent app hanging at next launch
+        new Thread(() -> {
+            try {
+                Thread.sleep(3000);
+                if (!mActivityDestroyed.get()) {
+                    Process.killProcess(Process.myPid());
+                }
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        }).start();
         super.onDestroy();
+        mActivityDestroyed.set(true);
     }
-
-
-    private boolean mManualExit = false;
 
     // Called from native code
     public void onExit() {
         mManualExit = true;
-        BackgroundService.stop(getApplicationContext());
+        BackgroundService.stop(this);
         finish();
     }
+
+    public native void onTermination();
 }
