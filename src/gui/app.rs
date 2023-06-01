@@ -60,13 +60,13 @@ impl App {
                 ModalId::Exit => {
                     if self.show_exit_progress {
                         if !Node::is_running() {
+                            modal.close();
                             Self::exit(frame, cb);
-                        } else {
-                            ui.add_space(10.0);
-                            let text = Node::get_sync_status_text(Node::get_sync_status());
-                            ProgressLoading::new(text).ui(ui);
-                            ui.add_space(10.0);
                         }
+                        ui.add_space(12.0);
+                        let text = Node::get_sync_status_text(Node::get_sync_status());
+                        ProgressLoading::new(text).ui(ui);
+                        ui.add_space(12.0);
                     } else {
                         ui.add_space(8.0);
                         ui.vertical_centered(|ui| {

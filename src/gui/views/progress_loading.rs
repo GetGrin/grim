@@ -31,6 +31,7 @@ impl ProgressLoading {
 impl Widget for ProgressLoading {
     fn ui(self, ui: &mut Ui) -> Response {
         ui.vertical_centered_justified(|ui| {
+            ui.add_space(10.0);
             Spinner::new().size(36.0).color(COLOR_DARK).ui(ui);
             ui.add_space(10.0);
             ui.label(RichText::new(self.text).size(18.0).color(COLOR_DARK));

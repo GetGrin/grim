@@ -215,14 +215,14 @@ impl Modal {
         let bg_idx = ui.painter().add(bg_shape);
 
         // Draw main content.
-        let mut content_resp_rect = ui.allocate_ui_at_rect(rect, |ui| {
+        let mut content_rect = ui.allocate_ui_at_rect(rect, |ui| {
             (add_content)(ui, frame, self);
         }).response.rect;
 
         // Setup background shape to be painted behind main content.
-        content_resp_rect.min -= egui::emath::vec2(6.0, 0.0);
-        content_resp_rect.max += egui::emath::vec2(6.0, 0.0);
-        bg_shape.rect = content_resp_rect;
+        content_rect.min -= egui::emath::vec2(6.0, 0.0);
+        content_rect.max += egui::emath::vec2(6.0, 0.0);
+        bg_shape.rect = content_rect;
         ui.painter().set(bg_idx, bg_shape);
     }
 
