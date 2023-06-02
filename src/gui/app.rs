@@ -121,5 +121,79 @@ impl App {
             OperatingSystem::Unknown => {}
         }
     }
+
+    pub fn setup_visuals(ctx: &Context) {
+        // Setup style
+        let mut style = (*ctx.style()).clone();
+        // Setup spacing for buttons.
+        style.spacing.button_padding = egui::vec2(12.0, 8.0);
+        // Make scroll-bar thinner.
+        style.spacing.scroll_bar_width = 4.0;
+        // Disable spacing between items.
+        style.spacing.item_spacing = egui::vec2(0.0, 0.0);
+
+        ctx.set_style(style);
+
+        // Setup visuals
+        let mut visuals = egui::Visuals::light();
+
+        // Disable stroke around panels by default
+        visuals.widgets.noninteractive.bg_stroke = Stroke::NONE;
+        ctx.set_visuals(visuals);
+    }
+
+    pub fn setup_fonts(ctx: &Context) {
+        use egui::FontFamily::Proportional;
+
+        let mut fonts = egui::FontDefinitions::default();
+
+        fonts.font_data.insert(
+            "phosphor".to_owned(),
+            egui::FontData::from_static(include_bytes!(
+                "../../fonts/phosphor.ttf"
+            )).tweak(egui::FontTweak {
+                scale: 1.0,
+                y_offset_factor: 0.14,
+                y_offset: 0.0
+            }),
+        );
+        fonts
+            .families
+            .entry(Proportional)
+            .or_default()
+            .insert(0, "phosphor".to_owned());
+
+        fonts.font_data.insert(
+            "noto".to_owned(),
+            egui::FontData::from_static(include_bytes!(
+                "../../fonts/noto_sc_reg.otf"
+            )).tweak(egui::FontTweak {
+                scale: 1.0,
+                y_offset_factor: -0.25,
+                y_offset: 0.0
+            }),
+        );
+        fonts
+            .families
+            .entry(Proportional)
+            .or_default()
+            .insert(0, "noto".to_owned());
+
+        ctx.set_fonts(fonts);
+
+        use egui::FontId;
+        use egui::TextStyle::*;
+
+        let mut style = (*ctx.style()).clone();
+        style.text_styles = [
+            (Heading, FontId::new(20.0, Proportional)),
+            (Body, FontId::new(16.0, Proportional)),
+            (Button, FontId::new(18.0, Proportional)),
+            (Small, FontId::new(12.0, Proportional)),
+            (Monospace, FontId::new(16.0, Proportional)),
+        ].into();
+
+        ctx.set_style(style);
+    }
 }
 

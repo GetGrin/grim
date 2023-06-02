@@ -18,7 +18,7 @@ use log::LevelFilter::Info;
 #[cfg(target_os = "android")]
 use winit::platform::android::activity::AndroidApp;
 
-use crate::gui::PlatformApp;
+use crate::gui::{App, PlatformApp};
 use crate::node::Node;
 
 #[allow(dead_code)]
@@ -42,9 +42,7 @@ fn android_main(app: AndroidApp) {
         builder.with_android_app(app);
     }));
 
-    start(options, Box::new(|_cc| Box::new(
-        PlatformApp::new(_cc, platform)
-    )));
+    start(options, app_creator(PlatformApp::new(platform)));
 }
 
 #[allow(dead_code)]
@@ -52,15 +50,22 @@ fn android_main(app: AndroidApp) {
 fn main() {
     #[cfg(debug_assertions)]
     env_logger::builder()
-        .filter_level(Debug)
+        .filter_level(Info)
         .parse_default_env()
         .init();
 
     use crate::gui::platform::Desktop;
     let options = NativeOptions::default();
-    start(options, Box::new(|_cc| Box::new(
-        PlatformApp::new(_cc, Desktop::default())
-    )));
+    start(options, app_creator(Desktop::default()));
+}
+
+fn app_creator<T: 'static>(app: PlatformApp<T>) -> AppCreator where PlatformApp<T>: eframe::App {
+    Box::new(|cc| {
+        App::setup_visuals(&cc.egui_ctx);
+        App::setup_fonts(&cc.egui_ctx);
+        //TODO: Setup storage
+        Box::new(app)
+    })
 }
 
 fn start(mut options: NativeOptions, app_creator: AppCreator) {
@@ -68,8 +73,6 @@ fn start(mut options: NativeOptions, app_creator: AppCreator) {
     options.renderer = Renderer::Wgpu;
 
     setup_i18n();
-
-    //TODO: Take network type and server check from config
     Node::start(ChainTypes::Mainnet);
 
     eframe::run_native("Grim", options, app_creator);
