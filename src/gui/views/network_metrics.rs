@@ -15,11 +15,12 @@
 use chrono::{DateTime, NaiveDateTime, Utc};
 use eframe::epaint::{Color32, Rounding, Stroke};
 use egui::{RichText, ScrollArea, Spinner, Widget};
+use grin_core::global::ChainTypes;
 use grin_servers::DiffBlock;
 
-use crate::gui::colors::{COLOR_DARK, COLOR_GRAY, COLOR_GRAY_LIGHT};
-use crate::gui::icons::{AT, COINS, CUBE_TRANSPARENT, HASH, HOURGLASS_LOW, HOURGLASS_MEDIUM, TIMER};
-use crate::gui::views::{NetworkTab, View};
+use crate::gui::colors::{COLOR_DARK, COLOR_GRAY, COLOR_GRAY_LIGHT, COLOR_YELLOW};
+use crate::gui::icons::{AT, COINS, CUBE_TRANSPARENT, HASH, HOURGLASS_LOW, HOURGLASS_MEDIUM, PLUGS, POWER, TIMER};
+use crate::gui::views::{Network, NetworkTab, View};
 use crate::node::Node;
 
 pub struct NetworkMetrics {
@@ -45,11 +46,19 @@ impl NetworkTab for NetworkMetrics {
 
     fn ui(&mut self, ui: &mut egui::Ui) {
         let server_stats = Node::get_stats();
-        // Show loading widget if server is not working or difficulty height is zero.
-        if !server_stats.is_some() || server_stats.as_ref().unwrap().diff_stats.height == 0 {
-            ui.centered_and_justified(|ui| {
-                Spinner::new().size(42.0).color(COLOR_GRAY).ui(ui);
-            });
+        if server_stats.is_none() || server_stats.as_ref().unwrap().diff_stats.height == 0 {
+            if !Node::is_running() {
+                Network::server_off_content(ui);
+            } else {
+                View::center_content(ui, [280.0, 160.0], |ui| {
+                    Spinner::new().size(104.0).color(COLOR_YELLOW).ui(ui);
+                    ui.add_space(18.0);
+                    ui.label(RichText::new(t!("network_metrics.loading"))
+                        .size(16.0)
+                        .color(Color32::from_gray(150))
+                    );
+                });
+            }
             return;
         }
 

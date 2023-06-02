@@ -20,8 +20,8 @@ use egui_extras::{Size, StripBuilder};
 use grin_chain::SyncStatus;
 use grin_core::global::ChainTypes;
 
-use crate::gui::colors::{COLOR_DARK, COLOR_GRAY_DARK, COLOR_YELLOW};
-use crate::gui::icons::{CARDHOLDER, DATABASE, DOTS_THREE_OUTLINE_VERTICAL, FACTORY, FADERS, GAUGE};
+use crate::gui::colors::{COLOR_DARK, COLOR_GRAY, COLOR_GRAY_DARK, COLOR_YELLOW};
+use crate::gui::icons::{CARDHOLDER, DATABASE, DOTS_THREE_OUTLINE_VERTICAL, FACTORY, FADERS, GAUGE, PLUGS, POWER};
 use crate::gui::Navigator;
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{NetworkTab, View};
@@ -71,7 +71,7 @@ impl Network {
 
         egui::TopBottomPanel::bottom("network_tabs")
             .frame(egui::Frame {
-                outer_margin: Margin::same(6.0),
+                outer_margin: Margin::same(5.0),
                 .. Default::default()
             })
             .resizable(false)
@@ -93,26 +93,28 @@ impl Network {
 
     fn draw_tabs(&mut self, ui: &mut egui::Ui) {
         ui.scope(|ui| {
-            //Setup spacing between tabs
-            ui.style_mut().spacing.item_spacing = egui::vec2(6.0, 0.0);
+            // Setup spacing between tabs.
+            ui.style_mut().spacing.item_spacing = egui::vec2(5.0, 0.0);
+            // Setup vertical padding inside tab button.
+            ui.style_mut().spacing.button_padding = egui::vec2(0.0, 3.0);
 
             ui.columns(4, |columns| {
-                columns[0].vertical_centered(|ui| {
+                columns[0].vertical_centered_justified(|ui| {
                     View::tab_button(ui, DATABASE, self.current_mode == Mode::Node, || {
                         self.current_mode = Mode::Node;
                     });
                 });
-                columns[1].vertical_centered(|ui| {
+                columns[1].vertical_centered_justified(|ui| {
                     View::tab_button(ui, GAUGE, self.current_mode == Mode::Metrics, || {
                         self.current_mode = Mode::Metrics;
                     });
                 });
-                columns[2].vertical_centered(|ui| {
+                columns[2].vertical_centered_justified(|ui| {
                     View::tab_button(ui, FACTORY, self.current_mode == Mode::Miner, || {
                         self.current_mode = Mode::Miner;
                     });
                 });
-                columns[3].vertical_centered(|ui| {
+                columns[3].vertical_centered_justified(|ui| {
                     View::tab_button(ui, FADERS, self.current_mode == Mode::Tuning, || {
                         self.current_mode = Mode::Tuning;
                     });
@@ -200,9 +202,7 @@ impl Network {
                 });
                 strip.cell(|ui| {
                     ui.centered_and_justified(|ui| {
-                        // Select sync status text
                         let sync_status = Node::get_sync_status();
-                        let status_text = Node::get_sync_status_text(sync_status);
 
                         // Setup text color animation based on sync status
                         let idle = match sync_status {
@@ -219,7 +219,7 @@ impl Network {
                         // Draw sync text
                         let status_color_rgba = Rgba::from(COLOR_GRAY_DARK) * color_factor as f32;
                         let status_color = Color32::from(status_color_rgba);
-                        View::ellipsize_text(ui, status_text, 15.0, status_color);
+                        View::ellipsize_text(ui, Node::get_sync_status_text(), 15.0, status_color);
 
                         // Repaint based on sync status
                         if idle {
@@ -230,6 +230,24 @@ impl Network {
                     });
                 });
             });
+    }
+
+    pub fn server_off_content(ui: &mut egui::Ui) {
+        View::center_content(ui, [240.0, 214.0], |ui| {
+            ui.label(RichText::new(PLUGS)
+                .size(84.0)
+                .color(Color32::from_gray(200))
+            );
+            ui.add_space(-16.0);
+            ui.label(RichText::new(Node::get_sync_status_text())
+                .size(19.0)
+                .color(Color32::from_gray(150))
+            );
+            ui.add_space(12.0);
+            View::button(ui, format!("{} {}", POWER, t!("network.enable")), COLOR_YELLOW, || {
+                Node::start(ChainTypes::Mainnet);
+            });
+        });
     }
 }
 

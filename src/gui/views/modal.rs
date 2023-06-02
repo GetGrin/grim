@@ -15,7 +15,7 @@
 use std::cmp::min;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use egui::{Align2, Color32, RichText, Rounding, Sense, Stroke, Vec2};
+use egui::{Align2, Color32, RichText, Rounding, Sense, Separator, Stroke, Vec2, Widget};
 use egui::epaint::RectShape;
 use egui::style::Margin;
 use egui_extras::{Size, StripBuilder};
@@ -29,7 +29,6 @@ pub enum ModalId {
 }
 
 /// Location for [`Modal`] at application UI.
-#[derive(Clone, Copy)]
 pub enum ModalLocation {
     /// To draw globally above side panel and screen.
     Global,
@@ -204,7 +203,7 @@ impl Modal {
             rect,
             rounding,
             fill: COLOR_LIGHT,
-            stroke: View::DEFAULT_STROKE,
+            stroke: Stroke::NONE,
         };
         let bg_idx = ui.painter().add(bg_shape);
 
@@ -250,5 +249,11 @@ impl Modal {
         // Setup background shape to be painted behind title content.
         bg_shape.rect = title_resp.rect;
         ui.painter().set(bg_idx, bg_shape);
+
+        let (rect, _) = ui.allocate_exact_size(Vec2::new(ui.available_width(), 1.0),Sense::hover());
+        let painter = ui.painter();
+        painter.hline(rect.x_range(),
+                      painter.round_to_pixel(rect.center().y),
+                      View::DEFAULT_STROKE);
     }
 }

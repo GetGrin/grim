@@ -14,11 +14,13 @@
 
 use eframe::epaint::Stroke;
 use egui::{Color32, RichText, Rounding, ScrollArea, Spinner, Widget};
+use egui_extras::{Size, StripBuilder};
+use grin_core::global::ChainTypes;
 use grin_servers::PeerStats;
 
-use crate::gui::colors::{COLOR_DARK, COLOR_GRAY, COLOR_GRAY_LIGHT};
-use crate::gui::icons::{AT, CUBE, DEVICES, FLOW_ARROW, HANDSHAKE, PACKAGE, PLUGS_CONNECTED, SHARE_NETWORK};
-use crate::gui::views::{NetworkTab, View};
+use crate::gui::colors::{COLOR_DARK, COLOR_GRAY, COLOR_GRAY_LIGHT, COLOR_YELLOW};
+use crate::gui::icons::{AT, CUBE, DEVICES, FLOW_ARROW, HANDSHAKE, PACKAGE, PLUGS, PLUGS_CONNECTED, POWER, SHARE_NETWORK};
+use crate::gui::views::{Network, NetworkTab, View};
 use crate::node::Node;
 
 pub struct NetworkNode {
@@ -41,9 +43,13 @@ impl NetworkTab for NetworkNode {
     fn ui(&mut self, ui: &mut egui::Ui) {
         let server_stats = Node::get_stats();
         if !server_stats.is_some() {
-            ui.centered_and_justified(|ui| {
-                Spinner::new().size(42.0).color(COLOR_GRAY).ui(ui);
-            });
+            if !Node::is_running() {
+                Network::server_off_content(ui);
+            } else {
+                ui.centered_and_justified(|ui| {
+                    Spinner::new().size(104.0).color(COLOR_YELLOW).ui(ui);
+                });
+            }
             return;
         }
 

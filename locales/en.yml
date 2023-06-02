@@ -5,6 +5,9 @@ network:
   metrics: Metrics
   mining: Mining
   settings: Server settings
+  enable: Enable
+  disable: Disable
+  restart: Restart
 sync_status:
   server_restarting: Server is restarting
   server_down: Server is down
@@ -36,6 +39,7 @@ network_node:
   size: Size (GB)
   peers: Peers
 network_metrics:
+  loading: Metrics will be available after the synchronization
   emission: Emission
   inflation: Inflation
   supply: Supply

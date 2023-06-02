@@ -12,15 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::{Context, Stroke, Widget};
+use egui::{Color32, Context, RichText, Spinner, Stroke, Widget};
 use egui::os::OperatingSystem;
 use egui::style::Margin;
 
-use crate::gui::colors::COLOR_LIGHT;
+use crate::gui::colors::{COLOR_DARK, COLOR_LIGHT, COLOR_YELLOW};
 use crate::gui::Navigator;
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::screens::Root;
-use crate::gui::views::{Modal, ModalId, ModalLocation, ProgressLoading, View};
+use crate::gui::views::{Modal, ModalId, ModalLocation, View};
 use crate::node::Node;
 
 pub struct PlatformApp<Platform> {
@@ -36,18 +36,17 @@ pub struct App {
 
 impl App {
     pub fn ui(&mut self, ctx: &Context, frame: &mut eframe::Frame, cb: &dyn PlatformCallbacks) {
-        let modal_open = Navigator::is_modal_open(ModalLocation::Global);
         egui::CentralPanel::default()
             .frame(egui::Frame {
                 fill: COLOR_LIGHT,
                 .. Default::default()
             })
             .show(ctx, |ui| {
-                if modal_open {
+                if Navigator::is_modal_open(ModalLocation::Global) {
                     self.show_global_modal(ui, frame, cb);
                 }
                 self.root.ui(ui, frame, cb);
-            }).response.enabled = !modal_open;
+            });
     }
 
     fn show_global_modal(&mut self,
@@ -60,12 +59,18 @@ impl App {
                 ModalId::Exit => {
                     if self.show_exit_progress {
                         if !Node::is_running() {
-                            modal.close();
                             Self::exit(frame, cb);
+                            modal.close();
                         }
-                        ui.add_space(12.0);
-                        let text = Node::get_sync_status_text(Node::get_sync_status());
-                        ProgressLoading::new(text).ui(ui);
+                        ui.add_space(16.0);
+                        ui.vertical_centered(|ui| {
+                            Spinner::new().size(42.0).color(COLOR_YELLOW).ui(ui);
+                            ui.add_space(10.0);
+                            ui.label(RichText::new(Node::get_sync_status_text())
+                                .size(18.0)
+                                .color(COLOR_DARK)
+                            );
+                        });
                         ui.add_space(12.0);
                     } else {
                         ui.add_space(8.0);
@@ -77,19 +82,19 @@ impl App {
                         ui.spacing_mut().item_spacing = egui::Vec2::new(6.0, 0.0);
                         ui.columns(2, |columns| {
                             columns[0].vertical_centered_justified(|ui| {
-                                View::modal_button(ui, t!("modal_exit.exit"), || {
+                                View::button(ui, t!("modal_exit.exit"), Color32::WHITE, || {
                                     if !Node::is_running() {
                                         Self::exit(frame, cb);
                                         modal.close();
                                     } else {
-                                        modal.disable_closing();
                                         Node::stop();
+                                        modal.disable_closing();
                                         self.show_exit_progress = true;
                                     }
                                 });
                             });
                             columns[1].vertical_centered_justified(|ui| {
-                                View::modal_button(ui, t!("modal.cancel"), || {
+                                View::button(ui, t!("modal.cancel"), Color32::WHITE, || {
                                     modal.close();
                                 });
                             });

@@ -22,14 +22,12 @@ mod modal;
 pub use modal::*;
 
 mod network;
+pub use network::Network;
+
 mod network_node;
 mod network_settings;
 mod network_metrics;
 mod network_mining;
-pub use network::Network;
-
-mod progress_loading;
-pub use progress_loading::ProgressLoading;
 
 pub trait NetworkTab {
     fn name(&self) -> &String;

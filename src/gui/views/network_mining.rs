@@ -11,3 +11,28 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
+use egui::Ui;
+use crate::gui::views::NetworkTab;
+
+pub struct NetworkMining {
+    title: String
+}
+
+impl Default for NetworkMining {
+    fn default() -> Self {
+        Self {
+            title: t!("network.mining").to_uppercase(),
+        }
+    }
+}
+
+impl NetworkTab for NetworkMining {
+    fn name(&self) -> &String {
+        &self.title
+    }
+
+    fn ui(&mut self, ui: &mut Ui) {
+        todo!()
+    }
+}

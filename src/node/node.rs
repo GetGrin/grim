@@ -30,11 +30,11 @@ use lazy_static::lazy_static;
 use log::info;
 
 lazy_static! {
-    /// Static thread-aware state of [Node] to be updated from another thread.
+    /// Static thread-aware state of [`Node`] to be updated from another thread.
     static ref NODE_STATE: Arc<Node> = Arc::new(Node::default());
 }
 
-/// Provides [Server] control, holds current status and statistics.
+/// Provides [`Server`] control, holds current status and statistics.
 pub struct Node {
     /// Statistics data for UI.
     stats: Arc<RwLock<Option<ServerStats>>>,
@@ -61,12 +61,12 @@ impl Default for Node {
 }
 
 impl Node {
-    /// Stop [Server].
+    /// Stop the [`Server`].
     pub fn stop() {
         NODE_STATE.stop_needed.store(true, Ordering::Relaxed);
     }
 
-    /// Start [Server] with provided chain type.
+    /// Start [`Server`] with provided chain type.
     pub fn start(chain_type: ChainTypes) {
         if !Self::is_running() {
             let mut w_chain_type = NODE_STATE.chain_type.write().unwrap();
@@ -75,7 +75,7 @@ impl Node {
         }
     }
 
-    /// Restart [Server] with provided chain type.
+    /// Restart [`Server`] with provided chain type.
     pub fn restart(chain_type: ChainTypes) {
         if Self::is_running() {
             let mut w_chain_type = NODE_STATE.chain_type.write().unwrap();
@@ -86,40 +86,40 @@ impl Node {
         }
     }
 
-    /// Check if [Server] is starting.
+    /// Check if [`Server`] is starting.
     pub fn is_starting() -> bool {
         NODE_STATE.starting.load(Ordering::Relaxed)
     }
 
-    /// Check if [Server] is running.
+    /// Check if [`Server`] is running.
     pub fn is_running() -> bool {
-        Self::get_stats().is_some() || Self::is_starting()
+        Self::get_sync_status().is_some()
     }
 
-    /// Check if [Server] is stopping.
+    /// Check if [`Server`] is stopping.
     pub fn is_stopping() -> bool {
         NODE_STATE.stop_needed.load(Ordering::Relaxed)
     }
 
-    /// Check if [Server] is restarting.
+    /// Check if [`Server`] is restarting.
     pub fn is_restarting() -> bool {
         NODE_STATE.restart_needed.load(Ordering::Relaxed)
     }
 
-    /// Get [Server] statistics.
+    /// Get [`Server`] statistics.
     pub fn get_stats() -> RwLockReadGuard<'static, Option<ServerStats>> {
         NODE_STATE.stats.read().unwrap()
     }
 
-    /// Get [Server] synchronization status, empty when it is not running.
+    /// Get [`Server`] synchronization status, empty when Server is not running.
     pub fn get_sync_status() -> Option<SyncStatus> {
         // Return Shutdown status when node is stopping.
         if Self::is_stopping() {
             return Some(SyncStatus::Shutdown)
         }
 
-        // Return Initial status when node is starting.
-        if Self::is_starting() {
+        // Return Initial status when node is starting or restarting.
+        if Self::is_starting() || Self::is_restarting() {
             return Some(SyncStatus::Initial)
         }
 
@@ -131,16 +131,24 @@ impl Node {
         None
     }
 
-    /// Start a thread to launch [Server] and update [NODE_STATE] with server statistics.
-    fn start_server_thread() -> JoinHandle<()> {
+    /// Start a thread to launch [`Server`] and update [`NODE_STATE`] with server statistics.
+    fn start_server_thread() {
         thread::spawn(move || {
             NODE_STATE.starting.store(true, Ordering::Relaxed);
 
+            // Start the server.
             let mut server = start_server(&NODE_STATE.chain_type.read().unwrap());
             let mut first_start = true;
 
             loop {
                 if Self::is_restarting() {
+                    // Clean server stats.
+                    {
+                        let mut w_stats = NODE_STATE.stats.write().unwrap();
+                        *w_stats = None;
+                    }
+
+                    // Stop the server.
                     server.stop();
 
                     // Create new server with current chain type.
@@ -148,10 +156,14 @@ impl Node {
 
                     NODE_STATE.restart_needed.store(false, Ordering::Relaxed);
                 } else if Self::is_stopping() {
-                    server.stop();
+                    // Clean server stats.
+                    {
+                        let mut w_stats = NODE_STATE.stats.write().unwrap();
+                        *w_stats = None;
+                    }
 
-                    let mut w_stats = NODE_STATE.stats.write().unwrap();
-                    *w_stats = None;
+                    // Stop the server.
+                    server.stop();
 
                     NODE_STATE.starting.store(false, Ordering::Relaxed);
                     NODE_STATE.stop_needed.store(false, Ordering::Relaxed);
@@ -159,8 +171,11 @@ impl Node {
                 } else {
                     let stats = server.get_server_stats();
                     if stats.is_ok() {
-                        let mut w_stats = NODE_STATE.stats.write().unwrap();
-                        *w_stats = Some(stats.as_ref().ok().unwrap().clone());
+                        // Update server stats.
+                        {
+                            let mut w_stats = NODE_STATE.stats.write().unwrap();
+                            *w_stats = Some(stats.as_ref().ok().unwrap().clone());
+                        }
 
                         if first_start {
                             NODE_STATE.starting.store(false, Ordering::Relaxed);
@@ -170,18 +185,24 @@ impl Node {
                 }
                 thread::sleep(Duration::from_millis(250));
             }
-        })
+        });
     }
 
     /// Get synchronization status i18n text.
-    pub fn get_sync_status_text(sync_status: Option<SyncStatus>) -> String {
+    pub fn get_sync_status_text() -> String {
+        if Node::is_starting() {
+            return t!("sync_status.initial")
+        };
+
+        if Node::is_stopping() {
+            return t!("sync_status.shutdown")
+        };
+
         if Node::is_restarting() {
             return t!("sync_status.server_restarting")
         }
 
-        if Node::is_stopping() {
-            return t!("sync_status.shutdown")
-        }
+        let sync_status = Self::get_sync_status();
 
         if sync_status.is_none() {
             return t!("sync_status.server_down")
@@ -256,7 +277,7 @@ impl Node {
 
 }
 
-/// Start [Server] with provided chain type.
+/// Start the [`Server`] with provided chain type.
 fn start_server(chain_type: &ChainTypes) -> Server {
     // Initialize config
     let mut node_config_result = config::initial_setup_server(chain_type);
@@ -358,14 +379,13 @@ fn start_server(chain_type: &ChainTypes) -> Server {
 #[cfg(target_os = "android")]
 #[allow(non_snake_case)]
 #[no_mangle]
-/// Get sync status text for Android notification from [NODE_STATE] in Java string format.
+/// Get sync status text for Android notification from [`NODE_STATE`] in Java string format.
 pub extern "C" fn Java_mw_gri_android_BackgroundService_getSyncStatusText(
     _env: jni::JNIEnv,
     _class: jni::objects::JObject,
     _activity: jni::objects::JObject,
 ) -> jstring {
-    let sync_status = Node::get_sync_status();
-    let status_text = Node::get_sync_status_text(sync_status);
+    let status_text = Node::get_sync_status_text();
     let j_text = _env.new_string(status_text);
     return j_text.unwrap().into_raw();
 }
@@ -388,7 +408,7 @@ pub extern "C" fn Java_mw_gri_android_BackgroundService_getSyncTitle(
 #[cfg(target_os = "android")]
 #[allow(non_snake_case)]
 #[no_mangle]
-/// Calling on unexpected application termination (removal from recent apps)
+/// Calling on unexpected Android application termination (removal from recent apps).
 pub extern "C" fn Java_mw_gri_android_MainActivity_onTermination(
     _env: jni::JNIEnv,
     _class: jni::objects::JObject,

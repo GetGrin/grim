@@ -14,10 +14,11 @@
 
 use egui::epaint::{Color32, FontId, Rounding, Stroke};
 use egui::text::{LayoutJob, TextFormat};
-use egui::{Button, PointerState, Response, RichText, Sense, Widget};
+use egui::{Button, PointerState, Response, RichText, Sense, Vec2, Widget};
 use egui::epaint::text::TextWrapping;
+use egui_extras::{Size, StripBuilder};
 
-use crate::gui::colors::{COLOR_DARK, COLOR_GRAY, COLOR_LIGHT, COLOR_GRAY_LIGHT, COLOR_GRAY_DARK};
+use crate::gui::colors::{COLOR_DARK, COLOR_GRAY, COLOR_LIGHT, COLOR_GRAY_LIGHT, COLOR_GRAY_DARK, COLOR_YELLOW};
 
 pub struct View;
 
@@ -103,7 +104,6 @@ impl View {
             false => { Color32::WHITE }
         };
         let br = Button::new(wt)
-            .min_size(ui.available_size_before_wrap())
             .stroke(stroke)
             .fill(color)
             .ui(ui).interact(Sense::click_and_drag());
@@ -111,16 +111,12 @@ impl View {
         Self::on_button_click(ui, br, action);
     }
 
-    /// Modal button with white background fill color, contains text.
-    pub fn modal_button(ui: &mut egui::Ui, text: String, action: impl FnOnce()) {
-        let mut size = ui.available_size_before_wrap();
-        size.y = 36.0;
-
+    /// Draw [`Button`] with specified background fill color.
+    pub fn button(ui: &mut egui::Ui, text: String, fill_color: Color32, action: impl FnOnce()) {
         let wt = RichText::new(text.to_uppercase()).size(18.0).color(COLOR_GRAY_DARK);
         let br = Button::new(wt)
             .stroke(Self::DEFAULT_STROKE)
-            .min_size(size)
-            .fill(Color32::WHITE)
+            .fill(fill_color)
             .ui(ui).interact(Sense::click_and_drag());
 
         Self::on_button_click(ui, br, action);
@@ -167,6 +163,20 @@ impl View {
 
             // Draw box label
             ui.label(RichText::new(label).color(COLOR_GRAY).size(15.0));
+        });
+    }
+
+    /// Draw content in the center of current layout with specified width and height.
+    pub fn center_content(ui: &mut egui::Ui, w_h: [f32; 2], content: impl FnOnce(&mut egui::Ui)) {
+        ui.vertical_centered(|ui| {
+            let mut rect = ui.available_rect_before_wrap();
+            let side_margin = (ui.available_width() - w_h[0]) / 2.0;
+            rect.min += egui::emath::vec2(side_margin, ui.available_height() / 2.0 - w_h[1] / 2.0);
+            rect.max -= egui::emath::vec2(side_margin, 0.0);
+            // rect.set_width(w_h[0]);
+            ui.allocate_ui_at_rect(rect, |ui| {
+                (content)(ui);
+            });
         });
     }
 }

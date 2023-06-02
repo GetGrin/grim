@@ -96,11 +96,13 @@ impl PlatformApp<Android> {
     fn setup_visuals(ctx: &egui::Context) {
         // Setup style
         let mut style = (*ctx.style()).clone();
-
-        // Make scroll-bar thinner
+        // Setup spacing for buttons.
+        style.spacing.button_padding = egui::vec2(12.0, 8.0);
+        // Make scroll-bar thinner.
         style.spacing.scroll_bar_width = 4.0;
-        //
+        // Disable spacing between items.
         style.spacing.item_spacing = egui::vec2(0.0, 0.0);
+
         ctx.set_style(style);
 
         // Setup visuals
@@ -183,7 +185,7 @@ fn padding_panels(ctx: &egui::Context) {
         .show_separator_line(false)
         .resizable(false)
         .exact_height(DISPLAY_CUTOUT_TOP.load(Ordering::Relaxed) as f32)
-        .show(ctx, |ui| {});
+        .show(ctx, |_ui| {});
 
     egui::TopBottomPanel::bottom("bottom_padding_panel")
         .frame(egui::Frame {
@@ -194,7 +196,7 @@ fn padding_panels(ctx: &egui::Context) {
         .show_separator_line(false)
         .resizable(false)
         .exact_height(DISPLAY_CUTOUT_BOTTOM.load(Ordering::Relaxed) as f32)
-        .show(ctx, |ui| {});
+        .show(ctx, |_ui| {});
 
     egui::SidePanel::right("right_padding_panel")
         .frame(egui::Frame {
@@ -205,7 +207,7 @@ fn padding_panels(ctx: &egui::Context) {
         .show_separator_line(false)
         .resizable(false)
         .max_width(DISPLAY_CUTOUT_RIGHT.load(Ordering::Relaxed) as f32)
-        .show(ctx, |ui| {});
+        .show(ctx, |_ui| {});
 
     egui::SidePanel::left("left_padding_panel")
         .frame(egui::Frame {
@@ -216,7 +218,7 @@ fn padding_panels(ctx: &egui::Context) {
         .show_separator_line(false)
         .resizable(false)
         .max_width(DISPLAY_CUTOUT_LEFT.load(Ordering::Relaxed) as f32)
-        .show(ctx, |ui| {});
+        .show(ctx, |_ui| {});
 }
 
 lazy_static! {

@@ -5,6 +5,9 @@ network:
   metrics: Метрики
   mining: Майнинг
   settings: Настройки сервера
+  enable: Включить
+  disable: Выключить
+  restart: Перезапустить
 sync_status:
   server_restarting: Сервер перезапускается
   server_down: Сервер выключен
@@ -36,6 +39,7 @@ network_node:
   size: Размер (ГБ)
   peers: Пиры
 network_metrics:
+  loading: Метрики будут доступны после синхронизации
   emission: Эмиссия
   inflation: Инфляция
   supply: Предложение
