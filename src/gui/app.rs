@@ -55,7 +55,7 @@ impl App {
                          frame: &mut eframe::Frame,
                          cb: &dyn PlatformCallbacks) {
         let location = ModalLocation::Global;
-        Navigator::modal_ui(ui, frame, location, |ui, frame, modal| {
+        Navigator::modal_ui(ui, location, |ui, modal| {
             match modal.id {
                 ModalId::Exit => {
                     if self.show_exit_progress {

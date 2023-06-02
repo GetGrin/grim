@@ -118,11 +118,8 @@ impl Modal {
     }
 
     /// Show [`Modal`] with provided content.
-    pub fn ui(&self,
-              ui: &mut egui::Ui,
-              frame: &mut eframe::Frame,
-              add_content: impl FnOnce(&mut egui::Ui, &mut eframe::Frame, &Modal)) {
-        let cw = min(frame.info().window_info.size.x as i64 - 20, Self::DEFAULT_WIDTH) as f32;
+    pub fn ui(&self, ui: &mut egui::Ui, add_content: impl FnOnce(&mut egui::Ui, &Modal)) {
+        let width = min(ui.available_width() as i64 - 20, Self::DEFAULT_WIDTH) as f32;
 
         // Show background Window at full available size
         egui::Window::new(self.window_id(true))
@@ -144,7 +141,7 @@ impl Modal {
             .title_bar(false)
             .resizable(false)
             .collapsible(false)
-            .default_width(cw)
+            .default_width(width)
             .anchor(self.modal_position(), Vec2::default())
             .frame(egui::Frame {
                 rounding: Rounding::same(8.0),
@@ -155,7 +152,7 @@ impl Modal {
                 if self.title.is_some() {
                     self.draw_title(ui);
                 }
-                self.draw_content(ui, frame, add_content);
+                self.draw_content(ui, add_content);
             }).unwrap().response.layer_id;
 
         // Always show main content Window above background Window
@@ -187,10 +184,7 @@ impl Modal {
     }
 
     /// Draw provided content.
-    fn draw_content(&self,
-                    ui: &mut egui::Ui,
-                    frame: &mut eframe::Frame,
-                    add_content: impl FnOnce(&mut egui::Ui, &mut eframe::Frame, &Modal)) {
+    fn draw_content(&self, ui: &mut egui::Ui, add_content: impl FnOnce(&mut egui::Ui, &Modal)) {
         let mut rect = ui.available_rect_before_wrap();
         rect.min += egui::emath::vec2(6.0, 0.0);
         rect.max -= egui::emath::vec2(6.0, 0.0);
@@ -216,7 +210,7 @@ impl Modal {
 
         // Draw main content.
         let mut content_rect = ui.allocate_ui_at_rect(rect, |ui| {
-            (add_content)(ui, frame, self);
+            (add_content)(ui, self);
         }).response.rect;
 
         // Setup background shape to be painted behind main content.

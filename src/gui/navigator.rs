@@ -179,10 +179,8 @@ impl Navigator {
 
     /// Show [Modal] with provided location at app UI.
     pub fn modal_ui(ui: &mut egui::Ui,
-                    frame: &mut eframe::Frame,
                     location: ModalLocation,
-                    add_content: impl FnOnce(&mut egui::Ui, &mut eframe::Frame, &Modal)) {
-
+                    add_content: impl FnOnce(&mut egui::Ui, &Modal)) {
         let r_nav = NAVIGATOR_STATE.read().unwrap();
         let modal = match location {
             ModalLocation::Global => { &r_nav.global_modal }
@@ -190,7 +188,7 @@ impl Navigator {
             ModalLocation::Screen => { &r_nav.screen_modal }
         };
         if modal.is_some() {
-            modal.as_ref().unwrap().ui(ui, frame, add_content);
+            modal.as_ref().unwrap().ui(ui, add_content);
         }
     }
 
