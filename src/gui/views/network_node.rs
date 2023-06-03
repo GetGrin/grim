@@ -17,27 +17,18 @@ use egui::{Color32, RichText, Rounding, ScrollArea, Spinner, Widget};
 use egui_extras::{Size, StripBuilder};
 use grin_core::global::ChainTypes;
 use grin_servers::PeerStats;
+use crate::gui::Colors;
 
-use crate::gui::colors::{COLOR_DARK, COLOR_GRAY, COLOR_GRAY_LIGHT, COLOR_YELLOW};
 use crate::gui::icons::{AT, CUBE, DEVICES, FLOW_ARROW, HANDSHAKE, PACKAGE, PLUGS, PLUGS_CONNECTED, POWER, SHARE_NETWORK};
 use crate::gui::views::{Network, NetworkTab, View};
 use crate::node::Node;
 
-pub struct NetworkNode {
-    title: String
-}
-
-impl Default for NetworkNode {
-    fn default() -> Self {
-        Self {
-            title: t!("network.node").to_uppercase(),
-        }
-    }
-}
+#[derive(Default)]
+pub struct NetworkNode;
 
 impl NetworkTab for NetworkNode {
-    fn name(&self) -> &String {
-        &self.title
+    fn name(&self) -> String {
+        t!("network.node")
     }
 
     fn ui(&mut self, ui: &mut egui::Ui) {
@@ -47,7 +38,7 @@ impl NetworkTab for NetworkNode {
                 Network::server_off_content(ui);
             } else {
                 ui.centered_and_justified(|ui| {
-                    Spinner::new().size(104.0).color(COLOR_YELLOW).ui(ui);
+                    Spinner::new().size(104.0).color(Colors::GOLD).ui(ui);
                 });
             }
             return;
@@ -218,51 +209,51 @@ fn draw_peer_stats(ui: &mut egui::Ui, peer: &PeerStats, rounding: [bool; 2]) {
                 se: if rounding[1] { 8.0 } else { 0.0 },
             },
             Color32::WHITE,
-            Stroke { width: 1.0, color: COLOR_GRAY_LIGHT }
+            Stroke { width: 1.0, color: Colors::ITEM_STROKE }
         );
 
         ui.add_space(2.0);
         ui.horizontal_top(|ui| {
             ui.add_space(5.0);
             ui.heading(RichText::new(PLUGS_CONNECTED)
-                .color(Color32::BLACK)
+                .color(Colors::BLACK)
                 .size(18.0));
             ui.add_space(3.0);
 
             // Draw peer address
             ui.heading(RichText::new(&peer.addr)
-                .color(Color32::BLACK)
+                .color(Colors::BLACK)
                 .size(18.0));
         });
         ui.horizontal_top(|ui| {
             ui.add_space(6.0);
             ui.heading(RichText::new(PACKAGE)
-                .color(COLOR_DARK)
+                .color(Colors::TITLE)
                 .size(16.0));
             ui.add_space(4.0);
 
             // Draw peer difficulty and height
             ui.heading(RichText::new(peer.total_difficulty.to_string())
-                .color(COLOR_DARK)
+                .color(Colors::TITLE)
                 .size(16.0));
             ui.add_space(2.0);
-            ui.heading(RichText::new(AT).color(COLOR_DARK).size(16.0));
+            ui.heading(RichText::new(AT).color(Colors::TITLE).size(16.0));
             ui.add_space(2.0);
             ui.heading(RichText::new(peer.height.to_string())
-                .color(COLOR_DARK)
+                .color(Colors::TITLE)
                 .size(16.0));
         });
 
         ui.horizontal_top(|ui| {
             ui.add_space(6.0);
             ui.heading(RichText::new(DEVICES)
-                .color(COLOR_GRAY)
+                .color(Colors::GRAY)
                 .size(16.0));
             ui.add_space(4.0);
 
             // Draw peer user-agent
             ui.heading(RichText::new(&peer.user_agent)
-                .color(COLOR_GRAY)
+                .color(Colors::GRAY)
                 .size(16.0));
         });
         ui.add_space(2.0);

@@ -12,19 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::epaint::{Color32, FontId, Rounding, Stroke};
-use egui::text::{LayoutJob, TextFormat};
 use egui::{Button, PointerState, Response, RichText, Sense, Vec2, Widget};
+use egui::epaint::{Color32, FontId, Rounding, Stroke};
 use egui::epaint::text::TextWrapping;
+use egui::text::{LayoutJob, TextFormat};
 use egui_extras::{Size, StripBuilder};
 
-use crate::gui::colors::{COLOR_DARK, COLOR_GRAY, COLOR_LIGHT, COLOR_GRAY_LIGHT, COLOR_GRAY_DARK, COLOR_YELLOW};
+use crate::gui::Colors;
 
 pub struct View;
 
 impl View {
     /// Default stroke around views.
-    pub const DEFAULT_STROKE: Stroke = Stroke { width: 1.0, color: Color32::from_gray(190) };
+    pub const DEFAULT_STROKE: Stroke = Stroke { width: 1.0, color: Colors::STROKE };
 
     /// Default width of side panel at application UI.
     pub const SIDE_PANEL_MIN_WIDTH: i64 = 400;
@@ -56,7 +56,7 @@ impl View {
 
     /// Sub-header with uppercase characters and more lighter color.
     pub fn sub_header(ui: &mut egui::Ui, text: String) {
-        ui.label(RichText::new(text.to_uppercase()).size(16.0).color(COLOR_GRAY_DARK));
+        ui.label(RichText::new(text.to_uppercase()).size(16.0).color(Colors::SUB_TITLE));
     }
 
     /// Temporary button click optimization for touch screens.
@@ -77,9 +77,9 @@ impl View {
             // Disable stroke around title buttons on hover
             ui.style_mut().visuals.widgets.active.bg_stroke = Stroke::NONE;
 
-            let wt = RichText::new(icon.to_string()).size(24.0).color(COLOR_DARK);
+            let wt = RichText::new(icon.to_string()).size(24.0).color(Colors::TITLE);
             let br = Button::new(wt)
-                .fill(Color32::TRANSPARENT)
+                .fill(Colors::TRANSPARENT)
                 .ui(ui).interact(Sense::click_and_drag());
 
             Self::on_button_click(ui, br, action);
@@ -89,8 +89,8 @@ impl View {
     /// Tab button with white background fill color, contains only icon.
     pub fn tab_button(ui: &mut egui::Ui, icon: &str, active: bool, action: impl FnOnce()) {
         let text_color = match active {
-            true => { COLOR_GRAY_DARK }
-            false => { COLOR_DARK }
+            true => { Colors::TITLE }
+            false => { Colors::SUB_TITLE }
         };
         let wt = RichText::new(icon.to_string()).size(24.0).color(text_color);
 
@@ -100,8 +100,8 @@ impl View {
         };
 
         let color = match active {
-            true => { COLOR_LIGHT }
-            false => { Color32::WHITE }
+            true => { Colors::FILL }
+            false => { Colors::WHITE }
         };
         let br = Button::new(wt)
             .stroke(stroke)
@@ -113,7 +113,7 @@ impl View {
 
     /// Draw [`Button`] with specified background fill color.
     pub fn button(ui: &mut egui::Ui, text: String, fill_color: Color32, action: impl FnOnce()) {
-        let wt = RichText::new(text.to_uppercase()).size(18.0).color(COLOR_GRAY_DARK);
+        let wt = RichText::new(text.to_uppercase()).size(18.0).color(Colors::BUTTON);
         let br = Button::new(wt)
             .stroke(Self::DEFAULT_STROKE)
             .fill(fill_color)
@@ -139,8 +139,8 @@ impl View {
                 sw: if r[2] { 8.0 } else { 0.0 },
                 se: if r[3] { 8.0 } else { 0.0 },
             },
-            Color32::WHITE,
-            Stroke { width: 1.0, color: COLOR_GRAY_LIGHT },
+            Colors::WHITE,
+            Stroke { width: 1.0, color: Colors::ITEM_STROKE },
         );
 
         ui.vertical_centered_justified(|ui| {
@@ -150,7 +150,7 @@ impl View {
             // Draw box value
             let mut job = LayoutJob::single_section(value, TextFormat {
                 font_id: FontId::proportional(18.0),
-                color: Color32::BLACK,
+                color: Colors::BLACK,
                 .. Default::default()
             });
             job.wrap = TextWrapping {
@@ -162,7 +162,7 @@ impl View {
             ui.label(job);
 
             // Draw box label
-            ui.label(RichText::new(label).color(COLOR_GRAY).size(15.0));
+            ui.label(RichText::new(label).color(Colors::GRAY).size(15.0));
         });
     }
 

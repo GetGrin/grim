@@ -8,6 +8,7 @@ network:
   enable: Enable
   disable: Disable
   restart: Restart
+  inactive_message: 'Enable server or choose/add another connection method by pressing %{dots} on top left corner of the screen.'
 sync_status:
   server_restarting: Server is restarting
   server_down: Server is down
@@ -22,7 +23,7 @@ sync_status:
   tx_hashset_range_proofs_validation: 'Validating state - range proofs: %{percent}%'
   tx_hashset_kernels_validation: 'Validating state - kernels: %{percent}%'
   tx_hashset_save: Finalizing chain state
-  body_sync: Downloading blocks
+  body_sync: Downloading blockchain
   body_sync_percent: 'Downloading blocks: %{percent}%'
   shutdown: Server is shutting down
 network_node:

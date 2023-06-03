@@ -20,12 +20,12 @@ use egui_extras::{Size, StripBuilder};
 use grin_chain::SyncStatus;
 use grin_core::global::ChainTypes;
 
-use crate::gui::colors::{COLOR_DARK, COLOR_GRAY, COLOR_GRAY_DARK, COLOR_YELLOW};
 use crate::gui::icons::{CARDHOLDER, DATABASE, DOTS_THREE_OUTLINE_VERTICAL, FACTORY, FADERS, GAUGE, PLUGS, POWER};
-use crate::gui::Navigator;
+use crate::gui::{Colors, Navigator};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{NetworkTab, View};
 use crate::gui::views::network_metrics::NetworkMetrics;
+use crate::gui::views::network_mining::NetworkMining;
 use crate::gui::views::network_node::NetworkNode;
 use crate::node::Node;
 
@@ -33,7 +33,7 @@ use crate::node::Node;
 enum Mode {
     Node,
     Metrics,
-    Miner,
+    Mining,
     Tuning
 }
 
@@ -42,6 +42,7 @@ pub struct Network {
 
     node_view: NetworkNode,
     metrics_view: NetworkMetrics,
+    mining_view: NetworkMining,
 }
 
 impl Default for Network {
@@ -49,7 +50,8 @@ impl Default for Network {
         Self {
             current_mode: Mode::Node,
             node_view: NetworkNode::default(),
-            metrics_view: NetworkMetrics::default()
+            metrics_view: NetworkMetrics::default(),
+            mining_view: NetworkMining::default()
         }
     }
 }
@@ -59,7 +61,7 @@ impl Network {
         egui::TopBottomPanel::top("network_title")
             .resizable(false)
             .frame(egui::Frame {
-                fill: COLOR_YELLOW,
+                fill: Colors::YELLOW,
                 inner_margin: Margin::same(0.0),
                 outer_margin: Margin::same(0.0),
                 stroke: Stroke::NONE,
@@ -83,7 +85,7 @@ impl Network {
             .frame(egui::Frame {
                 stroke: View::DEFAULT_STROKE,
                 inner_margin: Margin::same(4.0),
-                fill: Color32::WHITE,
+                fill: Colors::WHITE,
                 .. Default::default()
             })
             .show_inside(ui, |ui| {
@@ -110,8 +112,8 @@ impl Network {
                     });
                 });
                 columns[2].vertical_centered_justified(|ui| {
-                    View::tab_button(ui, FACTORY, self.current_mode == Mode::Miner, || {
-                        self.current_mode = Mode::Miner;
+                    View::tab_button(ui, FACTORY, self.current_mode == Mode::Mining, || {
+                        self.current_mode = Mode::Mining;
                     });
                 });
                 columns[3].vertical_centered_justified(|ui| {
@@ -134,7 +136,7 @@ impl Network {
             Mode::Tuning => {
                 self.node_view.ui(ui);
             }
-            Mode::Miner => {}
+            Mode::Mining => {}
         }
     }
 
@@ -180,8 +182,8 @@ impl Network {
             Mode::Metrics => {
                 self.metrics_view.name()
             }
-            Mode::Miner => {
-                self.node_view.name()
+            Mode::Mining => {
+                self.mining_view.name()
             }
             Mode::Tuning => {
                 self.node_view.name()
@@ -195,9 +197,9 @@ impl Network {
                 strip.cell(|ui| {
                     ui.add_space(2.0);
                     ui.vertical_centered(|ui| {
-                        ui.label(RichText::new(title_text)
+                        ui.label(RichText::new(title_text.to_uppercase())
                             .size(18.0)
-                            .color(COLOR_DARK));
+                            .color(Colors::TITLE));
                     });
                 });
                 strip.cell(|ui| {
@@ -211,13 +213,13 @@ impl Network {
                         };
                         let (dark, bright) = (0.3, 1.0);
                         let color_factor = if !idle {
-                            lerp(dark..=bright, ui.input().time.cos().abs())
+                            lerp(dark..=bright, ui.input().time.cos().abs()) as f32
                         } else {
-                            bright
+                            bright as f32
                         };
 
                         // Draw sync text
-                        let status_color_rgba = Rgba::from(COLOR_GRAY_DARK) * color_factor as f32;
+                        let status_color_rgba = Rgba::from(Colors::SUB_TITLE) * color_factor;
                         let status_color = Color32::from(status_color_rgba);
                         View::ellipsize_text(ui, Node::get_sync_status_text(), 15.0, status_color);
 
@@ -233,18 +235,16 @@ impl Network {
     }
 
     pub fn server_off_content(ui: &mut egui::Ui) {
-        View::center_content(ui, [240.0, 214.0], |ui| {
-            ui.label(RichText::new(PLUGS)
-                .size(84.0)
-                .color(Color32::from_gray(200))
+        View::center_content(ui, [ui.available_width() - 48.0, 160.0], |ui| {
+            let text = t!("network.inactive_message","dots" => DOTS_THREE_OUTLINE_VERTICAL);
+            ui.label(RichText::new(text)
+                .size(16.0)
+                .color(Colors::INACTIVE_TEXT)
             );
-            ui.add_space(-16.0);
-            ui.label(RichText::new(Node::get_sync_status_text())
-                .size(19.0)
-                .color(Color32::from_gray(150))
-            );
-            ui.add_space(12.0);
-            View::button(ui, format!("{} {}", POWER, t!("network.enable")), COLOR_YELLOW, || {
+
+            ui.add_space(10.0);
+
+            View::button(ui, format!("{} {}", POWER, t!("network.enable")), Colors::GOLD, || {
                 Node::start(ChainTypes::Mainnet);
             });
         });

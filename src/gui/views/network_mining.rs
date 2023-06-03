@@ -15,21 +15,12 @@
 use egui::Ui;
 use crate::gui::views::NetworkTab;
 
-pub struct NetworkMining {
-    title: String
-}
-
-impl Default for NetworkMining {
-    fn default() -> Self {
-        Self {
-            title: t!("network.mining").to_uppercase(),
-        }
-    }
-}
+#[derive(Default)]
+pub struct NetworkMining;
 
 impl NetworkTab for NetworkMining {
-    fn name(&self) -> &String {
-        &self.title
+    fn name(&self) -> String {
+        t!("network.mining")
     }
 
     fn ui(&mut self, ui: &mut Ui) {

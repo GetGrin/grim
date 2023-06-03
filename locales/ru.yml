@@ -8,6 +8,7 @@ network:
   enable: Включить
   disable: Выключить
   restart: Перезапустить
+  inactive_message: 'Включите сервер или выберите/добавьте другой способ подключения, нажав %{dots} в левом верхнем углу экрана.'
 sync_status:
   server_restarting: Сервер перезапускается
   server_down: Сервер выключен
@@ -22,7 +23,7 @@ sync_status:
   tx_hashset_range_proofs_validation: 'Проверка доказательств: %{percent}%'
   tx_hashset_kernels_validation: 'Проверка ядер: %{percent}%'
   tx_hashset_save: Сохранение состояния цепи
-  body_sync: Загрузка блоков
+  body_sync: Загрузка блокчейна
   body_sync_percent: 'Загрузка блоков: %{percent}%'
   shutdown: Выключение сервера
 network_node:

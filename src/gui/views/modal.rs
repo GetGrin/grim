@@ -15,12 +15,12 @@
 use std::cmp::min;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use egui::{Align2, Color32, RichText, Rounding, Sense, Separator, Stroke, Vec2, Widget};
+use egui::{Align2, RichText, Rounding, Sense, Separator, Stroke, Vec2, Widget};
 use egui::epaint::RectShape;
 use egui::style::Margin;
 use egui_extras::{Size, StripBuilder};
+use crate::gui::Colors;
 
-use crate::gui::colors::{COLOR_DARK, COLOR_LIGHT, COLOR_YELLOW};
 use crate::gui::views::View;
 
 /// Identifier for [`Modal`] content to draw at [`Modal::ui`].
@@ -128,7 +128,7 @@ impl Modal {
             .fixed_pos(ui.next_widget_position())
             .fixed_size(ui.available_size())
             .frame(egui::Frame {
-                fill: Color32::from_black_alpha(100),
+                fill: Colors::SEMI_TRANSPARENT,
                 ..Default::default()
             })
             .show(ui.ctx(), |ui| {
@@ -144,7 +144,7 @@ impl Modal {
             .anchor(self.modal_position(), Vec2::default())
             .frame(egui::Frame {
                 rounding: Rounding::same(8.0),
-                fill: COLOR_YELLOW,
+                fill: Colors::YELLOW,
                 ..Default::default()
             })
             .show(ui.ctx(), |ui| {
@@ -202,7 +202,7 @@ impl Modal {
         let mut bg_shape = RectShape {
             rect,
             rounding,
-            fill: COLOR_LIGHT,
+            fill: Colors::FILL,
             stroke: Stroke::NONE,
         };
         let bg_idx = ui.painter().add(bg_shape);
@@ -232,7 +232,7 @@ impl Modal {
                 sw: 0.0,
                 se: 0.0,
             },
-            fill: COLOR_YELLOW,
+            fill: Colors::YELLOW,
             stroke: Stroke::NONE,
         };
         let bg_idx = ui.painter().add(bg_shape);
@@ -241,7 +241,10 @@ impl Modal {
         let title_resp = ui.allocate_ui_at_rect(rect, |ui| {
             ui.vertical_centered_justified(|ui| {
                 ui.add_space(8.0);
-                ui.label(RichText::new(self.title.as_ref().unwrap()).size(20.0).color(COLOR_DARK));
+                ui.label(RichText::new(self.title.as_ref().unwrap())
+                    .size(20.0)
+                    .color(Colors::TITLE)
+                );
                 ui.add_space(8.0);
             });
         }).response;
@@ -250,10 +253,12 @@ impl Modal {
         bg_shape.rect = title_resp.rect;
         ui.painter().set(bg_idx, bg_shape);
 
-        let (rect, _) = ui.allocate_exact_size(Vec2::new(ui.available_width(), 1.0),Sense::hover());
+        // Draw line below title.
+        let line_size = Vec2::new(ui.available_width(), 1.0);
+        let (line_rect, _) = ui.allocate_exact_size(line_size, Sense::hover());
         let painter = ui.painter();
-        painter.hline(rect.x_range(),
-                      painter.round_to_pixel(rect.center().y),
-                      View::DEFAULT_STROKE);
+        painter.hline(line_rect.x_range(),
+                           painter.round_to_pixel(line_rect.center().y),
+                           View::DEFAULT_STROKE);
     }
 }

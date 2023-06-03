@@ -15,7 +15,7 @@
 use egui::style::Margin;
 use egui_extras::{Size, StripBuilder};
 
-use crate::gui::colors::{COLOR_DARK, COLOR_YELLOW};
+use crate::gui::Colors;
 use crate::gui::views::View;
 
 pub struct TitlePanelAction<'action> {
@@ -34,19 +34,17 @@ pub struct TitlePanel {
 }
 
 impl TitlePanel {
-    const PANEL_SIZE: f32 = 52.0;
+    const PANEL_HEIGHT: f32 = 52.0;
 
-    pub fn new(title: &String) -> Self {
+    pub fn new(title: String) -> Self {
         Self { title: title.to_uppercase() }
     }
 
     pub fn ui(&self, l: Option<TitlePanelAction>, r: Option<TitlePanelAction>, ui: &mut egui::Ui) {
-        let Self { title } = self;
-
         egui::TopBottomPanel::top("title_panel")
             .resizable(false)
             .frame(egui::Frame {
-                fill: COLOR_YELLOW,
+                fill: Colors::YELLOW,
                 inner_margin: Margin::same(0.0),
                 outer_margin: Margin::same(0.0),
                 stroke: egui::Stroke::NONE,
@@ -54,40 +52,44 @@ impl TitlePanel {
             })
             .show_inside(ui, |ui| {
                 StripBuilder::new(ui)
-                    .size(Size::exact(Self::PANEL_SIZE))
+                    .size(Size::exact(Self::PANEL_HEIGHT))
                     .vertical(|mut strip| {
                         strip.strip(|builder| {
                             builder
-                                .size(Size::exact(Self::PANEL_SIZE))
+                                .size(Size::exact(Self::PANEL_HEIGHT))
                                 .size(Size::remainder())
-                                .size(Size::exact(Self::PANEL_SIZE))
+                                .size(Size::exact(Self::PANEL_HEIGHT))
                                 .horizontal(|mut strip| {
                                     strip.cell(|ui| {
-                                        show_action(ui, l.as_ref());
+                                        self.draw_action(ui, l);
                                     });
                                     strip.cell(|ui| {
-                                        ui.centered_and_justified(|ui| {
-                                            View::ellipsize_text(ui, title.into(), 20.0, COLOR_DARK);
-                                        });
+                                        self.draw_title(ui);
                                     });
                                     strip.cell(|ui| {
-                                        show_action(ui, r.as_ref());
+                                        self.draw_action(ui, r);
                                     });
                                 });
                         });
                     });
             });
     }
-}
 
-fn show_action(ui: &mut egui::Ui, action: Option<&TitlePanelAction>) {
-    if action.is_some() {
-        let action = action.unwrap();
-        ui.centered_and_justified(|ui| {
-            View::title_button(ui, &action.icon, || {
-                (action.on_click)();
+    fn draw_action(&self, ui: &mut egui::Ui, action: Option<TitlePanelAction>) {
+        if action.is_some() {
+            let action = action.unwrap();
+            ui.centered_and_justified(|ui| {
+                View::title_button(ui, &action.icon, || {
+                    (action.on_click)();
+                });
             });
+        }
+    }
+
+    fn draw_title(&self, ui: &mut egui::Ui) {
+        let Self { title } = self;
+        ui.centered_and_justified(|ui| {
+            View::ellipsize_text(ui, title.into(), 20.0, Colors::TITLE);
         });
     }
 }
-

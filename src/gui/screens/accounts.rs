@@ -20,17 +20,8 @@ use crate::gui::platform::PlatformCallbacks;
 use crate::gui::screens::{Screen, ScreenId};
 use crate::gui::views::{TitlePanel, TitlePanelAction, View};
 
-pub struct Accounts {
-    title: String
-}
-
-impl Default for Accounts {
-    fn default() -> Self {
-        Self {
-            title: t!("screen_accounts.title").to_uppercase(),
-        }
-    }
-}
+#[derive(Default)]
+pub struct Accounts;
 
 impl Screen for Accounts {
     fn id(&self) -> ScreenId {
@@ -38,9 +29,7 @@ impl Screen for Accounts {
     }
 
     fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame, cb: &dyn PlatformCallbacks) {
-        let Self { title } = self;
-
-        TitlePanel::new(title)
+        TitlePanel::new(t!("screen_accounts.title"))
             .ui(if !View::is_dual_panel_mode(frame) {
                 TitlePanelAction::new(GLOBE, || {
                     Navigator::toggle_side_panel();

@@ -19,8 +19,10 @@ pub use app::{App, PlatformApp};
 mod navigator;
 pub use navigator::Navigator;
 
+mod colors;
+pub use colors::Colors;
+
 pub mod platform;
 pub mod screens;
 pub mod views;
 pub mod icons;
-pub mod colors;

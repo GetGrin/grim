@@ -5,7 +5,6 @@ import android.os.Bundle;
 import android.os.Process;
 import android.system.ErrnoException;
 import android.system.Os;
-import android.util.Log;
 import android.view.KeyEvent;
 import android.view.OrientationEventListener;
 import com.google.androidgamesdk.GameActivity;
@@ -30,7 +29,7 @@ public class MainActivity extends GameActivity {
 
         // Callback to update display cutouts at native code.
         OrientationEventListener orientationEventListener = new OrientationEventListener(this,
-                SensorManager.SENSOR_DELAY_FASTEST) {
+                SensorManager.SENSOR_DELAY_NORMAL) {
             @Override
             public void onOrientationChanged(int orientation) {
                 onDisplayCutoutsChanged(Utils.getDisplayCutouts(MainActivity.this));
@@ -83,7 +82,6 @@ public class MainActivity extends GameActivity {
 
     // Called from native code
     public void onExit() {
-        Log.d("12345", "onExit");
         mManualExit = true;
         BackgroundService.stop(this);
         finish();

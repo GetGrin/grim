@@ -16,8 +16,7 @@ use egui::{Color32, Context, RichText, Spinner, Stroke, Widget};
 use egui::os::OperatingSystem;
 use egui::style::Margin;
 
-use crate::gui::colors::{COLOR_DARK, COLOR_LIGHT, COLOR_YELLOW};
-use crate::gui::Navigator;
+use crate::gui::{Colors, Navigator};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::screens::Root;
 use crate::gui::views::{Modal, ModalId, ModalLocation, View};
@@ -38,7 +37,7 @@ impl App {
     pub fn ui(&mut self, ctx: &Context, frame: &mut eframe::Frame, cb: &dyn PlatformCallbacks) {
         egui::CentralPanel::default()
             .frame(egui::Frame {
-                fill: COLOR_LIGHT,
+                fill: Colors::FILL,
                 .. Default::default()
             })
             .show(ctx, |ui| {
@@ -64,11 +63,11 @@ impl App {
                         }
                         ui.add_space(16.0);
                         ui.vertical_centered(|ui| {
-                            Spinner::new().size(42.0).color(COLOR_YELLOW).ui(ui);
+                            Spinner::new().size(42.0).color(Colors::GRAY).ui(ui);
                             ui.add_space(10.0);
                             ui.label(RichText::new(Node::get_sync_status_text())
                                 .size(18.0)
-                                .color(COLOR_DARK)
+                                .color(Colors::INACTIVE_TEXT)
                             );
                         });
                         ui.add_space(12.0);
@@ -82,7 +81,7 @@ impl App {
                         ui.spacing_mut().item_spacing = egui::Vec2::new(6.0, 0.0);
                         ui.columns(2, |columns| {
                             columns[0].vertical_centered_justified(|ui| {
-                                View::button(ui, t!("modal_exit.exit"), Color32::WHITE, || {
+                                View::button(ui, t!("modal_exit.exit"), Colors::WHITE, || {
                                     if !Node::is_running() {
                                         Self::exit(frame, cb);
                                         modal.close();
@@ -94,7 +93,7 @@ impl App {
                                 });
                             });
                             columns[1].vertical_centered_justified(|ui| {
-                                View::button(ui, t!("modal.cancel"), Color32::WHITE, || {
+                                View::button(ui, t!("modal.cancel"), Colors::WHITE, || {
                                     modal.close();
                                 });
                             });

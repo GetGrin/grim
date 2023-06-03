@@ -12,9 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub const COLOR_YELLOW: egui::Color32 = egui::Color32::from_rgb(254, 241, 2);
-pub const COLOR_LIGHT: egui::Color32 = egui::Color32::from_gray(240);
-pub const COLOR_DARK: egui::Color32 = egui::Color32::from_gray(60);
-pub const COLOR_GRAY: egui::Color32 = egui::Color32::from_gray(120);
-pub const COLOR_GRAY_LIGHT: egui::Color32 = egui::Color32::from_gray(220);
-pub const COLOR_GRAY_DARK: egui::Color32 = egui::Color32::from_gray(80);
+use egui::Color32;
+
+pub struct Colors;
+
+impl Colors {
+    pub const WHITE: Color32 = Color32::from_gray(253);
+    pub const BLACK: Color32 = Color32::from_gray(2);
+    pub const TRANSPARENT: Color32 = Color32::from_rgba_premultiplied(0, 0, 0, 0);
+    pub const SEMI_TRANSPARENT: Color32 = Color32::from_black_alpha(100);
+    pub const YELLOW: Color32 = Color32::from_rgb(254, 241, 2);
+    pub const GOLD: Color32 = Color32::from_rgb(255, 215, 0);
+    pub const FILL: Color32 = Color32::from_gray(240);
+    pub const TITLE: Color32 = Color32::from_gray(60);
+    pub const SUB_TITLE: Color32 = Color32::from_gray(80);
+    pub const BUTTON: Color32 = Color32::from_gray(70);
+    pub const GRAY: Color32 = Color32::from_gray(120);
+    pub const STROKE: Color32 = Color32::from_gray(190);
+    pub const INACTIVE_TEXT: Color32 = Color32::from_gray(150);
+    pub const ITEM_STROKE: Color32 = Color32::from_gray(220);
+}

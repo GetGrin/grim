@@ -18,30 +18,21 @@ use egui::{RichText, ScrollArea, Spinner, Widget};
 use grin_core::global::ChainTypes;
 use grin_servers::DiffBlock;
 
-use crate::gui::colors::{COLOR_DARK, COLOR_GRAY, COLOR_GRAY_LIGHT, COLOR_YELLOW};
+use crate::gui::Colors;
 use crate::gui::icons::{AT, COINS, CUBE_TRANSPARENT, HASH, HOURGLASS_LOW, HOURGLASS_MEDIUM, PLUGS, POWER, TIMER};
 use crate::gui::views::{Network, NetworkTab, View};
 use crate::node::Node;
 
-pub struct NetworkMetrics {
-    title: String
-}
-
-impl Default for NetworkMetrics {
-    fn default() -> Self {
-        Self {
-            title: t!("network.metrics").to_uppercase(),
-        }
-    }
-}
+#[derive(Default)]
+pub struct NetworkMetrics;
 
 const BLOCK_REWARD: f64 = 60.0;
 // 1 year is calculated as 365 days and 6 hours (31557600).
 const YEARLY_SUPPLY: f64 = ((60 * 60 * 24 * 365) + 6 * 60 * 60) as f64;
 
 impl NetworkTab for NetworkMetrics {
-    fn name(&self) -> &String {
-        &self.title
+    fn name(&self) -> String {
+        t!("network.metrics")
     }
 
     fn ui(&mut self, ui: &mut egui::Ui) {
@@ -51,11 +42,11 @@ impl NetworkTab for NetworkMetrics {
                 Network::server_off_content(ui);
             } else {
                 View::center_content(ui, [280.0, 160.0], |ui| {
-                    Spinner::new().size(104.0).color(COLOR_YELLOW).ui(ui);
+                    Spinner::new().size(104.0).color(Colors::GOLD).ui(ui);
                     ui.add_space(18.0);
                     ui.label(RichText::new(t!("network_metrics.loading"))
                         .size(16.0)
-                        .color(Color32::from_gray(150))
+                        .color(Colors::INACTIVE_TEXT)
                     );
                 });
             }
@@ -177,60 +168,60 @@ fn draw_diff_block(ui: &mut egui::Ui, db: &DiffBlock, rounding: [bool; 2]) {
                     se: if rounding[1] { 8.0 } else { 0.0 },
                 },
                 Color32::WHITE,
-                Stroke { width: 1.0, color: COLOR_GRAY_LIGHT }
+                Stroke { width: 1.0, color: Colors::ITEM_STROKE }
             );
 
             ui.add_space(2.0);
             ui.horizontal_top(|ui| {
                 ui.add_space(5.0);
                 ui.heading(RichText::new(HASH)
-                    .color(Color32::BLACK)
+                    .color(Colors::BLACK)
                     .size(18.0));
                 ui.add_space(2.0);
 
                 // Draw block hash
                 ui.heading(RichText::new(db.block_hash.to_string())
-                    .color(Color32::BLACK)
+                    .color(Colors::BLACK)
                     .size(18.0));
             });
             ui.horizontal_top(|ui| {
                 ui.add_space(6.0);
                 ui.heading(RichText::new(CUBE_TRANSPARENT)
-                    .color(COLOR_DARK)
+                    .color(Colors::TITLE)
                     .size(16.0));
                 ui.add_space(4.0);
 
                 // Draw block difficulty and height
                 ui.heading(RichText::new(db.difficulty.to_string())
-                    .color(COLOR_DARK)
+                    .color(Colors::TITLE)
                     .size(16.0));
                 ui.add_space(2.0);
-                ui.heading(RichText::new(AT).color(COLOR_DARK).size(16.0));
+                ui.heading(RichText::new(AT).color(Colors::TITLE).size(16.0));
                 ui.add_space(2.0);
                 ui.heading(RichText::new(db.block_height.to_string())
-                    .color(COLOR_DARK)
+                    .color(Colors::TITLE)
                     .size(16.0));
             });
             ui.horizontal_top(|ui| {
                 ui.add_space(6.0);
                 ui.heading(RichText::new(TIMER)
-                    .color(COLOR_GRAY)
+                    .color(Colors::GRAY)
                     .size(16.0));
                 ui.add_space(4.0);
 
                 // Draw block time
                 ui.heading(RichText::new(format!("{}s", db.duration))
-                    .color(COLOR_GRAY)
+                    .color(Colors::GRAY)
                     .size(16.0));
                 ui.add_space(2.0);
-                ui.heading(RichText::new(HOURGLASS_LOW).color(COLOR_GRAY).size(16.0));
+                ui.heading(RichText::new(HOURGLASS_LOW).color(Colors::GRAY).size(16.0));
                 ui.add_space(2.0);
 
                 let naive_datetime = NaiveDateTime::from_timestamp_opt(db.time as i64, 0);
                 if naive_datetime.is_some() {
                     let datetime: DateTime<Utc> = DateTime::from_utc(naive_datetime.unwrap(), Utc);
                     ui.heading(RichText::new(datetime.to_string())
-                        .color(COLOR_GRAY)
+                        .color(Colors::GRAY)
                         .size(16.0));
                 }
             });
