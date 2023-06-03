@@ -14,14 +14,18 @@
 
 use std::cmp::min;
 
-use crate::gui::Navigator;
+use egui::{RichText, Spinner, Widget};
+
+use crate::gui::{App, Colors, Navigator};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::screens::{Account, Accounts, Screen, ScreenId};
-use crate::gui::views::{Network, View};
+use crate::gui::views::{ModalId, ModalLocation, Network, View};
+use crate::node::Node;
 
 pub struct Root {
     screens: Vec<Box<dyn Screen>>,
-    network: Network
+    network: Network,
+    show_exit_progress: bool
 }
 
 impl Default for Root {
@@ -33,14 +37,19 @@ impl Default for Root {
                 Box::new(Accounts::default()),
                 Box::new(Account::default())
             ]),
-            network: Network::default()
+            network: Network::default(),
+            show_exit_progress: false
         }
     }
 }
 
 impl Root {
     pub fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame, cb: &dyn PlatformCallbacks) {
-        let (is_panel_open, panel_width) = dual_panel_state_width(frame);
+        if Navigator::is_modal_open(ModalLocation::Global) {
+            self.show_global_modal(ui, frame, cb);
+        }
+
+        let (is_panel_open, panel_width) = self.dual_panel_state_width(frame);
         egui::SidePanel::left("network_panel")
             .resizable(false)
             .exact_width(panel_width)
@@ -56,6 +65,63 @@ impl Root {
             });
     }
 
+    fn show_global_modal(&mut self,
+                         ui: &mut egui::Ui,
+                         frame: &mut eframe::Frame,
+                         cb: &dyn PlatformCallbacks) {
+        let location = ModalLocation::Global;
+        Navigator::modal_ui(ui, location, |ui, modal| {
+            match modal.id {
+                ModalId::Exit => {
+                    if self.show_exit_progress {
+                        if !Node::is_running() {
+                            App::exit(frame, cb);
+                            modal.close();
+                        }
+                        ui.add_space(16.0);
+                        ui.vertical_centered(|ui| {
+                            Spinner::new().size(48.0).color(Colors::GRAY).ui(ui);
+                            ui.add_space(12.0);
+                            ui.label(RichText::new(t!("sync_status.shutdown"))
+                                .size(17.0)
+                                .color(Colors::TEXT)
+                            );
+                        });
+                        ui.add_space(10.0);
+                    } else {
+                        ui.add_space(8.0);
+                        ui.vertical_centered(|ui| {
+                            ui.label(t!("modal_exit.description"));
+                        });
+                        ui.add_space(10.0);
+                        // Setup spacing between buttons
+                        ui.spacing_mut().item_spacing = egui::Vec2::new(6.0, 0.0);
+                        ui.columns(2, |columns| {
+                            columns[0].vertical_centered_justified(|ui| {
+                                View::button(ui, t!("modal_exit.exit"), Colors::WHITE, || {
+                                    if !Node::is_running() {
+                                        App::exit(frame, cb);
+                                        modal.close();
+                                    } else {
+                                        Node::stop();
+                                        modal.disable_closing();
+                                        self.show_exit_progress = true;
+                                    }
+                                });
+                            });
+                            columns[1].vertical_centered_justified(|ui| {
+                                View::button(ui, t!("modal.cancel"), Colors::WHITE, || {
+                                    modal.close();
+                                });
+                            });
+                        });
+                        ui.add_space(6.0);
+                    }
+                }
+            }
+        });
+    }
+
     fn show_current_screen(&mut self,
                                ui: &mut egui::Ui,
                                frame: &mut eframe::Frame,
@@ -68,18 +134,18 @@ impl Root {
             }
         }
     }
-}
 
-/// Get dual panel state and width
-fn dual_panel_state_width(frame: &mut eframe::Frame) -> (bool, f32) {
-    let dual_panel_mode = View::is_dual_panel_mode(frame);
-    let is_panel_open = dual_panel_mode || Navigator::is_side_panel_open();
-    let panel_width = if dual_panel_mode {
-        min(frame.info().window_info.size.x as i64, View::SIDE_PANEL_MIN_WIDTH) as f32
-    } else {
-        frame.info().window_info.size.x
-    };
-    (is_panel_open, panel_width)
+    /// Get dual panel state and width
+    fn dual_panel_state_width(&self, frame: &mut eframe::Frame) -> (bool, f32) {
+        let dual_panel_mode = View::is_dual_panel_mode(frame);
+        let is_panel_open = dual_panel_mode || Navigator::is_side_panel_open();
+        let panel_width = if dual_panel_mode {
+            min(frame.info().window_info.size.x as i64, View::SIDE_PANEL_MIN_WIDTH) as f32
+        } else {
+            frame.info().window_info.size.x
+        };
+        (is_panel_open, panel_width)
+    }
 }
 
 #[allow(dead_code)]

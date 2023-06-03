@@ -76,7 +76,6 @@ impl Network {
                 outer_margin: Margin::same(5.0),
                 .. Default::default()
             })
-            .resizable(false)
             .show_inside(ui, |ui| {
                 self.draw_tabs(ui);
             });
@@ -219,7 +218,7 @@ impl Network {
                         };
 
                         // Draw sync text
-                        let status_color_rgba = Rgba::from(Colors::SUB_TITLE) * color_factor;
+                        let status_color_rgba = Rgba::from(Colors::TEXT) * color_factor;
                         let status_color = Color32::from(status_color_rgba);
                         View::ellipsize_text(ui, Node::get_sync_status_text(), 15.0, status_color);
 
@@ -234,9 +233,9 @@ impl Network {
             });
     }
 
-    pub fn server_off_content(ui: &mut egui::Ui) {
-        View::center_content(ui, [ui.available_width() - 48.0, 160.0], |ui| {
-            let text = t!("network.inactive_message","dots" => DOTS_THREE_OUTLINE_VERTICAL);
+    pub fn disabled_server_content(ui: &mut egui::Ui) {
+        View::center_content(ui, 142.0, |ui| {
+            let text = t!("network.disabled_server", "dots" => DOTS_THREE_OUTLINE_VERTICAL);
             ui.label(RichText::new(text)
                 .size(16.0)
                 .color(Colors::INACTIVE_TEXT)

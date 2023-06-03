@@ -35,7 +35,7 @@ impl NetworkTab for NetworkNode {
         let server_stats = Node::get_stats();
         if !server_stats.is_some() {
             if !Node::is_running() {
-                Network::server_off_content(ui);
+                Network::disabled_server_content(ui);
             } else {
                 ui.centered_and_justified(|ui| {
                     Spinner::new().size(104.0).color(Colors::GOLD).ui(ui);

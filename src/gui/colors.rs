@@ -25,7 +25,7 @@ impl Colors {
     pub const GOLD: Color32 = Color32::from_rgb(255, 215, 0);
     pub const FILL: Color32 = Color32::from_gray(240);
     pub const TITLE: Color32 = Color32::from_gray(60);
-    pub const SUB_TITLE: Color32 = Color32::from_gray(80);
+    pub const TEXT: Color32 = Color32::from_gray(80);
     pub const BUTTON: Color32 = Color32::from_gray(70);
     pub const GRAY: Color32 = Color32::from_gray(120);
     pub const STROKE: Color32 = Color32::from_gray(190);

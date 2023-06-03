@@ -39,14 +39,14 @@ impl NetworkTab for NetworkMetrics {
         let server_stats = Node::get_stats();
         if server_stats.is_none() || server_stats.as_ref().unwrap().diff_stats.height == 0 {
             if !Node::is_running() {
-                Network::server_off_content(ui);
+                Network::disabled_server_content(ui);
             } else {
-                View::center_content(ui, [280.0, 160.0], |ui| {
+                View::center_content(ui, 160.0, |ui| {
                     Spinner::new().size(104.0).color(Colors::GOLD).ui(ui);
                     ui.add_space(18.0);
                     ui.label(RichText::new(t!("network_metrics.loading"))
                         .size(16.0)
-                        .color(Colors::INACTIVE_TEXT)
+                        .color(Colors::TEXT)
                     );
                 });
             }

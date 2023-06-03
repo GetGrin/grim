@@ -24,6 +24,7 @@ impl NetworkTab for NetworkMining {
     }
 
     fn ui(&mut self, ui: &mut Ui) {
-        todo!()
+
+
     }
 }

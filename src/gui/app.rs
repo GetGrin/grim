@@ -12,15 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::{Color32, Context, RichText, Spinner, Stroke, Widget};
+use egui::{Context, Stroke};
 use egui::os::OperatingSystem;
-use egui::style::Margin;
 
-use crate::gui::{Colors, Navigator};
+use crate::gui::Colors;
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::screens::Root;
-use crate::gui::views::{Modal, ModalId, ModalLocation, View};
-use crate::node::Node;
 
 pub struct PlatformApp<Platform> {
     pub(crate) app: App,
@@ -30,7 +27,6 @@ pub struct PlatformApp<Platform> {
 #[derive(Default)]
 pub struct App {
     root: Root,
-    show_exit_progress: bool
 }
 
 impl App {
@@ -41,71 +37,11 @@ impl App {
                 .. Default::default()
             })
             .show(ctx, |ui| {
-                if Navigator::is_modal_open(ModalLocation::Global) {
-                    self.show_global_modal(ui, frame, cb);
-                }
                 self.root.ui(ui, frame, cb);
             });
     }
 
-    fn show_global_modal(&mut self,
-                         ui: &mut egui::Ui,
-                         frame: &mut eframe::Frame,
-                         cb: &dyn PlatformCallbacks) {
-        let location = ModalLocation::Global;
-        Navigator::modal_ui(ui, location, |ui, modal| {
-            match modal.id {
-                ModalId::Exit => {
-                    if self.show_exit_progress {
-                        if !Node::is_running() {
-                            Self::exit(frame, cb);
-                            modal.close();
-                        }
-                        ui.add_space(16.0);
-                        ui.vertical_centered(|ui| {
-                            Spinner::new().size(42.0).color(Colors::GRAY).ui(ui);
-                            ui.add_space(10.0);
-                            ui.label(RichText::new(Node::get_sync_status_text())
-                                .size(18.0)
-                                .color(Colors::INACTIVE_TEXT)
-                            );
-                        });
-                        ui.add_space(12.0);
-                    } else {
-                        ui.add_space(8.0);
-                        ui.vertical_centered(|ui| {
-                            ui.label(t!("modal_exit.description"));
-                        });
-                        ui.add_space(10.0);
-                        // Setup spacing between buttons
-                        ui.spacing_mut().item_spacing = egui::Vec2::new(6.0, 0.0);
-                        ui.columns(2, |columns| {
-                            columns[0].vertical_centered_justified(|ui| {
-                                View::button(ui, t!("modal_exit.exit"), Colors::WHITE, || {
-                                    if !Node::is_running() {
-                                        Self::exit(frame, cb);
-                                        modal.close();
-                                    } else {
-                                        Node::stop();
-                                        modal.disable_closing();
-                                        self.show_exit_progress = true;
-                                    }
-                                });
-                            });
-                            columns[1].vertical_centered_justified(|ui| {
-                                View::button(ui, t!("modal.cancel"), Colors::WHITE, || {
-                                    modal.close();
-                                });
-                            });
-                        });
-                        ui.add_space(6.0);
-                    }
-                }
-            }
-        });
-    }
-
-    fn exit(frame: &mut eframe::Frame, cb: &dyn PlatformCallbacks) {
+    pub fn exit(frame: &mut eframe::Frame, cb: &dyn PlatformCallbacks) {
         match OperatingSystem::from_target_os() {
             OperatingSystem::Android => {
                 cb.exit();
