@@ -224,6 +224,21 @@ impl Node {
                     t!("sync_status.header_sync_percent", "percent" => percent)
                 }
             }
+            SyncStatus::TxHashsetPibd {
+                aborted: _,
+                errored: _,
+                completed_leaves,
+                leaves_required,
+                completed_to_height: _,
+                required_height: _,
+            } => {
+                if completed_leaves == 0 {
+                    t!("sync_status.tx_hashset_pibd")
+                } else {
+                    let percent = completed_leaves * 100 / leaves_required;
+                    t!("sync_status.tx_hashset_pibd_percent",  "percent" => percent)
+                }
+            }
             SyncStatus::TxHashsetDownload(stat) => {
                 if stat.total_size > 0 {
                     let percent = stat.downloaded_size * 100 / stat.total_size;
@@ -232,8 +247,25 @@ impl Node {
                     t!("sync_status.tx_hashset_download")
                 }
             }
-            SyncStatus::TxHashsetSetup => {
-                t!("sync_status.tx_hashset_setup")
+            SyncStatus::TxHashsetSetup {
+                headers,
+                headers_total,
+                kernel_pos,
+                kernel_pos_total,
+            } => {
+                if headers.is_some() && headers_total.is_some() {
+                    let h = headers.unwrap();
+                    let ht = headers_total.unwrap();
+                    let percent = h * 100 / ht;
+                    t!("sync_status.tx_hashset_setup_history", "percent" => percent)
+                } else if kernel_pos.is_some() && kernel_pos_total.is_some() {
+                    let k = kernel_pos.unwrap();
+                    let kt = kernel_pos_total.unwrap();
+                    let percent = k * 100 / kt;
+                    t!("sync_status.tx_hashset_setup_position", "percent" => percent)
+                } else {
+                    t!("sync_status.tx_hashset_setup")
+                }
             }
             SyncStatus::TxHashsetRangeProofsValidation {
                 rproofs,

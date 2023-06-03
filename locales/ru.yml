@@ -8,7 +8,7 @@ network:
   enable: Включить
   disable: Выключить
   restart: Перезапустить
-  inactive_message: 'Включите сервер или выберите/добавьте другой способ подключения, нажав %{dots} в левом верхнем углу экрана.'
+  disabled_server: 'Включите сервер или выберите другой способ подключения, нажав %{dots} в левом верхнем углу экрана.'
 sync_status:
   server_restarting: Сервер перезапускается
   server_down: Сервер выключен
@@ -17,8 +17,12 @@ sync_status:
   awaiting_peers: Ожидание пиров
   header_sync: Загрузка заголовков
   header_sync_percent: 'Загрузка заголовков: %{percent}%'
+  tx_hashset_pibd: 'Загрузка состояния (PIBD)'
+  tx_hashset_pibd_percent: 'Загрузка состояния (PIBD): %{percent}%'
   tx_hashset_download: Загрузка состояния цепи
   tx_hashset_download_percent: 'Загрузка состояния цепи: %{percent}%'
+  tx_hashset_setup_history: 'Подготовка состояния (история): %{percent}%'
+  tx_hashset_setup_position: 'Подготовка состояния (позиция): %{percent}%'
   tx_hashset_setup: Подготовка состояния для проверки
   tx_hashset_range_proofs_validation: 'Проверка доказательств: %{percent}%'
   tx_hashset_kernels_validation: 'Проверка ядер: %{percent}%'

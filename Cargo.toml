@@ -14,14 +14,14 @@ build = "src/build/build.rs"
 log = "0.4"
 #android-activity = { version = "0.4", features = ["game-activity"] }
 #grin_api = "5.1.2"
-grin_chain = "5.1.2"
-grin_config = "5.1.2"
-grin_core = "5.1.2"
+grin_chain = { git = "https://github.com/mimblewimble/grin.git" }
+grin_config = { git = "https://github.com/mimblewimble/grin.git" }
+grin_core = { git = "https://github.com/mimblewimble/grin.git" }
 #grin_keychain = "5.1.2"
 #grin_p2p = "5.1.2"
-grin_servers = "5.1.2"
+grin_servers = { git = "https://github.com/mimblewimble/grin.git" }
 #grin_store = "5.1.2"
-grin_util = "5.1.2"
+grin_util = { git = "https://github.com/mimblewimble/grin.git" }
 openssl-sys = { version = "0.9.82", features = ["vendored"] }
 #grin_wallet_api = "5.1.0"
 #grin_wallet_libwallet = "5.1.0"

@@ -1263,28 +1263,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "failure"
-version = "0.1.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d32e9bd16cc02eae7db7ef620b392808b89f6a5e16bb3497d159c6b92a0f4f86"
-dependencies = [
- "backtrace",
- "failure_derive",
-]
-
-[[package]]
-name = "failure_derive"
-version = "0.1.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aa4da3c766cd7a0db8242e326e9e4e081edd567072893ed320008189715366a4"
-dependencies = [
- "proc-macro2 1.0.57",
- "quote 1.0.27",
- "syn 1.0.109",
- "synstructure",
-]
-
-[[package]]
 name = "fastrand"
 version = "1.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1749,14 +1727,11 @@ dependencies = [
 
 [[package]]
 name = "grin_api"
-version = "5.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "da268fbd0150cb77b121e22435dd920516bd17d1d3d566d291cf914218e1902c"
+version = "5.2.0-alpha.2"
+source = "git+https://github.com/mimblewimble/grin.git#c31921f4d9b228338682068155167583f007b0d0"
 dependencies = [
  "bytes 0.5.6",
  "easy-jsonrpc-mw",
- "failure",
- "failure_derive",
  "futures 0.3.28",
  "grin_chain",
  "grin_core",
@@ -1776,6 +1751,7 @@ dependencies = [
  "serde",
  "serde_derive",
  "serde_json",
+ "thiserror",
  "tokio",
  "tokio-rustls",
  "url",
@@ -1783,9 +1759,8 @@ dependencies = [
 
 [[package]]
 name = "grin_chain"
-version = "5.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "125c3a424b3bb2730965dcba2be6889a028717a3acf1941f1aa95be3937354da"
+version = "5.2.0-alpha.2"
+source = "git+https://github.com/mimblewimble/grin.git#c31921f4d9b228338682068155167583f007b0d0"
 dependencies = [
  "bit-vec",
  "bitflags 1.3.2",
@@ -1793,8 +1768,6 @@ dependencies = [
  "chrono",
  "croaring",
  "enum_primitive",
- "failure",
- "failure_derive",
  "grin_core",
  "grin_keychain",
  "grin_store",
@@ -1804,13 +1777,13 @@ dependencies = [
  "lru-cache",
  "serde",
  "serde_derive",
+ "thiserror",
 ]
 
 [[package]]
 name = "grin_config"
-version = "5.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4773b76f43fd63b95f65adb8b2654fa20de93adcb18706e6c7ec5f4dbb40e05f"
+version = "5.2.0-alpha.2"
+source = "git+https://github.com/mimblewimble/grin.git#c31921f4d9b228338682068155167583f007b0d0"
 dependencies = [
  "dirs 2.0.2",
  "grin_core",
@@ -1825,9 +1798,8 @@ dependencies = [
 
 [[package]]
 name = "grin_core"
-version = "5.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ff261d0141bce01e68413a783cd1d34630f5fca8b0958a057c83de7fde786673"
+version = "5.2.0-alpha.2"
+source = "git+https://github.com/mimblewimble/grin.git#c31921f4d9b228338682068155167583f007b0d0"
 dependencies = [
  "blake2-rfc",
  "byteorder",
@@ -1835,8 +1807,6 @@ dependencies = [
  "chrono",
  "croaring",
  "enum_primitive",
- "failure",
- "failure_derive",
  "grin_keychain",
  "grin_util",
  "lazy_static",
@@ -1848,14 +1818,14 @@ dependencies = [
  "serde",
  "serde_derive",
  "siphasher",
+ "thiserror",
  "zeroize",
 ]
 
 [[package]]
 name = "grin_keychain"
-version = "5.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7d3a59a5bd95c9bdc6ed6b69b4289f135efd5df7e879fd6b1dd2b76650cdf657"
+version = "5.2.0-alpha.2"
+source = "git+https://github.com/mimblewimble/grin.git#c31921f4d9b228338682068155167583f007b0d0"
 dependencies = [
  "blake2-rfc",
  "byteorder",
@@ -1876,9 +1846,8 @@ dependencies = [
 
 [[package]]
 name = "grin_p2p"
-version = "5.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0d6216ab944d72967529aba141b48699b8080e063f5ae8b0f9e25e6ae6ce2915"
+version = "5.2.0-alpha.2"
+source = "git+https://github.com/mimblewimble/grin.git#c31921f4d9b228338682068155167583f007b0d0"
 dependencies = [
  "bitflags 1.3.2",
  "bytes 0.5.6",
@@ -1899,14 +1868,11 @@ dependencies = [
 
 [[package]]
 name = "grin_pool"
-version = "5.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "92b84dc4dd654ab0e6c37f4c445b574bf907d676568d5fb1383384f6ca386c28"
+version = "5.2.0-alpha.2"
+source = "git+https://github.com/mimblewimble/grin.git#c31921f4d9b228338682068155167583f007b0d0"
 dependencies = [
  "blake2-rfc",
  "chrono",
- "failure",
- "failure_derive",
  "grin_core",
  "grin_keychain",
  "grin_util",
@@ -1914,13 +1880,14 @@ dependencies = [
  "rand 0.6.5",
  "serde",
  "serde_derive",
+ "thiserror",
 ]
 
 [[package]]
 name = "grin_secp256k1zkp"
-version = "0.7.11"
+version = "0.7.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3af3c4c4829b3e2e7ee1d9a542833e4244912fbb887fabe44682558159b068a7"
+checksum = "b04798e32404c0af082b6a209ad4df1ab1d9ec3a5a5056f284cfa32f74e59ce6"
 dependencies = [
  "arrayvec 0.3.25",
  "cc",
@@ -1934,9 +1901,8 @@ dependencies = [
 
 [[package]]
 name = "grin_servers"
-version = "5.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ef1199e16639363d901125cfebac234f2b1ea93d391a6f4cafe15ab08d353307"
+version = "5.2.0-alpha.2"
+source = "git+https://github.com/mimblewimble/grin.git#c31921f4d9b228338682068155167583f007b0d0"
 dependencies = [
  "chrono",
  "fs2",
@@ -1965,14 +1931,11 @@ dependencies = [
 
 [[package]]
 name = "grin_store"
-version = "5.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "24a7201e07d68eae329c08f40853a7a17491ec31ad488b6725af0b4c594a60bd"
+version = "5.2.0-alpha.2"
+source = "git+https://github.com/mimblewimble/grin.git#c31921f4d9b228338682068155167583f007b0d0"
 dependencies = [
  "byteorder",
  "croaring",
- "failure",
- "failure_derive",
  "grin_core",
  "grin_util",
  "libc",
@@ -1982,13 +1945,13 @@ dependencies = [
  "serde",
  "serde_derive",
  "tempfile",
+ "thiserror",
 ]
 
 [[package]]
 name = "grin_util"
-version = "5.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b6b9e8230eb30b717ebaef3f238c8defbab08c232f42dc5445c9f01a1b18c98b"
+version = "5.2.0-alpha.2"
+source = "git+https://github.com/mimblewimble/grin.git#c31921f4d9b228338682068155167583f007b0d0"
 dependencies = [
  "backtrace",
  "base64 0.12.3",
@@ -4025,18 +3988,6 @@ dependencies = [
  "proc-macro2 1.0.57",
  "quote 1.0.27",
  "unicode-ident",
-]
-
-[[package]]
-name = "synstructure"
-version = "0.12.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f36bdaa60a83aca3921b5259d5400cbf5e90fc51931376a9bd4a0eb79aa7210f"
-dependencies = [
- "proc-macro2 1.0.57",
- "quote 1.0.27",
- "syn 1.0.109",
- "unicode-xid 0.2.4",
 ]
 
 [[package]]
