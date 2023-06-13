@@ -15,9 +15,10 @@
 use egui::{Context, Stroke};
 use egui::os::OperatingSystem;
 
-use crate::gui::Colors;
+use crate::gui::{Colors, Navigator};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::screens::Root;
+use crate::node::Node;
 
 pub struct PlatformApp<Platform> {
     pub(crate) app: App,
@@ -130,5 +131,30 @@ impl App {
 
         ctx.set_style(style);
     }
+}
+
+#[allow(dead_code)]
+#[cfg(target_os = "android")]
+#[allow(non_snake_case)]
+#[no_mangle]
+pub extern "C" fn Java_mw_gri_android_MainActivity_onBackButtonPress(
+    _env: jni::JNIEnv,
+    _class: jni::objects::JObject,
+    _activity: jni::objects::JObject,
+) {
+    Navigator::back();
+}
+
+#[allow(dead_code)]
+#[cfg(target_os = "android")]
+#[allow(non_snake_case)]
+#[no_mangle]
+/// Calling on unexpected Android application termination (removal from recent apps).
+pub extern "C" fn Java_mw_gri_android_MainActivity_onTermination(
+    _env: jni::JNIEnv,
+    _class: jni::objects::JObject,
+    _activity: jni::objects::JObject,
+) {
+    Node::stop(false);
 }
 

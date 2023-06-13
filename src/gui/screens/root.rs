@@ -80,12 +80,9 @@ impl Root {
                         }
                         ui.add_space(16.0);
                         ui.vertical_centered(|ui| {
-                            Spinner::new().size(48.0).color(Colors::GRAY).ui(ui);
+                            Spinner::new().size(48.0).color(Colors::GOLD).ui(ui);
                             ui.add_space(12.0);
-                            ui.label(RichText::new(t!("sync_status.shutdown"))
-                                .size(17.0)
-                                .color(Colors::TEXT)
-                            );
+                            ui.label(t!("sync_status.shutdown"));
                         });
                         ui.add_space(10.0);
                     } else {
@@ -103,7 +100,7 @@ impl Root {
                                         App::exit(frame, cb);
                                         modal.close();
                                     } else {
-                                        Node::stop();
+                                        Node::stop(true);
                                         modal.disable_closing();
                                         self.show_exit_progress = true;
                                     }
@@ -123,9 +120,9 @@ impl Root {
     }
 
     fn show_current_screen(&mut self,
-                               ui: &mut egui::Ui,
-                               frame: &mut eframe::Frame,
-                               cb: &dyn PlatformCallbacks) {
+                           ui: &mut egui::Ui,
+                           frame: &mut eframe::Frame,
+                           cb: &dyn PlatformCallbacks) {
         let Self { screens, .. } = self;
         for screen in screens.iter_mut() {
             if Navigator::is_current(&screen.id()) {
@@ -146,16 +143,4 @@ impl Root {
         };
         (is_panel_open, panel_width)
     }
-}
-
-#[allow(dead_code)]
-#[cfg(target_os = "android")]
-#[allow(non_snake_case)]
-#[no_mangle]
-pub extern "C" fn Java_mw_gri_android_MainActivity_onBackButtonPress(
-    _env: jni::JNIEnv,
-    _class: jni::objects::JObject,
-    _activity: jni::objects::JObject,
-) {
-    Navigator::back();
 }

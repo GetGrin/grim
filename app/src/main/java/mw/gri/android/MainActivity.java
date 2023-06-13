@@ -1,5 +1,9 @@
 package mw.gri.android;
 
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.hardware.SensorManager;
 import android.os.Bundle;
 import android.os.Process;
@@ -13,9 +17,20 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public class MainActivity extends GameActivity {
 
+    public static String FINISH_ACTIVITY_ACTION = "MainActivity.finish";
+
     static {
         System.loadLibrary("grim");
     }
+
+    private final BroadcastReceiver mBroadcastReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context ctx, Intent i) {
+            if (i.getAction().equals(FINISH_ACTIVITY_ACTION)) {
+                onExit();
+            }
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -40,6 +55,9 @@ public class MainActivity extends GameActivity {
         }
         onDisplayCutoutsChanged(Utils.getDisplayCutouts(this));
 
+        // Register receiver to finish activity from the BackgroundService.
+        registerReceiver(mBroadcastReceiver, new IntentFilter(FINISH_ACTIVITY_ACTION));
+
         // Start notification service.
         BackgroundService.start(this);
     }
@@ -62,10 +80,12 @@ public class MainActivity extends GameActivity {
 
     @Override
     protected void onDestroy() {
+        unregisterReceiver(mBroadcastReceiver);
+
         if (!mManualExit) {
             onTermination();
         }
-        // Temp fix: kill process after 3 seconds to prevent app hanging at next launch
+        // Temp fix: kill process after 3 seconds to prevent app hanging at next launch.
         new Thread(() -> {
             try {
                 Thread.sleep(3000);
@@ -80,8 +100,12 @@ public class MainActivity extends GameActivity {
         mActivityDestroyed.set(true);
     }
 
-    // Called from native code
+    // Called from native code.
     public void onExit() {
+        // Return if exit was already requested.
+        if (mManualExit) {
+            return;
+        }
         mManualExit = true;
         BackgroundService.stop(this);
         finish();

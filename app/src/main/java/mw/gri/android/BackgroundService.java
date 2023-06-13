@@ -28,8 +28,13 @@ public class BackgroundService extends Service {
             NotificationManager manager = getSystemService(NotificationManager.class);
             manager.notify(SYNC_STATUS_NOTIFICATION_ID, mNotificationBuilder.build());
 
+            if (exitAppAfterNodeStop()) {
+                sendBroadcast(new Intent(MainActivity.FINISH_ACTIVITY_ACTION));
+                mStopped = true;
+            }
+
             if (!mStopped) {
-                mHandler.postDelayed(this, 500);
+                mHandler.postDelayed(this, 300);
             }
         }
     };
@@ -127,4 +132,5 @@ public class BackgroundService extends Service {
 
     private native String getSyncStatusText();
     private native String getSyncTitle();
+    private native boolean exitAppAfterNodeStop();
 }

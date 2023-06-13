@@ -25,7 +25,7 @@ use grin_config::config;
 use grin_core::global;
 use grin_core::global::ChainTypes;
 use grin_servers::{Server, ServerStats};
-use jni::sys::jstring;
+use jni::sys::{jboolean, jstring};
 use lazy_static::lazy_static;
 use log::info;
 
@@ -46,6 +46,8 @@ pub struct Node {
     restart_needed: AtomicBool,
     /// Thread flag to stop the server.
     stop_needed: AtomicBool,
+    /// Flag to check if app exit is needed after server stop.
+    exit_after_stop: AtomicBool
 }
 
 impl Default for Node {
@@ -56,14 +58,16 @@ impl Default for Node {
             starting: AtomicBool::new(false),
             restart_needed: AtomicBool::new(false),
             stop_needed: AtomicBool::new(false),
+            exit_after_stop: AtomicBool::new(false)
         }
     }
 }
 
 impl Node {
-    /// Stop the [`Server`].
-    pub fn stop() {
+    /// Stop the [`Server`] and setup exit flag after if needed.
+    pub fn stop(exit_after_stop: bool) {
         NODE_STATE.stop_needed.store(true, Ordering::Relaxed);
+        NODE_STATE.exit_after_stop.store(exit_after_stop, Ordering::Relaxed);
     }
 
     /// Start [`Server`] with provided chain type.
@@ -190,12 +194,12 @@ impl Node {
 
     /// Get synchronization status i18n text.
     pub fn get_sync_status_text() -> String {
-        if Node::is_starting() {
-            return t!("sync_status.initial")
-        };
-
         if Node::is_stopping() {
             return t!("sync_status.shutdown")
+        };
+
+        if Node::is_starting() {
+            return t!("sync_status.initial")
         };
 
         if Node::is_restarting() {
@@ -440,11 +444,13 @@ pub extern "C" fn Java_mw_gri_android_BackgroundService_getSyncTitle(
 #[cfg(target_os = "android")]
 #[allow(non_snake_case)]
 #[no_mangle]
-/// Calling on unexpected Android application termination (removal from recent apps).
-pub extern "C" fn Java_mw_gri_android_MainActivity_onTermination(
+/// Check if app exit is needed after node stop.
+pub extern "C" fn Java_mw_gri_android_BackgroundService_exitAppAfterNodeStop(
     _env: jni::JNIEnv,
     _class: jni::objects::JObject,
     _activity: jni::objects::JObject,
-) {
-    Node::stop();
+) -> jboolean {
+    let exit_after_stop = NODE_STATE.exit_after_stop.load(Ordering::Relaxed);
+    let is_app_exit_needed = !Node::is_running() && exit_after_stop;
+    return is_app_exit_needed as jboolean;
 }
