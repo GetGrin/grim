@@ -53,7 +53,6 @@ public class MainActivity extends GameActivity {
         if (orientationEventListener.canDetectOrientation()) {
             orientationEventListener.enable();
         }
-        onDisplayCutoutsChanged(Utils.getDisplayCutouts(this));
 
         // Register receiver to finish activity from the BackgroundService.
         registerReceiver(mBroadcastReceiver, new IntentFilter(FINISH_ACTIVITY_ACTION));
@@ -63,6 +62,13 @@ public class MainActivity extends GameActivity {
     }
 
     native void onDisplayCutoutsChanged(int[] cutouts);
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // Update display cutouts.
+        onDisplayCutoutsChanged(Utils.getDisplayCutouts(this));
+    }
 
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
