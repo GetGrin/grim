@@ -12,11 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::{Button, PointerState, Response, RichText, Sense, Vec2, Widget};
+use egui::{Button, PointerState, Response, RichText, Sense, Widget};
 use egui::epaint::{Color32, FontId, RectShape, Rounding, Stroke};
 use egui::epaint::text::TextWrapping;
 use egui::text::{LayoutJob, TextFormat};
-use egui_extras::{Size, StripBuilder};
 
 use crate::gui::Colors;
 
@@ -127,7 +126,7 @@ impl View {
     /// | VALUE |
     /// | label |
     pub fn rounded_box(ui: &mut egui::Ui, value: String, label: String, r: [bool; 4]) {
-        let mut rect = ui.available_rect_before_wrap();
+        let rect = ui.available_rect_before_wrap();
 
         // Create background shape.
         let mut bg_shape = RectShape {

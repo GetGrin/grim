@@ -13,7 +13,6 @@
 // limitations under the License.
 
 use std::sync::atomic::{AtomicI32, Ordering};
-use eframe::epaint::Stroke;
 use lazy_static::lazy_static;
 use winit::platform::android::activity::AndroidApp;
 

@@ -15,12 +15,10 @@
 use std::cmp::min;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use egui::{Align2, RichText, Rounding, Sense, Separator, Stroke, Vec2, Widget};
+use egui::{Align2, RichText, Rounding, Sense, Stroke, Vec2};
 use egui::epaint::RectShape;
-use egui::style::Margin;
-use egui_extras::{Size, StripBuilder};
-use crate::gui::Colors;
 
+use crate::gui::Colors;
 use crate::gui::views::View;
 
 /// Identifier for [`Modal`] content to draw at [`Modal::ui`].

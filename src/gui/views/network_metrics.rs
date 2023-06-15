@@ -15,11 +15,10 @@
 use chrono::{DateTime, NaiveDateTime, Utc};
 use eframe::epaint::{Color32, Rounding, Stroke};
 use egui::{RichText, ScrollArea, Spinner, Widget};
-use grin_core::global::ChainTypes;
 use grin_servers::DiffBlock;
 
 use crate::gui::Colors;
-use crate::gui::icons::{AT, COINS, CUBE_TRANSPARENT, HASH, HOURGLASS_LOW, HOURGLASS_MEDIUM, PLUGS, POWER, TIMER};
+use crate::gui::icons::{AT, COINS, CUBE_TRANSPARENT, HASH, HOURGLASS_LOW, HOURGLASS_MEDIUM, TIMER};
 use crate::gui::views::{Network, NetworkTab, View};
 use crate::node::Node;
 

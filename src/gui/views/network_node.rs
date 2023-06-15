@@ -14,12 +14,10 @@
 
 use eframe::epaint::Stroke;
 use egui::{Color32, RichText, Rounding, ScrollArea, Spinner, Widget};
-use egui_extras::{Size, StripBuilder};
-use grin_core::global::ChainTypes;
 use grin_servers::PeerStats;
-use crate::gui::Colors;
 
-use crate::gui::icons::{AT, CUBE, DEVICES, FLOW_ARROW, HANDSHAKE, PACKAGE, PLUGS, PLUGS_CONNECTED, POWER, SHARE_NETWORK};
+use crate::gui::Colors;
+use crate::gui::icons::{AT, CUBE, DEVICES, FLOW_ARROW, HANDSHAKE, PACKAGE, PLUGS_CONNECTED, SHARE_NETWORK};
 use crate::gui::views::{Network, NetworkTab, View};
 use crate::node::Node;
 

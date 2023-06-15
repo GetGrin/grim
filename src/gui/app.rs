@@ -20,17 +20,20 @@ use crate::gui::platform::PlatformCallbacks;
 use crate::gui::screens::Root;
 use crate::node::Node;
 
+/// To be implemented by platform-specific application.
 pub struct PlatformApp<Platform> {
     pub(crate) app: App,
     pub(crate) platform: Platform,
 }
 
 #[derive(Default)]
+/// Contains main screen panel and ui setup.
 pub struct App {
     root: Root,
 }
 
 impl App {
+    /// Draw content on main screen panel.
     pub fn ui(&mut self, ctx: &Context, frame: &mut eframe::Frame, cb: &dyn PlatformCallbacks) {
         egui::CentralPanel::default()
             .frame(egui::Frame {
@@ -42,6 +45,7 @@ impl App {
             });
     }
 
+    /// Exit from the app.
     pub fn exit(frame: &mut eframe::Frame, cb: &dyn PlatformCallbacks) {
         match OperatingSystem::from_target_os() {
             OperatingSystem::Android => {
@@ -58,6 +62,7 @@ impl App {
         }
     }
 
+    /// Setup application styles.
     pub fn setup_visuals(ctx: &Context) {
         // Setup style
         let mut style = (*ctx.style()).clone();
@@ -78,6 +83,7 @@ impl App {
         ctx.set_visuals(visuals);
     }
 
+    /// Setup application fonts.
     pub fn setup_fonts(ctx: &Context) {
         use egui::FontFamily::Proportional;
 
@@ -137,6 +143,7 @@ impl App {
 #[cfg(target_os = "android")]
 #[allow(non_snake_case)]
 #[no_mangle]
+/// Calling when back button is pressed on Android.
 pub extern "C" fn Java_mw_gri_android_MainActivity_onBackButtonPress(
     _env: jni::JNIEnv,
     _class: jni::objects::JObject,

@@ -14,7 +14,7 @@
 
 use std::cmp::min;
 
-use egui::{RichText, Spinner, Widget};
+use egui::{Spinner, Widget};
 
 use crate::gui::{App, Colors, Navigator};
 use crate::gui::platform::PlatformCallbacks;

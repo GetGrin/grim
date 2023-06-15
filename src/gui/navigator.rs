@@ -154,15 +154,14 @@ impl Navigator {
         }
 
         // Check if Modal is open.
-        let mut is_open = false;
-        {
+        let is_open = {
             let r_nav = NAVIGATOR_STATE.read().unwrap();
-            is_open = match location {
+            match location {
                 ModalLocation::Global => { r_nav.global_modal.as_ref().unwrap().is_open() }
                 ModalLocation::SidePanel => { r_nav.side_panel_modal.as_ref().unwrap().is_open() }
                 ModalLocation::Screen => {r_nav.screen_modal.as_ref().unwrap().is_open() }
-            };
-        }
+            }
+        };
 
         // If Modal is not open, remove it from navigator state.
         if !is_open {

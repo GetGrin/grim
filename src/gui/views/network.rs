@@ -18,10 +18,9 @@ use egui::{Color32, lerp, Rgba, RichText, Stroke};
 use egui::style::Margin;
 use egui_extras::{Size, StripBuilder};
 use grin_chain::SyncStatus;
-use grin_core::global::ChainTypes;
 
-use crate::gui::icons::{CARDHOLDER, DATABASE, DOTS_THREE_OUTLINE_VERTICAL, FACTORY, FADERS, GAUGE, PLUGS, POWER};
 use crate::gui::{Colors, Navigator};
+use crate::gui::icons::{CARDHOLDER, DATABASE, DOTS_THREE_OUTLINE_VERTICAL, FACTORY, FADERS, GAUGE, POWER};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{NetworkTab, View};
 use crate::gui::views::network_metrics::NetworkMetrics;
@@ -244,7 +243,7 @@ impl Network {
             ui.add_space(10.0);
 
             View::button(ui, format!("{} {}", POWER, t!("network.enable")), Colors::GOLD, || {
-                Node::start(ChainTypes::Mainnet);
+                Node::start();
             });
         });
     }
