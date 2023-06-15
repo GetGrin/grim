@@ -13,13 +13,12 @@
 // limitations under the License.
 
 use eframe::{AppCreator, NativeOptions, Renderer, Theme};
-use grin_core::global::ChainTypes;
-use log::LevelFilter::Info;
 #[cfg(target_os = "android")]
 use winit::platform::android::activity::AndroidApp;
 
 use crate::gui::{App, PlatformApp};
 use crate::node::Node;
+use crate::Settings;
 
 #[allow(dead_code)]
 #[cfg(target_os = "android")]
@@ -28,9 +27,10 @@ fn android_main(app: AndroidApp) {
     #[cfg(debug_assertions)]
     {
         std::env::set_var("RUST_BACKTRACE", "full");
-        android_logger::init_once(
-            android_logger::Config::default().with_max_level(Info).with_tag("grim"),
-        );
+        let log_config = android_logger::Config::default()
+            .with_max_level(log::LevelFilter::Info)
+            .with_tag("grim");
+        android_logger::init_once(log_config);
     }
 
     use crate::gui::platform::Android;
@@ -73,7 +73,10 @@ fn start(mut options: NativeOptions, app_creator: AppCreator) {
     options.renderer = Renderer::Wgpu;
 
     setup_i18n();
-    Node::start(ChainTypes::Mainnet);
+
+    if Settings::get_app_config().auto_start_node {
+        Node::start();
+    }
 
     eframe::run_native("Grim", options, app_creator);
 }

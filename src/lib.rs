@@ -21,3 +21,6 @@ mod wallet;
 mod gui;
 
 pub mod grim;
+
+mod settings;
+pub use settings::{Settings, AppConfig};

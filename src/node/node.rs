@@ -16,18 +16,18 @@ use std::{fs, thread};
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock, RwLockReadGuard};
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::thread::JoinHandle;
 use std::time::Duration;
 
 use futures::channel::oneshot;
 use grin_chain::SyncStatus;
-use grin_config::config;
 use grin_core::global;
 use grin_core::global::ChainTypes;
 use grin_servers::{Server, ServerStats};
 use jni::sys::{jboolean, jstring};
 use lazy_static::lazy_static;
 use log::info;
+
+use crate::Settings;
 
 lazy_static! {
     /// Static thread-aware state of [`Node`] to be updated from another thread.
@@ -38,8 +38,6 @@ lazy_static! {
 pub struct Node {
     /// Statistics data for UI.
     stats: Arc<RwLock<Option<ServerStats>>>,
-    /// Chain type of launched server.
-    chain_type: Arc<RwLock<ChainTypes>>,
     /// Indicator if server is starting.
     starting: AtomicBool,
     /// Thread flag to stop the server and start it again.
@@ -54,7 +52,6 @@ impl Default for Node {
     fn default() -> Self {
         Self {
             stats: Arc::new(RwLock::new(None)),
-            chain_type: Arc::new(RwLock::new(ChainTypes::Mainnet)),
             starting: AtomicBool::new(false),
             restart_needed: AtomicBool::new(false),
             stop_needed: AtomicBool::new(false),
@@ -70,52 +67,48 @@ impl Node {
         NODE_STATE.exit_after_stop.store(exit_after_stop, Ordering::Relaxed);
     }
 
-    /// Start [`Server`] with provided chain type.
-    pub fn start(chain_type: ChainTypes) {
+    /// Start the node.
+    pub fn start() {
         if !Self::is_running() {
-            let mut w_chain_type = NODE_STATE.chain_type.write().unwrap();
-            *w_chain_type = chain_type;
             Self::start_server_thread();
         }
     }
 
-    /// Restart [`Server`] with provided chain type.
-    pub fn restart(chain_type: ChainTypes) {
+    /// Restart the node.
+    pub fn restart() {
         if Self::is_running() {
-            let mut w_chain_type = NODE_STATE.chain_type.write().unwrap();
-            *w_chain_type = chain_type;
             NODE_STATE.restart_needed.store(true, Ordering::Relaxed);
         } else {
-            Node::start(chain_type);
+            Node::start();
         }
     }
 
-    /// Check if [`Server`] is starting.
+    /// Check if node is starting.
     pub fn is_starting() -> bool {
         NODE_STATE.starting.load(Ordering::Relaxed)
     }
 
-    /// Check if [`Server`] is running.
+    /// Check if node is running.
     pub fn is_running() -> bool {
         Self::get_sync_status().is_some()
     }
 
-    /// Check if [`Server`] is stopping.
+    /// Check if node is stopping.
     pub fn is_stopping() -> bool {
         NODE_STATE.stop_needed.load(Ordering::Relaxed)
     }
 
-    /// Check if [`Server`] is restarting.
+    /// Check if node is restarting.
     pub fn is_restarting() -> bool {
         NODE_STATE.restart_needed.load(Ordering::Relaxed)
     }
 
-    /// Get [`Server`] statistics.
+    /// Get node [`Server`] statistics.
     pub fn get_stats() -> RwLockReadGuard<'static, Option<ServerStats>> {
         NODE_STATE.stats.read().unwrap()
     }
 
-    /// Get [`Server`] synchronization status, empty when Server is not running.
+    /// Get synchronization status, empty when [`Server`] is not running.
     pub fn get_sync_status() -> Option<SyncStatus> {
         // Return Shutdown status when node is stopping.
         if Self::is_stopping() {
@@ -135,13 +128,13 @@ impl Node {
         None
     }
 
-    /// Start a thread to launch [`Server`] and update [`NODE_STATE`] with server statistics.
+    /// Start the node [`Server`] at separate thread to update [`NODE_STATE`] with [`ServerStats`].
     fn start_server_thread() {
         thread::spawn(move || {
             NODE_STATE.starting.store(true, Ordering::Relaxed);
 
             // Start the server.
-            let mut server = start_server(&NODE_STATE.chain_type.read().unwrap());
+            let mut server = start_server();
             let mut first_start = true;
 
             loop {
@@ -155,8 +148,8 @@ impl Node {
                     // Stop the server.
                     server.stop();
 
-                    // Create new server with current chain type.
-                    server = start_server(&NODE_STATE.chain_type.read().unwrap());
+                    // Create new server.
+                    server = start_server();
 
                     NODE_STATE.restart_needed.store(false, Ordering::Relaxed);
                 } else if Self::is_stopping() {
@@ -310,27 +303,12 @@ impl Node {
             SyncStatus::Shutdown => t!("sync_status.shutdown"),
         }
     }
-
 }
 
-/// Start the [`Server`] with provided chain type.
-fn start_server(chain_type: &ChainTypes) -> Server {
-    // Initialize config
-    let mut node_config_result = config::initial_setup_server(chain_type);
-    if node_config_result.is_err() {
-        // Remove config file on init error
-        let mut grin_path = dirs::home_dir().unwrap();
-        grin_path.push(".grin");
-        grin_path.push(chain_type.shortname());
-        grin_path.push(config::SERVER_CONFIG_FILE_NAME);
-        fs::remove_file(grin_path).unwrap();
-
-        // Reinit config
-        node_config_result = config::initial_setup_server(chain_type);
-    }
-
-    let node_config = node_config_result.ok();
-    let config = node_config.clone().unwrap();
+/// Start the node [`Server`].
+fn start_server() -> Server {
+    // Get current global config
+    let config = &Settings::get_node_config().global_config;
     let server_config = config.members.as_ref().unwrap().server.clone();
 
     // Remove temporary file dir
@@ -367,24 +345,19 @@ fn start_server(chain_type: &ChainTypes) -> Server {
         }
     }
     if !global::GLOBAL_ACCEPT_FEE_BASE.is_init() {
-        let afb = config
-            .members
-            .as_ref()
-            .unwrap()
-            .server
-            .pool_config
-            .accept_fee_base;
+        let afb = config.members.as_ref().unwrap().server.pool_config.accept_fee_base;
         global::init_global_accept_fee_base(afb);
         info!("Accept Fee Base: {:?}", global::get_accept_fee_base());
     }
     if !global::GLOBAL_FUTURE_TIME_LIMIT.is_init() {
-        global::init_global_future_time_limit(config.members.unwrap().server.future_time_limit);
+        let future_time_limit = config.members.as_ref().unwrap().server.future_time_limit;
+        global::init_global_future_time_limit(future_time_limit);
         info!("Future Time Limit: {:?}", global::get_future_time_limit());
     }
 
     let api_chan: &'static mut (oneshot::Sender<()>, oneshot::Receiver<()>) =
         Box::leak(Box::new(oneshot::channel::<()>()));
-    let mut server_result = Server::new(server_config.clone(), None, api_chan);
+    let server_result = Server::new(server_config, None, api_chan);
     //TODO: handle server errors
     //
     // if server_result.is_err() {

@@ -13,5 +13,7 @@
 // limitations under the License.
 
 mod node;
-
 pub use node::Node;
+
+mod config;
+pub use config::NodeConfig;
