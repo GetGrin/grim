@@ -22,35 +22,36 @@ use grin_chain::SyncStatus;
 use crate::gui::{Colors, Navigator};
 use crate::gui::icons::{CARDHOLDER, DATABASE, DOTS_THREE_OUTLINE_VERTICAL, FACTORY, FADERS, GAUGE, POWER};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{NetworkTab, View};
 use crate::gui::views::network_metrics::NetworkMetrics;
 use crate::gui::views::network_mining::NetworkMining;
 use crate::gui::views::network_node::NetworkNode;
+use crate::gui::views::network_settings::NetworkSettings;
+use crate::gui::views::View;
 use crate::node::Node;
+use crate::Settings;
+
+pub trait NetworkTab {
+    fn get_type(&self) -> NetworkTabType;
+    fn name(&self) -> String;
+    fn ui(&mut self, ui: &mut egui::Ui);
+}
 
 #[derive(PartialEq)]
-enum Mode {
+pub enum NetworkTabType {
     Node,
     Metrics,
     Mining,
-    Tuning
+    Settings
 }
 
 pub struct Network {
-    current_mode: Mode,
-
-    node_view: NetworkNode,
-    metrics_view: NetworkMetrics,
-    mining_view: NetworkMining,
+    current_tab: Box<dyn NetworkTab>,
 }
 
 impl Default for Network {
     fn default() -> Self {
         Self {
-            current_mode: Mode::Node,
-            node_view: NetworkNode::default(),
-            metrics_view: NetworkMetrics::default(),
-            mining_view: NetworkMining::default()
+            current_tab: Box::new(NetworkNode::default()),
         }
     }
 }
@@ -87,7 +88,7 @@ impl Network {
                 .. Default::default()
             })
             .show_inside(ui, |ui| {
-                self.draw_tab_content(ui);
+                self.current_tab.ui(ui);
             });
     }
 
@@ -100,42 +101,31 @@ impl Network {
 
             ui.columns(4, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
-                    View::tab_button(ui, DATABASE, self.current_mode == Mode::Node, || {
-                        self.current_mode = Mode::Node;
-                    });
+                    View::tab_button(ui, DATABASE,
+                                     self.current_tab.get_type() == NetworkTabType::Node, || {
+                            self.current_tab = Box::new(NetworkNode::default());
+                        });
                 });
                 columns[1].vertical_centered_justified(|ui| {
-                    View::tab_button(ui, GAUGE, self.current_mode == Mode::Metrics, || {
-                        self.current_mode = Mode::Metrics;
-                    });
+                    View::tab_button(ui, GAUGE,
+                                     self.current_tab.get_type() == NetworkTabType::Metrics, || {
+                            self.current_tab = Box::new(NetworkMetrics::default());
+                        });
                 });
                 columns[2].vertical_centered_justified(|ui| {
-                    View::tab_button(ui, FACTORY, self.current_mode == Mode::Mining, || {
-                        self.current_mode = Mode::Mining;
-                    });
+                    View::tab_button(ui, FACTORY,
+                                     self.current_tab.get_type() == NetworkTabType::Mining, || {
+                            self.current_tab = Box::new(NetworkMining::default());
+                        });
                 });
                 columns[3].vertical_centered_justified(|ui| {
-                    View::tab_button(ui, FADERS, self.current_mode == Mode::Tuning, || {
-                        self.current_mode = Mode::Tuning;
-                    });
+                    View::tab_button(ui, FADERS,
+                                     self.current_tab.get_type() == NetworkTabType::Settings, || {
+                            self.current_tab = Box::new(NetworkSettings::default());
+                        });
                 });
             });
         });
-    }
-
-    fn draw_tab_content(&mut self, ui: &mut egui::Ui) {
-        match self.current_mode {
-            Mode::Node => {
-                self.node_view.ui(ui);
-            }
-            Mode::Metrics => {
-                self.metrics_view.ui(ui);
-            }
-            Mode::Tuning => {
-                self.node_view.ui(ui);
-            }
-            Mode::Mining => {}
-        }
     }
 
     fn draw_title(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame) {
@@ -173,21 +163,6 @@ impl Network {
     }
 
     fn draw_title_text(&self, builder: StripBuilder) {
-        let title_text = match &self.current_mode {
-            Mode::Node => {
-                self.node_view.name()
-            }
-            Mode::Metrics => {
-                self.metrics_view.name()
-            }
-            Mode::Mining => {
-                self.mining_view.name()
-            }
-            Mode::Tuning => {
-                self.node_view.name()
-            }
-        };
-
         builder
             .size(Size::remainder())
             .size(Size::exact(32.0))
@@ -195,7 +170,7 @@ impl Network {
                 strip.cell(|ui| {
                     ui.add_space(2.0);
                     ui.vertical_centered(|ui| {
-                        ui.label(RichText::new(title_text.to_uppercase())
+                        ui.label(RichText::new(self.current_tab.name().to_uppercase())
                             .size(18.0)
                             .color(Colors::TITLE));
                     });
@@ -233,7 +208,7 @@ impl Network {
     }
 
     pub fn disabled_server_content(ui: &mut egui::Ui) {
-        View::center_content(ui, 142.0, |ui| {
+        View::center_content(ui, 162.0, |ui| {
             let text = t!("network.disabled_server", "dots" => DOTS_THREE_OUTLINE_VERTICAL);
             ui.label(RichText::new(text)
                 .size(16.0)
@@ -244,6 +219,15 @@ impl Network {
 
             View::button(ui, format!("{} {}", POWER, t!("network.enable")), Colors::GOLD, || {
                 Node::start();
+            });
+
+            ui.add_space(4.0);
+
+            let autostart: bool = Settings::get_app_config().auto_start_node;
+            View::checkbox(ui, autostart, t!("network.autorun"), || {
+                let mut w_app_config = Settings::get_app_config_to_update();
+                w_app_config.auto_start_node = !autostart;
+                w_app_config.save();
             });
         });
     }

@@ -72,6 +72,10 @@ impl App {
         style.spacing.scroll_bar_width = 4.0;
         // Disable spacing between items.
         style.spacing.item_spacing = egui::vec2(0.0, 0.0);
+        // Setup radio button/checkbox size and spacing.
+        style.spacing.icon_width = 24.0;
+        style.spacing.icon_width_inner = 14.0;
+        style.spacing.icon_spacing = 10.0;
 
         ctx.set_style(style);
 

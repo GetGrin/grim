@@ -12,12 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::{Button, PointerState, Response, RichText, Sense, Widget};
+use egui::{Button, PointerState, Response, RichText, Sense, Spinner, Widget};
 use egui::epaint::{Color32, FontId, RectShape, Rounding, Stroke};
 use egui::epaint::text::TextWrapping;
 use egui::text::{LayoutJob, TextFormat};
 
 use crate::gui::Colors;
+use crate::gui::icons::{CHECK_SQUARE, SQUARE};
 
 pub struct View;
 
@@ -183,5 +184,39 @@ impl View {
                 (content)(ui);
             });
         });
+    }
+
+    /// Draw big gold loading spinner.
+    pub fn big_loading_spinner(ui: &mut egui::Ui) {
+        Spinner::new().size(104.0).color(Colors::GOLD).ui(ui);
+    }
+
+    /// Draw small gold loading spinner.
+    pub fn small_loading_spinner(ui: &mut egui::Ui) {
+        Spinner::new().size(48.0).color(Colors::GOLD).ui(ui);
+    }
+
+    //        let wt = RichText::new(text.to_uppercase()).size(18.0).color(Colors::BUTTON);
+    //         let br = Button::new(wt)
+    //             .stroke(Self::DEFAULT_STROKE)
+    //             .fill(fill_color)
+    //             .ui(ui).interact(Sense::click_and_drag());
+    //
+    //         Self::on_button_click(ui, br, action);
+
+    /// Draw button that looks like checkbox with callback to change value.
+    pub fn checkbox(ui: &mut egui::Ui, value: bool, text: String, cb: impl FnOnce()) {
+        let text_value = match value {
+            true => { format!("{} {}", CHECK_SQUARE, text)}
+            false => { format!("{} {}", SQUARE, text)}
+        };
+        let wt = RichText::new(text_value).size(18.0).color(Colors::BUTTON);
+        let br = Button::new(wt)
+            .frame(false)
+            .stroke(Stroke::NONE)
+            .fill(Colors::TRANSPARENT)
+            .ui(ui).interact(Sense::click_and_drag());
+
+        Self::on_button_click(ui, br, cb);
     }
 }

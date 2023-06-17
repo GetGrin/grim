@@ -11,3 +11,22 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
+use crate::gui::views::{NetworkTab, NetworkTabType};
+
+#[derive(Default)]
+pub struct NetworkSettings;
+
+impl NetworkTab for NetworkSettings {
+    fn get_type(&self) -> NetworkTabType {
+        NetworkTabType::Settings
+    }
+
+    fn name(&self) -> String {
+        t!("network.settings")
+    }
+
+    fn ui(&mut self, ui: &mut egui::Ui) {
+
+    }
+}

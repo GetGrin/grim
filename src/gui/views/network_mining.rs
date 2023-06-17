@@ -12,19 +12,37 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::Ui;
-use crate::gui::views::NetworkTab;
+use crate::gui::Colors;
+use crate::gui::views::{Network, NetworkTab, NetworkTabType, View};
+use crate::node::Node;
 
 #[derive(Default)]
 pub struct NetworkMining;
 
 impl NetworkTab for NetworkMining {
+    fn get_type(&self) -> NetworkTabType {
+        NetworkTabType::Mining
+    }
+
     fn name(&self) -> String {
         t!("network.mining")
     }
 
-    fn ui(&mut self, ui: &mut Ui) {
+    fn ui(&mut self, ui: &mut egui::Ui) {
+        let server_stats = Node::get_stats();
+        // Show loading spinner when stats are not available or message when server is not enabled.
+        if !server_stats.is_some() {
+            if !Node::is_running() {
+                Network::disabled_server_content(ui);
+            } else {
+                ui.centered_and_justified(|ui| {
+                    View::big_loading_spinner(ui);
+                });
+            }
+            return;
+        }
 
+        let stats = server_stats.as_ref().unwrap();
 
     }
 }

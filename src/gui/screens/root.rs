@@ -14,8 +14,6 @@
 
 use std::cmp::min;
 
-use egui::{Spinner, Widget};
-
 use crate::gui::{App, Colors, Navigator};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::screens::{Account, Accounts, Screen, ScreenId};
@@ -80,7 +78,7 @@ impl Root {
                         }
                         ui.add_space(16.0);
                         ui.vertical_centered(|ui| {
-                            Spinner::new().size(48.0).color(Colors::GOLD).ui(ui);
+                            View::small_loading_spinner(ui);
                             ui.add_space(12.0);
                             ui.label(t!("sync_status.shutdown"));
                         });

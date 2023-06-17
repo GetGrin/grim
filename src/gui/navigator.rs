@@ -22,7 +22,7 @@ use crate::gui::screens::ScreenId;
 use crate::gui::views::{Modal, ModalId, ModalLocation};
 
 lazy_static! {
-    /// Static [Navigator] state to be accessible from anywhere.
+    /// Static [`Navigator`] state to be accessible from anywhere.
     static ref NAVIGATOR_STATE: RwLock<Navigator> = RwLock::new(Navigator::default());
 }
 
@@ -53,20 +53,20 @@ impl Default for Navigator {
 }
 
 impl Navigator {
-    /// Initialize navigation from provided [ScreenId].
+    /// Initialize navigation from provided [`ScreenId`].
     pub fn init(from: ScreenId) {
         let mut w_nav = NAVIGATOR_STATE.write().unwrap();
         w_nav.screen_stack.clear();
         w_nav.screen_stack.insert(from);
     }
 
-    /// Check if provided [ScreenId] is current.
+    /// Check if provided [`ScreenId`] is current.
     pub fn is_current(id: &ScreenId) -> bool {
         let r_nav = NAVIGATOR_STATE.read().unwrap();
         r_nav.screen_stack.last().unwrap() == id
     }
 
-    /// Navigate to screen with provided [ScreenId].
+    /// Navigate to screen with provided [`ScreenId`].
     pub fn to(id: ScreenId) {
         NAVIGATOR_STATE.write().unwrap().screen_stack.insert(id);
     }
@@ -110,19 +110,19 @@ impl Navigator {
         }
     }
 
-    /// Open exit confirmation [Modal].
+    /// Open exit confirmation [`Modal`].
     pub fn open_exit_modal() {
         let w_nav = NAVIGATOR_STATE.write().unwrap();
         Self::open_exit_modal_nav(w_nav);
     }
 
-    /// Open exit confirmation [Modal] with provided [NAVIGATOR_STATE] lock.
+    /// Open exit confirmation [`Modal`] with provided [NAVIGATOR_STATE] lock.
     fn open_exit_modal_nav(mut w_nav: RwLockWriteGuard<Navigator>) {
         let m = Modal::new(ModalId::Exit, ModalLocation::Global).title(t!("modal_exit.exit"));
         w_nav.global_modal = Some(m);
     }
 
-    /// Open [Modal] at specified location.
+    /// Open [`Modal`] at specified location.
     pub fn open_modal(modal: Modal) {
         let mut w_nav = NAVIGATOR_STATE.write().unwrap();
         match modal.location {
@@ -138,7 +138,7 @@ impl Navigator {
         }
     }
 
-    /// Check if [Modal] is open at specified location and remove it from [Navigator] if closed.
+    /// Check if [`Modal`] is open at specified location and remove it from [`Navigator`] otherwise.
     pub fn is_modal_open(location: ModalLocation) -> bool {
         // Check if Modal is showing.
         {
@@ -176,7 +176,7 @@ impl Navigator {
         true
     }
 
-    /// Show [Modal] with provided location at app UI.
+    /// Show [`Modal`] with provided location at app UI.
     pub fn modal_ui(ui: &mut egui::Ui,
                     location: ModalLocation,
                     add_content: impl FnOnce(&mut egui::Ui, &Modal)) {

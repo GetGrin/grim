@@ -14,12 +14,12 @@
 
 use chrono::{DateTime, NaiveDateTime, Utc};
 use eframe::epaint::{Color32, Rounding, Stroke};
-use egui::{RichText, ScrollArea, Spinner, Widget};
+use egui::{RichText, ScrollArea};
 use grin_servers::DiffBlock;
 
 use crate::gui::Colors;
 use crate::gui::icons::{AT, COINS, CUBE_TRANSPARENT, HASH, HOURGLASS_LOW, HOURGLASS_MEDIUM, TIMER};
-use crate::gui::views::{Network, NetworkTab, View};
+use crate::gui::views::{Network, NetworkTab, NetworkTabType, View};
 use crate::node::Node;
 
 #[derive(Default)]
@@ -30,18 +30,23 @@ const BLOCK_REWARD: f64 = 60.0;
 const YEARLY_SUPPLY: f64 = ((60 * 60 * 24 * 365) + 6 * 60 * 60) as f64;
 
 impl NetworkTab for NetworkMetrics {
+    fn get_type(&self) -> NetworkTabType {
+        NetworkTabType::Metrics
+    }
+
     fn name(&self) -> String {
         t!("network.metrics")
     }
 
     fn ui(&mut self, ui: &mut egui::Ui) {
         let server_stats = Node::get_stats();
+        // Show loading spinner when stats are not available or message when server is not enabled.
         if server_stats.is_none() || server_stats.as_ref().unwrap().diff_stats.height == 0 {
             if !Node::is_running() {
                 Network::disabled_server_content(ui);
             } else {
                 View::center_content(ui, 160.0, |ui| {
-                    Spinner::new().size(104.0).color(Colors::GOLD).ui(ui);
+                    View::big_loading_spinner(ui);
                     ui.add_space(18.0);
                     ui.label(RichText::new(t!("network_metrics.loading"))
                         .size(16.0)
@@ -54,7 +59,7 @@ impl NetworkTab for NetworkMetrics {
 
         let stats = server_stats.as_ref().unwrap();
 
-        // Show emission info
+        // Show emission info.
         ui.vertical_centered_justified(|ui| {
             View::sub_header(ui, format!("{} {}", COINS, t!("network_metrics.emission")));
         });

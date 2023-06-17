@@ -22,14 +22,9 @@ mod modal;
 pub use modal::*;
 
 mod network;
-pub use network::Network;
+pub use network::*;
 
 mod network_node;
 mod network_settings;
 mod network_metrics;
 mod network_mining;
-
-pub trait NetworkTab {
-    fn name(&self) -> String;
-    fn ui(&mut self, ui: &mut egui::Ui);
-}

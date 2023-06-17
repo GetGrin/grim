@@ -13,30 +13,35 @@
 // limitations under the License.
 
 use eframe::epaint::Stroke;
-use egui::{Color32, RichText, Rounding, ScrollArea, Spinner, Widget};
+use egui::{Color32, RichText, Rounding, ScrollArea};
 use grin_servers::PeerStats;
 
 use crate::gui::Colors;
 use crate::gui::icons::{AT, CUBE, DEVICES, FLOW_ARROW, HANDSHAKE, PACKAGE, PLUGS_CONNECTED, SHARE_NETWORK};
-use crate::gui::views::{Network, NetworkTab, View};
+use crate::gui::views::{Network, NetworkTab, NetworkTabType, View};
 use crate::node::Node;
 
 #[derive(Default)]
 pub struct NetworkNode;
 
 impl NetworkTab for NetworkNode {
+    fn get_type(&self) -> NetworkTabType {
+        NetworkTabType::Metrics
+    }
+
     fn name(&self) -> String {
         t!("network.node")
     }
 
     fn ui(&mut self, ui: &mut egui::Ui) {
         let server_stats = Node::get_stats();
+        // Show loading spinner when stats are not available or message when server is not enabled.
         if !server_stats.is_some() {
             if !Node::is_running() {
                 Network::disabled_server_content(ui);
             } else {
                 ui.centered_and_justified(|ui| {
-                    Spinner::new().size(104.0).color(Colors::GOLD).ui(ui);
+                    View::big_loading_spinner(ui);
                 });
             }
             return;
@@ -83,7 +88,7 @@ impl NetworkTab for NetworkNode {
                 });
 
                 // Show block stats
-                ui.add_space(6.0);
+                ui.add_space(4.0);
                 ui.vertical_centered_justified(|ui| {
                     View::sub_header(ui, format!("{} {}", CUBE, t!("network_node.block")));
                 });
@@ -119,7 +124,7 @@ impl NetworkTab for NetworkNode {
                 });
 
                 // Show data stats
-                ui.add_space(6.0);
+                ui.add_space(4.0);
                 ui.vertical_centered_justified(|ui| {
                     View::sub_header(ui, format!("{} {}", SHARE_NETWORK, t!("network_node.data")));
                 });
@@ -167,7 +172,7 @@ impl NetworkTab for NetworkNode {
 
                 // Show peers stats when available
                 if stats.peer_count > 0 {
-                    ui.add_space(6.0);
+                    ui.add_space(4.0);
                     ui.vertical_centered_justified(|ui| {
                         View::sub_header(ui, format!("{} {}", HANDSHAKE, t!("network_node.peers")));
                     });

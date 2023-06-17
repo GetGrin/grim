@@ -133,7 +133,7 @@ impl Modal {
                 ui.set_min_size(ui.available_size());
             });
 
-        // Show main content Window at give position
+        // Show main content Window at given position
         let layer_id = egui::Window::new(self.window_id(false))
             .title_bar(false)
             .resizable(false)
