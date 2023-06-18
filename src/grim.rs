@@ -74,7 +74,7 @@ fn start(mut options: NativeOptions, app_creator: AppCreator) {
 
     setup_i18n();
 
-    if Settings::get_app_config().auto_start_node {
+    if Settings::app_config_to_read().auto_start_node {
         Node::start();
     }
 

@@ -1,15 +1,16 @@
 screen_accounts:
   title: Accounts
 network:
+  self: Network
   node: Integrated node
-  metrics: Metrics
+  metrics: Network metrics
   mining: Mining
-  settings: Server settings
-  enable: Enable
+  settings: Node settings
+  enable_node: Enable node
   disable: Disable
   restart: Restart
   autorun: Autorun
-  disabled_server: 'Enable server or choose another connection method by pressing %{dots} on top left corner of the screen.'
+  disabled_server: 'Enable integrated node or choose another connection method by pressing %{dots} in the top-left corner of the screen.'
 sync_status:
   server_restarting: Server is restarting
   server_down: Server is down
@@ -51,7 +52,20 @@ network_metrics:
   supply: Supply
   block_time: Block time
   reward: Reward
-  difficulty_window: 'Difficulty at window %{size}'
+  difficulty_window: 'Difficulty window %{size}'
+network_mining:
+  loading: Mining will be available after the synchronization
+  enable_server: Enable server
+  disabled_server: 'Enable stratum server at %{address} or change settings by selecting %{settings} at the bottom of the screen.'
+  starting: Stratum server is starting
+  info: 'Mining server is enabled, you can change settings by selecting %{settings} at the bottom of the screen. Data is updating when devices are connected.'
+  address: IP Address
+  wallet: Wallet Address
+  server: Stratum server
+  miners: Miners
+  devices: Devices
+  blocks_found: Blocks found
+  hashrate: Hashrate
 modal:
   cancel: Cancel
 modal_exit:

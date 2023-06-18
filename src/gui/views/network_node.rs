@@ -26,16 +26,12 @@ pub struct NetworkNode;
 
 impl NetworkTab for NetworkNode {
     fn get_type(&self) -> NetworkTabType {
-        NetworkTabType::Metrics
-    }
-
-    fn name(&self) -> String {
-        t!("network.node")
+        NetworkTabType::Node
     }
 
     fn ui(&mut self, ui: &mut egui::Ui) {
         let server_stats = Node::get_stats();
-        // Show loading spinner when stats are not available or message when server is not enabled.
+        // Show message when node is not running or loading spinner when stats are not available.
         if !server_stats.is_some() {
             if !Node::is_running() {
                 Network::disabled_server_content(ui);

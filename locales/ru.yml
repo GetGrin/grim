@@ -1,15 +1,16 @@
 screen_accounts:
   title: Аккаунты
 network:
+  self: Сеть
   node: Встроенный узел
-  metrics: Метрики
+  metrics: Показатели сети
   mining: Майнинг
-  settings: Настройки сервера
-  enable: Включить
+  settings: Настройки узла
+  enable_node: Включить узел
   disable: Выключить
   restart: Перезапустить
   autorun: Автозапуск
-  disabled_server: 'Включите сервер или выберите другой способ подключения, нажав %{dots} в левом верхнем углу экрана.'
+  disabled_server: 'Включите встроенный узел или выберите другой способ подключения, нажав %{dots} в левом-верхнем углу экрана.'
 sync_status:
   server_restarting: Сервер перезапускается
   server_down: Сервер выключен
@@ -51,7 +52,20 @@ network_metrics:
   supply: Предложение
   block_time: Время блока
   reward: Награда
-  difficulty_window: 'Сложность в окне %{size}'
+  difficulty_window: 'Окно сложности %{size}'
+network_mining:
+  loading: Майнинг будет доступен после синхронизации
+  enable_server: Включить сервер
+  disabled_server: 'Включите stratum-сервер по адресу %{address} или измените настройки, выбрав %{settings} внизу экрана.'
+  starting: Stratum-сервер запускается
+  info: 'Сервер майнинга запущен, вы можете изменить настройки, выбрав %{settings} внизу экрана. Данные обновляются, когда устройства подключены.'
+  address: IP Адрес
+  wallet: Адрес кошелька
+  server: Stratum-сервер
+  miners: Майнеры
+  devices: Устройства
+  found: Найдено
+  hashrate: Хешрэйт
 modal:
   cancel: Отмена
 modal_exit:

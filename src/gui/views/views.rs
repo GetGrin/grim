@@ -196,27 +196,19 @@ impl View {
         Spinner::new().size(48.0).color(Colors::GOLD).ui(ui);
     }
 
-    //        let wt = RichText::new(text.to_uppercase()).size(18.0).color(Colors::BUTTON);
-    //         let br = Button::new(wt)
-    //             .stroke(Self::DEFAULT_STROKE)
-    //             .fill(fill_color)
-    //             .ui(ui).interact(Sense::click_and_drag());
-    //
-    //         Self::on_button_click(ui, br, action);
-
-    /// Draw button that looks like checkbox with callback to change value.
-    pub fn checkbox(ui: &mut egui::Ui, value: bool, text: String, cb: impl FnOnce()) {
-        let text_value = match value {
+    /// Draw the button that looks like checkbox with callback after change.
+    pub fn checkbox(ui: &mut egui::Ui, checked: bool, text: String, callback: impl FnOnce()) {
+        let text_value = match checked {
             true => { format!("{} {}", CHECK_SQUARE, text)}
             false => { format!("{} {}", SQUARE, text)}
         };
-        let wt = RichText::new(text_value).size(18.0).color(Colors::BUTTON);
+        let wt = RichText::new(text_value).size(19.0).color(Colors::BUTTON);
         let br = Button::new(wt)
             .frame(false)
             .stroke(Stroke::NONE)
             .fill(Colors::TRANSPARENT)
             .ui(ui).interact(Sense::click_and_drag());
 
-        Self::on_button_click(ui, br, cb);
+        Self::on_button_click(ui, br, callback);
     }
 }

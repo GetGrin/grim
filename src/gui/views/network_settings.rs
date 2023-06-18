@@ -12,7 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use grin_core::global::ChainTypes;
 use crate::gui::views::{NetworkTab, NetworkTabType};
+use crate::Settings;
 
 #[derive(Default)]
 pub struct NetworkSettings;
@@ -22,11 +24,6 @@ impl NetworkTab for NetworkSettings {
         NetworkTabType::Settings
     }
 
-    fn name(&self) -> String {
-        t!("network.settings")
-    }
-
     fn ui(&mut self, ui: &mut egui::Ui) {
-
     }
 }

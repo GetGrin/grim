@@ -34,23 +34,19 @@ impl NetworkTab for NetworkMetrics {
         NetworkTabType::Metrics
     }
 
-    fn name(&self) -> String {
-        t!("network.metrics")
-    }
-
     fn ui(&mut self, ui: &mut egui::Ui) {
         let server_stats = Node::get_stats();
-        // Show loading spinner when stats are not available or message when server is not enabled.
+        // Show message when node is not running or loading spinner when metrics are not available.
         if server_stats.is_none() || server_stats.as_ref().unwrap().diff_stats.height == 0 {
             if !Node::is_running() {
                 Network::disabled_server_content(ui);
             } else {
-                View::center_content(ui, 160.0, |ui| {
+                View::center_content(ui, 162.0, |ui| {
                     View::big_loading_spinner(ui);
                     ui.add_space(18.0);
                     ui.label(RichText::new(t!("network_metrics.loading"))
                         .size(16.0)
-                        .color(Colors::TEXT)
+                        .color(Colors::INACTIVE_TEXT)
                     );
                 });
             }
@@ -88,7 +84,7 @@ impl NetworkTab for NetworkMetrics {
                                   [false, true, false, true]);
             });
         });
-        ui.add_space(6.0);
+        ui.add_space(4.0);
 
         // Show difficulty adjustment window info
         ui.vertical_centered_justified(|ui| {
@@ -119,7 +115,7 @@ impl NetworkTab for NetworkMetrics {
                                   [false, true, false, true]);
             });
         });
-        ui.add_space(6.0);
+        ui.add_space(4.0);
 
         // Show difficulty adjustment window blocks
         let blocks_size = stats.diff_stats.last_blocks.len();

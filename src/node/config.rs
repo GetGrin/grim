@@ -12,11 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::{fs, thread};
-use std::fs::File;
-use std::io::Write;
-use std::sync::atomic::{AtomicBool, Ordering};
-
 use grin_config::{config, ConfigError, ConfigMembers, GlobalConfig};
 use grin_config::config::{API_SECRET_FILE_NAME, FOREIGN_API_SECRET_FILE_NAME, SERVER_CONFIG_FILE_NAME};
 use grin_core::global::ChainTypes;
@@ -24,70 +19,49 @@ use serde::{Deserialize, Serialize};
 
 use crate::Settings;
 
-/// Node config that contains [`GlobalConfig`] to be used by [`grin_servers::Server`].
+/// Wrapped node config to be used by [`grin_servers::Server`].
 #[derive(Serialize, Deserialize)]
 pub struct NodeConfig {
-    pub global_config: GlobalConfig,
-    update_needed: AtomicBool,
-    updating: AtomicBool
+    pub members: ConfigMembers
 }
 
 impl NodeConfig {
-    /// Initialize node config with provided chain type from the disk.
-    pub fn init(chain_type: &ChainTypes) -> Self {
+    /// Initialize integrated node config.
+    pub fn init(chain_type: ChainTypes) -> Self {
         let _ = Self::check_api_secret_files(chain_type, API_SECRET_FILE_NAME);
         let _ = Self::check_api_secret_files(chain_type, FOREIGN_API_SECRET_FILE_NAME);
 
-        let config_path = Settings::get_config_path(SERVER_CONFIG_FILE_NAME, Some(chain_type));
-
-        // Create default config if it doesn't exist or has wrong format.
-        if !config_path.exists() || toml::from_str::<ConfigMembers>(
-            fs::read_to_string(config_path.clone()).unwrap().as_str()
-        ).is_err() {
-            let mut default_config = GlobalConfig::for_chain(chain_type);
-            default_config.update_paths(&Settings::get_working_path(Some(chain_type)));
-            let _ = default_config.write_to_file(config_path.to_str().unwrap());
-        }
-
-        let config = GlobalConfig::new(config_path.to_str().unwrap());
-
+        let config_members = Self::for_chain_type(chain_type);
         Self {
-            global_config: config.unwrap(),
-            update_needed: AtomicBool::new(false),
-            updating: AtomicBool::new(false)
+            members: config_members
         }
     }
 
-    /// Write node config on disk.
-    pub fn save_config(&self) {
-        if self.updating.load(Ordering::Relaxed) {
-            self.update_needed.store(true, Ordering::Relaxed);
-            return;
+    /// Initialize config with provided [`ChainTypes`].
+    pub fn for_chain_type(chain_type: ChainTypes) -> ConfigMembers {
+        let path = Settings::get_config_path(SERVER_CONFIG_FILE_NAME, Some(chain_type));
+        let parsed = Settings::read_from_file::<ConfigMembers>(path.clone());
+        if !path.exists() || parsed.is_err() {
+            let mut default_config = GlobalConfig::for_chain(&chain_type);
+            default_config.update_paths(&Settings::get_working_path(Some(chain_type)));
+            let config = default_config.members.unwrap();
+            Settings::write_to_file(&config, path);
+            config
+        } else {
+            parsed.unwrap()
         }
+    }
 
-        thread::spawn(move || loop {
-            let config = Settings::get_node_config();
-            config.update_needed.store(false, Ordering::Relaxed);
-            config.updating.store(true, Ordering::Relaxed);
-
-            let chain_type = &config.global_config.members.clone().unwrap().server.chain_type;
-            let config_path = Settings::get_config_path(SERVER_CONFIG_FILE_NAME, Some(chain_type));
-
-            // Write config to file.
-            let conf_out = toml::to_string(&config.global_config.members).unwrap();
-            let mut file = File::create(config_path.to_str().unwrap()).unwrap();
-            file.write_all(conf_out.as_bytes()).unwrap();
-
-            if !config.update_needed.load(Ordering::Relaxed) {
-                config.updating.store(false, Ordering::Relaxed);
-                break;
-            }
-        });
+    /// Save node config to disk.
+    pub fn save(&mut self) {
+        let chain_type = self.members.server.chain_type;
+        let config_path = Settings::get_config_path(SERVER_CONFIG_FILE_NAME, Some(chain_type));
+        Settings::write_to_file(&self.members, config_path);
     }
 
     /// Check that the api secret files exist and are valid.
     fn check_api_secret_files(
-        chain_type: &ChainTypes,
+        chain_type: ChainTypes,
         secret_file_name: &str,
     ) -> Result<(), ConfigError> {
         let grin_path = Settings::get_working_path(Some(chain_type));

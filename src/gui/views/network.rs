@@ -20,7 +20,7 @@ use egui_extras::{Size, StripBuilder};
 use grin_chain::SyncStatus;
 
 use crate::gui::{Colors, Navigator};
-use crate::gui::icons::{CARDHOLDER, DATABASE, DOTS_THREE_OUTLINE_VERTICAL, FACTORY, FADERS, GAUGE, POWER};
+use crate::gui::icons::{CARDHOLDER, DATABASE, DOTS_THREE_OUTLINE_VERTICAL, FACTORY, FADERS, GAUGE};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::network_metrics::NetworkMetrics;
 use crate::gui::views::network_mining::NetworkMining;
@@ -32,7 +32,6 @@ use crate::Settings;
 
 pub trait NetworkTab {
     fn get_type(&self) -> NetworkTabType;
-    fn name(&self) -> String;
     fn ui(&mut self, ui: &mut egui::Ui);
 }
 
@@ -42,6 +41,17 @@ pub enum NetworkTabType {
     Metrics,
     Mining,
     Settings
+}
+
+impl NetworkTabType {
+    pub fn name(&self) -> String {
+        match *self {
+            NetworkTabType::Node => { t!("network.node") }
+            NetworkTabType::Metrics => { t!("network.metrics") }
+            NetworkTabType::Mining => { t!("network.mining") }
+            NetworkTabType::Settings => { t!("network.settings") }
+        }
+    }
 }
 
 pub struct Network {
@@ -101,31 +111,31 @@ impl Network {
 
             ui.columns(4, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
-                    View::tab_button(ui, DATABASE,
-                                     self.current_tab.get_type() == NetworkTabType::Node, || {
+                    View::tab_button(ui, DATABASE, self.is_current_tab(NetworkTabType::Node), || {
                             self.current_tab = Box::new(NetworkNode::default());
                         });
                 });
                 columns[1].vertical_centered_justified(|ui| {
-                    View::tab_button(ui, GAUGE,
-                                     self.current_tab.get_type() == NetworkTabType::Metrics, || {
+                    View::tab_button(ui, GAUGE, self.is_current_tab(NetworkTabType::Metrics), || {
                             self.current_tab = Box::new(NetworkMetrics::default());
                         });
                 });
                 columns[2].vertical_centered_justified(|ui| {
-                    View::tab_button(ui, FACTORY,
-                                     self.current_tab.get_type() == NetworkTabType::Mining, || {
+                    View::tab_button(ui, FACTORY, self.is_current_tab(NetworkTabType::Mining), || {
                             self.current_tab = Box::new(NetworkMining::default());
                         });
                 });
                 columns[3].vertical_centered_justified(|ui| {
-                    View::tab_button(ui, FADERS,
-                                     self.current_tab.get_type() == NetworkTabType::Settings, || {
+                    View::tab_button(ui, FADERS, self.is_current_tab(NetworkTabType::Settings), || {
                             self.current_tab = Box::new(NetworkSettings::default());
                         });
                 });
             });
         });
+    }
+
+    fn is_current_tab(&self, tab_type: NetworkTabType) -> bool {
+        self.current_tab.get_type() == tab_type
     }
 
     fn draw_title(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame) {
@@ -170,7 +180,7 @@ impl Network {
                 strip.cell(|ui| {
                     ui.add_space(2.0);
                     ui.vertical_centered(|ui| {
-                        ui.label(RichText::new(self.current_tab.name().to_uppercase())
+                        ui.label(RichText::new(self.current_tab.get_type().name().to_uppercase())
                             .size(18.0)
                             .color(Colors::TITLE));
                     });
@@ -217,15 +227,15 @@ impl Network {
 
             ui.add_space(10.0);
 
-            View::button(ui, format!("{} {}", POWER, t!("network.enable")), Colors::GOLD, || {
+            View::button(ui, t!("network.enable_node"), Colors::GOLD, || {
                 Node::start();
             });
 
-            ui.add_space(4.0);
+            ui.add_space(2.0);
 
-            let autostart: bool = Settings::get_app_config().auto_start_node;
+            let autostart: bool = Settings::app_config_to_read().auto_start_node;
             View::checkbox(ui, autostart, t!("network.autorun"), || {
-                let mut w_app_config = Settings::get_app_config_to_update();
+                let mut w_app_config = Settings::app_config_to_update();
                 w_app_config.auto_start_node = !autostart;
                 w_app_config.save();
             });

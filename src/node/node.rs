@@ -45,7 +45,9 @@ pub struct Node {
     /// Thread flag to stop the server.
     stop_needed: AtomicBool,
     /// Flag to check if app exit is needed after server stop.
-    exit_after_stop: AtomicBool
+    exit_after_stop: AtomicBool,
+    /// Thread flag to start stratum server at separate.
+    start_stratum_server: AtomicBool
 }
 
 impl Default for Node {
@@ -55,7 +57,8 @@ impl Default for Node {
             starting: AtomicBool::new(false),
             restart_needed: AtomicBool::new(false),
             stop_needed: AtomicBool::new(false),
-            exit_after_stop: AtomicBool::new(false)
+            exit_after_stop: AtomicBool::new(false),
+            start_stratum_server: AtomicBool::new(false)
         }
     }
 }
@@ -81,6 +84,16 @@ impl Node {
         } else {
             Node::start();
         }
+    }
+
+    /// Start stratum server.
+    pub fn start_stratum_server() {
+        NODE_STATE.start_stratum_server.store(true, Ordering::Relaxed);
+    }
+
+    /// Check if stratum server is starting.
+    pub fn is_stratum_server_starting() -> bool {
+        NODE_STATE.start_stratum_server.load(Ordering::Relaxed)
     }
 
     /// Check if node is starting.
@@ -164,8 +177,20 @@ impl Node {
 
                     NODE_STATE.starting.store(false, Ordering::Relaxed);
                     NODE_STATE.stop_needed.store(false, Ordering::Relaxed);
+                    NODE_STATE.start_stratum_server.store(false, Ordering::Relaxed);
                     break;
                 } else {
+                    if Self::is_stratum_server_starting() {
+                        // Start mining server.
+                        let stratum_config = server.config.stratum_mining_config.clone().unwrap();
+                        server.start_stratum_server(stratum_config);
+
+                        // Wait for mining server to start and update status.
+                        thread::sleep(Duration::from_millis(1000));
+
+                        NODE_STATE.start_stratum_server.store(false, Ordering::Relaxed);
+                    }
+
                     let stats = server.get_server_stats();
                     if stats.is_ok() {
                         // Update server stats.
@@ -308,8 +333,8 @@ impl Node {
 /// Start the node [`Server`].
 fn start_server() -> Server {
     // Get current global config
-    let config = &Settings::get_node_config().global_config;
-    let server_config = config.members.as_ref().unwrap().server.clone();
+    let config = &Settings::node_config_to_read().members;
+    let server_config = config.server.clone();
 
     // Remove temporary file dir
     {
@@ -328,7 +353,7 @@ fn start_server() -> Server {
     // accept_fee_base, and future_time_limit.
     // These are read via global and not read from config beyond this point.
     if !global::GLOBAL_CHAIN_TYPE.is_init() {
-        global::init_global_chain_type(config.members.as_ref().unwrap().server.chain_type);
+        global::init_global_chain_type(config.server.chain_type);
     }
     info!("Chain: {:?}", global::get_chain_type());
 
@@ -345,12 +370,12 @@ fn start_server() -> Server {
         }
     }
     if !global::GLOBAL_ACCEPT_FEE_BASE.is_init() {
-        let afb = config.members.as_ref().unwrap().server.pool_config.accept_fee_base;
+        let afb = config.server.pool_config.accept_fee_base;
         global::init_global_accept_fee_base(afb);
         info!("Accept Fee Base: {:?}", global::get_accept_fee_base());
     }
     if !global::GLOBAL_FUTURE_TIME_LIMIT.is_init() {
-        let future_time_limit = config.members.as_ref().unwrap().server.future_time_limit;
+        let future_time_limit = config.server.future_time_limit;
         global::init_global_future_time_limit(future_time_limit);
         info!("Future Time Limit: {:?}", global::get_future_time_limit());
     }
@@ -417,13 +442,12 @@ pub extern "C" fn Java_mw_gri_android_BackgroundService_getSyncTitle(
 #[cfg(target_os = "android")]
 #[allow(non_snake_case)]
 #[no_mangle]
-/// Check if app exit is needed after node stop.
+/// Check if app exit is needed after node stop to finish Android app at background.
 pub extern "C" fn Java_mw_gri_android_BackgroundService_exitAppAfterNodeStop(
     _env: jni::JNIEnv,
     _class: jni::objects::JObject,
     _activity: jni::objects::JObject,
 ) -> jboolean {
-    let exit_after_stop = NODE_STATE.exit_after_stop.load(Ordering::Relaxed);
-    let is_app_exit_needed = !Node::is_running() && exit_after_stop;
-    return is_app_exit_needed as jboolean;
+    let exit_needed = !Node::is_running() && NODE_STATE.exit_after_stop.load(Ordering::Relaxed);
+    return exit_needed as jboolean;
 }
