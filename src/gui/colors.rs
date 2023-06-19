@@ -23,6 +23,8 @@ impl Colors {
     pub const SEMI_TRANSPARENT: Color32 = Color32::from_black_alpha(100);
     pub const YELLOW: Color32 = Color32::from_rgb(254, 241, 2);
     pub const GOLD: Color32 = Color32::from_rgb(255, 215, 0);
+    pub const GREEN: Color32 = Color32::from_rgb(0, 0x64, 0);
+    pub const RED: Color32 = Color32::from_rgb(0x8B, 0, 0);
     pub const FILL: Color32 = Color32::from_gray(240);
     pub const TITLE: Color32 = Color32::from_gray(60);
     pub const TEXT: Color32 = Color32::from_gray(80);

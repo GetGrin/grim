@@ -186,7 +186,7 @@ impl Node {
                         server.start_stratum_server(stratum_config);
 
                         // Wait for mining server to start and update status.
-                        thread::sleep(Duration::from_millis(1000));
+                        thread::sleep(Duration::from_millis(100));
 
                         NODE_STATE.start_stratum_server.store(false, Ordering::Relaxed);
                     }

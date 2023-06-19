@@ -18,7 +18,7 @@ use egui::epaint::text::TextWrapping;
 use egui::text::{LayoutJob, TextFormat};
 
 use crate::gui::Colors;
-use crate::gui::icons::{CHECK_SQUARE, SQUARE};
+use crate::gui::icons::{CHECK_SQUARE, CIRCLE, RADIO_BUTTON, SQUARE};
 
 pub struct View;
 
@@ -54,19 +54,23 @@ impl View {
         ui.label(job);
     }
 
-    /// Sub-header with uppercase characters and more lighter color.
-    pub fn sub_header(ui: &mut egui::Ui, text: String) {
-        ui.label(RichText::new(text.to_uppercase()).size(16.0).color(Colors::TEXT));
+    /// Draw horizontally centered sub-title with space below.
+    pub fn sub_title(ui: &mut egui::Ui, text: String) {
+        ui.vertical_centered_justified(|ui| {
+            ui.label(RichText::new(text.to_uppercase()).size(16.0).color(Colors::TEXT));
+        });
+        ui.add_space(4.0);
     }
 
     /// Temporary button click optimization for touch screens.
     fn on_button_click(ui: &mut egui::Ui, resp: Response, action: impl FnOnce()) {
+        let drag_resp = resp.interact(Sense::click_and_drag());
         // Clear pointer event if dragging is out of button area
-        if resp.dragged() && !ui.rect_contains_pointer(resp.rect) {
+        if drag_resp.dragged() && !ui.rect_contains_pointer(drag_resp.rect) {
             ui.input_mut().pointer = PointerState::default();
         }
         // Call click action if button is clicked or drag released
-        if resp.drag_released() || resp.clicked() {
+        if drag_resp.drag_released() || drag_resp.clicked() {
             (action)();
         };
     }
@@ -80,7 +84,7 @@ impl View {
             let wt = RichText::new(icon.to_string()).size(24.0).color(Colors::TITLE);
             let br = Button::new(wt)
                 .fill(Colors::TRANSPARENT)
-                .ui(ui).interact(Sense::click_and_drag());
+                .ui(ui);
 
             Self::on_button_click(ui, br, action);
         });
@@ -106,7 +110,7 @@ impl View {
         let br = Button::new(wt)
             .stroke(stroke)
             .fill(color)
-            .ui(ui).interact(Sense::click_and_drag());
+            .ui(ui);
 
         Self::on_button_click(ui, br, action);
     }
@@ -117,7 +121,7 @@ impl View {
         let br = Button::new(wt)
             .stroke(Self::DEFAULT_STROKE)
             .fill(fill_color)
-            .ui(ui).interact(Sense::click_and_drag());
+            .ui(ui);
 
         Self::on_button_click(ui, br, action);
     }
@@ -146,25 +150,31 @@ impl View {
         // Draw box content.
         let content_resp = ui.allocate_ui_at_rect(rect, |ui| {
             ui.vertical_centered_justified(|ui| {
-                // Correct vertical spacing between items.
-                ui.style_mut().spacing.item_spacing.y = -4.0;
+                ui.add_space(2.0);
 
-                // Draw box value.
-                let mut job = LayoutJob::single_section(value, TextFormat {
-                    font_id: FontId::proportional(18.0),
-                    color: Colors::BLACK,
-                    ..Default::default()
+                ui.scope(|ui| {
+                    // Correct vertical spacing between items.
+                    ui.style_mut().spacing.item_spacing.y = -3.0;
+
+                    // Draw box value.
+                    let mut job = LayoutJob::single_section(value, TextFormat {
+                        font_id: FontId::proportional(18.0),
+                        color: Colors::BLACK,
+                        ..Default::default()
+                    });
+                    job.wrap = TextWrapping {
+                        max_rows: 1,
+                        break_anywhere: false,
+                        overflow_character: Option::from('﹍'),
+                        ..Default::default()
+                    };
+                    ui.label(job);
+
+                    // Draw box label.
+                    ui.label(RichText::new(label).color(Colors::GRAY).size(15.0));
                 });
-                job.wrap = TextWrapping {
-                    max_rows: 1,
-                    break_anywhere: false,
-                    overflow_character: Option::from('﹍'),
-                    ..Default::default()
-                };
-                ui.label(job);
 
-                // Draw box label.
-                ui.label(RichText::new(label).color(Colors::GRAY).size(15.0));
+                ui.add_space(2.0);
             });
         }).response;
 
@@ -196,18 +206,36 @@ impl View {
         Spinner::new().size(48.0).color(Colors::GOLD).ui(ui);
     }
 
-    /// Draw the button that looks like checkbox with callback after change.
+    /// Draw the button that looks like checkbox with callback on check.
     pub fn checkbox(ui: &mut egui::Ui, checked: bool, text: String, callback: impl FnOnce()) {
-        let text_value = match checked {
-            true => { format!("{} {}", CHECK_SQUARE, text)}
-            false => { format!("{} {}", SQUARE, text)}
+        let (text_value, color) = match checked {
+            true => { (format!("{} {}", CHECK_SQUARE, text), Colors::BUTTON) }
+            false => { (format!("{} {}", SQUARE, text), Colors::TEXT) }
         };
-        let wt = RichText::new(text_value).size(19.0).color(Colors::BUTTON);
+
+        let wt = RichText::new(text_value).size(18.0).color(color);
         let br = Button::new(wt)
             .frame(false)
             .stroke(Stroke::NONE)
             .fill(Colors::TRANSPARENT)
-            .ui(ui).interact(Sense::click_and_drag());
+            .ui(ui);
+
+        Self::on_button_click(ui, br, callback);
+    }
+
+    /// Draw the radio button with callback on select.
+    pub fn radio_button(ui: &mut egui::Ui, selected: bool, text: String, callback: impl FnOnce()) {
+        let (text_value, color) = match selected {
+            true => { (format!("{} {}", RADIO_BUTTON, text), Colors::BUTTON) }
+            false => { (format!("{} {}", CIRCLE, text), Colors::TEXT) }
+        };
+
+        let wt = RichText::new(text_value).size(18.0).color(color);
+        let br = Button::new(wt)
+            .frame(false)
+            .stroke(Stroke::NONE)
+            .fill(Colors::TRANSPARENT)
+            .ui(ui);
 
         Self::on_button_click(ui, br, callback);
     }

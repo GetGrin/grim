@@ -3,7 +3,7 @@ screen_accounts:
 network:
   self: Сеть
   node: Встроенный узел
-  metrics: Показатели сети
+  metrics: Показатели цепи
   mining: Майнинг
   settings: Настройки узла
   enable_node: Включить узел
@@ -46,7 +46,7 @@ network_node:
   size: Размер (ГБ)
   peers: Пиры
 network_metrics:
-  loading: Метрики будут доступны после синхронизации
+  loading: Показатели цепи будут доступны после синхронизации
   emission: Эмиссия
   inflation: Инфляция
   supply: Предложение
@@ -57,7 +57,6 @@ network_mining:
   loading: Майнинг будет доступен после синхронизации
   enable_server: Включить сервер
   disabled_server: 'Включите stratum-сервер по адресу %{address} или измените настройки, выбрав %{settings} внизу экрана.'
-  starting: Stratum-сервер запускается
   info: 'Сервер майнинга запущен, вы можете изменить настройки, выбрав %{settings} внизу экрана. Данные обновляются, когда устройства подключены.'
   address: IP Адрес
   wallet: Адрес кошелька
@@ -65,7 +64,9 @@ network_mining:
   miners: Майнеры
   devices: Устройства
   found: Найдено
-  hashrate: Хешрэйт
+  hashrate: 'Хешрэйт (C%{bits})'
+  connected: Подключен
+  disconnected: Отключен
 modal:
   cancel: Отмена
 modal_exit:

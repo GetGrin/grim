@@ -12,11 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::RichText;
+use chrono::{DateTime, NaiveDateTime, Utc};
+use egui::{RichText, Rounding, ScrollArea, Stroke};
 use grin_chain::SyncStatus;
+use grin_servers::WorkerStats;
 
 use crate::gui::Colors;
-use crate::gui::icons::{COMPUTER_TOWER, CPU, FADERS, POLYGON};
+use crate::gui::icons::{BARBELL, CLOCK_AFTERNOON, COMPUTER_TOWER, CPU, CUBE, FADERS, FOLDER_DASHED, FOLDER_NOTCH_MINUS, FOLDER_NOTCH_PLUS, PLUGS, PLUGS_CONNECTED, POLYGON};
 use crate::gui::views::{Network, NetworkTab, NetworkTabType, View};
 use crate::node::Node;
 use crate::Settings;
@@ -68,6 +70,18 @@ impl NetworkTab for NetworkMining {
                     .color(Colors::INACTIVE_TEXT)
                 );
 
+                let mut addresses = Vec::new();
+                for net_if in pnet::datalink::interfaces() {
+                    for ip in net_if.ips {
+                        if ip.is_ipv4() {
+                            addresses.push(ip);
+                        }
+                    }
+                }
+                if addresses.len() != 0 {
+
+                }
+
                 ui.add_space(10.0);
 
                 View::button(ui, t!("network_mining.enable_server"), Colors::GOLD, || {
@@ -76,7 +90,7 @@ impl NetworkTab for NetworkMining {
 
                 ui.add_space(2.0);
 
-                // Check if stratum server is enabled at config
+                // Check if stratum server is enabled at config.
                 let stratum_enabled = Settings::node_config_to_read()
                     .members.clone()
                     .server.stratum_mining_config.unwrap()
@@ -93,23 +107,14 @@ impl NetworkTab for NetworkMining {
             return;
         } else if Node::is_stratum_server_starting() {
             // Show loading spinner when mining server is starting.
-            View::center_content(ui, 162.0, |ui| {
+            ui.centered_and_justified(|ui| {
                 View::big_loading_spinner(ui);
-                ui.add_space(18.0);
-                ui.label(RichText::new(t!("network_mining.starting"))
-                    .size(16.0)
-                    .color(Colors::INACTIVE_TEXT)
-                );
             });
             return;
         }
 
         // Show stratum mining server info.
-        ui.vertical_centered_justified(|ui| {
-            View::sub_header(ui, format!("{} {}", COMPUTER_TOWER, t!("network_mining.server")));
-        });
-        ui.add_space(4.0);
-
+        View::sub_title(ui, format!("{} {}", COMPUTER_TOWER, t!("network_mining.server")));
         ui.columns(2, |columns| {
             columns[0].vertical_centered(|ui| {
                 View::rounded_box(ui,
@@ -118,11 +123,12 @@ impl NetworkTab for NetworkMining {
                                   [true, false, true, false]);
             });
             columns[1].vertical_centered(|ui| {
-                // Stratum mining wallet address.
+                //TODO: Stratum mining wallet listening address. Replace with local wallet name.
                 let wallet_address = Settings::node_config_to_read()
                     .members.clone()
                     .server.stratum_mining_config.unwrap()
-                    .wallet_listener_url;
+                    .wallet_listener_url
+                    .replace("http://", "");
                 View::rounded_box(ui,
                                   wallet_address,
                                   t!("network_mining.wallet"),
@@ -132,11 +138,7 @@ impl NetworkTab for NetworkMining {
         ui.add_space(4.0);
 
         // Show network info.
-        ui.vertical_centered_justified(|ui| {
-            View::sub_header(ui, format!("{} {}", POLYGON, t!("network.self")));
-        });
-        ui.add_space(4.0);
-
+        View::sub_title(ui, format!("{} {}", POLYGON, t!("network.self")));
         ui.columns(3, |columns| {
             columns[0].vertical_centered(|ui| {
                 let difficulty = if stratum_stats.network_difficulty > 0 {
@@ -162,24 +164,20 @@ impl NetworkTab for NetworkMining {
             });
             columns[2].vertical_centered(|ui| {
                 let hashrate = if stratum_stats.network_hashrate > 0.0 {
-                    stratum_stats.network_hashrate.to_string()
+                    format!("{:.*}", 2, stratum_stats.network_hashrate)
                 } else {
                     "-".into()
                 };
                 View::rounded_box(ui,
                                   hashrate,
-                                  t!("network_mining.hashrate"),
+                                  t!("network_mining.hashrate", "bits" => stratum_stats.edge_bits),
                                   [false, true, false, true]);
             });
         });
         ui.add_space(4.0);
 
         // Show mining info.
-        ui.vertical_centered_justified(|ui| {
-            View::sub_header(ui, format!("{} {}", CPU, t!("network_mining.miners")));
-        });
-        ui.add_space(4.0);
-
+        View::sub_title(ui, format!("{} {}", CPU, t!("network_mining.miners")));
         ui.columns(2, |columns| {
             columns[0].vertical_centered(|ui| {
                 View::rounded_box(ui,
@@ -197,9 +195,32 @@ impl NetworkTab for NetworkMining {
         });
         ui.add_space(4.0);
 
-        // Show miners info.
-        if !stratum_stats.worker_stats.is_empty() {
-            //TODO: miners workers
+        // Show workers stats or info text when possible.
+        let workers_size = stratum_stats.worker_stats.len();
+        if workers_size != 0 && stratum_stats.num_workers > 0 {
+            ScrollArea::vertical()
+                .auto_shrink([false; 2])
+                .id_source("stratum_workers_scroll")
+                .show_rows(
+                    ui,
+                    WORKER_UI_HEIGHT,
+                    workers_size,
+                    |ui, row_range| {
+                        for index in row_range {
+                            let worker = stratum_stats.worker_stats.get(index).unwrap();
+                            let rounding = if workers_size == 1 {
+                                [true, true]
+                            } else if index == 0 {
+                                [true, false]
+                            } else if index == workers_size - 1 {
+                                [false, true]
+                            } else {
+                                [false, false]
+                            };
+                            draw_worker_stats(ui, worker, rounding)
+                        }
+                    },
+                );
         } else if ui.available_height() > 142.0 {
             View::center_content(ui, 142.0, |ui| {
                 ui.label(RichText::new(t!("network_mining.info", "settings" => FADERS))
@@ -209,4 +230,124 @@ impl NetworkTab for NetworkMining {
             });
         }
     }
+}
+
+const WORKER_UI_HEIGHT: f32 = 77.0;
+
+fn draw_worker_stats(ui: &mut egui::Ui, ws: &WorkerStats, rounding: [bool; 2]) {
+    // Add space before the first item.
+    if rounding[0] {
+        ui.add_space(4.0);
+    }
+
+    ui.horizontal(|ui| {
+        ui.add_space(6.0);
+        ui.vertical(|ui| {
+            let mut rect = ui.available_rect_before_wrap();
+            rect.set_height(WORKER_UI_HEIGHT);
+            ui.painter().rect(
+                rect,
+                Rounding {
+                    nw: if rounding[0] { 8.0 } else { 0.0 },
+                    ne: if rounding[0] { 8.0 } else { 0.0 },
+                    sw: if rounding[1] { 8.0 } else { 0.0 },
+                    se: if rounding[1] { 8.0 } else { 0.0 },
+                },
+                Colors::WHITE,
+                Stroke { width: 1.0, color: Colors::ITEM_STROKE }
+            );
+
+            ui.add_space(2.0);
+            ui.horizontal_top(|ui| {
+                let (status_text, status_icon) = match ws.is_connected {
+                    true => { (t!("network_mining.connected"), PLUGS_CONNECTED) }
+                    false => { (t!("network_mining.disconnected"), PLUGS) }
+                };
+                ui.add_space(5.0);
+                ui.heading(RichText::new(status_icon)
+                    .color(Colors::BLACK)
+                    .size(18.0));
+                ui.add_space(2.0);
+
+                // Draw worker ID.
+                ui.heading(RichText::new(&ws.id)
+                    .color(Colors::BLACK)
+                    .size(18.0));
+                ui.add_space(3.0);
+
+                // Draw worker status.
+                ui.heading(RichText::new(status_text)
+                    .color(Colors::BLACK)
+                    .size(18.0));
+            });
+            ui.horizontal_top(|ui| {
+                ui.add_space(6.0);
+                ui.heading(RichText::new(BARBELL)
+                    .color(Colors::TITLE)
+                    .size(16.0));
+                ui.add_space(4.0);
+                // Draw difficulty.
+                ui.heading(RichText::new(ws.pow_difficulty.to_string())
+                    .color(Colors::TITLE)
+                    .size(16.0));
+                ui.add_space(6.0);
+
+                ui.heading(RichText::new(FOLDER_NOTCH_PLUS)
+                    .color(Colors::GREEN)
+                    .size(16.0));
+                ui.add_space(3.0);
+                // Draw accepted shares.
+                ui.heading(RichText::new(ws.num_accepted.to_string())
+                    .color(Colors::GREEN)
+                    .size(16.0));
+                ui.add_space(6.0);
+
+                ui.heading(RichText::new(FOLDER_NOTCH_MINUS)
+                    .color(Colors::RED)
+                    .size(16.0));
+                ui.add_space(3.0);
+                // Draw rejected shares.
+                ui.heading(RichText::new(ws.num_rejected.to_string())
+                    .color(Colors::RED)
+                    .size(16.0));
+                ui.add_space(6.0);
+
+                ui.heading(RichText::new(FOLDER_DASHED)
+                    .color(Colors::GRAY)
+                    .size(16.0));
+                ui.add_space(3.0);
+                // Draw stale shares.
+                ui.heading(RichText::new(ws.num_stale.to_string())
+                    .color(Colors::GRAY)
+                    .size(16.0));
+                ui.add_space(6.0);
+
+                ui.heading(RichText::new(CUBE)
+                    .color(Colors::TITLE)
+                    .size(16.0));
+                ui.add_space(3.0);
+                // Draw blocks found.
+                ui.heading(RichText::new(ws.num_blocks_found.to_string())
+                    .color(Colors::TITLE)
+                    .size(16.0));
+            });
+            ui.horizontal_top(|ui| {
+                ui.add_space(6.0);
+                ui.heading(RichText::new(CLOCK_AFTERNOON)
+                    .color(Colors::TITLE)
+                    .size(16.0));
+                ui.add_space(4.0);
+
+                // Draw block time
+                let seen = ws.last_seen.duration_since(std::time::UNIX_EPOCH).unwrap().as_secs();
+                let naive_datetime = NaiveDateTime::from_timestamp_opt(seen as i64, 0).unwrap();
+                let datetime: DateTime<Utc> = DateTime::from_utc(naive_datetime, Utc);
+                ui.heading(RichText::new(datetime.to_string())
+                    .color(Colors::GRAY)
+                    .size(16.0));
+
+            });
+            ui.add_space(2.0);
+        });
+    });
 }

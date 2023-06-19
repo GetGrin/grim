@@ -13,7 +13,7 @@
 // limitations under the License.
 
 use eframe::epaint::Stroke;
-use egui::{Color32, RichText, Rounding, ScrollArea};
+use egui::{RichText, Rounding, ScrollArea};
 use grin_servers::PeerStats;
 
 use crate::gui::Colors;
@@ -48,11 +48,8 @@ impl NetworkTab for NetworkNode {
         ScrollArea::vertical()
             .auto_shrink([false; 2])
             .show(ui, |ui| {
-                // Show header stats
-                ui.vertical_centered_justified(|ui| {
-                    View::sub_header(ui, format!("{} {}", FLOW_ARROW, t!("network_node.header")));
-                });
-                ui.add_space(4.0);
+                // Show header info.
+                View::sub_title(ui, format!("{} {}", FLOW_ARROW, t!("network_node.header")));
                 ui.columns(2, |columns| {
                     columns[0].vertical_centered(|ui| {
                         View::rounded_box(ui,
@@ -82,13 +79,10 @@ impl NetworkTab for NetworkNode {
                                           [false, false, false, true]);
                     });
                 });
+                ui.add_space(4.0);
 
-                // Show block stats
-                ui.add_space(4.0);
-                ui.vertical_centered_justified(|ui| {
-                    View::sub_header(ui, format!("{} {}", CUBE, t!("network_node.block")));
-                });
-                ui.add_space(4.0);
+                // Show block info.
+                View::sub_title(ui, format!("{} {}", CUBE, t!("network_node.block")));
                 ui.columns(2, |columns| {
                     columns[0].vertical_centered(|ui| {
                         View::rounded_box(ui,
@@ -118,13 +112,10 @@ impl NetworkTab for NetworkNode {
                                           [false, false, false, true]);
                     });
                 });
+                ui.add_space(4.0);
 
-                // Show data stats
-                ui.add_space(4.0);
-                ui.vertical_centered_justified(|ui| {
-                    View::sub_header(ui, format!("{} {}", SHARE_NETWORK, t!("network_node.data")));
-                });
-                ui.add_space(4.0);
+                // Show data info.
+                View::sub_title(ui, format!("{} {}", SHARE_NETWORK, t!("network_node.data")));
                 ui.columns(2, |columns| {
                     columns[0].vertical_centered(|ui| {
                         let tx_stat = match &stats.tx_stats {
@@ -165,15 +156,11 @@ impl NetworkTab for NetworkNode {
                                           [false, false, false, true]);
                     });
                 });
+                ui.add_space(4.0);
 
-                // Show peers stats when available
+                // Show peer stats when available.
                 if stats.peer_count > 0 {
-                    ui.add_space(4.0);
-                    ui.vertical_centered_justified(|ui| {
-                        View::sub_header(ui, format!("{} {}", HANDSHAKE, t!("network_node.peers")));
-                    });
-                    ui.add_space(4.0);
-
+                    View::sub_title(ui, format!("{} {}", HANDSHAKE, t!("network_node.peers")));
                     for index in 0..stats.peer_stats.len() {
                         let ps = stats.peer_stats.get(index).unwrap();
                         let rounding = if stats.peer_count == 1 {
@@ -197,7 +184,7 @@ impl NetworkTab for NetworkNode {
 fn draw_peer_stats(ui: &mut egui::Ui, peer: &PeerStats, rounding: [bool; 2]) {
     ui.vertical(|ui| {
         let mut rect = ui.available_rect_before_wrap();
-        rect.set_height(77.0);
+        rect.set_height(78.0);
 
         ui.painter().rect(
             rect,
@@ -207,7 +194,7 @@ fn draw_peer_stats(ui: &mut egui::Ui, peer: &PeerStats, rounding: [bool; 2]) {
                 sw: if rounding[1] { 8.0 } else { 0.0 },
                 se: if rounding[1] { 8.0 } else { 0.0 },
             },
-            Color32::WHITE,
+            Colors::WHITE,
             Stroke { width: 1.0, color: Colors::ITEM_STROKE }
         );
 
@@ -255,7 +242,7 @@ fn draw_peer_stats(ui: &mut egui::Ui, peer: &PeerStats, rounding: [bool; 2]) {
                 .color(Colors::GRAY)
                 .size(16.0));
         });
-        ui.add_space(2.0);
+        ui.add_space(3.0);
     });
 
     // Add space after last item

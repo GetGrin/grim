@@ -3,7 +3,7 @@ screen_accounts:
 network:
   self: Network
   node: Integrated node
-  metrics: Network metrics
+  metrics: Chain metrics
   mining: Mining
   settings: Node settings
   enable_node: Enable node
@@ -46,7 +46,7 @@ network_node:
   size: Size (GB)
   peers: Peers
 network_metrics:
-  loading: Metrics will be available after the synchronization
+  loading: Chain metrics will be available after the synchronization
   emission: Emission
   inflation: Inflation
   supply: Supply
@@ -57,7 +57,6 @@ network_mining:
   loading: Mining will be available after the synchronization
   enable_server: Enable server
   disabled_server: 'Enable stratum server at %{address} or change settings by selecting %{settings} at the bottom of the screen.'
-  starting: Stratum server is starting
   info: 'Mining server is enabled, you can change settings by selecting %{settings} at the bottom of the screen. Data is updating when devices are connected.'
   address: IP Address
   wallet: Wallet Address
@@ -65,9 +64,11 @@ network_mining:
   miners: Miners
   devices: Devices
   blocks_found: Blocks found
-  hashrate: Hashrate
+  hashrate: 'Hashrate (C%{bits})'
+  connected: Connected
+  disconnected: Disconnected
 modal:
   cancel: Cancel
 modal_exit:
-  description: Are you sure you want to quit the app?
+  description: Are you sure you want to quit the application?
   exit: Exit
