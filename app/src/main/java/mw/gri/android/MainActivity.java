@@ -1,9 +1,7 @@
 package mw.gri.android;
 
-import android.content.BroadcastReceiver;
-import android.content.Context;
-import android.content.Intent;
-import android.content.IntentFilter;
+import android.content.*;
+import android.content.pm.PackageManager;
 import android.hardware.SensorManager;
 import android.os.Bundle;
 import android.os.Process;
@@ -27,6 +25,7 @@ public class MainActivity extends GameActivity {
         @Override
         public void onReceive(Context ctx, Intent i) {
             if (i.getAction().equals(FINISH_ACTIVITY_ACTION)) {
+                unregisterReceiver(this);
                 onExit();
             }
         }
@@ -86,11 +85,11 @@ public class MainActivity extends GameActivity {
 
     @Override
     protected void onDestroy() {
-        unregisterReceiver(mBroadcastReceiver);
-
         if (!mManualExit) {
+            unregisterReceiver(mBroadcastReceiver);
             onTermination();
         }
+
         // Temp fix: kill process after 3 seconds to prevent app hanging at next launch.
         new Thread(() -> {
             try {
@@ -115,6 +114,20 @@ public class MainActivity extends GameActivity {
         mManualExit = true;
         BackgroundService.stop(this);
         finish();
+    }
+
+    // Called from native code to restart the app.
+    public void onAppRestart() {
+        BackgroundService.stop(this);
+
+        // Restart Activity.
+        Intent intent = getPackageManager().getLaunchIntentForPackage(getPackageName());
+        ComponentName componentName = intent.getComponent();
+        Intent mainIntent = Intent.makeRestartActivityTask(componentName);
+        startActivity(mainIntent);
+
+        // Kill old process.
+        Process.killProcess(Process.myPid());
     }
 
     public native void onTermination();
