@@ -221,13 +221,13 @@ impl Node {
         };
 
         if Node::is_restarting() {
-            return t!("sync_status.server_restarting")
+            return t!("sync_status.node_restarting")
         }
 
         let sync_status = Self::get_sync_status();
 
         if sync_status.is_none() {
-            return t!("sync_status.server_down")
+            return t!("sync_status.node_down")
         }
 
         match sync_status.unwrap() {

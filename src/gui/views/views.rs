@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::{Button, PointerState, Response, RichText, Sense, Spinner, Widget};
+use egui::{AboveOrBelow, Button, PointerState, Response, RichText, ScrollArea, Sense, Spinner, Widget, WidgetText};
 use egui::epaint::{Color32, FontId, RectShape, Rounding, Stroke};
 use egui::epaint::text::TextWrapping;
 use egui::text::{LayoutJob, TextFormat};
 
 use crate::gui::Colors;
-use crate::gui::icons::{CHECK_SQUARE, CIRCLE, RADIO_BUTTON, SQUARE};
+use crate::gui::icons::{CARET_DOWN, CHECK_SQUARE, CIRCLE, RADIO_BUTTON, SQUARE};
 
 pub struct View;
 
@@ -62,17 +62,17 @@ impl View {
         ui.add_space(4.0);
     }
 
-    /// Temporary button click optimization for touch screens.
-    fn on_button_click(ui: &mut egui::Ui, resp: Response, action: impl FnOnce()) {
+    /// Temporary click optimization for touch screens, return `true` if it was clicked.
+    fn touched(ui: &mut egui::Ui, resp: Response) -> bool {
         let drag_resp = resp.interact(Sense::click_and_drag());
         // Clear pointer event if dragging is out of button area
         if drag_resp.dragged() && !ui.rect_contains_pointer(drag_resp.rect) {
             ui.input_mut().pointer = PointerState::default();
         }
-        // Call click action if button is clicked or drag released
         if drag_resp.drag_released() || drag_resp.clicked() {
-            (action)();
-        };
+            return true
+        }
+        false
     }
 
     /// Title button with transparent background fill color, contains only icon.
@@ -80,13 +80,13 @@ impl View {
         ui.scope(|ui| {
             // Disable stroke around title buttons on hover
             ui.style_mut().visuals.widgets.active.bg_stroke = Stroke::NONE;
-
             let wt = RichText::new(icon.to_string()).size(24.0).color(Colors::TITLE);
             let br = Button::new(wt)
                 .fill(Colors::TRANSPARENT)
                 .ui(ui);
-
-            Self::on_button_click(ui, br, action);
+            if Self::touched(ui, br) {
+                (action)();
+            }
         });
     }
 
@@ -96,34 +96,32 @@ impl View {
             true => { Colors::TITLE }
             false => { Colors::TEXT }
         };
-        let wt = RichText::new(icon.to_string()).size(24.0).color(text_color);
-
         let stroke = match active {
             true => { Stroke::NONE }
             false => { Self::DEFAULT_STROKE }
         };
-
         let color = match active {
             true => { Colors::FILL }
             false => { Colors::WHITE }
         };
-        let br = Button::new(wt)
+        let br = Button::new(RichText::new(icon.to_string()).size(24.0).color(text_color))
             .stroke(stroke)
             .fill(color)
             .ui(ui);
-
-        Self::on_button_click(ui, br, action);
+        if Self::touched(ui, br) {
+            (action)();
+        }
     }
 
     /// Draw [`Button`] with specified background fill color.
     pub fn button(ui: &mut egui::Ui, text: String, fill_color: Color32, action: impl FnOnce()) {
-        let wt = RichText::new(text.to_uppercase()).size(18.0).color(Colors::BUTTON);
-        let br = Button::new(wt)
+        let br = Button::new(RichText::new(text.to_uppercase()).size(18.0).color(Colors::BUTTON))
             .stroke(Self::DEFAULT_STROKE)
             .fill(fill_color)
             .ui(ui);
-
-        Self::on_button_click(ui, br, action);
+        if Self::touched(ui, br) {
+            (action)();
+        }
     }
 
     /// Draw rounded box with some value and label in the middle,
@@ -212,31 +210,33 @@ impl View {
             true => { (format!("{} {}", CHECK_SQUARE, text), Colors::BUTTON) }
             false => { (format!("{} {}", SQUARE, text), Colors::TEXT) }
         };
-
-        let wt = RichText::new(text_value).size(18.0).color(color);
-        let br = Button::new(wt)
+        let br = Button::new(RichText::new(text_value).size(18.0).color(color))
             .frame(false)
             .stroke(Stroke::NONE)
             .fill(Colors::TRANSPARENT)
             .ui(ui);
-
-        Self::on_button_click(ui, br, callback);
+        if Self::touched(ui, br) {
+            (callback)();
+        }
     }
 
-    /// Draw the radio button with callback on select.
-    pub fn radio_button(ui: &mut egui::Ui, selected: bool, text: String, callback: impl FnOnce()) {
-        let (text_value, color) = match selected {
-            true => { (format!("{} {}", RADIO_BUTTON, text), Colors::BUTTON) }
-            false => { (format!("{} {}", CIRCLE, text), Colors::TEXT) }
-        };
+    /// Show a [`RadioButton`]. It is selected if `*current_value == selected_value`.
+    /// If clicked, `selected_value` is assigned to `*current_value`.
+    pub fn radio_value<T: PartialEq>(ui: &mut egui::Ui, current: &mut T, value: T, text: String) {
+        let mut response = ui.radio(*current == value, text);
+        if Self::touched(ui, response.clone()) && *current != value {
+            *current = value;
+            response.mark_changed();
+        }
+    }
 
-        let wt = RichText::new(text_value).size(18.0).color(color);
-        let br = Button::new(wt)
-            .frame(false)
-            .stroke(Stroke::NONE)
-            .fill(Colors::TRANSPARENT)
-            .ui(ui);
-
-        Self::on_button_click(ui, br, callback);
+    /// Draw horizontal line
+    pub fn horizontal_line(ui: &mut egui::Ui, color: Color32) {
+        let line_size = egui::Vec2::new(ui.available_width(), 1.0);
+        let (line_rect, _) = ui.allocate_exact_size(line_size, Sense::hover());
+        let painter = ui.painter();
+        painter.hline(line_rect.x_range(),
+                      painter.round_to_pixel(line_rect.center().y),
+                      Stroke { width: 1.0, color });
     }
 }

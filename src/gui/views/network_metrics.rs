@@ -18,6 +18,7 @@ use grin_servers::DiffBlock;
 
 use crate::gui::Colors;
 use crate::gui::icons::{AT, COINS, CUBE_TRANSPARENT, HASH, HOURGLASS_LOW, HOURGLASS_MEDIUM, TIMER};
+use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Network, NetworkTab, NetworkTabType, View};
 use crate::node::Node;
 
@@ -33,7 +34,7 @@ impl NetworkTab for NetworkMetrics {
         NetworkTabType::Metrics
     }
 
-    fn ui(&mut self, ui: &mut egui::Ui) {
+    fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         let server_stats = Node::get_stats();
         // Show message when node is not running or loading spinner when metrics are not available.
         if server_stats.is_none() || server_stats.as_ref().unwrap().diff_stats.height == 0 {

@@ -32,7 +32,7 @@ use crate::Settings;
 
 pub trait NetworkTab {
     fn get_type(&self) -> NetworkTabType;
-    fn ui(&mut self, ui: &mut egui::Ui);
+    fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks);
 }
 
 #[derive(PartialEq)]
@@ -67,7 +67,7 @@ impl Default for Network {
 }
 
 impl Network {
-    pub fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame, _: &dyn PlatformCallbacks) {
+    pub fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame, cb: &dyn PlatformCallbacks) {
         egui::TopBottomPanel::top("network_title")
             .resizable(false)
             .frame(egui::Frame {
@@ -98,7 +98,7 @@ impl Network {
                 .. Default::default()
             })
             .show_inside(ui, |ui| {
-                self.current_tab.ui(ui);
+                self.current_tab.ui(ui, cb);
             });
     }
 

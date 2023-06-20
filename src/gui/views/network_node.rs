@@ -18,6 +18,7 @@ use grin_servers::PeerStats;
 
 use crate::gui::Colors;
 use crate::gui::icons::{AT, CUBE, DEVICES, FLOW_ARROW, HANDSHAKE, PACKAGE, PLUGS_CONNECTED, SHARE_NETWORK};
+use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Network, NetworkTab, NetworkTabType, View};
 use crate::node::Node;
 
@@ -29,7 +30,7 @@ impl NetworkTab for NetworkNode {
         NetworkTabType::Node
     }
 
-    fn ui(&mut self, ui: &mut egui::Ui) {
+    fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         let server_stats = Node::get_stats();
         // Show message when node is not running or loading spinner when stats are not available.
         if !server_stats.is_some() {

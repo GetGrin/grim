@@ -12,10 +12,10 @@ network:
   autorun: Autorun
   disabled_server: 'Enable integrated node or choose another connection method by pressing %{dots} in the top-left corner of the screen.'
 sync_status:
-  server_restarting: Server is restarting
-  server_down: Server is down
-  initial: Server is starting
-  no_sync: Server is running
+  node_restarting: Node is restarting
+  node_down: Node is down
+  initial: Node is starting
+  no_sync: Node is running
   awaiting_peers: Waiting for peers
   header_sync: Downloading headers
   header_sync_percent: 'Downloading headers: %{percent}%'
@@ -31,7 +31,7 @@ sync_status:
   tx_hashset_save: Finalizing chain state
   body_sync: Downloading blocks
   body_sync_percent: 'Downloading blocks: %{percent}%'
-  shutdown: Server is shutting down
+  shutdown: Node is shutting down
 network_node:
   header: Header
   block: Block
@@ -55,11 +55,15 @@ network_metrics:
   difficulty_window: 'Difficulty window %{size}'
 network_mining:
   loading: Mining will be available after the synchronization
+  server_setup: Stratum server setup
   enable_server: Enable server
-  disabled_server: 'Enable stratum server at %{address} or change settings by selecting %{settings} at the bottom of the screen.'
+  server_setting: 'Enable stratum server or change more settings by selecting %{settings} at the bottom of the screen.'
   info: 'Mining server is enabled, you can change settings by selecting %{settings} at the bottom of the screen. Data is updating when devices are connected.'
-  address: IP Address
-  wallet: Wallet Address
+  no_ip_addresses: There are no available IP addresses on your system, the server cannot be started, check your network connectivity.
+  choose_ip_address: 'Choose IP Address:'
+  change_port: 'Change port:'
+  ip_address: IP Address
+  rewards_wallet: Wallet for rewards
   server: Stratum server
   miners: Miners
   devices: Devices

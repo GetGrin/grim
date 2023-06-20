@@ -64,7 +64,7 @@ impl Modal {
     /// Default width of the content.
     const DEFAULT_WIDTH: i64 = 380;
 
-    /// Create open and closeable [`Modal`] with center position.
+    /// Create open and closeable Modal with center position.
     pub fn new(id: ModalId, location: ModalLocation) -> Self {
         Self {
             id,
@@ -76,45 +76,45 @@ impl Modal {
         }
     }
 
-    /// Setup position of [`Modal`] on the screen.
+    /// Setup position of Modal on the screen.
     pub fn position(mut self, position: ModalPosition) -> Self {
         self.position = position;
         self
     }
 
-    /// Check if [`Modal`] is open.
+    /// Check if Modal is open.
     pub fn is_open(&self) -> bool {
         self.open.load(Ordering::Relaxed)
     }
 
-    /// Mark [`Modal`] closed.
+    /// Mark Modal closed.
     pub fn close(&self) {
         self.open.store(false, Ordering::Relaxed);
     }
 
-    /// Setup possibility to close [`Modal`].
+    /// Setup possibility to close Modal.
     pub fn closeable(self, closeable: bool) -> Self {
         self.closeable.store(closeable, Ordering::Relaxed);
         self
     }
 
-    /// Disable possibility to close [`Modal`].
+    /// Disable possibility to close Modal.
     pub fn disable_closing(&self) {
         self.closeable.store(false, Ordering::Relaxed);
     }
 
-    /// Check if [`Modal`] is closeable.
+    /// Check if Modal is closeable.
     pub fn is_closeable(&self) -> bool {
         self.closeable.load(Ordering::Relaxed)
     }
 
-    /// Set title text.
+    /// Set title text on Modal creation.
     pub fn title(mut self, title: String) -> Self {
         self.title = Some(title.to_uppercase());
         self
     }
 
-    /// Show [`Modal`] with provided content.
+    /// Show Modal with provided content.
     pub fn ui(&self, ui: &mut egui::Ui, add_content: impl FnOnce(&mut egui::Ui, &Modal)) {
         let width = min(ui.available_width() as i64 - 20, Self::DEFAULT_WIDTH) as f32;
 
@@ -252,11 +252,6 @@ impl Modal {
         ui.painter().set(bg_idx, bg_shape);
 
         // Draw line below title.
-        let line_size = Vec2::new(ui.available_width(), 1.0);
-        let (line_rect, _) = ui.allocate_exact_size(line_size, Sense::hover());
-        let painter = ui.painter();
-        painter.hline(line_rect.x_range(),
-                           painter.round_to_pixel(line_rect.center().y),
-                           View::DEFAULT_STROKE);
+        View::horizontal_line(ui, Colors::STROKE);
     }
 }

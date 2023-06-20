@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use grin_core::global::ChainTypes;
+use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{NetworkTab, NetworkTabType};
 use crate::Settings;
 
@@ -24,6 +25,6 @@ impl NetworkTab for NetworkSettings {
         NetworkTabType::Settings
     }
 
-    fn ui(&mut self, ui: &mut egui::Ui) {
+    fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
     }
 }
