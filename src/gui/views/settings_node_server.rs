@@ -12,21 +12,5 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-mod views;
-pub use views::View;
-
-mod title_panel;
-pub use title_panel::*;
-
-mod modal;
-pub use modal::*;
-
-mod network;
-pub use network::*;
-
-mod network_node;
-mod network_settings;
-mod network_metrics;
-mod network_mining;
-mod settings_stratum;
-mod settings_node_server;
+// /// Integrated node server setup ui section.
+// struct

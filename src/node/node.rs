@@ -355,7 +355,6 @@ fn start_server() -> Server {
     if !global::GLOBAL_CHAIN_TYPE.is_init() {
         global::init_global_chain_type(config.server.chain_type);
     }
-    info!("Chain: {:?}", global::get_chain_type());
 
     if !global::GLOBAL_NRD_FEATURE_ENABLED.is_init() {
         match global::get_chain_type() {
@@ -372,39 +371,33 @@ fn start_server() -> Server {
     if !global::GLOBAL_ACCEPT_FEE_BASE.is_init() {
         let afb = config.server.pool_config.accept_fee_base;
         global::init_global_accept_fee_base(afb);
-        info!("Accept Fee Base: {:?}", global::get_accept_fee_base());
     }
     if !global::GLOBAL_FUTURE_TIME_LIMIT.is_init() {
         let future_time_limit = config.server.future_time_limit;
         global::init_global_future_time_limit(future_time_limit);
-        info!("Future Time Limit: {:?}", global::get_future_time_limit());
     }
 
     let api_chan: &'static mut (oneshot::Sender<()>, oneshot::Receiver<()>) =
         Box::leak(Box::new(oneshot::channel::<()>()));
-    let server_result = Server::new(server_config, None, api_chan);
-    //TODO: handle server errors
-    //
-    // if server_result.is_err() {
-    //     let mut db_path = PathBuf::from(&server_config.db_root);
-    //     db_path.push("grin.lock");
-    //     fs::remove_file(db_path).unwrap();
-    //
-    //     // Remove chain data on server start error
-    //     let dirs_to_remove: Vec<&str> = vec!["header", "lmdb", "txhashset"];
-    //     for dir in dirs_to_remove {
-    //         let mut path = PathBuf::from(&server_config.db_root);
-    //         path.push(dir);
-    //         fs::remove_dir_all(path).unwrap();
-    //     }
-    //
-    //     // Recreate server
-    //     let config = node_config.clone().unwrap();
-    //     let server_config = config.members.as_ref().unwrap().server.clone();
-    //     let api_chan: &'static mut (oneshot::Sender<()>, oneshot::Receiver<()>) =
-    //         Box::leak(Box::new(oneshot::channel::<()>()));
-    //     server_result = Server::new(server_config.clone(), None, api_chan);
-    // }
+    let mut server_result = Server::new(server_config.clone(), None, api_chan);
+    if server_result.is_err() {
+        let mut db_path = PathBuf::from(&server_config.db_root);
+        db_path.push("grin.lock");
+        fs::remove_file(db_path).unwrap();
+
+        // Remove chain data on server start error
+        let dirs_to_remove: Vec<&str> = vec!["header", "lmdb", "txhashset"];
+        for dir in dirs_to_remove {
+            let mut path = PathBuf::from(&server_config.db_root);
+            path.push(dir);
+            fs::remove_dir_all(path).unwrap();
+        }
+
+        // Recreate server
+        let api_chan: &'static mut (oneshot::Sender<()>, oneshot::Receiver<()>) =
+            Box::leak(Box::new(oneshot::channel::<()>()));
+        server_result = Server::new(server_config.clone(), None, api_chan);
+    }
 
     server_result.unwrap()
 }

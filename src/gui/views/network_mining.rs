@@ -12,24 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::fmt::format;
-use std::net::IpAddr;
-use std::str::FromStr;
 use chrono::{DateTime, NaiveDateTime, Utc};
-use egui::{RichText, Rounding, ScrollArea, Stroke};
+use egui::{Response, RichText, Rounding, ScrollArea, Stroke, TextStyle, Widget};
 use grin_chain::SyncStatus;
 use grin_servers::WorkerStats;
-use pnet::ipnetwork::IpNetwork;
 
-use crate::gui::Colors;
-use crate::gui::icons::{BARBELL, CLOCK_AFTERNOON, COMPUTER_TOWER, CPU, CUBE, FADERS, FOLDER_DASHED, FOLDER_NOTCH_MINUS, FOLDER_NOTCH_PLUS, PLUGS, PLUGS_CONNECTED, POLYGON, WRENCH};
+use crate::gui::{Colors, Navigator};
+use crate::gui::icons::{BARBELL, CLOCK_AFTERNOON, COMPUTER_TOWER, CPU, CUBE, FADERS, FOLDER_DASHED, FOLDER_NOTCH_MINUS, FOLDER_NOTCH_PLUS, PLUGS, PLUGS_CONNECTED, POLYGON};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Network, NetworkTab, NetworkTabType, View};
-use crate::node::Node;
+use crate::gui::views::{Modal, Network, NetworkTab, NetworkTabType, View};
+use crate::gui::views::settings_stratum::StratumServerSetup;
+use crate::node::{Node, NodeConfig};
 use crate::Settings;
 
 #[derive(Default)]
-pub struct NetworkMining;
+pub struct NetworkMining {
+    stratum_server_setup: StratumServerSetup
+}
 
 impl NetworkTab for NetworkMining {
     fn get_type(&self) -> NetworkTabType {
@@ -42,7 +41,7 @@ impl NetworkTab for NetworkMining {
         // Show message when node is not running or loading spinner when mining are not available.
         if !server_stats.is_some() || Node::get_sync_status().unwrap() != SyncStatus::NoSync {
             if !Node::is_running() {
-                Network::disabled_server_content(ui);
+                Network::disabled_node_ui(ui);
             } else {
                 View::center_content(ui, 162.0, |ui| {
                     View::big_loading_spinner(ui);
@@ -58,137 +57,31 @@ impl NetworkTab for NetworkMining {
 
         let stratum_stats = &server_stats.as_ref().unwrap().stratum_stats;
 
-        // Stratum server address + port from config.
-        let saved_stratum_addr = Settings::node_config_to_read()
-            .members.clone()
-            .server.stratum_mining_config.unwrap()
-            .stratum_server_addr.unwrap();
-        let (stratum_addr, stratum_port) = saved_stratum_addr.split_once(":").unwrap();
-
-        // List of available ip addresses.
-        let mut addresses = Vec::new();
-        for net_if in pnet::datalink::interfaces() {
-            for ip in net_if.ips {
-                if ip.is_ipv4() {
-                    addresses.push(ip.ip());
-                }
-            }
-        }
-
-        // Show error message when IP addresses are not available on the system.
-        if addresses.is_empty() {
-            View::center_content(ui, 52.0, |ui| {
-                ui.label(RichText::new(t!("network_mining.no_ip_addresses"))
-                    .size(16.0)
-                    .color(Colors::INACTIVE_TEXT)
-                );
-            });
-            return;
-        }
-
-        // Show stratum server setup when mining server is not enabled.
+        // Show stratum server setup when mining server is not running.
         if !stratum_stats.is_running && !Node::is_stratum_server_starting() {
             ScrollArea::vertical()
+                .id_source("stratum_server_setup")
                 .auto_shrink([false; 2])
                 .show(ui, |ui| {
-                    ui.add_space(6.0);
-                    View::sub_title(ui,
-                                    format!("{} {}", WRENCH, t!("network_mining.server_setup")));
-
-                    ui.add_space(4.0);
-                    View::horizontal_line(ui, Colors::ITEM_STROKE);
-                    ui.add_space(6.0);
+                    self.stratum_server_setup.ui(ui, cb);
 
                     ui.vertical_centered(|ui| {
-                        ui.label(RichText::new(t!("network_mining.choose_ip_address"))
-                            .size(16.0)
-                            .color(Colors::GRAY)
-                        );
-                        ui.add_space(10.0);
-
-                        if addresses.len() != 0 {
-                            let saved_ip_addr = &IpAddr::from_str(stratum_addr).unwrap();
-                            let mut selected_addr = saved_ip_addr;
-
-                            // Set first IP address as current if saved is not present at system.
-                            if !addresses.contains(selected_addr) {
-                                selected_addr = addresses.get(0).unwrap();
-                            }
-
-                            // Show available IP addresses on the system.
-                            let _ = addresses.chunks(2).map(|x| {
-                                if x.len() == 2 {
-                                    ui.columns(2, |columns| {
-                                        let addr0 = x.get(0).unwrap();
-                                        columns[0].vertical_centered(|ui| {
-                                            View::radio_value(ui,
-                                                              &mut selected_addr,
-                                                              addr0,
-                                                              addr0.to_string());
-                                        });
-                                        let addr1 = x.get(1).unwrap();
-                                        columns[1].vertical_centered(|ui| {
-                                            View::radio_value(ui,
-                                                              &mut selected_addr,
-                                                              addr1,
-                                                              addr1.to_string());
-                                        })
-                                    });
-                                    ui.add_space(12.0);
-                                } else {
-                                    let addr = x.get(0).unwrap();
-                                    View::radio_value(ui,
-                                                      &mut selected_addr,
-                                                      addr,
-                                                      addr.to_string());
-                                    ui.add_space(4.0);
-                                }
-                            }).collect::<Vec<_>>();
-
-                            // Save stratum server address at config if it was changed.
-                            if saved_ip_addr != selected_addr {
-                                let addr_to_save = format!("{}:{}", selected_addr, stratum_port);
-                                let mut w_node_config = Settings::node_config_to_update();
-                                w_node_config.members
-                                    .server.stratum_mining_config.as_mut().unwrap()
-                                    .stratum_server_addr = Some(addr_to_save);
-                                w_node_config.save();
-                            }
-                        }
-
-                        ui.label(RichText::new(t!("network_mining.change_port"))
-                            .size(16.0)
-                            .color(Colors::GRAY)
-                        );
-
-                        // Show button to choose server port.
-                        ui.add_space(6.0);
-                        View::button(ui, stratum_port.to_string(), Colors::WHITE, || {
-                            //TODO: Open modal to change value
-                            cb.show_keyboard();
-                        });
-
-                        ui.add_space(14.0);
-                        View::horizontal_line(ui, Colors::ITEM_STROKE);
-                        ui.add_space(6.0);
-
                         // Show message about stratum server config.
-                        let text = t!(
-                            "network_mining.server_setting",
-                            "address" => saved_stratum_addr,
-                            "settings" => FADERS
-                        );
+                        let text = t!("network_mining.server_setting", "settings" => FADERS);
                         ui.label(RichText::new(text)
                             .size(16.0)
                             .color(Colors::INACTIVE_TEXT)
                         );
-                        ui.add_space(8.0);
+                        ui.add_space(4.0);
 
-                        // Show button to enable server.
-                        View::button(ui, t!("network_mining.enable_server"), Colors::GOLD, || {
-                            Node::start_stratum_server();
-                        });
-                        ui.add_space(2.0);
+                        // Show button to enable stratum server if port is available.
+                        if self.stratum_server_setup.stratum_port_available {
+                            ui.add_space(6.0);
+                            View::button(ui, t!("network_mining.enable_server"), Colors::GOLD, || {
+                                Node::start_stratum_server();
+                            });
+                            ui.add_space(2.0);
+                        }
 
                         let stratum_enabled = Settings::node_config_to_read()
                             .members.clone()
@@ -218,9 +111,10 @@ impl NetworkTab for NetworkMining {
         View::sub_title(ui, format!("{} {}", COMPUTER_TOWER, t!("network_mining.server")));
         ui.columns(2, |columns| {
             columns[0].vertical_centered(|ui| {
+                let (stratum_addr, stratum_port) = NodeConfig::get_stratum_address_port();
                 View::rounded_box(ui,
-                                  saved_stratum_addr,
-                                  t!("network_mining.ip_address"),
+                                  format!("{}:{}", stratum_addr, stratum_port),
+                                  t!("network_mining.address"),
                                   [true, false, true, false]);
             });
             columns[1].vertical_centered(|ui| {
@@ -302,7 +196,6 @@ impl NetworkTab for NetworkMining {
             ui.add_space(4.0);
             View::horizontal_line(ui, Colors::ITEM_STROKE);
             ui.add_space(4.0);
-
             ScrollArea::vertical()
                 .auto_shrink([false; 2])
                 .id_source("stratum_workers_scroll")
@@ -322,7 +215,7 @@ impl NetworkTab for NetworkMining {
                             } else {
                                 [false, false]
                             };
-                            draw_worker_stats(ui, worker, rounding)
+                            draw_workers_stats(ui, worker, rounding)
                         }
                     },
                 );
@@ -335,11 +228,20 @@ impl NetworkTab for NetworkMining {
             });
         }
     }
+
+    fn on_modal_ui(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
+        match modal.id {
+            StratumServerSetup::STRATUM_PORT_MODAL => {
+                self.stratum_server_setup.stratum_port_modal_ui(ui, modal, cb);
+            },
+            _ => {}
+        }
+    }
 }
 
 const WORKER_UI_HEIGHT: f32 = 77.0;
 
-fn draw_worker_stats(ui: &mut egui::Ui, ws: &WorkerStats, rounding: [bool; 2]) {
+fn draw_workers_stats(ui: &mut egui::Ui, ws: &WorkerStats, rounding: [bool; 2]) {
     // Add space before the first item.
     if rounding[0] {
         ui.add_space(4.0);

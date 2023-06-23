@@ -15,7 +15,7 @@
 use egui::Frame;
 
 use crate::gui::icons::{ARROW_CIRCLE_LEFT, GLOBE, PLUS};
-use crate::gui::Navigator;
+use crate::gui::{Colors, Navigator};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::screens::{Screen, ScreenId};
 use crate::gui::views::{TitlePanel, TitlePanelAction, View};
@@ -43,6 +43,7 @@ impl Screen for Accounts {
         egui::CentralPanel::default()
             .frame(Frame {
                 stroke: View::DEFAULT_STROKE,
+                fill: Colors::FILL_DARK,
                 ..Default::default()
             })
             .show_inside(ui, |ui| {

@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::net::{IpAddr, Ipv4Addr, SocketAddrV4, TcpListener};
+use std::str::FromStr;
 use std::time::Duration;
 
 use egui::{Color32, lerp, Rgba, RichText, Stroke};
@@ -22,17 +24,18 @@ use grin_chain::SyncStatus;
 use crate::gui::{Colors, Navigator};
 use crate::gui::icons::{CARDHOLDER, DATABASE, DOTS_THREE_OUTLINE_VERTICAL, FACTORY, FADERS, GAUGE};
 use crate::gui::platform::PlatformCallbacks;
+use crate::gui::views::{Modal, ModalLocation, View};
 use crate::gui::views::network_metrics::NetworkMetrics;
 use crate::gui::views::network_mining::NetworkMining;
 use crate::gui::views::network_node::NetworkNode;
 use crate::gui::views::network_settings::NetworkSettings;
-use crate::gui::views::View;
 use crate::node::Node;
 use crate::Settings;
 
 pub trait NetworkTab {
     fn get_type(&self) -> NetworkTabType;
     fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks);
+    fn on_modal_ui(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks);
 }
 
 #[derive(PartialEq)]
@@ -68,13 +71,19 @@ impl Default for Network {
 
 impl Network {
     pub fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame, cb: &dyn PlatformCallbacks) {
+        // Show modal if it's opened.
+        if Navigator::is_modal_open(ModalLocation::SidePanel) {
+            Navigator::modal_ui(ui, ModalLocation::SidePanel, |ui, modal| {
+                self.current_tab.as_mut().on_modal_ui(ui, modal, cb);
+            });
+        }
+
         egui::TopBottomPanel::top("network_title")
             .resizable(false)
             .frame(egui::Frame {
                 fill: Colors::YELLOW,
                 inner_margin: Margin::same(0.0),
                 outer_margin: Margin::same(0.0),
-                stroke: Stroke::NONE,
                 ..Default::default()
             })
             .show_inside(ui, |ui| {
@@ -217,7 +226,8 @@ impl Network {
             });
     }
 
-    pub fn disabled_server_content(ui: &mut egui::Ui) {
+    /// Content to draw when node is disabled.
+    pub fn disabled_node_ui(ui: &mut egui::Ui) {
         View::center_content(ui, 162.0, |ui| {
             let text = t!("network.disabled_server", "dots" => DOTS_THREE_OUTLINE_VERTICAL);
             ui.label(RichText::new(text)
@@ -240,6 +250,26 @@ impl Network {
                 w_app_config.save();
             });
         });
+    }
+
+    /// List of available IP addresses.
+    pub fn get_ip_list() -> Vec<IpAddr> {
+        let mut addresses = Vec::new();
+        for net_if in pnet::datalink::interfaces() {
+            for ip in net_if.ips {
+                if ip.is_ipv4() {
+                    addresses.push(ip.ip());
+                }
+            }
+        }
+        addresses
+    }
+
+    /// Check whether a port is available on the provided host.
+    pub fn is_port_available(host: &str, port: u16) -> bool {
+        let ip_addr = Ipv4Addr::from_str(host).unwrap();
+        let ipv4 = SocketAddrV4::new(ip_addr, port);
+        TcpListener::bind(ipv4).is_ok()
     }
 }
 

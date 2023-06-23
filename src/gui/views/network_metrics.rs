@@ -13,13 +13,13 @@
 // limitations under the License.
 
 use chrono::{DateTime, NaiveDateTime, Utc};
-use egui::{RichText, Rounding, ScrollArea, Stroke};
+use egui::{RichText, Rounding, ScrollArea, Stroke, Ui};
 use grin_servers::DiffBlock;
 
 use crate::gui::Colors;
 use crate::gui::icons::{AT, COINS, CUBE_TRANSPARENT, HASH, HOURGLASS_LOW, HOURGLASS_MEDIUM, TIMER};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Network, NetworkTab, NetworkTabType, View};
+use crate::gui::views::{Modal, Network, NetworkTab, NetworkTabType, View};
 use crate::node::Node;
 
 #[derive(Default)]
@@ -39,7 +39,7 @@ impl NetworkTab for NetworkMetrics {
         // Show message when node is not running or loading spinner when metrics are not available.
         if server_stats.is_none() || server_stats.as_ref().unwrap().diff_stats.height == 0 {
             if !Node::is_running() {
-                Network::disabled_server_content(ui);
+                Network::disabled_node_ui(ui);
             } else {
                 View::center_content(ui, 162.0, |ui| {
                     View::big_loading_spinner(ui);
@@ -113,9 +113,9 @@ impl NetworkTab for NetworkMetrics {
         // Show difficulty adjustment window blocks
         let blocks_size = stats.diff_stats.last_blocks.len();
         ScrollArea::vertical()
+            .id_source("difficulty_scroll")
             .auto_shrink([false; 2])
             .stick_to_bottom(true)
-            .id_source("difficulty_scroll")
             .show_rows(
                 ui,
                 DIFF_BLOCK_UI_HEIGHT,
@@ -137,6 +137,8 @@ impl NetworkTab for NetworkMetrics {
                 },
             );
     }
+
+    fn on_modal_ui(&mut self, ui: &mut Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {}
 }
 
 const DIFF_BLOCK_UI_HEIGHT: f32 = 76.60;

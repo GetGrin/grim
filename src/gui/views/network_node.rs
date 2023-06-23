@@ -13,13 +13,13 @@
 // limitations under the License.
 
 use eframe::epaint::Stroke;
-use egui::{RichText, Rounding, ScrollArea};
+use egui::{RichText, Rounding, ScrollArea, Ui};
 use grin_servers::PeerStats;
 
 use crate::gui::Colors;
 use crate::gui::icons::{AT, CUBE, DEVICES, FLOW_ARROW, HANDSHAKE, PACKAGE, PLUGS_CONNECTED, SHARE_NETWORK};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Network, NetworkTab, NetworkTabType, View};
+use crate::gui::views::{Modal, Network, NetworkTab, NetworkTabType, View};
 use crate::node::Node;
 
 #[derive(Default)]
@@ -35,7 +35,7 @@ impl NetworkTab for NetworkNode {
         // Show message when node is not running or loading spinner when stats are not available.
         if !server_stats.is_some() {
             if !Node::is_running() {
-                Network::disabled_server_content(ui);
+                Network::disabled_node_ui(ui);
             } else {
                 ui.centered_and_justified(|ui| {
                     View::big_loading_spinner(ui);
@@ -47,6 +47,7 @@ impl NetworkTab for NetworkNode {
         let stats = server_stats.as_ref().unwrap();
 
         ScrollArea::vertical()
+            .id_source("integrated_node")
             .auto_shrink([false; 2])
             .show(ui, |ui| {
                 // Show header info.
@@ -180,6 +181,8 @@ impl NetworkTab for NetworkNode {
                 }
             });
     }
+
+    fn on_modal_ui(&mut self, ui: &mut Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {}
 }
 
 fn draw_peer_stats(ui: &mut egui::Ui, peer: &PeerStats, rounding: [bool; 2]) {

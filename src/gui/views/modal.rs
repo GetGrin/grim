@@ -21,11 +21,6 @@ use egui::epaint::RectShape;
 use crate::gui::Colors;
 use crate::gui::views::View;
 
-/// Identifier for [`Modal`] content to draw at [`Modal::ui`].
-pub enum ModalId {
-    Exit
-}
-
 /// Location for [`Modal`] at application UI.
 pub enum ModalLocation {
     /// To draw globally above side panel and screen.
@@ -46,8 +41,8 @@ pub enum ModalPosition {
 
 /// Stores data to draw dialog box/popup at UI, powered by [`egui::Window`].
 pub struct Modal {
-    /// Identifier for content.
-    pub(crate) id: ModalId,
+    /// Identifier for modal.
+    pub(crate) id: &'static str,
     /// Location at UI.
     pub(crate) location: ModalLocation,
     /// Position on the screen.
@@ -65,7 +60,7 @@ impl Modal {
     const DEFAULT_WIDTH: i64 = 380;
 
     /// Create open and closeable Modal with center position.
-    pub fn new(id: ModalId, location: ModalLocation) -> Self {
+    pub fn new(id: &'static str, location: ModalLocation) -> Self {
         Self {
             id,
             location,
@@ -116,9 +111,7 @@ impl Modal {
 
     /// Show Modal with provided content.
     pub fn ui(&self, ui: &mut egui::Ui, add_content: impl FnOnce(&mut egui::Ui, &Modal)) {
-        let width = min(ui.available_width() as i64 - 20, Self::DEFAULT_WIDTH) as f32;
-
-        // Show background Window at full available size
+        // Show background Window at full available size.
         egui::Window::new(self.window_id(true))
             .title_bar(false)
             .resizable(false)
@@ -133,13 +126,17 @@ impl Modal {
                 ui.set_min_size(ui.available_size());
             });
 
-        // Show main content Window at given position
+        // Choose width of modal content.
+        let width = min(ui.available_width() as i64 - 20, Self::DEFAULT_WIDTH) as f32;
+
+        // Show main content Window at given position.
+        let (content_align, content_offset) = self.modal_position();
         let layer_id = egui::Window::new(self.window_id(false))
             .title_bar(false)
             .resizable(false)
             .collapsible(false)
             .default_width(width)
-            .anchor(self.modal_position(), Vec2::default())
+            .anchor(content_align, content_offset)
             .frame(egui::Frame {
                 rounding: Rounding::same(8.0),
                 fill: Colors::YELLOW,
@@ -152,7 +149,7 @@ impl Modal {
                 self.draw_content(ui, add_content);
             }).unwrap().response.layer_id;
 
-        // Always show main content Window above background Window
+        // Always show main content Window above background Window.
         ui.ctx().move_to_top(layer_id);
 
     }
@@ -173,11 +170,16 @@ impl Modal {
     }
 
     /// Get [`egui::Window`] position based on [`ModalPosition`].
-    fn modal_position(&self) -> Align2 {
-        match self.position {
+    fn modal_position(&self) -> (Align2, Vec2) {
+        let align = match self.position {
             ModalPosition::CenterTop => { Align2::CENTER_TOP }
             ModalPosition::Center => { Align2::CENTER_CENTER }
-        }
+        };
+        let offset = match self.position {
+            ModalPosition::CenterTop => { Vec2::new(0.0, 20.0) }
+            ModalPosition::Center => { Vec2::new(0.0, 0.0) }
+        };
+        (align, offset)
     }
 
     /// Draw provided content.

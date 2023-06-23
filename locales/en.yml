@@ -19,7 +19,7 @@ sync_status:
   awaiting_peers: Waiting for peers
   header_sync: Downloading headers
   header_sync_percent: 'Downloading headers: %{percent}%'
-  tx_hashset_pibd: 'Downloading state (PIBD)'
+  tx_hashset_pibd: Downloading state (PIBD)
   tx_hashset_pibd_percent: 'Downloading state (PIBD): %{percent}%'
   tx_hashset_download: Downloading chain state
   tx_hashset_download_percent: 'Downloading chain state: %{percent}%'
@@ -57,22 +57,28 @@ network_mining:
   loading: Mining will be available after the synchronization
   server_setup: Stratum server setup
   enable_server: Enable server
-  server_setting: 'Enable stratum server or change more settings by selecting %{settings} at the bottom of the screen.'
+  server_setting: 'Enable stratum server or change more settings by selecting %{settings} at the bottom of the screen. App restart is required to change settings of the running server.'
   info: 'Mining server is enabled, you can change settings by selecting %{settings} at the bottom of the screen. Data is updating when devices are connected.'
-  no_ip_addresses: There are no available IP addresses on your system, the server cannot be started, check your network connectivity.
-  choose_ip_address: 'Choose IP Address:'
-  change_port: 'Change port:'
-  ip_address: IP Address
+  no_ip_addresses: There are no available IP addresses on your system, stratum server cannot be started, check your network connectivity.
+  port_unavailable: Specified port is unavailable
   rewards_wallet: Wallet for rewards
   server: Stratum server
+  address: Address
   miners: Miners
   devices: Devices
   blocks_found: Blocks found
   hashrate: 'Hashrate (C%{bits})'
   connected: Connected
   disconnected: Disconnected
+network_settings:
+  server: Server
+  port: Port
+  ip_address: IP Address
+  change_port: Change port
+  enter_value: 'Enter value:'
 modal:
   cancel: Cancel
+  save: Save
 modal_exit:
   description: Are you sure you want to quit the application?
   exit: Exit

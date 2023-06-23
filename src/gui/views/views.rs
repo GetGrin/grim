@@ -115,7 +115,7 @@ impl View {
 
     /// Draw [`Button`] with specified background fill color.
     pub fn button(ui: &mut egui::Ui, text: String, fill_color: Color32, action: impl FnOnce()) {
-        let br = Button::new(RichText::new(text.to_uppercase()).size(18.0).color(Colors::BUTTON))
+        let br = Button::new(RichText::new(text.to_uppercase()).size(18.0).color(Colors::TEXT_BUTTON))
             .stroke(Self::DEFAULT_STROKE)
             .fill(fill_color)
             .ui(ui);
@@ -207,7 +207,7 @@ impl View {
     /// Draw the button that looks like checkbox with callback on check.
     pub fn checkbox(ui: &mut egui::Ui, checked: bool, text: String, callback: impl FnOnce()) {
         let (text_value, color) = match checked {
-            true => { (format!("{} {}", CHECK_SQUARE, text), Colors::BUTTON) }
+            true => { (format!("{} {}", CHECK_SQUARE, text), Colors::TEXT_BUTTON) }
             false => { (format!("{} {}", SQUARE, text), Colors::TEXT) }
         };
         let br = Button::new(RichText::new(text_value).size(18.0).color(color))

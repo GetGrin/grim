@@ -17,7 +17,7 @@ use std::cmp::min;
 use crate::gui::{App, Colors, Navigator};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::screens::{Account, Accounts, Screen, ScreenId};
-use crate::gui::views::{ModalId, ModalLocation, Network, View};
+use crate::gui::views::{ModalLocation, Network, View};
 use crate::node::Node;
 
 pub struct Root {
@@ -67,10 +67,9 @@ impl Root {
                          ui: &mut egui::Ui,
                          frame: &mut eframe::Frame,
                          cb: &dyn PlatformCallbacks) {
-        let location = ModalLocation::Global;
-        Navigator::modal_ui(ui, location, |ui, modal| {
+        Navigator::modal_ui(ui, ModalLocation::Global, |ui, modal| {
             match modal.id {
-                ModalId::Exit => {
+                Navigator::EXIT_MODAL => {
                     if self.show_exit_progress {
                         if !Node::is_running() {
                             App::exit(frame, cb);
@@ -89,30 +88,36 @@ impl Root {
                             ui.label(t!("modal_exit.description"));
                         });
                         ui.add_space(10.0);
-                        // Setup spacing between buttons
-                        ui.spacing_mut().item_spacing = egui::Vec2::new(6.0, 0.0);
-                        ui.columns(2, |columns| {
-                            columns[0].vertical_centered_justified(|ui| {
-                                View::button(ui, t!("modal_exit.exit"), Colors::WHITE, || {
-                                    if !Node::is_running() {
-                                        App::exit(frame, cb);
+
+                        // Show modal buttons.
+                        ui.scope(|ui| {
+                            // Setup spacing between buttons.
+                            ui.spacing_mut().item_spacing = egui::Vec2::new(6.0, 0.0);
+
+                            ui.columns(2, |columns| {
+                                columns[0].vertical_centered_justified(|ui| {
+                                    View::button(ui, t!("modal_exit.exit"), Colors::WHITE, || {
+                                        if !Node::is_running() {
+                                            App::exit(frame, cb);
+                                            modal.close();
+                                        } else {
+                                            Node::stop(true);
+                                            modal.disable_closing();
+                                            self.show_exit_progress = true;
+                                        }
+                                    });
+                                });
+                                columns[1].vertical_centered_justified(|ui| {
+                                    View::button(ui, t!("modal.cancel"), Colors::WHITE, || {
                                         modal.close();
-                                    } else {
-                                        Node::stop(true);
-                                        modal.disable_closing();
-                                        self.show_exit_progress = true;
-                                    }
+                                    });
                                 });
                             });
-                            columns[1].vertical_centered_justified(|ui| {
-                                View::button(ui, t!("modal.cancel"), Colors::WHITE, || {
-                                    modal.close();
-                                });
-                            });
+                            ui.add_space(6.0);
                         });
-                        ui.add_space(6.0);
                     }
                 }
+                _ => {}
             }
         });
     }

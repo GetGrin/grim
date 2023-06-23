@@ -25,10 +25,12 @@ impl Colors {
     pub const GOLD: Color32 = Color32::from_rgb(255, 215, 0);
     pub const GREEN: Color32 = Color32::from_rgb(0, 0x64, 0);
     pub const RED: Color32 = Color32::from_rgb(0x8B, 0, 0);
-    pub const FILL: Color32 = Color32::from_gray(240);
+    pub const FILL: Color32 = Color32::from_gray(244);
+    pub const FILL_DARK: Color32 = Color32::from_gray(232);
     pub const TITLE: Color32 = Color32::from_gray(60);
     pub const TEXT: Color32 = Color32::from_gray(80);
-    pub const BUTTON: Color32 = Color32::from_gray(70);
+    pub const TEXT_BUTTON: Color32 = Color32::from_gray(70);
+    pub const BUTTON: Color32 = Color32::from_gray(249);
     pub const GRAY: Color32 = Color32::from_gray(120);
     pub const STROKE: Color32 = Color32::from_gray(190);
     pub const INACTIVE_TEXT: Color32 = Color32::from_gray(150);

@@ -12,9 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use egui::Ui;
 use grin_core::global::ChainTypes;
+use crate::gui::Colors;
+use crate::gui::icons::COMPUTER_TOWER;
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{NetworkTab, NetworkTabType};
+use crate::gui::views::{Modal, NetworkTab, NetworkTabType, View};
 use crate::Settings;
 
 #[derive(Default)]
@@ -26,5 +29,13 @@ impl NetworkTab for NetworkSettings {
     }
 
     fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
+        View::sub_title(ui, format!("{} {}", COMPUTER_TOWER, t!("network_settings.server")));
+        View::horizontal_line(ui, Colors::ITEM_STROKE);
+        ui.add_space(4.0);
+
+    }
+
+    fn on_modal_ui(&mut self, ui: &mut Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
+
     }
 }

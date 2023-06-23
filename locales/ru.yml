@@ -19,7 +19,7 @@ sync_status:
   awaiting_peers: Ожидание пиров
   header_sync: Загрузка заголовков
   header_sync_percent: 'Загрузка заголовков: %{percent}%'
-  tx_hashset_pibd: 'Загрузка состояния (PIBD)'
+  tx_hashset_pibd: Загрузка состояния (PIBD)
   tx_hashset_pibd_percent: 'Загрузка состояния (PIBD): %{percent}%'
   tx_hashset_download: Загрузка состояния цепи
   tx_hashset_download_percent: 'Загрузка состояния цепи: %{percent}%'
@@ -57,22 +57,28 @@ network_mining:
   loading: Майнинг будет доступен после синхронизации
   server_setup: Настройка stratum-сервера
   enable_server: Включить сервер
-  server_setting: 'Включите stratum-сервер или измените больше настроек, выбрав %{settings} внизу экрана.'
+  server_setting: 'Включите stratum-сервер или измените больше настроек, выбрав %{settings} внизу экрана. Для изменения настроек запущенного сервера потребуется перезапуск приложения.'
   info: 'Сервер майнинга запущен, вы можете изменить настройки, выбрав %{settings} внизу экрана. Данные обновляются, когда устройства подключены.'
-  no_ip_addresses: В вашей системе отсутствуют доступные IP адреса, запуск сервера невозможен, проверьте ваше подключение к сети.
-  choose_ip_address: 'Выберите IP адрес:'
-  change_port: 'Измените порт:'
-  ip_address: IP Адрес
+  no_ip_addresses: В вашей системе отсутствуют доступные IP адреса, запуск stratum-сервера невозможен, проверьте ваше подключение к сети.
+  port_unavailable: Указанный порт недоступен
   rewards_wallet: Кошелёк для наград
   server: Stratum-сервер
+  address: Адрес
   miners: Майнеры
   devices: Устройства
   found: Найдено
   hashrate: 'Хешрэйт (C%{bits})'
   connected: Подключен
   disconnected: Отключен
+network_settings:
+  server: Сервер
+  ip_address: IP Адрес
+  port: Порт
+  change_port: Изменить порт
+  enter_value: 'Введите значение:'
 modal:
   cancel: Отмена
+  save: Сохранить
 modal_exit:
   description: Вы уверены, что хотите выйти из приложения?
   exit: Выход

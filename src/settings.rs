@@ -37,15 +37,15 @@ const APP_CONFIG_FILE_NAME: &'static str = "app.toml";
 pub struct AppConfig {
     /// Run node server on startup.
     pub auto_start_node: bool,
-    /// Chain type for node server.
-    node_chain_type: ChainTypes
+    /// Chain type for node and wallets.
+    chain_type: ChainTypes
 }
 
 impl Default for AppConfig {
     fn default() -> Self {
         Self {
             auto_start_node: false,
-            node_chain_type: ChainTypes::default(),
+            chain_type: ChainTypes::default(),
         }
     }
 }
@@ -66,10 +66,10 @@ impl AppConfig {
 
     /// Change chain type and load new [`NodeConfig`] accordingly.
     pub fn change_chain_type(&mut self, chain_type: ChainTypes) {
-        if self.node_chain_type == chain_type {
+        if self.chain_type == chain_type {
             return;
         } else {
-            self.node_chain_type = chain_type;
+            self.chain_type = chain_type;
             self.save();
 
             // Load config for selected chain type.
@@ -95,7 +95,7 @@ impl Settings {
     /// Initialize settings with app and node configs.
     fn init() -> Self {
         let app_config = AppConfig::init();
-        let chain_type = app_config.node_chain_type;
+        let chain_type = app_config.chain_type;
         Self {
             app_config: Arc::new(RwLock::new(app_config)),
             node_config: Arc::new(RwLock::new(NodeConfig::init(chain_type)))

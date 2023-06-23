@@ -64,7 +64,6 @@ impl App {
 
     /// Setup application styles.
     pub fn setup_visuals(ctx: &Context) {
-        // Setup style
         let mut style = (*ctx.style()).clone();
         // Setup spacing for buttons.
         style.spacing.button_padding = egui::vec2(12.0, 8.0);
@@ -76,14 +75,16 @@ impl App {
         style.spacing.icon_width = 24.0;
         style.spacing.icon_width_inner = 14.0;
         style.spacing.icon_spacing = 10.0;
-
+        // Setup style
         ctx.set_style(style);
 
-        // Setup visuals
         let mut visuals = egui::Visuals::light();
-
+        // Setup selection color.
+        visuals.selection.stroke = Stroke { width: 1.0, color: Colors::TEXT };
+        visuals.selection.bg_fill = Colors::GOLD;
         // Disable stroke around panels by default
         visuals.widgets.noninteractive.bg_stroke = Stroke::NONE;
+        // Setup visuals
         ctx.set_visuals(visuals);
     }
 

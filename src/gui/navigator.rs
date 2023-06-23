@@ -19,7 +19,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use lazy_static::lazy_static;
 
 use crate::gui::screens::ScreenId;
-use crate::gui::views::{Modal, ModalId, ModalLocation};
+use crate::gui::views::{Modal, ModalLocation};
 
 lazy_static! {
     /// Static [`Navigator`] state to be accessible from anywhere.
@@ -53,6 +53,9 @@ impl Default for Navigator {
 }
 
 impl Navigator {
+    /// Identifier for exit [`Modal`].
+    pub const EXIT_MODAL: &'static str = "exit";
+
     /// Initialize navigation from provided [`ScreenId`].
     pub fn init(from: ScreenId) {
         let mut w_nav = NAVIGATOR_STATE.write().unwrap();
@@ -118,7 +121,7 @@ impl Navigator {
 
     /// Open exit confirmation [`Modal`] with provided [NAVIGATOR_STATE] lock.
     fn open_exit_modal_nav(mut w_nav: RwLockWriteGuard<Navigator>) {
-        let m = Modal::new(ModalId::Exit, ModalLocation::Global).title(t!("modal_exit.exit"));
+        let m = Modal::new(Self::EXIT_MODAL, ModalLocation::Global).title(t!("modal_exit.exit"));
         w_nav.global_modal = Some(m);
     }
 
