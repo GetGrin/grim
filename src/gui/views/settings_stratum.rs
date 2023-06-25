@@ -59,8 +59,8 @@ impl StratumServerSetup {
         ui.add_space(4.0);
 
         // Show error message when IP addresses are not available on the system.
-        let mut addresses = Network::get_ip_list();
-        if addresses.is_empty() {
+        let mut addrs = Network::get_ip_list();
+        if addrs.is_empty() {
             ui.vertical_centered(|ui| {
                 ui.label(RichText::new(t!("network_mining.no_ip_addresses"))
                     .size(16.0)
@@ -79,7 +79,7 @@ impl StratumServerSetup {
             ui.add_space(6.0);
 
             // Show stratum IP address setup.
-            Self::ip_address_setup_ui(ui, addresses);
+            self.ip_address_setup_ui(ui, addrs);
 
             View::horizontal_line(ui, Colors::ITEM_STROKE);
             ui.add_space(6.0);
@@ -109,7 +109,7 @@ impl StratumServerSetup {
                 Navigator::open_modal(port_modal);
                 cb.show_keyboard();
             });
-            ui.add_space(12.0);
+            ui.add_space(14.0);
 
             // Show error when stratum server port is unavailable.
             if !self.stratum_port_available {
@@ -200,18 +200,18 @@ impl StratumServerSetup {
     }
 
     /// Show stratum IP address setup.
-    fn ip_address_setup_ui(ui: &mut egui::Ui, addresses: Vec<IpAddr>) {
+    fn ip_address_setup_ui(&mut self, ui: &mut egui::Ui, addrs: Vec<IpAddr>) {
         let (addr, port) = NodeConfig::get_stratum_address_port();
         let saved_ip_addr = &IpAddr::from_str(addr.as_str()).unwrap();
         let mut selected_addr = saved_ip_addr;
 
         // Set first IP address as current if saved is not present at system.
-        if !addresses.contains(selected_addr) {
-            selected_addr = addresses.get(0).unwrap();
+        if !addrs.contains(selected_addr) {
+            selected_addr = addrs.get(0).unwrap();
         }
 
         // Show available IP addresses on the system.
-        let _ = addresses.chunks(2).map(|x| {
+        let _ = addrs.chunks(2).map(|x| {
             if x.len() == 2 {
                 ui.columns(2, |columns| {
                     let addr0 = x.get(0).unwrap();
@@ -242,6 +242,8 @@ impl StratumServerSetup {
         // Save stratum server address at config if it was changed.
         if saved_ip_addr != selected_addr {
             NodeConfig::save_stratum_address_port(selected_addr.to_string(), port.to_string());
+            let available = Network::is_port_available(selected_addr.to_string().as_str(), port);
+            self.stratum_port_available = available;
         }
     }
 }
