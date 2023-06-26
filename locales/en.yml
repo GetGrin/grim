@@ -10,7 +10,7 @@ network:
   disable: Disable
   restart: Restart
   autorun: Autorun
-  disabled_server: 'Enable integrated node or choose another connection method by pressing %{dots} in the top-left corner of the screen.'
+  disabled_server: 'Enable integrated node or add another connection method by pressing %{dots} in the top-left corner of the screen.'
 sync_status:
   node_restarting: Node is restarting
   node_down: Node is down
@@ -58,7 +58,7 @@ network_mining:
   server_setup: Stratum server setup
   enable_server: Enable server
   server_setting: 'Enable stratum server or change more settings by selecting %{settings} at the bottom of the screen. App restart is required to change settings of the running server.'
-  info: 'Mining server is enabled, you can change settings by selecting %{settings} at the bottom of the screen. Data is updating when devices are connected.'
+  info: 'Mining server is enabled, you can change its settings by selecting %{settings} at the bottom of the screen. Data is updating when devices are connected.'
   no_ip_addresses: There are no available IP addresses on your system, stratum server cannot be started, check your network connectivity.
   port_unavailable: Specified port is unavailable
   rewards_wallet: Wallet for rewards

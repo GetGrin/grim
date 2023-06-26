@@ -25,7 +25,6 @@ use grin_core::global::ChainTypes;
 use grin_servers::{Server, ServerStats};
 use jni::sys::{jboolean, jstring};
 use lazy_static::lazy_static;
-use log::info;
 
 use crate::Settings;
 

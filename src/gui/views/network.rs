@@ -16,7 +16,7 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddrV4, TcpListener};
 use std::str::FromStr;
 use std::time::Duration;
 
-use egui::{Color32, lerp, Rgba, RichText, Stroke};
+use egui::{Color32, lerp, Rgba, RichText};
 use egui::style::Margin;
 use egui_extras::{Size, StripBuilder};
 use grin_chain::SyncStatus;
@@ -24,11 +24,12 @@ use grin_chain::SyncStatus;
 use crate::gui::{Colors, Navigator};
 use crate::gui::icons::{CARDHOLDER, DATABASE, DOTS_THREE_OUTLINE_VERTICAL, FACTORY, FADERS, GAUGE};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Modal, ModalLocation, View};
+use crate::gui::views::{Modal, ModalContainer, View};
 use crate::gui::views::network_metrics::NetworkMetrics;
 use crate::gui::views::network_mining::NetworkMining;
 use crate::gui::views::network_node::NetworkNode;
 use crate::gui::views::network_settings::NetworkSettings;
+use crate::gui::views::settings_stratum::StratumServerSetup;
 use crate::node::Node;
 use crate::Settings;
 
@@ -59,21 +60,32 @@ impl NetworkTabType {
 
 pub struct Network {
     current_tab: Box<dyn NetworkTab>,
+    allowed_modal_ids: Vec<&'static str>,
 }
 
 impl Default for Network {
     fn default() -> Self {
         Self {
             current_tab: Box::new(NetworkNode::default()),
+            allowed_modal_ids: vec![
+                StratumServerSetup::STRATUM_PORT_MODAL
+            ]
         }
+    }
+}
+
+impl ModalContainer for Network {
+    fn allowed_modal_ids(&self) -> &Vec<&'static str> {
+        self.allowed_modal_ids.as_ref()
     }
 }
 
 impl Network {
     pub fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame, cb: &dyn PlatformCallbacks) {
-        // Show modal if it's opened.
-        if Navigator::is_modal_open(ModalLocation::SidePanel) {
-            Navigator::modal_ui(ui, ModalLocation::SidePanel, |ui, modal| {
+        // Show modal content if it's opened.
+        let modal_id = Navigator::is_modal_open();
+        if modal_id.is_some() && self.can_show_modal(modal_id.unwrap()) {
+            Navigator::modal_ui(ui, |ui, modal| {
                 self.current_tab.as_mut().on_modal_ui(ui, modal, cb);
             });
         }

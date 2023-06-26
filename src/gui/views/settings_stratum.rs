@@ -20,7 +20,7 @@ use egui::{RichText, TextStyle, Widget};
 use crate::gui::{Colors, Navigator};
 use crate::gui::icons::WRENCH;
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Modal, ModalLocation, ModalPosition, Network, View};
+use crate::gui::views::{Modal, ModalPosition, Network, View};
 use crate::node::NodeConfig;
 
 /// Stratum server setup ui section.
@@ -59,7 +59,7 @@ impl StratumServerSetup {
         ui.add_space(4.0);
 
         // Show error message when IP addresses are not available on the system.
-        let mut addrs = Network::get_ip_list();
+        let addrs = Network::get_ip_list();
         if addrs.is_empty() {
             ui.vertical_centered(|ui| {
                 ui.label(RichText::new(t!("network_mining.no_ip_addresses"))
@@ -102,11 +102,10 @@ impl StratumServerSetup {
                 );
 
                 // Show stratum port modal.
-                let port_modal = Modal::new(Self::STRATUM_PORT_MODAL,
-                                            ModalLocation::SidePanel)
+                let port_modal = Modal::new(Self::STRATUM_PORT_MODAL)
                     .position(ModalPosition::CenterTop)
                     .title(t!("network_settings.change_port"));
-                Navigator::open_modal(port_modal);
+                Navigator::show_modal(port_modal);
                 cb.show_keyboard();
             });
             ui.add_space(14.0);
@@ -138,8 +137,8 @@ impl StratumServerSetup {
 
             // Draw stratum port text edit.
             let text_edit_resp = egui::TextEdit::singleline(&mut self.stratum_port_edit)
-                .font(TextStyle::Button)
-                .desired_width(48.0)
+                .font(TextStyle::Heading)
+                .desired_width(58.0)
                 .cursor_at_end(true)
                 .ui(ui);
             text_edit_resp.request_focus();

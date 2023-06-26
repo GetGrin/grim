@@ -15,27 +15,25 @@
 use std::cmp::min;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use egui::{Align2, RichText, Rounding, Sense, Stroke, Vec2};
+use egui::{Align2, RichText, Rounding, Stroke, Vec2};
 use egui::epaint::RectShape;
 
 use crate::gui::Colors;
 use crate::gui::views::View;
 
-/// Location for [`Modal`] at application UI.
-pub enum ModalLocation {
-    /// To draw globally above side panel and screen.
-    Global,
-    /// To draw on the side panel.
-    SidePanel,
-    /// To draw on the screen.
-    Screen
+/// Contains modal ids to draw at current container if possible.
+pub trait ModalContainer {
+    fn allowed_modal_ids(&self) -> &Vec<&'static str>;
+
+    /// Check if it's possible to show modal.
+    fn can_show_modal(&self, id: &'static str) -> bool {
+        self.allowed_modal_ids().contains(&id)
+    }
 }
 
-/// Position of [`Modal`] on the screen at provided [`ModalLocation`].
+/// Position of [`Modal`] on the screen.
 pub enum ModalPosition {
-    /// Center-top position.
     CenterTop,
-    /// Center of the location.
     Center
 }
 
@@ -43,8 +41,6 @@ pub enum ModalPosition {
 pub struct Modal {
     /// Identifier for modal.
     pub(crate) id: &'static str,
-    /// Location at UI.
-    pub(crate) location: ModalLocation,
     /// Position on the screen.
     position: ModalPosition,
     /// Flag to show the content.
@@ -59,11 +55,10 @@ impl Modal {
     /// Default width of the content.
     const DEFAULT_WIDTH: i64 = 380;
 
-    /// Create open and closeable Modal with center position.
-    pub fn new(id: &'static str, location: ModalLocation) -> Self {
+    /// Create opened and closeable Modal with center position.
+    pub fn new(id: &'static str) -> Self {
         Self {
             id,
-            location,
             position: ModalPosition::Center,
             open: AtomicBool::new(true),
             closeable: AtomicBool::new(true),
@@ -112,12 +107,11 @@ impl Modal {
     /// Show Modal with provided content.
     pub fn ui(&self, ui: &mut egui::Ui, add_content: impl FnOnce(&mut egui::Ui, &Modal)) {
         // Show background Window at full available size.
-        egui::Window::new(self.window_id(true))
+        egui::Window::new("modal_bg_window")
             .title_bar(false)
             .resizable(false)
             .collapsible(false)
-            .fixed_pos(ui.next_widget_position())
-            .fixed_size(ui.available_size())
+            .fixed_size(ui.ctx().used_size())
             .frame(egui::Frame {
                 fill: Colors::SEMI_TRANSPARENT,
                 ..Default::default()
@@ -131,7 +125,7 @@ impl Modal {
 
         // Show main content Window at given position.
         let (content_align, content_offset) = self.modal_position();
-        let layer_id = egui::Window::new(self.window_id(false))
+        let layer_id = egui::Window::new("modal_window")
             .title_bar(false)
             .resizable(false)
             .collapsible(false)
@@ -152,21 +146,6 @@ impl Modal {
         // Always show main content Window above background Window.
         ui.ctx().move_to_top(layer_id);
 
-    }
-
-    /// Generate identifier for inner [`egui::Window`] parts based on [`ModalLocation`].
-    fn window_id(&self, background: bool) -> &'static str {
-        match self.location {
-            ModalLocation::Global => {
-                if background { "global.bg" } else { "global" }
-            }
-            ModalLocation::SidePanel => {
-                if background { "side_panel.bg" } else { "side_panel" }
-            }
-            ModalLocation::Screen => {
-                if background { "global.bg" } else { "global" }
-            }
-        }
     }
 
     /// Get [`egui::Window`] position based on [`ModalPosition`].

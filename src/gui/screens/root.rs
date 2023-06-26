@@ -13,17 +13,17 @@
 // limitations under the License.
 
 use std::cmp::min;
-
 use crate::gui::{App, Colors, Navigator};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::screens::{Account, Accounts, Screen, ScreenId};
-use crate::gui::views::{ModalLocation, Network, View};
+use crate::gui::views::{ModalContainer, Network, View};
 use crate::node::Node;
 
 pub struct Root {
     screens: Vec<Box<dyn Screen>>,
     network: Network,
-    show_exit_progress: bool
+    show_exit_progress: bool,
+    allowed_modal_ids: Vec<&'static str>
 }
 
 impl Default for Root {
@@ -31,23 +31,34 @@ impl Default for Root {
         Navigator::init(ScreenId::Accounts);
 
         Self {
-            screens: (vec![
+            screens: vec![
                 Box::new(Accounts::default()),
                 Box::new(Account::default())
-            ]),
+            ],
             network: Network::default(),
-            show_exit_progress: false
+            show_exit_progress: false,
+            allowed_modal_ids: vec![
+                Navigator::EXIT_MODAL
+            ]
         }
+    }
+}
+
+impl ModalContainer for Root {
+    fn allowed_modal_ids(&self) -> &Vec<&'static str> {
+        self.allowed_modal_ids.as_ref()
     }
 }
 
 impl Root {
     pub fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame, cb: &dyn PlatformCallbacks) {
-        if Navigator::is_modal_open(ModalLocation::Global) {
-            self.show_global_modal(ui, frame, cb);
+        // Draw exit modal content if it's open.
+        let modal_id = Navigator::is_modal_open();
+        if modal_id.is_some() && self.can_show_modal(modal_id.unwrap()) {
+            self.exit_modal_content(ui, frame, cb);
         }
 
-        let (is_panel_open, panel_width) = self.dual_panel_state_width(frame);
+        let (is_panel_open, panel_width) = Self::side_panel_state_width(frame);
         egui::SidePanel::left("network_panel")
             .resizable(false)
             .exact_width(panel_width)
@@ -63,61 +74,56 @@ impl Root {
             });
     }
 
-    fn show_global_modal(&mut self,
-                         ui: &mut egui::Ui,
-                         frame: &mut eframe::Frame,
-                         cb: &dyn PlatformCallbacks) {
-        Navigator::modal_ui(ui, ModalLocation::Global, |ui, modal| {
-            match modal.id {
-                Navigator::EXIT_MODAL => {
-                    if self.show_exit_progress {
-                        if !Node::is_running() {
-                            App::exit(frame, cb);
-                            modal.close();
-                        }
-                        ui.add_space(16.0);
-                        ui.vertical_centered(|ui| {
-                            View::small_loading_spinner(ui);
-                            ui.add_space(12.0);
-                            ui.label(t!("sync_status.shutdown"));
-                        });
-                        ui.add_space(10.0);
-                    } else {
-                        ui.add_space(8.0);
-                        ui.vertical_centered(|ui| {
-                            ui.label(t!("modal_exit.description"));
-                        });
-                        ui.add_space(10.0);
-
-                        // Show modal buttons.
-                        ui.scope(|ui| {
-                            // Setup spacing between buttons.
-                            ui.spacing_mut().item_spacing = egui::Vec2::new(6.0, 0.0);
-
-                            ui.columns(2, |columns| {
-                                columns[0].vertical_centered_justified(|ui| {
-                                    View::button(ui, t!("modal_exit.exit"), Colors::WHITE, || {
-                                        if !Node::is_running() {
-                                            App::exit(frame, cb);
-                                            modal.close();
-                                        } else {
-                                            Node::stop(true);
-                                            modal.disable_closing();
-                                            self.show_exit_progress = true;
-                                        }
-                                    });
-                                });
-                                columns[1].vertical_centered_justified(|ui| {
-                                    View::button(ui, t!("modal.cancel"), Colors::WHITE, || {
-                                        modal.close();
-                                    });
-                                });
-                            });
-                            ui.add_space(6.0);
-                        });
-                    }
+    fn exit_modal_content(&mut self,
+                          ui: &mut egui::Ui,
+                          frame: &mut eframe::Frame,
+                          cb: &dyn PlatformCallbacks) {
+        Navigator::modal_ui(ui, |ui, modal| {
+            if self.show_exit_progress {
+                if !Node::is_running() {
+                    App::exit(frame, cb);
+                    modal.close();
                 }
-                _ => {}
+                ui.add_space(16.0);
+                ui.vertical_centered(|ui| {
+                    View::small_loading_spinner(ui);
+                    ui.add_space(12.0);
+                    ui.label(t!("sync_status.shutdown"));
+                });
+                ui.add_space(10.0);
+            } else {
+                ui.add_space(8.0);
+                ui.vertical_centered(|ui| {
+                    ui.label(t!("modal_exit.description"));
+                });
+                ui.add_space(10.0);
+
+                // Show modal buttons.
+                ui.scope(|ui| {
+                    // Setup spacing between buttons.
+                    ui.spacing_mut().item_spacing = egui::Vec2::new(6.0, 0.0);
+
+                    ui.columns(2, |columns| {
+                        columns[0].vertical_centered_justified(|ui| {
+                            View::button(ui, t!("modal_exit.exit"), Colors::WHITE, || {
+                                if !Node::is_running() {
+                                    App::exit(frame, cb);
+                                    modal.close();
+                                } else {
+                                    Node::stop(true);
+                                    modal.disable_closing();
+                                    self.show_exit_progress = true;
+                                }
+                            });
+                        });
+                        columns[1].vertical_centered_justified(|ui| {
+                            View::button(ui, t!("modal.cancel"), Colors::WHITE, || {
+                                modal.close();
+                            });
+                        });
+                    });
+                    ui.add_space(6.0);
+                });
             }
         });
     }
@@ -135,8 +141,8 @@ impl Root {
         }
     }
 
-    /// Get dual panel state and width
-    fn dual_panel_state_width(&self, frame: &mut eframe::Frame) -> (bool, f32) {
+    /// Get side panel state and width.
+    fn side_panel_state_width(frame: &mut eframe::Frame) -> (bool, f32) {
         let dual_panel_mode = View::is_dual_panel_mode(frame);
         let is_panel_open = dual_panel_mode || Navigator::is_side_panel_open();
         let panel_width = if dual_panel_mode {

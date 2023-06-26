@@ -43,11 +43,13 @@ impl NetworkTab for NetworkMetrics {
             } else {
                 View::center_content(ui, 162.0, |ui| {
                     View::big_loading_spinner(ui);
-                    ui.add_space(18.0);
-                    ui.label(RichText::new(t!("network_metrics.loading"))
-                        .size(16.0)
-                        .color(Colors::INACTIVE_TEXT)
-                    );
+                    if !Node::is_stopping() {
+                        ui.add_space(18.0);
+                        ui.label(RichText::new(t!("network_metrics.loading"))
+                            .size(16.0)
+                            .color(Colors::INACTIVE_TEXT)
+                        );
+                    }
                 });
             }
             return;

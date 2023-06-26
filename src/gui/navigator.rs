@@ -19,25 +19,21 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use lazy_static::lazy_static;
 
 use crate::gui::screens::ScreenId;
-use crate::gui::views::{Modal, ModalLocation};
+use crate::gui::views::Modal;
 
 lazy_static! {
     /// Static [`Navigator`] state to be accessible from anywhere.
     static ref NAVIGATOR_STATE: RwLock<Navigator> = RwLock::new(Navigator::default());
 }
 
-/// Logic of navigation for UI, stores screen identifiers stack, open modals and side panel state.
+/// Logic of navigation at ui, stores screen identifiers stack, showing modal and side panel state.
 pub struct Navigator {
     /// Screen identifiers in navigation stack.
     screen_stack: BTreeSet<ScreenId>,
     /// Indicator if side panel is open.
     side_panel_open: AtomicBool,
-    /// Modal state to show globally above panel and screen.
-    global_modal: Option<Modal>,
-    /// Modal state to show on the side panel.
-    side_panel_modal: Option<Modal>,
-    /// Modal state to show on the screen.
-    screen_modal: Option<Modal>,
+    /// Modal window to show.
+    modal: Option<Modal>,
 }
 
 impl Default for Navigator {
@@ -45,9 +41,7 @@ impl Default for Navigator {
         Self {
             screen_stack: BTreeSet::new(),
             side_panel_open: AtomicBool::new(false),
-            global_modal: None,
-            side_panel_modal: None,
-            screen_modal: None,
+            modal: None,
         }
     }
 }
@@ -78,119 +72,72 @@ impl Navigator {
     pub fn back() {
         let mut w_nav = NAVIGATOR_STATE.write().unwrap();
 
-        // If global Modal is showing and closeable, remove it from Navigator.
-        if w_nav.global_modal.is_some() {
-            let global_modal = w_nav.global_modal.as_ref().unwrap();
-            if global_modal.is_closeable() {
-                w_nav.global_modal = None;
+        // If Modal is showing and closeable, remove it from Navigator.
+        if w_nav.modal.is_some() {
+            let modal = w_nav.modal.as_ref().unwrap();
+            if modal.is_closeable() {
+                w_nav.modal = None;
             }
             return;
         }
 
-        // If side panel Modal is showing and closeable, remove it from Navigator.
-        if w_nav.side_panel_modal.is_some() {
-            let side_panel_modal = w_nav.side_panel_modal.as_ref().unwrap();
-            if side_panel_modal.is_closeable() {
-                w_nav.side_panel_modal = None;
-            }
-            return;
-        }
-
-        // If screen Modal is showing and closeable, remove it from Navigator.
-        if w_nav.screen_modal.is_some() {
-            let screen_modal = w_nav.screen_modal.as_ref().unwrap();
-            if screen_modal.is_closeable() {
-                w_nav.screen_modal = None;
-            }
-            return;
-        }
-
-        // Go back at screen stack or show exit confirmation Modal.
+        // Go back at screen stack or set exit confirmation Modal.
         if w_nav.screen_stack.len() > 1 {
             w_nav.screen_stack.pop_last();
         } else {
-            Self::open_exit_modal_nav(w_nav);
+            Self::show_exit_modal_nav(w_nav);
         }
     }
 
-    /// Open exit confirmation [`Modal`].
-    pub fn open_exit_modal() {
+    /// Set exit confirmation [`Modal`].
+    pub fn show_exit_modal() {
         let w_nav = NAVIGATOR_STATE.write().unwrap();
-        Self::open_exit_modal_nav(w_nav);
+        Self::show_exit_modal_nav(w_nav);
     }
 
-    /// Open exit confirmation [`Modal`] with provided [NAVIGATOR_STATE] lock.
-    fn open_exit_modal_nav(mut w_nav: RwLockWriteGuard<Navigator>) {
-        let m = Modal::new(Self::EXIT_MODAL, ModalLocation::Global).title(t!("modal_exit.exit"));
-        w_nav.global_modal = Some(m);
+    /// Set exit confirmation [`Modal`] with provided [NAVIGATOR_STATE] lock.
+    fn show_exit_modal_nav(mut w_nav: RwLockWriteGuard<Navigator>) {
+        let m = Modal::new(Self::EXIT_MODAL).title(t!("modal_exit.exit"));
+        w_nav.modal = Some(m);
     }
 
-    /// Open [`Modal`] at specified location.
-    pub fn open_modal(modal: Modal) {
+    /// Set [`Modal`] to show.
+    pub fn show_modal(modal: Modal) {
         let mut w_nav = NAVIGATOR_STATE.write().unwrap();
-        match modal.location {
-            ModalLocation::Global => {
-                w_nav.global_modal = Some(modal);
-            }
-            ModalLocation::SidePanel => {
-                w_nav.side_panel_modal = Some(modal);
-            }
-            ModalLocation::Screen => {
-                w_nav.screen_modal = Some(modal);
-            }
-        }
+        w_nav.modal = Some(modal);
     }
 
-    /// Check if [`Modal`] is open at specified location and remove it from [`Navigator`] otherwise.
-    pub fn is_modal_open(location: ModalLocation) -> bool {
+    /// Check if [`Modal`] is open by returning its id, remove it from [`Navigator`] if it's closed.
+    pub fn is_modal_open() -> Option<&'static str> {
         // Check if Modal is showing.
         {
-            let r_nav = NAVIGATOR_STATE.read().unwrap();
-            let showing = match location {
-                ModalLocation::Global => { r_nav.global_modal.is_some() }
-                ModalLocation::SidePanel => { r_nav.side_panel_modal.is_some() }
-                ModalLocation::Screen => { r_nav.screen_modal.is_some() }
-            };
-            if !showing {
-                return false;
+            if NAVIGATOR_STATE.read().unwrap().modal.is_none() {
+                return None;
             }
         }
 
         // Check if Modal is open.
-        let is_open = {
+        let (is_open, id) = {
             let r_nav = NAVIGATOR_STATE.read().unwrap();
-            match location {
-                ModalLocation::Global => { r_nav.global_modal.as_ref().unwrap().is_open() }
-                ModalLocation::SidePanel => { r_nav.side_panel_modal.as_ref().unwrap().is_open() }
-                ModalLocation::Screen => {r_nav.screen_modal.as_ref().unwrap().is_open() }
-            }
+            let modal = r_nav.modal.as_ref().unwrap();
+            (modal.is_open(), modal.id)
         };
 
         // If Modal is not open, remove it from navigator state.
         if !is_open {
             let mut w_nav = NAVIGATOR_STATE.write().unwrap();
-            match location {
-                ModalLocation::Global => { w_nav.global_modal = None }
-                ModalLocation::SidePanel => { w_nav.side_panel_modal = None }
-                ModalLocation::Screen => { w_nav.screen_modal = None }
-            }
-            return false;
+            w_nav.modal = None;
+            return None;
         }
-        true
+        Some(id)
     }
 
-    /// Show [`Modal`] with provided location at app UI.
-    pub fn modal_ui(ui: &mut egui::Ui,
-                    location: ModalLocation,
-                    add_content: impl FnOnce(&mut egui::Ui, &Modal)) {
-        let r_nav = NAVIGATOR_STATE.read().unwrap();
-        let modal = match location {
-            ModalLocation::Global => { &r_nav.global_modal }
-            ModalLocation::SidePanel => { &r_nav.side_panel_modal }
-            ModalLocation::Screen => { &r_nav.screen_modal }
-        };
-        if modal.is_some() {
-            modal.as_ref().unwrap().ui(ui, add_content);
+    /// Draw showing [`Modal`] content if it's opened.
+    pub fn modal_ui(ui: &mut egui::Ui, add_content: impl FnOnce(&mut egui::Ui, &Modal)) {
+        if let Some(modal) = &NAVIGATOR_STATE.read().unwrap().modal {
+            if modal.is_open() {
+                modal.ui(ui, add_content);
+            }
         }
     }
 

@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::{AboveOrBelow, Button, PointerState, Response, RichText, ScrollArea, Sense, Spinner, Widget, WidgetText};
+use egui::{Button, PointerState, Response, RichText, Sense, Spinner, Widget};
 use egui::epaint::{Color32, FontId, RectShape, Rounding, Stroke};
 use egui::epaint::text::TextWrapping;
 use egui::text::{LayoutJob, TextFormat};
 
-use crate::gui::Colors;
-use crate::gui::icons::{CARET_DOWN, CHECK_SQUARE, CIRCLE, RADIO_BUTTON, SQUARE};
+use crate::gui::{Colors, Navigator};
+use crate::gui::icons::{CHECK_SQUARE, SQUARE};
 
 pub struct View;
 
@@ -29,7 +29,7 @@ impl View {
     /// Default width of side panel at application UI.
     pub const SIDE_PANEL_MIN_WIDTH: i64 = 400;
 
-    /// Check if UI can show side panel and screen at same time.
+    /// Check if ui can show side panel and screen at same time.
     pub fn is_dual_panel_mode(frame: &mut eframe::Frame) -> bool {
         let w = frame.info().window_info.size.x;
         let h = frame.info().window_info.size.y;

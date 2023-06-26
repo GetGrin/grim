@@ -13,11 +13,11 @@
 // limitations under the License.
 
 use chrono::{DateTime, NaiveDateTime, Utc};
-use egui::{Response, RichText, Rounding, ScrollArea, Stroke, TextStyle, Widget};
+use egui::{RichText, Rounding, ScrollArea, Stroke};
 use grin_chain::SyncStatus;
 use grin_servers::WorkerStats;
 
-use crate::gui::{Colors, Navigator};
+use crate::gui::Colors;
 use crate::gui::icons::{BARBELL, CLOCK_AFTERNOON, COMPUTER_TOWER, CPU, CUBE, FADERS, FOLDER_DASHED, FOLDER_NOTCH_MINUS, FOLDER_NOTCH_PLUS, PLUGS, PLUGS_CONNECTED, POLYGON};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, Network, NetworkTab, NetworkTabType, View};
@@ -45,11 +45,13 @@ impl NetworkTab for NetworkMining {
             } else {
                 View::center_content(ui, 162.0, |ui| {
                     View::big_loading_spinner(ui);
-                    ui.add_space(18.0);
-                    ui.label(RichText::new(t!("network_mining.loading"))
-                        .size(16.0)
-                        .color(Colors::INACTIVE_TEXT)
-                    );
+                    if !Node::is_stopping() {
+                        ui.add_space(18.0);
+                        ui.label(RichText::new(t!("network_mining.loading"))
+                            .size(16.0)
+                            .color(Colors::INACTIVE_TEXT)
+                        );
+                    }
                 });
             }
             return;
