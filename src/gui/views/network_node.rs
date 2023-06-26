@@ -13,7 +13,7 @@
 // limitations under the License.
 
 use eframe::epaint::Stroke;
-use egui::{RichText, Rounding, ScrollArea, Ui};
+use egui::{RichText, Rounding, ScrollArea};
 use grin_servers::PeerStats;
 
 use crate::gui::Colors;
@@ -182,13 +182,13 @@ impl NetworkTab for NetworkNode {
             });
     }
 
-    fn on_modal_ui(&mut self, ui: &mut Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {}
+    fn on_modal_ui(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {}
 }
 
 fn draw_peer_stats(ui: &mut egui::Ui, peer: &PeerStats, rounding: [bool; 2]) {
     ui.vertical(|ui| {
         let mut rect = ui.available_rect_before_wrap();
-        rect.set_height(78.0);
+        rect.set_height(77.3);
 
         ui.painter().rect(
             rect,
@@ -251,6 +251,6 @@ fn draw_peer_stats(ui: &mut egui::Ui, peer: &PeerStats, rounding: [bool; 2]) {
 
     // Add space after last item
     if rounding[1] {
-        ui.add_space(3.0);
+        ui.add_space(2.0);
     }
 }

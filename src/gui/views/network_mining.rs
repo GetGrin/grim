@@ -77,7 +77,7 @@ impl NetworkTab for NetworkMining {
                         ui.add_space(4.0);
 
                         // Show button to enable stratum server if port is available.
-                        if self.stratum_server_setup.stratum_port_available {
+                        if self.stratum_server_setup.is_stratum_port_available {
                             ui.add_space(6.0);
                             View::button(ui, t!("network_mining.enable_server"), Colors::GOLD, || {
                                 Node::start_stratum_server();

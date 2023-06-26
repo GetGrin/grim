@@ -12,16 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::Ui;
-use grin_core::global::ChainTypes;
-use crate::gui::Colors;
-use crate::gui::icons::COMPUTER_TOWER;
+use egui::ScrollArea;
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Modal, NetworkTab, NetworkTabType, View};
-use crate::Settings;
+use crate::gui::views::{Modal, NetworkTab, NetworkTabType};
+use crate::gui::views::settings_node::NodeSetup;
 
 #[derive(Default)]
-pub struct NetworkSettings;
+pub struct NetworkSettings {
+    node_setup: NodeSetup
+}
 
 impl NetworkTab for NetworkSettings {
     fn get_type(&self) -> NetworkTabType {
@@ -29,13 +28,15 @@ impl NetworkTab for NetworkSettings {
     }
 
     fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
-        View::sub_title(ui, format!("{} {}", COMPUTER_TOWER, t!("network_settings.server")));
-        View::horizontal_line(ui, Colors::ITEM_STROKE);
-        ui.add_space(4.0);
-
+        ScrollArea::vertical()
+            .id_source("network_settings")
+            .auto_shrink([false; 2])
+            .show(ui, |ui| {
+                self.node_setup.ui(ui, cb);
+            });
     }
 
-    fn on_modal_ui(&mut self, ui: &mut Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
+    fn on_modal_ui(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
 
     }
 }

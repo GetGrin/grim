@@ -43,7 +43,7 @@ impl View {
     /// Show and cut long text with ﹍ character.
     pub fn ellipsize_text(ui: &mut egui::Ui, text: String, size: f32, color: Color32) {
         let mut job = LayoutJob::single_section(text, TextFormat {
-            font_id: FontId::proportional(size), color, .. Default::default()
+            font_id: FontId::proportional(size), color, ..Default::default()
         });
         job.wrap = TextWrapping {
             max_rows: 1,
@@ -201,7 +201,7 @@ impl View {
 
     /// Draw small gold loading spinner.
     pub fn small_loading_spinner(ui: &mut egui::Ui) {
-        Spinner::new().size(48.0).color(Colors::GOLD).ui(ui);
+        Spinner::new().size(42.0).color(Colors::GOLD).ui(ui);
     }
 
     /// Draw the button that looks like checkbox with callback on check.
@@ -210,6 +210,7 @@ impl View {
             true => { (format!("{} {}", CHECK_SQUARE, text), Colors::TEXT_BUTTON) }
             false => { (format!("{} {}", SQUARE, text), Colors::TEXT) }
         };
+
         let br = Button::new(RichText::new(text_value).size(18.0).color(color))
             .frame(false)
             .stroke(Stroke::NONE)

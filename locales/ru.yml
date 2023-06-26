@@ -11,6 +11,7 @@ network:
   restart: Перезапустить
   autorun: Автозапуск
   disabled_server: 'Включите встроенный узел или добавьте другой способ подключения, нажав %{dots} в левом-верхнем углу экрана.'
+  no_ip_addresses: В вашей системе отсутствуют доступные IP адреса, запуск сервера невозможен, проверьте ваше подключение к сети.
 sync_status:
   node_restarting: Узел перезапускается
   node_down: Узел выключен
@@ -59,7 +60,6 @@ network_mining:
   enable_server: Включить сервер
   server_setting: 'Включите stratum-сервер или измените больше настроек, выбрав %{settings} внизу экрана. Для изменения настроек запущенного сервера потребуется перезапуск приложения.'
   info: 'Сервер майнинга запущен, вы можете изменить его настройки, выбрав %{settings} внизу экрана. Данные обновляются, когда устройства подключены.'
-  no_ip_addresses: В вашей системе отсутствуют доступные IP адреса, запуск stratum-сервера невозможен, проверьте ваше подключение к сети.
   port_unavailable: Указанный порт недоступен
   rewards_wallet: Кошелёк для наград
   server: Stratum-сервер
@@ -71,14 +71,20 @@ network_mining:
   connected: Подключен
   disconnected: Отключен
 network_settings:
-  server: Сервер
   ip_address: IP Адрес
   port: Порт
   change_port: Изменить порт
   enter_value: 'Введите значение:'
+  server:
+    title: Сервер
+    enable: Включить
+    disable: Выключить
+    restart: Перезапустить
+    api_ip_address: API IP Адрес
 modal:
   cancel: Отмена
   save: Сохранить
+  confirmation: Подтверждение
 modal_exit:
   description: Вы уверены, что хотите выйти из приложения?
   exit: Выход

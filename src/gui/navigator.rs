@@ -97,7 +97,7 @@ impl Navigator {
 
     /// Set exit confirmation [`Modal`] with provided [NAVIGATOR_STATE] lock.
     fn show_exit_modal_nav(mut w_nav: RwLockWriteGuard<Navigator>) {
-        let m = Modal::new(Self::EXIT_MODAL).title(t!("modal_exit.exit"));
+        let m = Modal::new(Self::EXIT_MODAL).title(t!("modal.confirmation"));
         w_nav.modal = Some(m);
     }
 

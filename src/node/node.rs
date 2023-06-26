@@ -151,12 +151,6 @@ impl Node {
 
             loop {
                 if Self::is_restarting() {
-                    // Clean server stats.
-                    {
-                        let mut w_stats = NODE_STATE.stats.write().unwrap();
-                        *w_stats = None;
-                    }
-
                     // Stop the server.
                     server.stop();
 

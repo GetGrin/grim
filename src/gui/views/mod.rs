@@ -29,4 +29,4 @@ mod network_settings;
 mod network_metrics;
 mod network_mining;
 mod settings_stratum;
-mod settings_node_server;
+mod settings_node;

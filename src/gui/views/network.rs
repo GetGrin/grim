@@ -105,7 +105,7 @@ impl Network {
         egui::TopBottomPanel::bottom("network_tabs")
             .frame(egui::Frame {
                 outer_margin: Margin::same(5.0),
-                .. Default::default()
+                ..Default::default()
             })
             .show_inside(ui, |ui| {
                 self.draw_tabs(ui);
@@ -116,7 +116,7 @@ impl Network {
                 stroke: View::DEFAULT_STROKE,
                 inner_margin: Margin::same(4.0),
                 fill: Colors::WHITE,
-                .. Default::default()
+                ..Default::default()
             })
             .show_inside(ui, |ui| {
                 self.current_tab.ui(ui, cb);
@@ -246,21 +246,22 @@ impl Network {
                 .size(16.0)
                 .color(Colors::INACTIVE_TEXT)
             );
-
             ui.add_space(10.0);
-
             View::button(ui, t!("network.enable_node"), Colors::GOLD, || {
                 Node::start();
             });
-
             ui.add_space(2.0);
+            Self::autorun_node_checkbox(ui);
+        });
+    }
 
-            let autostart: bool = Settings::app_config_to_read().auto_start_node;
-            View::checkbox(ui, autostart, t!("network.autorun"), || {
-                let mut w_app_config = Settings::app_config_to_update();
-                w_app_config.auto_start_node = !autostart;
-                w_app_config.save();
-            });
+    /// Draw checkbox with setting to run node on app launch.
+    pub fn autorun_node_checkbox(ui: &mut egui::Ui) {
+        let autostart: bool = Settings::app_config_to_read().auto_start_node;
+        View::checkbox(ui, autostart, t!("network.autorun"), || {
+            let mut w_app_config = Settings::app_config_to_update();
+            w_app_config.auto_start_node = !autostart;
+            w_app_config.save();
         });
     }
 
@@ -275,6 +276,17 @@ impl Network {
             }
         }
         addresses
+    }
+
+    /// Show message when IP addresses are not available at system.
+    pub fn no_ip_address_ui(ui: &mut egui::Ui) {
+        ui.vertical_centered(|ui| {
+            ui.label(RichText::new(t!("network.no_ip_addresses"))
+                .size(16.0)
+                .color(Colors::INACTIVE_TEXT)
+            );
+            ui.add_space(6.0);
+        });
     }
 
     /// Check whether a port is available on the provided host.

@@ -13,7 +13,7 @@
 // limitations under the License.
 
 use chrono::{DateTime, NaiveDateTime, Utc};
-use egui::{RichText, Rounding, ScrollArea, Stroke, Ui};
+use egui::{RichText, Rounding, ScrollArea, Stroke};
 use grin_servers::DiffBlock;
 
 use crate::gui::Colors;
@@ -140,7 +140,7 @@ impl NetworkTab for NetworkMetrics {
             );
     }
 
-    fn on_modal_ui(&mut self, ui: &mut Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {}
+    fn on_modal_ui(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {}
 }
 
 const DIFF_BLOCK_UI_HEIGHT: f32 = 76.60;
