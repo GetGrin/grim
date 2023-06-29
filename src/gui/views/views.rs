@@ -70,7 +70,7 @@ impl View {
             ui.input_mut().pointer = PointerState::default();
         }
         if drag_resp.drag_released() || drag_resp.clicked() {
-            return true
+            return true;
         }
         false
     }

@@ -337,15 +337,5 @@ impl Network {
             ui.add_space(6.0);
         });
     }
-
-    /// Check whether a port is available on the provided host.
-    pub fn is_port_available(host: &String, port: &String) -> bool {
-        if let Ok(p) = port.parse::<u16>() {
-            let ip_addr = Ipv4Addr::from_str(host.as_str()).unwrap();
-            let ipv4 = SocketAddrV4::new(ip_addr, p);
-            return TcpListener::bind(ipv4).is_ok();
-        }
-        false
-    }
 }
 

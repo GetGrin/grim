@@ -76,6 +76,7 @@ network_settings:
   enter_value: Введите значение
   port_unavailable: Указанный порт недоступен
   restart_app_required: Для применения изменений требуется перезапуск приложения.
+  restart_node_required: Для применения изменений требуется перезапуск узла.
   enable: Включить
   disable: Выключить
   restart: Перезапустить

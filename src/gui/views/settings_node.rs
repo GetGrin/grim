@@ -44,7 +44,7 @@ pub struct NodeSetup {
 impl Default for NodeSetup {
     fn default() -> Self {
         let (api_ip, api_port) = NodeConfig::get_api_address_port();
-        let is_api_port_available = is_api_port_available(&api_ip, &api_port);
+        let is_api_port_available = NodeConfig::is_api_port_available(&api_ip, &api_port);
         Self {
             api_port_edit: api_port,
             api_port_available_edit: is_api_port_available,
@@ -127,8 +127,13 @@ impl NodeSetup {
                 // Show API IP addresses to select.
                 let (api_ip, api_port) = NodeConfig::get_api_address_port();
                 Network::ip_list_ui(ui, &api_ip, &addrs, |selected_ip| {
-                    self.is_api_port_available = is_api_port_available(selected_ip, &api_port);
+                    println!("12345 selected_ip {}", selected_ip);
+                    let api_available = NodeConfig::is_api_port_available(selected_ip, &api_port);
+                    println!("12345 selected_ip is_api_port_available {}", api_available);
+                    self.is_api_port_available = api_available;
+                    println!("12345 before save");
                     NodeConfig::save_api_address_port(selected_ip, &api_port);
+                    println!("12345 after save");
                 });
 
                 ui.label(RichText::new(t!("network_settings.api_port"))
@@ -161,14 +166,21 @@ impl NodeSetup {
             Navigator::show_modal(port_modal);
             cb.show_keyboard();
         });
-        ui.add_space(14.0);
+        ui.add_space(6.0);
 
-        // Show error when API server port is unavailable.
         if !self.is_api_port_available {
+            // Show error when API server port is unavailable.
             ui.label(RichText::new(t!("network_settings.port_unavailable"))
                 .size(16.0)
                 .color(Colors::RED));
-            ui.add_space(12.0);
+            ui.add_space(6.0);
+        } else if Node::is_running() {
+            // Show reminder to restart node if settings are changed.
+            ui.label(RichText::new(t!("network_settings.restart_node_required"))
+                .size(16.0)
+                .color(Colors::INACTIVE_TEXT)
+            );
+            ui.add_space(6.0);
         }
     }
 
@@ -221,7 +233,10 @@ impl NodeSetup {
                         View::button(ui, t!("modal.save"), Colors::WHITE, || {
                             // Check if port is available.
                             let (ip, _) = NodeConfig::get_api_address_port();
-                            let available = is_api_port_available(&ip, &self.api_port_edit);
+                            let available = NodeConfig::is_api_port_available(
+                                &ip,
+                                &self.api_port_edit
+                            );
                             self.api_port_available_edit = available;
 
                             if self.api_port_available_edit {
@@ -242,23 +257,4 @@ impl NodeSetup {
             });
         });
     }
-}
-
-fn is_api_port_available(ip: &String, port: &String) -> bool {
-    let same_address_as_running = {
-        let (current_ip, current_port) = NodeConfig::get_api_address_port();
-        Node::is_running() && &current_ip == ip && &current_port == port
-    };
-
-    if same_address_as_running || (!Node::is_running() && Network::is_port_available(&ip, &port)) {
-        if &NodeConfig::get_p2p_port().to_string() != port {
-            let (stratum_ip, stratum_port) = NodeConfig::get_stratum_address_port();
-            return if &stratum_ip == ip {
-                &stratum_port != port
-            } else {
-                true
-            }
-        }
-    }
-    false
 }

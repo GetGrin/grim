@@ -76,6 +76,7 @@ network_settings:
   enter_value: Enter value
   port_unavailable: Specified port is unavailable
   restart_app_required: App restart is required to apply changes.
+  restart_node_required: Node server restart is required to apply changes.
   enable: Enable
   disable: Disable
   restart: Restart

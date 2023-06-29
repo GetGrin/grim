@@ -14,7 +14,7 @@
 
 use std::fs::File;
 use std::io::{BufRead, BufReader, Write};
-use std::net::IpAddr;
+use std::net::{IpAddr, Ipv4Addr, SocketAddrV4, TcpListener};
 use std::str::FromStr;
 
 use grin_config::{config, ConfigError, ConfigMembers, GlobalConfig};
@@ -24,6 +24,7 @@ use grin_p2p::msg::PeerAddrs;
 use grin_p2p::{PeerAddr, Seeding};
 use grin_servers::common::types::ChainValidationMode;
 use serde::{Deserialize, Serialize};
+use crate::node::Node;
 
 use crate::Settings;
 
@@ -69,6 +70,12 @@ impl NodeConfig {
         Settings::write_to_file(&self.members, config_path);
     }
 
+    /// Get node config values, requires to start node.
+    pub fn get_members() -> ConfigMembers {
+        let r_config = Settings::node_config_to_read();
+        r_config.members.clone()
+    }
+
     /// Check that the api secret files exist and are valid.
     fn check_api_secret_files(
         chain_type: &ChainTypes,
@@ -82,6 +89,16 @@ impl NodeConfig {
         } else {
             config::check_api_secret(&api_secret_path)
         }
+    }
+
+    /// Check whether a port is available on the provided host.
+    pub fn is_port_available(host: &String, port: &String) -> bool {
+        if let Ok(p) = port.parse::<u16>() {
+            let ip_addr = Ipv4Addr::from_str(host.as_str()).unwrap();
+            let ipv4 = SocketAddrV4::new(ip_addr, p);
+            return TcpListener::bind(ipv4).is_ok();
+        }
+        false
     }
 
     /// Get stratum server IP address and port.
@@ -114,6 +131,27 @@ impl NodeConfig {
         w_node_config.save();
     }
 
+    /// Check if stratum server port is available across the system and config.
+    pub fn is_stratum_port_available(ip: &String, port: &String) -> bool {
+        if Self::is_port_available(&ip, &port) {
+            if &Self::get_p2p_port().to_string() != port {
+                let (api_ip, api_port) = Self::get_api_address_port();
+                return if &api_ip == ip {
+                    &api_port != port
+                } else {
+                    true
+                }
+            }
+        }
+        false
+    }
+
+    /// Get stratum mining server wallet address to get rewards.
+    pub fn get_stratum_wallet_addr() -> String {
+        let r_config = Settings::node_config_to_read();
+        r_config.members.clone().server.stratum_mining_config.unwrap().wallet_listener_url
+    }
+
     /// Check if stratum mining server autorun is enabled.
     pub fn is_stratum_autorun_enabled() -> bool {
         let stratum_config = Settings::node_config_to_read()
@@ -141,18 +179,6 @@ impl NodeConfig {
         w_node_config.save();
     }
 
-    /// Disable stratum mining server autorun.
-    pub fn disable_stratum_autorun() {
-        let mut w_node_config = Settings::node_config_to_update();
-        w_node_config.members
-            .server
-            .stratum_mining_config
-            .as_mut()
-            .unwrap()
-            .enable_stratum_server = Some(false);
-        w_node_config.save();
-    }
-
     /// Get API server IP address and port.
     pub fn get_api_address_port() -> (String, String) {
         let r_config = Settings::node_config_to_read();
@@ -171,6 +197,25 @@ impl NodeConfig {
         let mut w_node_config = Settings::node_config_to_update();
         w_node_config.members.server.api_http_addr = addr_to_save;
         w_node_config.save();
+    }
+
+    /// Check if api server port is available across the system and config.
+    pub fn is_api_port_available(ip: &String, port: &String) -> bool {
+        if Node::is_running() {
+            // Check if API server with same address is running.
+            let same_running = if let Some(running_addr) =  Node::get_api_addr() {
+                running_addr == format!("{}:{}", ip, port)
+            } else {
+                false
+            };
+            if same_running || NodeConfig::is_port_available(&ip, &port) {
+                return &NodeConfig::get_p2p_port().to_string() != port;
+            }
+            return false;
+        } else if NodeConfig::is_port_available(&ip, &port) {
+            return &NodeConfig::get_p2p_port().to_string() != port;
+        }
+        false
     }
 
     /// Get API secret text.

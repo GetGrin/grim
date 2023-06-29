@@ -38,7 +38,7 @@ pub struct StratumServerSetup {
 impl Default for StratumServerSetup {
     fn default() -> Self {
         let (ip, port) = NodeConfig::get_stratum_address_port();
-        let is_port_available = is_stratum_port_available(&ip, &port);
+        let is_port_available = NodeConfig::is_stratum_port_available(&ip, &port);
         Self {
             stratum_port_edit: port,
             stratum_port_available_edit: is_port_available,
@@ -72,11 +72,8 @@ impl StratumServerSetup {
             // Show stratum IP addresses to select.
             let (ip, port) = NodeConfig::get_stratum_address_port();
             Network::ip_list_ui(ui, &ip, &all_ips, |selected_ip| {
-                self.is_port_available = is_stratum_port_available(selected_ip, &port);
+                self.is_port_available = NodeConfig::is_stratum_port_available(selected_ip, &port);
                 NodeConfig::save_stratum_address_port(selected_ip, &port);
-                if !self.is_port_available {
-                    NodeConfig::disable_stratum_autorun();
-                }
             });
 
             ui.label(RichText::new(t!("network_settings.port"))
@@ -169,7 +166,10 @@ impl StratumServerSetup {
                         View::button(ui, t!("modal.save"), Colors::WHITE, || {
                             // Check if port is available.
                             let (ip, _) = NodeConfig::get_api_address_port();
-                            let available = is_stratum_port_available(&ip, &self.stratum_port_edit);
+                            let available = NodeConfig::is_stratum_port_available(
+                                &ip,
+                                &self.stratum_port_edit
+                            );
                             self.stratum_port_available_edit = available;
 
                             // Save port at config if it's available.
@@ -187,18 +187,4 @@ impl StratumServerSetup {
             });
         });
     }
-}
-
-fn is_stratum_port_available(ip: &String, port: &String) -> bool {
-    if Network::is_port_available(&ip, &port) {
-        if &NodeConfig::get_p2p_port().to_string() != port {
-            let (api_ip, api_port) = NodeConfig::get_api_address_port();
-            return if &api_ip == ip {
-                &api_port != port
-            } else {
-                true
-            }
-        }
-    }
-    false
 }

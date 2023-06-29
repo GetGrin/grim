@@ -113,13 +113,9 @@ impl NetworkTab for NetworkMining {
             });
             columns[1].vertical_centered(|ui| {
                 //TODO: Stratum mining wallet listening address. Replace with local wallet name.
-                let wallet_address = Settings::node_config_to_read()
-                    .members.clone()
-                    .server.stratum_mining_config.unwrap()
-                    .wallet_listener_url
-                    .replace("http://", "");
+                let wallet_addr = NodeConfig::get_stratum_wallet_addr().replace("http://", "");
                 View::rounded_box(ui,
-                                  wallet_address,
+                                  wallet_addr,
                                   t!("network_mining.rewards_wallet"),
                                   [false, true, false, true]);
             });

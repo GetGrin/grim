@@ -26,6 +26,7 @@ use grin_servers::{Server, ServerStats};
 use grin_servers::common::types::Error;
 use jni::sys::{jboolean, jstring};
 use lazy_static::lazy_static;
+use crate::node::NodeConfig;
 
 use crate::Settings;
 
@@ -38,6 +39,10 @@ lazy_static! {
 pub struct Node {
     /// Statistics data for UI.
     stats: Arc<RwLock<Option<ServerStats>>>,
+    /// Running API server address.
+    api_addr: Arc<RwLock<Option<String>>>,
+    /// Running P2P server port.
+    p2p_port: Arc<RwLock<Option<u16>>>,
     /// Indicator if server is starting.
     starting: AtomicBool,
     /// Thread flag to stop the server and start it again.
@@ -56,6 +61,8 @@ impl Default for Node {
     fn default() -> Self {
         Self {
             stats: Arc::new(RwLock::new(None)),
+            api_addr: Arc::new(RwLock::new(None)),
+            p2p_port: Arc::new(RwLock::new(None)),
             starting: AtomicBool::new(false),
             restart_needed: AtomicBool::new(false),
             stop_needed: AtomicBool::new(false),
@@ -86,6 +93,26 @@ impl Node {
             NODE_STATE.restart_needed.store(true, Ordering::Relaxed);
         } else {
             Node::start();
+        }
+    }
+
+    /// Get API server address if node is running.
+    pub fn get_api_addr() -> Option<String> {
+        let r_api_addr = NODE_STATE.api_addr.read().unwrap();
+        if r_api_addr.is_some() {
+            Some(r_api_addr.as_ref().unwrap().clone())
+        } else {
+            None
+        }
+    }
+
+    /// Get P2P server port if node is running.
+    pub fn get_p2p_port() -> Option<u16> {
+        let r_p2p_port = NODE_STATE.p2p_port.read().unwrap();
+        if r_p2p_port.is_some() {
+            Some(r_p2p_port.unwrap())
+        } else {
+            None
         }
     }
 
@@ -165,8 +192,9 @@ impl Node {
                                     NODE_STATE.restart_needed.store(false, Ordering::Relaxed);
                                 }
                                 Err(e) => {
-                                    Self::handle_init_error(&e);
-                                    return;
+                                    NODE_STATE.restart_needed.store(false, Ordering::Relaxed);
+                                    Self::on_start_error(&e);
+                                    break;
                                 }
                             }
                         } else if Self::is_stopping() {
@@ -182,10 +210,21 @@ impl Node {
                             NODE_STATE.starting.store(false, Ordering::Relaxed);
                             NODE_STATE.stop_needed.store(false, Ordering::Relaxed);
                             NODE_STATE.start_stratum_server.store(false, Ordering::Relaxed);
+
+                            // Clean launched API server address.
+                            {
+                                let mut w_api_addr = NODE_STATE.api_addr.write().unwrap();
+                                *w_api_addr = None;
+                            }
+                            // Clean launched P2P server port.
+                            {
+                                let mut w_p2p_port = NODE_STATE.p2p_port.write().unwrap();
+                                *w_p2p_port = None;
+                            }
                             break;
                         } else {
+                            // Start stratum mining server.
                             if Self::is_stratum_server_starting() {
-                                // Start mining server.
                                 let stratum_config = server
                                     .config
                                     .stratum_mining_config
@@ -195,16 +234,14 @@ impl Node {
 
                                 // Wait for mining server to start and update status.
                                 thread::sleep(Duration::from_millis(100));
-
                                 NODE_STATE.start_stratum_server.store(false, Ordering::Relaxed);
                             }
 
-                            let stats = server.get_server_stats();
-                            if stats.is_ok() {
-                                // Update server stats.
+                            // Update server stats.
+                            if let Ok(stats) = server.get_server_stats() {
                                 {
                                     let mut w_stats = NODE_STATE.stats.write().unwrap();
-                                    *w_stats = Some(stats.as_ref().ok().unwrap().clone());
+                                    *w_stats = Some(stats);
                                 }
 
                                 if first_start {
@@ -217,14 +254,25 @@ impl Node {
                     }
                 }
                 Err(e) => {
-                    Self::handle_init_error(&e);
+                    NODE_STATE.starting.store(false, Ordering::Relaxed);
+                    Self::on_start_error(&e);
                 }
             }
         });
     }
 
     /// Handle node [`Server`] error on start.
-    fn handle_init_error(e: &Error) {
+    fn on_start_error(e: &Error) {
+        // Clean launched API server address.
+        {
+            let mut w_api_addr = NODE_STATE.api_addr.write().unwrap();
+            *w_api_addr = None;
+        }
+        // Clean launched P2P server port.
+        {
+            let mut w_p2p_port = NODE_STATE.p2p_port.write().unwrap();
+            *w_p2p_port = None;
+        }
         //TODO: Create error
         // NODE_STATE.init_error = Some(e);
 
@@ -412,7 +460,7 @@ impl Node {
 /// Start the [`Server`] for node.
 fn start_server() -> Result<Server, Error>  {
     // Get current global config
-    let config = &Settings::node_config_to_read().members;
+    let config = NodeConfig::get_members();
     let server_config = config.server.clone();
 
     // Remove temporary file dir
@@ -458,6 +506,19 @@ fn start_server() -> Result<Server, Error>  {
 
     let api_chan: &'static mut (oneshot::Sender<()>, oneshot::Receiver<()>) =
         Box::leak(Box::new(oneshot::channel::<()>()));
+
+    // Write launching API server address.
+    {
+        let mut w_api_addr = NODE_STATE.api_addr.write().unwrap();
+        *w_api_addr = Some(config.server.api_http_addr);
+    }
+
+    // Write launching P2P server port.
+    {
+        let mut w_p2p_port = NODE_STATE.p2p_port.write().unwrap();
+        *w_p2p_port = Some(config.server.p2p_config.port);
+    }
+
     let server_result = Server::new(server_config.clone(), None, api_chan);
     server_result
 }
