@@ -23,6 +23,7 @@ use grin_chain::SyncStatus;
 use grin_core::global;
 use grin_core::global::ChainTypes;
 use grin_servers::{Server, ServerStats};
+use grin_servers::common::types::Error;
 use jni::sys::{jboolean, jstring};
 use lazy_static::lazy_static;
 
@@ -46,7 +47,9 @@ pub struct Node {
     /// Flag to check if app exit is needed after server stop.
     exit_after_stop: AtomicBool,
     /// Thread flag to start stratum server at separate.
-    start_stratum_server: AtomicBool
+    start_stratum_server: AtomicBool,
+    /// Error on [`Server`] start.
+    init_error: Option<Error>
 }
 
 impl Default for Node {
@@ -57,7 +60,8 @@ impl Default for Node {
             restart_needed: AtomicBool::new(false),
             stop_needed: AtomicBool::new(false),
             exit_after_stop: AtomicBool::new(false),
-            start_stratum_server: AtomicBool::new(false)
+            start_stratum_server: AtomicBool::new(false),
+            init_error: None
         }
     }
 }
@@ -124,103 +128,185 @@ impl Node {
     pub fn get_sync_status() -> Option<SyncStatus> {
         // Return Shutdown status when node is stopping.
         if Self::is_stopping() {
-            return Some(SyncStatus::Shutdown)
+            return Some(SyncStatus::Shutdown);
         }
 
         // Return Initial status when node is starting or restarting.
         if Self::is_starting() || Self::is_restarting() {
-            return Some(SyncStatus::Initial)
+            return Some(SyncStatus::Initial);
         }
 
         let stats = Self::get_stats();
         // Return sync status when server is running (stats are not empty).
         if stats.is_some() {
-            return Some(stats.as_ref().unwrap().sync_status)
+            return Some(stats.as_ref().unwrap().sync_status);
         }
         None
     }
 
-    /// Start the node [`Server`] at separate thread to update [`NODE_STATE`] with [`ServerStats`].
+    /// Start node [`Server`] at separate thread to update [`NODE_STATE`] with [`ServerStats`].
     fn start_server_thread() {
         thread::spawn(move || {
             NODE_STATE.starting.store(true, Ordering::Relaxed);
 
             // Start the server.
-            let mut server = start_server();
-            let mut first_start = true;
+            match start_server() {
+                Ok(mut server) => {
+                    let mut first_start = true;
+                    loop {
+                        if Self::is_restarting() {
+                            // Stop the server.
+                            server.stop();
 
-            loop {
-                if Self::is_restarting() {
-                    // Stop the server.
-                    server.stop();
+                            // Create new server.
+                            match start_server() {
+                                Ok(s) => {
+                                    server = s;
+                                    NODE_STATE.restart_needed.store(false, Ordering::Relaxed);
+                                }
+                                Err(e) => {
+                                    Self::handle_init_error(&e);
+                                    return;
+                                }
+                            }
+                        } else if Self::is_stopping() {
+                            // Clean server stats.
+                            {
+                                let mut w_stats = NODE_STATE.stats.write().unwrap();
+                                *w_stats = None;
+                            }
 
-                    // Create new server.
-                    server = start_server();
+                            // Stop the server.
+                            server.stop();
 
-                    NODE_STATE.restart_needed.store(false, Ordering::Relaxed);
-                } else if Self::is_stopping() {
-                    // Clean server stats.
-                    {
-                        let mut w_stats = NODE_STATE.stats.write().unwrap();
-                        *w_stats = None;
-                    }
-
-                    // Stop the server.
-                    server.stop();
-
-                    NODE_STATE.starting.store(false, Ordering::Relaxed);
-                    NODE_STATE.stop_needed.store(false, Ordering::Relaxed);
-                    NODE_STATE.start_stratum_server.store(false, Ordering::Relaxed);
-                    break;
-                } else {
-                    if Self::is_stratum_server_starting() {
-                        // Start mining server.
-                        let stratum_config = server.config.stratum_mining_config.clone().unwrap();
-                        server.start_stratum_server(stratum_config);
-
-                        // Wait for mining server to start and update status.
-                        thread::sleep(Duration::from_millis(100));
-
-                        NODE_STATE.start_stratum_server.store(false, Ordering::Relaxed);
-                    }
-
-                    let stats = server.get_server_stats();
-                    if stats.is_ok() {
-                        // Update server stats.
-                        {
-                            let mut w_stats = NODE_STATE.stats.write().unwrap();
-                            *w_stats = Some(stats.as_ref().ok().unwrap().clone());
-                        }
-
-                        if first_start {
                             NODE_STATE.starting.store(false, Ordering::Relaxed);
-                            first_start = false;
+                            NODE_STATE.stop_needed.store(false, Ordering::Relaxed);
+                            NODE_STATE.start_stratum_server.store(false, Ordering::Relaxed);
+                            break;
+                        } else {
+                            if Self::is_stratum_server_starting() {
+                                // Start mining server.
+                                let stratum_config = server
+                                    .config
+                                    .stratum_mining_config
+                                    .clone()
+                                    .unwrap();
+                                server.start_stratum_server(stratum_config);
+
+                                // Wait for mining server to start and update status.
+                                thread::sleep(Duration::from_millis(100));
+
+                                NODE_STATE.start_stratum_server.store(false, Ordering::Relaxed);
+                            }
+
+                            let stats = server.get_server_stats();
+                            if stats.is_ok() {
+                                // Update server stats.
+                                {
+                                    let mut w_stats = NODE_STATE.stats.write().unwrap();
+                                    *w_stats = Some(stats.as_ref().ok().unwrap().clone());
+                                }
+
+                                if first_start {
+                                    NODE_STATE.starting.store(false, Ordering::Relaxed);
+                                    first_start = false;
+                                }
+                            }
                         }
+                        thread::sleep(Duration::from_millis(250));
                     }
                 }
-                thread::sleep(Duration::from_millis(250));
+                Err(e) => {
+                    Self::handle_init_error(&e);
+                }
             }
         });
+    }
+
+    /// Handle node [`Server`] error on start.
+    fn handle_init_error(e: &Error) {
+        //TODO: Create error
+        // NODE_STATE.init_error = Some(e);
+
+        // // Clean-up server data on data init error.
+        // // TODO: Ask user to clean-up data
+        // let clean_server_and_recreate = || -> Server {
+        //     let mut db_path = PathBuf::from(&server_config.db_root);
+        //     db_path.push("grin.lock");
+        //     fs::remove_file(db_path).unwrap();
+        //
+        //     // Remove chain data on server start error
+        //     let dirs_to_remove: Vec<&str> = vec!["header", "lmdb", "txhashset"];
+        //     for dir in dirs_to_remove {
+        //         let mut path = PathBuf::from(&server_config.db_root);
+        //         path.push(dir);
+        //         fs::remove_dir_all(path).unwrap();
+        //     }
+        //
+        //     // Recreate server
+        //     let api_chan: &'static mut (oneshot::Sender<()>, oneshot::Receiver<()>) =
+        //         Box::leak(Box::new(oneshot::channel::<()>()));
+        //     server_result = Server::new(server_config.clone(), None, api_chan);
+        //     server_result.unwrap()
+        // };
+
+        // Show err on server init error.
+        // TODO: Ask user to clean-up data
+        let show_error = |err: String| {
+            println!("Node server creation error:\n{}", err);
+        };
+
+        //TODO: Better error handling
+        match e {
+            Error::Store(_) => {
+                //TODO: Set err to ask user to clean data
+                //(clean_server_and_recreate)()
+            }
+            Error::Chain(_) => {
+                //TODO: Set err to ask user to clean data
+                //(clean_server_and_recreate)()
+            }
+            //TODO: Handle P2P error (Show config error msg)
+            Error::P2P(ref e) => {
+                (show_error)("P2P error".to_string());
+            }
+            //TODO: Handle API error (Show config error msg)
+            Error::API(ref e) => {
+                (show_error)(e.to_string());
+            }
+            //TODO: Seems like another node instance running?
+            Error::IOError(ref e) => {
+                (show_error)(e.to_string());
+            }
+            //TODO: Show config error msg
+            Error::Configuration(ref e) => {
+                (show_error)(e.to_string());
+            }
+            //TODO: Unknown error
+            _ => {
+                (show_error)("Unknown error".to_string());
+            }
+        }
     }
 
     /// Get synchronization status i18n text.
     pub fn get_sync_status_text() -> String {
         if Node::is_stopping() {
-            return t!("sync_status.shutdown")
+            return t!("sync_status.shutdown");
         };
 
         if Node::is_starting() {
-            return t!("sync_status.initial")
+            return t!("sync_status.initial");
         };
 
         if Node::is_restarting() {
-            return t!("sync_status.node_restarting")
+            return t!("sync_status.node_restarting");
         }
 
         let sync_status = Self::get_sync_status();
 
         if sync_status.is_none() {
-            return t!("sync_status.node_down")
+            return t!("sync_status.node_down");
         }
 
         match sync_status.unwrap() {
@@ -323,8 +409,8 @@ impl Node {
     }
 }
 
-/// Start the node [`Server`].
-fn start_server() -> Server {
+/// Start the [`Server`] for node.
+fn start_server() -> Result<Server, Error>  {
     // Get current global config
     let config = &Settings::node_config_to_read().members;
     let server_config = config.server.clone();
@@ -372,27 +458,8 @@ fn start_server() -> Server {
 
     let api_chan: &'static mut (oneshot::Sender<()>, oneshot::Receiver<()>) =
         Box::leak(Box::new(oneshot::channel::<()>()));
-    let mut server_result = Server::new(server_config.clone(), None, api_chan);
-    if server_result.is_err() {
-        let mut db_path = PathBuf::from(&server_config.db_root);
-        db_path.push("grin.lock");
-        fs::remove_file(db_path).unwrap();
-
-        // Remove chain data on server start error
-        let dirs_to_remove: Vec<&str> = vec!["header", "lmdb", "txhashset"];
-        for dir in dirs_to_remove {
-            let mut path = PathBuf::from(&server_config.db_root);
-            path.push(dir);
-            fs::remove_dir_all(path).unwrap();
-        }
-
-        // Recreate server
-        let api_chan: &'static mut (oneshot::Sender<()>, oneshot::Receiver<()>) =
-            Box::leak(Box::new(oneshot::channel::<()>()));
-        server_result = Server::new(server_config.clone(), None, api_chan);
-    }
-
-    server_result.unwrap()
+    let server_result = Server::new(server_config.clone(), None, api_chan);
+    server_result
 }
 
 #[allow(dead_code)]
