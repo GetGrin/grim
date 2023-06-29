@@ -37,6 +37,11 @@ impl NetworkTab for NetworkSettings {
     }
 
     fn on_modal_ui(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
-
+        match modal.id {
+            NodeSetup::API_PORT_MODAL => {
+                self.node_setup.api_port_modal_ui(ui, modal, cb);
+            },
+            _ => {}
+        }
     }
 }

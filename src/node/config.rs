@@ -35,7 +35,7 @@ pub struct NodeConfig {
 
 impl NodeConfig {
     /// Initialize integrated node config.
-    pub fn init(chain_type: ChainTypes) -> Self {
+    pub fn init(chain_type: &ChainTypes) -> Self {
         let _ = Self::check_api_secret_files(chain_type, API_SECRET_FILE_NAME);
         let _ = Self::check_api_secret_files(chain_type, FOREIGN_API_SECRET_FILE_NAME);
 
@@ -46,11 +46,11 @@ impl NodeConfig {
     }
 
     /// Initialize config with provided [`ChainTypes`].
-    pub fn for_chain_type(chain_type: ChainTypes) -> ConfigMembers {
+    pub fn for_chain_type(chain_type: &ChainTypes) -> ConfigMembers {
         let path = Settings::get_config_path(SERVER_CONFIG_FILE_NAME, Some(chain_type));
         let parsed = Settings::read_from_file::<ConfigMembers>(path.clone());
         if !path.exists() || parsed.is_err() {
-            let mut default_config = GlobalConfig::for_chain(&chain_type);
+            let mut default_config = GlobalConfig::for_chain(chain_type);
             default_config.update_paths(&Settings::get_working_path(Some(chain_type)));
             let config = default_config.members.unwrap();
             Settings::write_to_file(&config, path);
@@ -62,14 +62,16 @@ impl NodeConfig {
 
     /// Save node config to disk.
     pub fn save(&mut self) {
-        let chain_type = self.members.server.chain_type;
-        let config_path = Settings::get_config_path(SERVER_CONFIG_FILE_NAME, Some(chain_type));
+        let config_path = Settings::get_config_path(
+            SERVER_CONFIG_FILE_NAME,
+            Some(&self.members.server.chain_type)
+        );
         Settings::write_to_file(&self.members, config_path);
     }
 
     /// Check that the api secret files exist and are valid.
     fn check_api_secret_files(
-        chain_type: ChainTypes,
+        chain_type: &ChainTypes,
         secret_file_name: &str,
     ) -> Result<(), ConfigError> {
         let grin_path = Settings::get_working_path(Some(chain_type));
@@ -83,7 +85,7 @@ impl NodeConfig {
     }
 
     /// Get stratum server IP address and port.
-    pub fn get_stratum_address_port() -> (String, u16) {
+    pub fn get_stratum_address_port() -> (String, String) {
         let r_config = Settings::node_config_to_read();
         let saved_stratum_addr = r_config
             .members
@@ -95,11 +97,11 @@ impl NodeConfig {
             .as_ref()
             .unwrap();
         let (addr, port) = saved_stratum_addr.split_once(":").unwrap();
-        (addr.to_string(), port.parse().unwrap())
+        (addr.into(), port.into())
     }
 
     /// Save stratum server IP address and port.
-    pub fn save_stratum_address_port(addr: String, port: String) {
+    pub fn save_stratum_address_port(addr: &String, port: &String) {
         let addr_to_save = format!("{}:{}", addr, port);
         let mut w_node_config = Settings::node_config_to_update();
         w_node_config
@@ -112,8 +114,47 @@ impl NodeConfig {
         w_node_config.save();
     }
 
+    /// Check if stratum mining server autorun is enabled.
+    pub fn is_stratum_autorun_enabled() -> bool {
+        let stratum_config = Settings::node_config_to_read()
+            .members
+            .clone()
+            .server
+            .stratum_mining_config
+            .unwrap();
+        if let Some(enable) = stratum_config.enable_stratum_server {
+            return enable;
+        }
+        false
+    }
+
+    /// Toggle stratum mining server autorun.
+    pub fn toggle_stratum_autorun() {
+        let autorun = Self::is_stratum_autorun_enabled();
+        let mut w_node_config = Settings::node_config_to_update();
+        w_node_config.members
+            .server
+            .stratum_mining_config
+            .as_mut()
+            .unwrap()
+            .enable_stratum_server = Some(!autorun);
+        w_node_config.save();
+    }
+
+    /// Disable stratum mining server autorun.
+    pub fn disable_stratum_autorun() {
+        let mut w_node_config = Settings::node_config_to_update();
+        w_node_config.members
+            .server
+            .stratum_mining_config
+            .as_mut()
+            .unwrap()
+            .enable_stratum_server = Some(false);
+        w_node_config.save();
+    }
+
     /// Get API server IP address and port.
-    pub fn get_api_address_port() -> (String, u16) {
+    pub fn get_api_address_port() -> (String, String) {
         let r_config = Settings::node_config_to_read();
         let saved_api_addr = r_config
             .members
@@ -121,11 +162,11 @@ impl NodeConfig {
             .api_http_addr
             .as_str();
         let (addr, port) = saved_api_addr.split_once(":").unwrap();
-        (addr.to_string(), port.parse().unwrap())
+        (addr.into(), port.into())
     }
 
     /// Save API server IP address and port.
-    pub fn save_api_server_address_port(addr: String, port: String) {
+    pub fn save_api_address_port(addr: &String, port: &String) {
         let addr_to_save = format!("{}:{}", addr, port);
         let mut w_node_config = Settings::node_config_to_update();
         w_node_config.members.server.api_http_addr = addr_to_save;
@@ -149,7 +190,7 @@ impl NodeConfig {
     }
 
     /// Save API secret text.
-    pub fn save_api_secret(api_secret: String) {
+    pub fn save_api_secret(api_secret: &String) {
         if api_secret.is_empty() {
             return;
         }
@@ -181,7 +222,7 @@ impl NodeConfig {
     }
 
     /// Save Foreign API secret text.
-    pub fn save_foreign_api_secret(api_secret: String) {
+    pub fn save_foreign_api_secret(api_secret: &String) {
         if api_secret.is_empty() {
             return;
         }

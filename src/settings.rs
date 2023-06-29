@@ -65,11 +65,9 @@ impl AppConfig {
     }
 
     /// Change chain type and load new [`NodeConfig`] accordingly.
-    pub fn change_chain_type(&mut self, chain_type: ChainTypes) {
-        if self.chain_type == chain_type {
-            return;
-        } else {
-            self.chain_type = chain_type;
+    pub fn change_chain_type(&mut self, chain_type: &ChainTypes) {
+        if self.chain_type != *chain_type {
+            self.chain_type = *chain_type;
             self.save();
 
             // Load config for selected chain type.
@@ -95,10 +93,9 @@ impl Settings {
     /// Initialize settings with app and node configs.
     fn init() -> Self {
         let app_config = AppConfig::init();
-        let chain_type = app_config.chain_type;
         Self {
-            app_config: Arc::new(RwLock::new(app_config)),
-            node_config: Arc::new(RwLock::new(NodeConfig::init(chain_type)))
+            node_config: Arc::new(RwLock::new(NodeConfig::init(&app_config.chain_type))),
+            app_config: Arc::new(RwLock::new(app_config))
         }
     }
 
@@ -123,7 +120,7 @@ impl Settings {
     }
 
     /// Get working directory path for the application.
-    pub fn get_working_path(chain_type: Option<ChainTypes>) -> PathBuf {
+    pub fn get_working_path(chain_type: Option<&ChainTypes>) -> PathBuf {
         // Check if dir exists.
         let mut path = match dirs::home_dir() {
             Some(p) => p,
@@ -141,7 +138,7 @@ impl Settings {
     }
 
     /// Get config file path from provided name and [`ChainTypes`] if needed.
-    pub fn get_config_path(config_name: &str, chain_type: Option<ChainTypes>) -> PathBuf {
+    pub fn get_config_path(config_name: &str, chain_type: Option<&ChainTypes>) -> PathBuf {
         let main_path = Self::get_working_path(chain_type);
         let mut settings_path = main_path.clone();
         settings_path.push(config_name);

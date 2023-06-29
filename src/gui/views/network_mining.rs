@@ -77,29 +77,21 @@ impl NetworkTab for NetworkMining {
                         ui.add_space(4.0);
 
                         // Show button to enable stratum server if port is available.
-                        if self.stratum_server_setup.is_stratum_port_available {
+                        if self.stratum_server_setup.is_port_available {
                             ui.add_space(6.0);
                             View::button(ui, t!("network_mining.enable_server"), Colors::GOLD, || {
                                 Node::start_stratum_server();
                             });
                             ui.add_space(2.0);
+
+                            // Show stratum server autorun checkbox.
+                            let stratum_enabled = NodeConfig::is_stratum_autorun_enabled();
+                            View::checkbox(ui, stratum_enabled, t!("network.autorun"), || {
+                                NodeConfig::toggle_stratum_autorun();
+                            });
+                            ui.add_space(6.0);
                         }
-
-                        let stratum_enabled = Settings::node_config_to_read()
-                            .members.clone()
-                            .server.stratum_mining_config.unwrap()
-                            .enable_stratum_server.unwrap();
-
-                        // Show stratum server autorun checkbox.
-                        View::checkbox(ui, stratum_enabled, t!("network.autorun"), || {
-                            let mut w_node_config = Settings::node_config_to_update();
-                            w_node_config.members
-                                .server.stratum_mining_config.as_mut().unwrap()
-                                .enable_stratum_server = Some(!stratum_enabled);
-                            w_node_config.save();
-                        });
                     });
-                    ui.add_space(6.0);
                 });
             return;
         } else if Node::is_stratum_server_starting() {

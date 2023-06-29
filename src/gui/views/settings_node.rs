@@ -14,24 +14,22 @@
 
 use std::net::IpAddr;
 use std::str::FromStr;
-use egui::RichText;
-use crate::gui::Colors;
-use crate::gui::icons::COMPUTER_TOWER;
+use egui::{RichText, TextStyle, Widget};
+use crate::gui::{Colors, Navigator};
+use crate::gui::icons::{COMPUTER_TOWER, POWER};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Network, View};
+use crate::gui::views::{Modal, ModalPosition, Network, View};
 use crate::node::{Node, NodeConfig};
 
 /// Integrated node server setup ui section.
 pub struct NodeSetup {
-    /// API IP address to be used inside edit modal.
-    api_address_edit: String,
     /// API port to be used inside edit modal.
     api_port_edit: String,
     /// Flag to check if API port is available inside edit modal.
     api_port_available_edit: bool,
 
     /// Flag to check if API port is available from saved config value.
-    pub(crate) api_port_available: bool,
+    pub(crate) is_api_port_available: bool,
 
     /// API secret to be used inside edit modal.
     api_secret_edit: String,
@@ -45,13 +43,12 @@ pub struct NodeSetup {
 
 impl Default for NodeSetup {
     fn default() -> Self {
-        let (api_address, api_port) = NodeConfig::get_api_address_port();
-        let is_api_port_available = Network::is_port_available(api_address.as_str(), api_port);
+        let (api_ip, api_port) = NodeConfig::get_api_address_port();
+        let is_api_port_available = is_api_port_available(&api_ip, &api_port);
         Self {
-            api_address_edit: api_address,
-            api_port_edit: api_port.to_string(),
+            api_port_edit: api_port,
             api_port_available_edit: is_api_port_available,
-            api_port_available: is_api_port_available,
+            is_api_port_available,
             api_secret_edit: "".to_string(),
             foreign_api_secret_edit: "".to_string(),
             ftl_edit: "".to_string(),
@@ -62,10 +59,10 @@ impl Default for NodeSetup {
 const SECRET_SYMBOLS: &'static str = "••••••••••••";
 
 impl NodeSetup {
-    pub const API_PORT_MODAL: &'static str = "stratum_port";
+    pub const API_PORT_MODAL: &'static str = "api_port";
 
     pub fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
-        View::sub_title(ui, format!("{} {}", COMPUTER_TOWER, t!("network_settings.server.title")));
+        View::sub_title(ui, format!("{} {}", COMPUTER_TOWER, t!("network_settings.server")));
         View::horizontal_line(ui, Colors::ITEM_STROKE);
         ui.add_space(4.0);
 
@@ -79,17 +76,17 @@ impl NodeSetup {
             if Node::is_running() {
                 ui.scope(|ui| {
                     // Setup spacing between buttons.
-                    ui.spacing_mut().item_spacing = egui::Vec2::new(8.0, 0.0);
+                    ui.spacing_mut().item_spacing = egui::Vec2::new(6.0, 0.0);
                     ui.add_space(6.0);
 
                     ui.columns(2, |columns| {
                         columns[0].vertical_centered_justified(|ui| {
-                            View::button(ui, t!("network_settings.server.disable"), Colors::GOLD, || {
+                            View::button(ui, t!("network_settings.disable"), Colors::GOLD, || {
                                 Node::stop(false);
                             });
                         });
                         columns[1].vertical_centered_justified(|ui| {
-                            View::button(ui, t!("network_settings.server.restart"), Colors::GOLD, || {
+                            View::button(ui, t!("network_settings.restart"), Colors::GOLD, || {
                                 Node::restart();
                             });
                         });
@@ -98,7 +95,8 @@ impl NodeSetup {
             } else {
                 ui.add_space(6.0);
                 ui.vertical_centered(|ui| {
-                    View::button(ui, t!("network_settings.server.enable"), Colors::GOLD, || {
+                    let enable_text = format!("{} {}", POWER, t!("network_settings.enable"));
+                    View::button(ui, enable_text, Colors::GOLD, || {
                         Node::start();
                     });
                 });
@@ -112,7 +110,7 @@ impl NodeSetup {
         ui.add_space(4.0);
 
         let addrs = Network::get_ip_list();
-        // Show error message when IP addresses are not available on the system.
+        // Show message when IP addresses are not available on the system.
         if addrs.is_empty() {
             Network::no_ip_address_ui(ui);
             ui.add_space(4.0);
@@ -121,63 +119,146 @@ impl NodeSetup {
             ui.add_space(4.0);
 
             ui.vertical_centered(|ui| {
-                ui.label(RichText::new(t!("network_settings.server.api_ip_address"))
+                ui.label(RichText::new(t!("network_settings.api_ip"))
                     .size(16.0)
                     .color(Colors::GRAY)
                 );
                 ui.add_space(6.0);
-            });
-
-            // Show API IP address setup.
-            self.api_ip_address_setup_ui(ui, addrs)
-        }
-    }
-
-    /// Show API IP address setup.
-    fn api_ip_address_setup_ui(&mut self, ui: &mut egui::Ui, addrs: Vec<IpAddr>) {
-        let (addr, port) = NodeConfig::get_api_address_port();
-        let saved_ip_addr = &IpAddr::from_str(addr.as_str()).unwrap();
-        let mut selected_addr = saved_ip_addr;
-
-        // Set first IP address as current if saved is not present at system.
-        if !addrs.contains(selected_addr) {
-            selected_addr = addrs.get(0).unwrap();
-        }
-
-        // Show available IP addresses on the system.
-        let _ = addrs.chunks(2).map(|x| {
-            if x.len() == 2 {
-                ui.columns(2, |columns| {
-                    let addr0 = x.get(0).unwrap();
-                    columns[0].vertical_centered(|ui| {
-                        View::radio_value(ui,
-                                          &mut selected_addr,
-                                          addr0,
-                                          addr0.to_string());
-                    });
-                    let addr1 = x.get(1).unwrap();
-                    columns[1].vertical_centered(|ui| {
-                        View::radio_value(ui,
-                                          &mut selected_addr,
-                                          addr1,
-                                          addr1.to_string());
-                    })
+                // Show API IP addresses to select.
+                let (api_ip, api_port) = NodeConfig::get_api_address_port();
+                Network::ip_list_ui(ui, &api_ip, &addrs, |selected_ip| {
+                    self.is_api_port_available = is_api_port_available(selected_ip, &api_port);
+                    NodeConfig::save_api_address_port(selected_ip, &api_port);
                 });
-            } else {
-                let addr = x.get(0).unwrap();
-                View::radio_value(ui,
-                                  &mut selected_addr,
-                                  addr,
-                                  addr.to_string());
-            }
-            ui.add_space(10.0);
-        }).collect::<Vec<_>>();
 
-        // Save stratum server address at config if it was changed and check port availability.
-        if saved_ip_addr != selected_addr {
-            NodeConfig::save_api_server_address_port(selected_addr.to_string(), port.to_string());
-            let available = Network::is_port_available(selected_addr.to_string().as_str(), port);
-            self.api_port_available = available;
+                ui.label(RichText::new(t!("network_settings.api_port"))
+                    .size(16.0)
+                    .color(Colors::GRAY)
+                );
+                ui.add_space(6.0);
+                // Show API port setup.
+                self.api_port_setup_ui(ui, cb);
+
+                View::horizontal_line(ui, Colors::ITEM_STROKE);
+                ui.add_space(6.0);
+            });
         }
     }
+
+    /// Draw API port setup ui.
+    fn api_port_setup_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
+        let (_, port) = NodeConfig::get_api_address_port();
+        // Show button to choose API server port.
+        View::button(ui, port.clone(), Colors::BUTTON, || {
+            // Setup values for modal.
+            self.api_port_edit = port;
+            self.api_port_available_edit = self.is_api_port_available;
+
+            // Show API port modal.
+            let port_modal = Modal::new(Self::API_PORT_MODAL)
+                .position(ModalPosition::CenterTop)
+                .title(t!("network_settings.change_port"));
+            Navigator::show_modal(port_modal);
+            cb.show_keyboard();
+        });
+        ui.add_space(14.0);
+
+        // Show error when API server port is unavailable.
+        if !self.is_api_port_available {
+            ui.label(RichText::new(t!("network_settings.port_unavailable"))
+                .size(16.0)
+                .color(Colors::RED));
+            ui.add_space(12.0);
+        }
+    }
+
+    /// Draw API port [`Modal`] content ui.
+    pub fn api_port_modal_ui(&mut self,
+                                 ui: &mut egui::Ui,
+                                 modal: &Modal,
+                                 cb: &dyn PlatformCallbacks) {
+        ui.add_space(6.0);
+        ui.vertical_centered(|ui| {
+            ui.label(RichText::new(t!("network_settings.enter_value"))
+                .size(16.0)
+                .color(Colors::GRAY));
+            ui.add_space(8.0);
+
+            // Draw API port text edit.
+            let text_edit_resp = egui::TextEdit::singleline(&mut self.api_port_edit)
+                .font(TextStyle::Heading)
+                .desired_width(58.0)
+                .cursor_at_end(true)
+                .ui(ui);
+            text_edit_resp.request_focus();
+            if text_edit_resp.clicked() {
+                cb.show_keyboard();
+            }
+
+            // Show error when specified port is unavailable.
+            if !self.api_port_available_edit {
+                ui.add_space(12.0);
+                ui.label(RichText::new(t!("network_settings.port_unavailable"))
+                    .size(16.0)
+                    .color(Colors::RED));
+            }
+
+            ui.add_space(12.0);
+
+            // Show modal buttons.
+            ui.scope(|ui| {
+                // Setup spacing between buttons.
+                ui.spacing_mut().item_spacing = egui::Vec2::new(6.0, 0.0);
+
+                ui.columns(2, |columns| {
+                    columns[0].vertical_centered_justified(|ui| {
+                        View::button(ui, t!("modal.cancel"), Colors::WHITE, || {
+                            cb.hide_keyboard();
+                            modal.close();
+                        });
+                    });
+                    columns[1].vertical_centered_justified(|ui| {
+                        View::button(ui, t!("modal.save"), Colors::WHITE, || {
+                            // Check if port is available.
+                            let (ip, _) = NodeConfig::get_api_address_port();
+                            let available = is_api_port_available(&ip, &self.api_port_edit);
+                            self.api_port_available_edit = available;
+
+                            if self.api_port_available_edit {
+                                // Save port at config if it's available.
+                                NodeConfig::save_api_address_port(
+                                    &ip,
+                                    &self.api_port_edit
+                                );
+
+                                self.is_api_port_available = true;
+                                cb.hide_keyboard();
+                                modal.close();
+                            }
+                        });
+                    });
+                });
+                ui.add_space(6.0);
+            });
+        });
+    }
+}
+
+fn is_api_port_available(ip: &String, port: &String) -> bool {
+    let same_address_as_running = {
+        let (current_ip, current_port) = NodeConfig::get_api_address_port();
+        Node::is_running() && &current_ip == ip && &current_port == port
+    };
+
+    if same_address_as_running || (!Node::is_running() && Network::is_port_available(&ip, &port)) {
+        if &NodeConfig::get_p2p_port().to_string() != port {
+            let (stratum_ip, stratum_port) = NodeConfig::get_stratum_address_port();
+            return if &stratum_ip == ip {
+                &stratum_port != port
+            } else {
+                true
+            }
+        }
+    }
+    false
 }

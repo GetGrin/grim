@@ -29,6 +29,7 @@ use crate::gui::views::network_metrics::NetworkMetrics;
 use crate::gui::views::network_mining::NetworkMining;
 use crate::gui::views::network_node::NetworkNode;
 use crate::gui::views::network_settings::NetworkSettings;
+use crate::gui::views::settings_node::NodeSetup;
 use crate::gui::views::settings_stratum::StratumServerSetup;
 use crate::node::Node;
 use crate::Settings;
@@ -60,23 +61,24 @@ impl NetworkTabType {
 
 pub struct Network {
     current_tab: Box<dyn NetworkTab>,
-    allowed_modal_ids: Vec<&'static str>,
+    modal_ids: Vec<&'static str>,
 }
 
 impl Default for Network {
     fn default() -> Self {
         Self {
             current_tab: Box::new(NetworkNode::default()),
-            allowed_modal_ids: vec![
-                StratumServerSetup::STRATUM_PORT_MODAL
+            modal_ids: vec![
+                StratumServerSetup::STRATUM_PORT_MODAL,
+                NodeSetup::API_PORT_MODAL
             ]
         }
     }
 }
 
 impl ModalContainer for Network {
-    fn allowed_modal_ids(&self) -> &Vec<&'static str> {
-        self.allowed_modal_ids.as_ref()
+    fn modal_ids(&self) -> &Vec<&'static str> {
+        self.modal_ids.as_ref()
     }
 }
 
@@ -278,10 +280,57 @@ impl Network {
         addresses
     }
 
+    /// Draw IP list radio buttons.
+    pub fn ip_list_ui(ui: &mut egui::Ui,
+                      saved_ip: &String,
+                      ips: &Vec<IpAddr>,
+                      on_change: impl FnOnce(&String)) {
+        let saved_ip_addr = &IpAddr::from_str(saved_ip.as_str()).unwrap();
+        let mut selected_ip_addr = saved_ip_addr;
+
+        // Set first IP address as current if saved is not present at system.
+        if !ips.contains(selected_ip_addr) {
+            selected_ip_addr = ips.get(0).unwrap();
+        }
+
+        // Show available IP addresses on the system.
+        let _ = ips.chunks(2).map(|x| {
+            if x.len() == 2 {
+                ui.columns(2, |columns| {
+                    let ip_addr_l = x.get(0).unwrap();
+                    columns[0].vertical_centered(|ui| {
+                        View::radio_value(ui,
+                                          &mut selected_ip_addr,
+                                          ip_addr_l,
+                                          ip_addr_l.to_string());
+                    });
+                    let ip_addr_r = x.get(1).unwrap();
+                    columns[1].vertical_centered(|ui| {
+                        View::radio_value(ui,
+                                          &mut selected_ip_addr,
+                                          ip_addr_r,
+                                          ip_addr_r.to_string());
+                    })
+                });
+            } else {
+                let ip_addr = x.get(0).unwrap();
+                View::radio_value(ui,
+                                  &mut selected_ip_addr,
+                                  ip_addr,
+                                  ip_addr.to_string());
+            }
+            ui.add_space(12.0);
+        }).collect::<Vec<_>>();
+
+        if saved_ip_addr != selected_ip_addr {
+            (on_change)(&selected_ip_addr.to_string());
+        }
+    }
+
     /// Show message when IP addresses are not available at system.
     pub fn no_ip_address_ui(ui: &mut egui::Ui) {
         ui.vertical_centered(|ui| {
-            ui.label(RichText::new(t!("network.no_ip_addresses"))
+            ui.label(RichText::new(t!("network.no_ips"))
                 .size(16.0)
                 .color(Colors::INACTIVE_TEXT)
             );
@@ -290,10 +339,13 @@ impl Network {
     }
 
     /// Check whether a port is available on the provided host.
-    pub fn is_port_available(host: &str, port: u16) -> bool {
-        let ip_addr = Ipv4Addr::from_str(host).unwrap();
-        let ipv4 = SocketAddrV4::new(ip_addr, port);
-        TcpListener::bind(ipv4).is_ok()
+    pub fn is_port_available(host: &String, port: &String) -> bool {
+        if let Ok(p) = port.parse::<u16>() {
+            let ip_addr = Ipv4Addr::from_str(host.as_str()).unwrap();
+            let ipv4 = SocketAddrV4::new(ip_addr, p);
+            return TcpListener::bind(ipv4).is_ok();
+        }
+        false
     }
 }
 

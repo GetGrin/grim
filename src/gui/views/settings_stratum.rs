@@ -22,29 +22,27 @@ use crate::gui::icons::WRENCH;
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, ModalPosition, Network, View};
 use crate::node::NodeConfig;
+use crate::Settings;
 
 /// Stratum server setup ui section.
 pub struct StratumServerSetup {
-    /// Stratum IP address to be used inside edit modal.
-    stratum_address_edit: String,
     /// Stratum port  to be used inside edit modal.
     stratum_port_edit: String,
     /// Flag to check if stratum port is available inside edit modal.
     stratum_port_available_edit: bool,
 
     /// Flag to check if stratum port is available from saved config value.
-    pub(crate) is_stratum_port_available: bool
+    pub(crate) is_port_available: bool
 }
 
 impl Default for StratumServerSetup {
     fn default() -> Self {
-        let (stratum_address, stratum_port) = NodeConfig::get_stratum_address_port();
-        let is_port_available = Network::is_port_available(stratum_address.as_str(), stratum_port);
+        let (ip, port) = NodeConfig::get_stratum_address_port();
+        let is_port_available = is_stratum_port_available(&ip, &port);
         Self {
-            stratum_address_edit: stratum_address,
-            stratum_port_edit: stratum_port.to_string(),
+            stratum_port_edit: port,
             stratum_port_available_edit: is_port_available,
-            is_stratum_port_available: is_port_available
+            is_port_available
         }
     }
 }
@@ -58,66 +56,70 @@ impl StratumServerSetup {
         View::horizontal_line(ui, Colors::ITEM_STROKE);
         ui.add_space(4.0);
 
-        // Show error message when IP addresses are not available on the system.
-        let addrs = Network::get_ip_list();
-        if addrs.is_empty() {
+        // Show message when IP addresses are not available on the system.
+        let all_ips = Network::get_ip_list();
+        if all_ips.is_empty() {
             Network::no_ip_address_ui(ui);
             return;
         }
 
         ui.vertical_centered(|ui| {
-            ui.label(RichText::new(t!("network_settings.ip_address"))
+            ui.label(RichText::new(t!("network_settings.ip"))
                 .size(16.0)
                 .color(Colors::GRAY)
             );
             ui.add_space(6.0);
-
-            // Show stratum IP address setup.
-            self.ip_address_setup_ui(ui, addrs);
-
-            View::horizontal_line(ui, Colors::ITEM_STROKE);
-            ui.add_space(6.0);
+            // Show stratum IP addresses to select.
+            let (ip, port) = NodeConfig::get_stratum_address_port();
+            Network::ip_list_ui(ui, &ip, &all_ips, |selected_ip| {
+                self.is_port_available = is_stratum_port_available(selected_ip, &port);
+                NodeConfig::save_stratum_address_port(selected_ip, &port);
+                if !self.is_port_available {
+                    NodeConfig::disable_stratum_autorun();
+                }
+            });
 
             ui.label(RichText::new(t!("network_settings.port"))
                 .size(16.0)
                 .color(Colors::GRAY)
             );
-
-            // Show button to choose stratum server port.
             ui.add_space(6.0);
-            let (stratum_address, stratum_port) = NodeConfig::get_stratum_address_port();
-            View::button(ui, stratum_port.to_string(), Colors::BUTTON, || {
-                // Setup values for modal.
-                self.stratum_address_edit = stratum_address.clone();
-                self.stratum_port_edit = stratum_port.to_string();
-                self.stratum_port_available_edit = Network::is_port_available(
-                    stratum_address.as_str(),
-                    stratum_port
-                );
-
-                // Show stratum port modal.
-                let port_modal = Modal::new(Self::STRATUM_PORT_MODAL)
-                    .position(ModalPosition::CenterTop)
-                    .title(t!("network_settings.change_port"));
-                Navigator::show_modal(port_modal);
-                cb.show_keyboard();
-            });
-            ui.add_space(14.0);
-
-            // Show error when stratum server port is unavailable.
-            if !self.is_stratum_port_available {
-                ui.label(RichText::new(t!("network_mining.port_unavailable"))
-                    .size(16.0)
-                    .color(Colors::RED));
-                ui.add_space(12.0);
-            }
+            // Show stratum port setup.
+            self.port_setup_ui(ui, cb);
 
             View::horizontal_line(ui, Colors::ITEM_STROKE);
             ui.add_space(6.0);
         });
     }
 
-    /// Draw stratum port [`Modal`] content.
+    /// Draw stratum port setup ui.
+    fn port_setup_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
+        let (_, port) = NodeConfig::get_stratum_address_port();
+        // Show button to choose stratum server port.
+        View::button(ui, port.clone(), Colors::BUTTON, || {
+            // Setup values for modal.
+            self.stratum_port_edit = port;
+            self.stratum_port_available_edit = self.is_port_available;
+
+            // Show stratum port modal.
+            let port_modal = Modal::new(Self::STRATUM_PORT_MODAL)
+                .position(ModalPosition::CenterTop)
+                .title(t!("network_settings.change_port"));
+            Navigator::show_modal(port_modal);
+            cb.show_keyboard();
+        });
+        ui.add_space(14.0);
+
+        // Show error when stratum server port is unavailable.
+        if !self.is_port_available {
+            ui.label(RichText::new(t!("network_settings.port_unavailable"))
+                .size(16.0)
+                .color(Colors::RED));
+            ui.add_space(12.0);
+        }
+    }
+
+    /// Draw stratum port [`Modal`] content ui.
     pub fn stratum_port_modal_ui(&mut self,
                                  ui: &mut egui::Ui,
                                  modal: &Modal,
@@ -143,7 +145,7 @@ impl StratumServerSetup {
             // Show error when specified port is unavailable.
             if !self.stratum_port_available_edit {
                 ui.add_space(12.0);
-                ui.label(RichText::new(t!("network_mining.port_unavailable"))
+                ui.label(RichText::new(t!("network_settings.port_unavailable"))
                     .size(16.0)
                     .color(Colors::RED));
             }
@@ -153,7 +155,7 @@ impl StratumServerSetup {
             // Show modal buttons.
             ui.scope(|ui| {
                 // Setup spacing between buttons.
-                ui.spacing_mut().item_spacing = egui::Vec2::new(6.0, 0.0);
+                ui.spacing_mut().item_spacing = egui::Vec2::new(8.0, 0.0);
 
                 ui.columns(2, |columns| {
                     columns[0].vertical_centered_justified(|ui| {
@@ -166,21 +168,15 @@ impl StratumServerSetup {
                     columns[1].vertical_centered_justified(|ui| {
                         View::button(ui, t!("modal.save"), Colors::WHITE, || {
                             // Check if port is available.
-                            let port_parse = self.stratum_port_edit.parse::<u16>();
-                            let is_available = port_parse.is_ok() && Network::is_port_available(
-                                self.stratum_address_edit.as_str(),
-                                port_parse.unwrap()
-                            );
-                            self.stratum_port_available_edit = is_available;
+                            let (ip, _) = NodeConfig::get_api_address_port();
+                            let available = is_stratum_port_available(&ip, &self.stratum_port_edit);
+                            self.stratum_port_available_edit = available;
 
                             // Save port at config if it's available.
                             if self.stratum_port_available_edit {
-                                NodeConfig::save_stratum_address_port(
-                                    self.stratum_address_edit.clone(),
-                                    self.stratum_port_edit.clone()
-                                );
+                                NodeConfig::save_stratum_address_port(&ip, &self.stratum_port_edit);
 
-                                self.is_stratum_port_available = true;
+                                self.is_port_available = true;
                                 cb.hide_keyboard();
                                 modal.close();
                             }
@@ -191,52 +187,18 @@ impl StratumServerSetup {
             });
         });
     }
+}
 
-    /// Show stratum IP address setup.
-    fn ip_address_setup_ui(&mut self, ui: &mut egui::Ui, addrs: Vec<IpAddr>) {
-        let (addr, port) = NodeConfig::get_stratum_address_port();
-        let saved_ip_addr = &IpAddr::from_str(addr.as_str()).unwrap();
-        let mut selected_addr = saved_ip_addr;
-
-        // Set first IP address as current if saved is not present at system.
-        if !addrs.contains(selected_addr) {
-            selected_addr = addrs.get(0).unwrap();
-        }
-
-        // Show available IP addresses on the system.
-        let _ = addrs.chunks(2).map(|x| {
-            if x.len() == 2 {
-                ui.columns(2, |columns| {
-                    let addr0 = x.get(0).unwrap();
-                    columns[0].vertical_centered(|ui| {
-                        View::radio_value(ui,
-                                          &mut selected_addr,
-                                          addr0,
-                                          addr0.to_string());
-                    });
-                    let addr1 = x.get(1).unwrap();
-                    columns[1].vertical_centered(|ui| {
-                        View::radio_value(ui,
-                                          &mut selected_addr,
-                                          addr1,
-                                          addr1.to_string());
-                    })
-                });
+fn is_stratum_port_available(ip: &String, port: &String) -> bool {
+    if Network::is_port_available(&ip, &port) {
+        if &NodeConfig::get_p2p_port().to_string() != port {
+            let (api_ip, api_port) = NodeConfig::get_api_address_port();
+            return if &api_ip == ip {
+                &api_port != port
             } else {
-                let addr = x.get(0).unwrap();
-                View::radio_value(ui,
-                                  &mut selected_addr,
-                                  addr,
-                                  addr.to_string());
+                true
             }
-            ui.add_space(10.0);
-        }).collect::<Vec<_>>();
-
-        // Save stratum server address at config if it was changed and check port availability.
-        if saved_ip_addr != selected_addr {
-            NodeConfig::save_stratum_address_port(selected_addr.to_string(), port.to_string());
-            let available = Network::is_port_available(selected_addr.to_string().as_str(), port);
-            self.is_stratum_port_available = available;
         }
     }
+    false
 }

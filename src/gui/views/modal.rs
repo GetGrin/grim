@@ -23,11 +23,12 @@ use crate::gui::views::View;
 
 /// Contains modal ids to draw at current container if possible.
 pub trait ModalContainer {
-    fn allowed_modal_ids(&self) -> &Vec<&'static str>;
+    /// List of modal ids to show at current view container.
+    fn modal_ids(&self) -> &Vec<&'static str>;
 
     /// Check if it's possible to show modal.
     fn can_show_modal(&self, id: &'static str) -> bool {
-        self.allowed_modal_ids().contains(&id)
+        self.modal_ids().contains(&id)
     }
 }
 

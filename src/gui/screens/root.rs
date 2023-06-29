@@ -45,7 +45,7 @@ impl Default for Root {
 }
 
 impl ModalContainer for Root {
-    fn allowed_modal_ids(&self) -> &Vec<&'static str> {
+    fn modal_ids(&self) -> &Vec<&'static str> {
         self.allowed_modal_ids.as_ref()
     }
 }
