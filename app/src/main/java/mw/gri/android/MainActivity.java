@@ -7,11 +7,15 @@ import android.os.Bundle;
 import android.os.Process;
 import android.system.ErrnoException;
 import android.system.Os;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.OrientationEventListener;
 import com.google.androidgamesdk.GameActivity;
 
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import static android.content.ClipDescription.MIMETYPE_TEXT_HTML;
+import static android.content.ClipDescription.MIMETYPE_TEXT_PLAIN;
 
 public class MainActivity extends GameActivity {
 
@@ -130,5 +134,27 @@ public class MainActivity extends GameActivity {
         Process.killProcess(Process.myPid());
     }
 
+    // Notify native code to stop activity (e.g. node) on app destroy.
     public native void onTermination();
+
+    public void copyText(String data) {
+        ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+        ClipData clip = ClipData.newPlainText(data, data);
+        clipboard.setPrimaryClip(clip);
+    }
+
+    public String pasteText() {
+        ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+        String text;
+        if (!(clipboard.hasPrimaryClip())) {
+            text = "";
+        } else if (!(clipboard.getPrimaryClipDescription().hasMimeType(MIMETYPE_TEXT_PLAIN))
+                && !(clipboard.getPrimaryClipDescription().hasMimeType(MIMETYPE_TEXT_HTML))) {
+            text = "";
+        } else {
+            ClipData.Item item = clipboard.getPrimaryClip().getItemAt(0);
+            text = item.getText().toString();
+        }
+        return text;
+    }
 }

@@ -42,12 +42,41 @@ impl PlatformCallbacks for Android {
     }
 
     fn copy_string_to_buffer(&self, data: String) {
-        //TODO
+        use jni::objects::{JObject, JValue};
+
+        let vm = unsafe { jni::JavaVM::from_raw(self.android_app.vm_as_ptr() as _) }.unwrap();
+        let mut env = vm.attach_current_thread().unwrap();
+        let activity = unsafe {
+            JObject::from_raw(self.android_app.activity_as_ptr() as jni::sys::jobject)
+        };
+        let arg_value = env.new_string(data).unwrap();
+        let _ = env.call_method(
+            activity,
+            "copyText",
+            "(Ljava/lang/String;)V",
+            &[JValue::Object(&JObject::from(arg_value))]
+        ).unwrap();
     }
 
     fn get_string_from_buffer(&self) -> String {
-        //TODO
-        "".to_string()
+        use jni::objects::{JObject, JValue, JString};
+
+        let vm = unsafe { jni::JavaVM::from_raw(self.android_app.vm_as_ptr() as _) }.unwrap();
+        let mut env = vm.attach_current_thread().unwrap();
+        let activity = unsafe {
+            JObject::from_raw(self.android_app.activity_as_ptr() as jni::sys::jobject)
+        };
+        let result = env.call_method(
+            activity,
+            "pasteText",
+            "()Ljava/lang/String;",
+            &[]
+        ).unwrap();
+        let j_object: jni::sys::jobject = unsafe { result.as_jni().l };
+        let paste_data: String = unsafe {
+            env.get_string(JString::from(JObject::from_raw(j_object)).as_ref()).unwrap().into()
+        };
+        paste_data
     }
 
     fn exit(&self) {
