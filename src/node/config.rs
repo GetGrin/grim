@@ -340,9 +340,9 @@ impl NodeConfig {
     }
 
     /// Toggle full chain validation.
-    pub fn toggle_chain_validation() {
-        let mode = Settings::node_config_to_read().members.clone().server.chain_validation_mode;
-        let new_mode = if mode == ChainValidationMode::Disabled {
+    pub fn toggle_full_chain_validation() {
+        let validation_enabled = Self::is_full_chain_validation();
+        let new_mode = if validation_enabled {
             ChainValidationMode::Disabled
         } else {
             ChainValidationMode::EveryBlock

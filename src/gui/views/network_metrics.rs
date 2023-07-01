@@ -37,7 +37,8 @@ impl NetworkTab for NetworkMetrics {
     fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         let server_stats = Node::get_stats();
         // Show message when node is not running or loading spinner when metrics are not available.
-        if server_stats.is_none() || server_stats.as_ref().unwrap().diff_stats.height == 0 {
+        if server_stats.is_none() || Node::is_restarting()
+            || server_stats.as_ref().unwrap().diff_stats.height == 0 {
             if !Node::is_running() {
                 Network::disabled_node_ui(ui);
             } else {

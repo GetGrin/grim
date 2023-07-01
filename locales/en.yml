@@ -87,11 +87,16 @@ network_settings:
   api_secret: Rest API and V2 Owner API token
   foreign_api_secret: Foreign API token
   disabled: Disabled
+  enabled: Enabled
   copy: Copy
   paste: Paste
   ftl: The Future Time Limit (FTL)
   ftl_description: Limit on how far into the future, relative to a node's local time in seconds, the timestamp on a new block can be, in order for the block to be accepted.
   not_valid_value: Entered value is not valid
+  full_validation: Full validation
+  full_validation_description: Whether to run a full chain validation when processing each block (except during synchronization).
+  archive_mode: Archive mode
+  archive_mode_desc: Run the node in full archive mode (more disk space and time will be required for synchronization).
 modal:
   cancel: Cancel
   save: Save

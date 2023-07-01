@@ -17,9 +17,9 @@ use std::str::FromStr;
 
 use egui::{RichText, ScrollArea};
 
-use crate::gui::Colors;
+use crate::gui::{Colors, Navigator};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Modal, NetworkTab, NetworkTabType, View};
+use crate::gui::views::{Modal, ModalPosition, NetworkTab, NetworkTabType, View};
 use crate::gui::views::settings_node::NodeSetup;
 use crate::node::Node;
 
@@ -67,8 +67,30 @@ impl NetworkTab for NetworkSettings {
 impl NetworkSettings {
     pub const NODE_RESTART_REQUIRED_MODAL: &'static str = "node_restart_required";
 
+    /// Reminder to restart enabled node to show on edit setting at [`Modal`].
+    pub fn node_restart_required_ui(ui: &mut egui::Ui) {
+        if Node::is_running() {
+            ui.add_space(12.0);
+            ui.label(RichText::new(t!("network_settings.restart_node_required"))
+                .size(16.0)
+                .color(Colors::GREEN)
+            );
+        }
+    }
+
+    /// Show [`Modal`] to ask node restart if setting is changed on enabled node.
+    pub fn show_node_restart_required_modal() {
+        if Node::is_running() {
+            // Show modal to apply changes by node restart.
+            let port_modal = Modal::new(NetworkSettings::NODE_RESTART_REQUIRED_MODAL)
+                .position(ModalPosition::Center)
+                .title(t!("network.settings"));
+            Navigator::show_modal(port_modal);
+        }
+    }
+
     /// Node restart reminder modal content.
-    pub fn node_restart_required_modal(&self, ui: &mut egui::Ui, modal: &Modal) {
+    fn node_restart_required_modal(&self, ui: &mut egui::Ui, modal: &Modal) {
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.restart_node_required"))
