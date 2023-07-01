@@ -261,6 +261,11 @@ impl Node {
 
     /// Handle node [`Server`] error on start.
     fn on_start_error(e: &Error) {
+        // Clean server stats.
+        {
+            let mut w_stats = NODE_STATE.stats.write().unwrap();
+            *w_stats = None;
+        }
         // Clean launched API server address.
         {
             let mut w_api_addr = NODE_STATE.api_addr.write().unwrap();
@@ -300,16 +305,20 @@ impl Node {
         // TODO: Ask user to clean-up data
         let show_error = |err: String| {
             println!("Node server creation error:\n{}", err);
+            //TODO don't panic maybe
+            panic!("{}", err);
         };
 
         //TODO: Better error handling
         match e {
-            Error::Store(_) => {
+            Error::Store(e) => {
                 //TODO: Set err to ask user to clean data
+                panic!("{}", e);
                 //(clean_server_and_recreate)()
             }
-            Error::Chain(_) => {
+            Error::Chain(e) => {
                 //TODO: Set err to ask user to clean data
+                panic!("{}", e);
                 //(clean_server_and_recreate)()
             }
             //TODO: Handle P2P error (Show config error msg)
@@ -473,7 +482,6 @@ fn start_server() -> Result<Server, Error>  {
             }
         }
     }
-
     // Initialize our global chain_type, feature flags (NRD kernel support currently),
     // accept_fee_base, and future_time_limit.
     // These are read via global and not read from config beyond this point.
@@ -481,6 +489,7 @@ fn start_server() -> Result<Server, Error>  {
         global::init_global_chain_type(config.server.chain_type);
     } else {
         global::set_global_chain_type(config.server.chain_type);
+        global::set_local_chain_type(config.server.chain_type);
     }
 
     if !global::GLOBAL_NRD_FEATURE_ENABLED.is_init() {
@@ -492,6 +501,17 @@ fn start_server() -> Result<Server, Error>  {
             _ => {
                 // Set various non-mainnet feature flags.
                 global::init_global_nrd_enabled(true);
+            }
+        }
+    } else {
+        match global::get_chain_type() {
+            ChainTypes::Mainnet => {
+                // Set various mainnet specific feature flags.
+                global::set_global_nrd_enabled(false);
+            }
+            _ => {
+                // Set various non-mainnet feature flags.
+                global::set_global_nrd_enabled(true);
             }
         }
     }
