@@ -26,7 +26,7 @@ lazy_static! {
     static ref NAVIGATOR_STATE: RwLock<Navigator> = RwLock::new(Navigator::default());
 }
 
-/// Logic of navigation at ui, stores screen identifiers stack, showing modal and side panel state.
+/// Logic of common navigation at ui for screens and modals.
 pub struct Navigator {
     /// Screen identifiers in navigation stack.
     screen_stack: BTreeSet<ScreenId>,
@@ -81,7 +81,7 @@ impl Navigator {
             return;
         }
 
-        // Go back at screen stack or set exit confirmation Modal.
+        // Go back at screen stack or show exit confirmation Modal.
         if w_nav.screen_stack.len() > 1 {
             w_nav.screen_stack.pop_last();
         } else {
@@ -97,7 +97,7 @@ impl Navigator {
 
     /// Set exit confirmation [`Modal`] with provided [NAVIGATOR_STATE] lock.
     fn show_exit_modal_nav(mut w_nav: RwLockWriteGuard<Navigator>) {
-        let m = Modal::new(Self::EXIT_MODAL).title(t!("modal.confirmation"));
+        let m = Modal::new(Self::EXIT_MODAL).title(t!("modal_exit.exit"));
         w_nav.modal = Some(m);
     }
 

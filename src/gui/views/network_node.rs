@@ -33,7 +33,7 @@ impl NetworkTab for NetworkNode {
     fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         let server_stats = Node::get_stats();
         // Show message when node is not running or loading spinner when stats are not available.
-        if !server_stats.is_some() {
+        if !server_stats.is_some() || Node::is_restarting() {
             if !Node::is_running() {
                 Network::disabled_node_ui(ui);
             } else {
@@ -121,10 +121,8 @@ impl NetworkTab for NetworkNode {
                 ui.columns(2, |columns| {
                     columns[0].vertical_centered(|ui| {
                         let tx_stat = match &stats.tx_stats {
-                            None => { "0 (0)".to_string() }
-                            Some(tx) => {
-                                format!("{} ({})", tx.tx_pool_size, tx.tx_pool_kernels)
-                            }
+                            None => "0 (0)".to_string(),
+                            Some(tx) => format!("{} ({})", tx.tx_pool_size, tx.tx_pool_kernels)
                         };
                         View::rounded_box(ui,
                                           tx_stat,
@@ -133,10 +131,10 @@ impl NetworkTab for NetworkNode {
                     });
                     columns[1].vertical_centered(|ui| {
                         let stem_tx_stat = match &stats.tx_stats {
-                            None => { "0 (0)".to_string() }
-                            Some(stx) => {
-                                format!("{} ({})", stx.stem_pool_size, stx.stem_pool_kernels)
-                            }
+                            None => "0 (0)".to_string(),
+                            Some(stx) => format!("{} ({})",
+                                                 stx.stem_pool_size,
+                                                 stx.stem_pool_kernels)
                         };
                         View::rounded_box(ui,
                                           stem_tx_stat,

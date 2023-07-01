@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use std::cmp::min;
+use egui::RichText;
 use crate::gui::{App, Colors, Navigator};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::screens::{Account, Accounts, Screen, ScreenId};
@@ -88,13 +89,17 @@ impl Root {
                 ui.vertical_centered(|ui| {
                     View::small_loading_spinner(ui);
                     ui.add_space(12.0);
-                    ui.label(t!("sync_status.shutdown"));
+                    ui.label(RichText::new(t!("sync_status.shutdown"))
+                        .size(18.0)
+                        .color(Colors::TEXT));
                 });
                 ui.add_space(10.0);
             } else {
                 ui.add_space(8.0);
                 ui.vertical_centered(|ui| {
-                    ui.label(t!("modal_exit.description"));
+                    ui.label(RichText::new(t!("modal_exit.description"))
+                        .size(18.0)
+                        .color(Colors::TEXT));
                 });
                 ui.add_space(10.0);
 

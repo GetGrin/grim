@@ -65,7 +65,7 @@ network_mining:
   address: Адрес
   miners: Майнеры
   devices: Устройства
-  found: Найдено
+  blocks_found: Найдено блоков
   hashrate: 'Хешрэйт (C%{bits})'
   connected: Подключен
   disconnected: Отключен
@@ -73,7 +73,8 @@ network_settings:
   ip: IP Адрес
   port: Порт
   change_port: Изменить порт
-  enter_value: Введите значение
+  change_value: Изменить значение
+  stratum_port: Порт Stratum сервера
   port_unavailable: Указанный порт недоступен
   restart_app_required: Для применения изменений требуется перезапуск приложения.
   restart_node_required: Для применения изменений требуется перезапуск узла.
@@ -83,10 +84,17 @@ network_settings:
   server: Сервер
   api_ip: API IP Адрес
   api_port: API Порт
+  api_secret: Rest и V2 Owner API токен
+  foreign_api_secret: Foreign API токен
+  disabled: Отключен
+  copy: Копировать
+  paste: Вставить
+  ftl: Предел Будущего Времени (FTL)
+  ftl_description: Ограничение на то, насколько далеко в будущем, относительно локального времени узла в секундах, находится временная метка на новом блоке для его принятия.
+  not_valid_value: Введено недопустимое значение
 modal:
   cancel: Отмена
   save: Сохранить
-  confirmation: Подтверждение
 modal_exit:
   description: Вы уверены, что хотите выйти из приложения?
   exit: Выход

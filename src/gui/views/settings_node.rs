@@ -12,13 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::net::IpAddr;
-use std::str::FromStr;
-use egui::{RichText, TextStyle, Widget};
+use eframe::emath::Align;
+use egui::{Id, Layout, RichText, TextStyle, Widget};
+use grin_core::global::ChainTypes;
+use crate::AppConfig;
 use crate::gui::{Colors, Navigator};
-use crate::gui::icons::{COMPUTER_TOWER, POWER};
+use crate::gui::icons::{ASTERISK, CLIPBOARD_TEXT, COMPUTER_TOWER, COPY, POWER};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, ModalPosition, Network, View};
+use crate::gui::views::network_settings::NetworkSettings;
 use crate::node::{Node, NodeConfig};
 
 /// Integrated node server setup ui section.
@@ -43,7 +45,7 @@ pub struct NodeSetup {
 
 impl Default for NodeSetup {
     fn default() -> Self {
-        let (api_ip, api_port) = NodeConfig::get_api_address_port();
+        let (api_ip, api_port) = NodeConfig::get_api_address();
         let is_api_port_available = NodeConfig::is_api_port_available(&api_ip, &api_port);
         Self {
             api_port_edit: api_port,
@@ -56,15 +58,19 @@ impl Default for NodeSetup {
     }
 }
 
-const SECRET_SYMBOLS: &'static str = "••••••••••••";
-
 impl NodeSetup {
     pub const API_PORT_MODAL: &'static str = "api_port";
+    pub const API_SECRET_MODAL: &'static str = "api_secret";
+    pub const FOREIGN_API_SECRET_MODAL: &'static str = "foreign_api_secret";
+    pub const FTL_MODAL: &'static str = "ftl";
 
     pub fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         View::sub_title(ui, format!("{} {}", COMPUTER_TOWER, t!("network_settings.server")));
         View::horizontal_line(ui, Colors::ITEM_STROKE);
-        ui.add_space(4.0);
+        ui.add_space(8.0);
+
+        // Show chain type setup.
+        self.chain_type_ui(ui);
 
         // Show loading indicator or controls to stop/start/restart node.
         if Node::is_stopping() || Node::is_restarting() || Node::is_starting() {
@@ -103,16 +109,18 @@ impl NodeSetup {
             }
         }
 
+        // Autorun node setup.
         ui.add_space(4.0);
         ui.vertical_centered(|ui| {
-            Network::autorun_node_checkbox(ui);
+            Network::autorun_node_ui(ui);
         });
         ui.add_space(4.0);
 
-        let addrs = Network::get_ip_list();
-        // Show message when IP addresses are not available on the system.
+        let addrs = NetworkSettings::get_ip_addrs();
         if addrs.is_empty() {
-            Network::no_ip_address_ui(ui);
+            // Show message when IP addresses are not available on the system.
+            NetworkSettings::no_ip_address_ui(ui);
+
             ui.add_space(4.0);
         } else {
             View::horizontal_line(ui, Colors::ITEM_STROKE);
@@ -125,15 +133,11 @@ impl NodeSetup {
                 );
                 ui.add_space(6.0);
                 // Show API IP addresses to select.
-                let (api_ip, api_port) = NodeConfig::get_api_address_port();
-                Network::ip_list_ui(ui, &api_ip, &addrs, |selected_ip| {
-                    println!("12345 selected_ip {}", selected_ip);
+                let (api_ip, api_port) = NodeConfig::get_api_address();
+                NetworkSettings::ip_addrs_ui(ui, &api_ip, &addrs, |selected_ip| {
                     let api_available = NodeConfig::is_api_port_available(selected_ip, &api_port);
-                    println!("12345 selected_ip is_api_port_available {}", api_available);
                     self.is_api_port_available = api_available;
-                    println!("12345 before save");
-                    NodeConfig::save_api_address_port(selected_ip, &api_port);
-                    println!("12345 after save");
+                    NodeConfig::save_api_address(selected_ip, &api_port);
                 });
 
                 ui.label(RichText::new(t!("network_settings.api_port"))
@@ -144,16 +148,87 @@ impl NodeSetup {
                 // Show API port setup.
                 self.api_port_setup_ui(ui, cb);
 
-                View::horizontal_line(ui, Colors::ITEM_STROKE);
+                ui.label(RichText::new(t!("network_settings.api_secret"))
+                    .size(16.0)
+                    .color(Colors::GRAY)
+                );
                 ui.add_space(6.0);
+                // Show API secret setup.
+                self.secret_ui(Self::API_SECRET_MODAL, ui, cb);
+
+                ui.add_space(6.0);
+
+                ui.label(RichText::new(t!("network_settings.foreign_api_secret"))
+                    .size(16.0)
+                    .color(Colors::GRAY)
+                );
+                ui.add_space(6.0);
+                // Show Foreign API secret setup.
+                self.secret_ui(Self::FOREIGN_API_SECRET_MODAL, ui, cb);
+
+                if Node::is_running() {
+                    ui.add_space(2.0);
+                    // Show reminder to restart node if settings are changed.
+                    ui.label(RichText::new(t!("network_settings.restart_node_required"))
+                        .size(16.0)
+                        .color(Colors::GREEN)
+                    );
+                    ui.add_space(2.0);
+                }
             });
+        }
+
+        ui.add_space(6.0);
+        View::horizontal_line(ui, Colors::ITEM_STROKE);
+        ui.add_space(6.0);
+
+        ui.vertical_centered(|ui| {
+            ui.label(RichText::new(t!("network_settings.ftl"))
+                .size(16.0)
+                .color(Colors::GRAY)
+            );
+            ui.add_space(6.0);
+            // Show FTL setup.
+            self.ftl_ui(ui, cb);
+
+            View::horizontal_line(ui, Colors::ITEM_STROKE);
+            ui.add_space(6.0);
+        });
+    }
+
+    /// Draw [`ChainTypes`] setup ui.
+    fn chain_type_ui(&mut self, ui: &mut egui::Ui) {
+        let saved_chain_type = AppConfig::chain_type();
+        let mut selected_chain_type = saved_chain_type;
+
+        ui.columns(2, |columns| {
+            columns[0].vertical_centered(|ui| {
+                let main_type = ChainTypes::Mainnet;
+                View::radio_value(ui, &mut selected_chain_type, main_type, "Mainnet".to_string());
+            });
+            columns[1].vertical_centered(|ui| {
+                let test_type = ChainTypes::Testnet;
+                View::radio_value(ui, &mut selected_chain_type, test_type, "Testnet".to_string());
+            })
+        });
+        ui.add_space(4.0);
+
+        if saved_chain_type != selected_chain_type {
+            AppConfig::change_chain_type(&selected_chain_type);
+            if Node::is_running() {
+                // Show modal to apply changes by node restart.
+                let port_modal = Modal::new(NetworkSettings::NODE_RESTART_REQUIRED_MODAL)
+                    .position(ModalPosition::Center)
+                    .title(t!("network.settings"));
+                Navigator::show_modal(port_modal);
+            }
         }
     }
 
     /// Draw API port setup ui.
     fn api_port_setup_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
-        let (_, port) = NodeConfig::get_api_address_port();
-        // Show button to choose API server port.
+        let (_, port) = NodeConfig::get_api_address();
+        // Show button to enter API server port.
         View::button(ui, port.clone(), Colors::BUTTON, || {
             // Setup values for modal.
             self.api_port_edit = port;
@@ -162,7 +237,7 @@ impl NodeSetup {
             // Show API port modal.
             let port_modal = Modal::new(Self::API_PORT_MODAL)
                 .position(ModalPosition::CenterTop)
-                .title(t!("network_settings.change_port"));
+                .title(t!("network_settings.change_value"));
             Navigator::show_modal(port_modal);
             cb.show_keyboard();
         });
@@ -174,25 +249,19 @@ impl NodeSetup {
                 .size(16.0)
                 .color(Colors::RED));
             ui.add_space(6.0);
-        } else if Node::is_running() {
-            // Show reminder to restart node if settings are changed.
-            ui.label(RichText::new(t!("network_settings.restart_node_required"))
-                .size(16.0)
-                .color(Colors::INACTIVE_TEXT)
-            );
-            ui.add_space(6.0);
         }
+        ui.add_space(6.0);
     }
 
     /// Draw API port [`Modal`] content ui.
-    pub fn api_port_modal_ui(&mut self,
-                                 ui: &mut egui::Ui,
-                                 modal: &Modal,
-                                 cb: &dyn PlatformCallbacks) {
+    pub fn api_port_modal(&mut self,
+                          ui: &mut egui::Ui,
+                          modal: &Modal,
+                          cb: &dyn PlatformCallbacks) {
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
-            ui.label(RichText::new(t!("network_settings.enter_value"))
-                .size(16.0)
+            ui.label(RichText::new(t!("network_settings.api_port"))
+                .size(18.0)
                 .color(Colors::GRAY));
             ui.add_space(8.0);
 
@@ -222,6 +291,23 @@ impl NodeSetup {
                 // Setup spacing between buttons.
                 ui.spacing_mut().item_spacing = egui::Vec2::new(6.0, 0.0);
 
+                // Save button callback.
+                let on_save = || {
+                    // Check if port is available.
+                    let (api_ip, _) = NodeConfig::get_api_address();
+                    let available = NodeConfig::is_api_port_available(&api_ip, &self.api_port_edit);
+                    self.api_port_available_edit = available;
+
+                    if available {
+                        // Save port at config if it's available.
+                        NodeConfig::save_api_address(&api_ip, &self.api_port_edit);
+
+                        self.is_api_port_available = true;
+                        cb.hide_keyboard();
+                        modal.close();
+                    }
+                };
+
                 ui.columns(2, |columns| {
                     columns[0].vertical_centered_justified(|ui| {
                         View::button(ui, t!("modal.cancel"), Colors::WHITE, || {
@@ -230,31 +316,244 @@ impl NodeSetup {
                         });
                     });
                     columns[1].vertical_centered_justified(|ui| {
-                        View::button(ui, t!("modal.save"), Colors::WHITE, || {
-                            // Check if port is available.
-                            let (ip, _) = NodeConfig::get_api_address_port();
-                            let available = NodeConfig::is_api_port_available(
-                                &ip,
-                                &self.api_port_edit
-                            );
-                            self.api_port_available_edit = available;
-
-                            if self.api_port_available_edit {
-                                // Save port at config if it's available.
-                                NodeConfig::save_api_address_port(
-                                    &ip,
-                                    &self.api_port_edit
-                                );
-
-                                self.is_api_port_available = true;
-                                cb.hide_keyboard();
-                                modal.close();
-                            }
-                        });
+                        View::button(ui, t!("modal.save"), Colors::WHITE, on_save);
                     });
                 });
                 ui.add_space(6.0);
             });
+        });
+    }
+
+    /// Draw API secret token setup ui.
+    fn secret_ui(&mut self, modal_id: &'static str, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
+        // Setup values for modal
+        let secret_value = match modal_id {
+            Self::API_SECRET_MODAL => NodeConfig::get_api_secret(),
+            _ => NodeConfig::get_foreign_api_secret()
+        };
+
+        let secret_text = if secret_value.is_some() {
+            format!("{}{}{}{}{}{}{}{}{}{}", ASTERISK, ASTERISK, ASTERISK, ASTERISK,
+                    ASTERISK, ASTERISK, ASTERISK, ASTERISK, ASTERISK, ASTERISK)
+        } else {
+            t!("network_settings.disabled")
+        };
+
+        // Show button to open secret modal.
+        View::button(ui, secret_text, Colors::BUTTON, || {
+            // Setup values for modal.
+            match modal_id {
+                Self::API_SECRET_MODAL => {
+                    self.api_secret_edit = secret_value.unwrap_or("".to_string());
+                },
+                _ => {
+                    self.foreign_api_secret_edit = secret_value.unwrap_or("".to_string());
+                }
+            }
+            // Show secret edit modal.
+            let port_modal = Modal::new(modal_id)
+                .position(ModalPosition::CenterTop)
+                .title(t!("network_settings.change_value"));
+            Navigator::show_modal(port_modal);
+            cb.show_keyboard();
+        });
+        ui.add_space(6.0);
+    }
+
+    /// Draw API port [`Modal`] content ui.
+    pub fn secret_modal(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
+        ui.add_space(6.0);
+        ui.vertical_centered(|ui| {
+            let description = match modal.id {
+                Self::API_SECRET_MODAL => t!("network_settings.api_secret"),
+                _ => t!("network_settings.foreign_api_secret")
+            };
+            ui.label(RichText::new(description)
+                .size(18.0)
+                .color(Colors::GRAY));
+            ui.add_space(8.0);
+
+            // let Self { api_secret_edit, foreign_api_secret_edit, .. } = self;
+
+            // Draw API port text edit.
+            let edit_text = match modal.id {
+                Self::API_SECRET_MODAL => &mut self.api_secret_edit,
+                _ => &mut self.foreign_api_secret_edit
+            };
+            let text_edit_resp = egui::TextEdit::singleline(edit_text)
+                .id(Id::from(modal.id))
+                .font(TextStyle::Heading)
+                .cursor_at_end(true)
+                .ui(ui);
+            text_edit_resp.request_focus();
+            if text_edit_resp.clicked() {
+                cb.show_keyboard();
+            }
+            ui.add_space(12.0);
+
+            // Show buttons to copy/paste text.
+            ui.scope(|ui| {
+                // Setup spacing between buttons.
+                ui.spacing_mut().item_spacing = egui::Vec2::new(12.0, 0.0);
+
+                ui.columns(2, |columns| {
+                    // Setup spacing between buttons.
+                    columns[0].with_layout(Layout::right_to_left(Align::TOP), |ui| {
+                        let copy_text = format!("{} {}", COPY, t!("network_settings.copy"));
+                        View::button(ui, copy_text, Colors::WHITE, || {
+                            match modal.id {
+                                Self::API_SECRET_MODAL => {
+                                    cb.copy_string_to_buffer(self.api_secret_edit.clone());
+                                },
+                                _ => {
+                                    cb.copy_string_to_buffer(self.foreign_api_secret_edit.clone());
+                                }
+                            };
+
+                        });
+                    });
+                    columns[1].with_layout(Layout::left_to_right(Align::TOP), |ui| {
+                        let copy_text = format!("{} {}", CLIPBOARD_TEXT, t!("network_settings.paste"));
+                        View::button(ui, copy_text, Colors::WHITE, || {
+                            let text = cb.get_string_from_buffer();
+                            match modal.id {
+                                Self::API_SECRET_MODAL => self.api_secret_edit = text,
+                                _ => self.foreign_api_secret_edit = text
+                            };
+                        });
+                    });
+                });
+                ui.add_space(12.0);
+            });
+
+            // Show modal buttons.
+            ui.scope(|ui| {
+                // Setup spacing between buttons.
+                ui.spacing_mut().item_spacing = egui::Vec2::new(6.0, 0.0);
+
+                // Save button callback.
+                let on_save = || {
+                    match modal.id {
+                        Self::API_SECRET_MODAL => {
+                            let api_secret = &self.api_secret_edit.clone();
+                            NodeConfig::save_api_secret(api_secret);
+                        }
+                        _ => {
+                            let foreign_api_secret = &self.foreign_api_secret_edit.clone();
+                            NodeConfig::save_foreign_api_secret(foreign_api_secret);
+                        }
+                    };
+                    cb.hide_keyboard();
+                    modal.close();
+                };
+
+                ui.columns(2, |columns| {
+                    columns[0].vertical_centered_justified(|ui| {
+                        View::button(ui, t!("modal.cancel"), Colors::WHITE, || {
+                            cb.hide_keyboard();
+                            modal.close();
+                        });
+                    });
+                    columns[1].vertical_centered_justified(|ui| {
+                        View::button(ui, t!("modal.save"), Colors::WHITE, on_save);
+                    });
+                });
+                ui.add_space(6.0);
+            });
+        });
+    }
+
+    /// Draw FTL setup ui.
+    fn ftl_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
+        let ftl = NodeConfig::get_ftl();
+        // Show button to enter FTL value.
+        View::button(ui, ftl.clone(), Colors::BUTTON, || {
+            // Setup values for modal.
+            self.ftl_edit = ftl;
+            // Show stratum port modal.
+            let ftl_modal = Modal::new(Self::FTL_MODAL)
+                .position(ModalPosition::CenterTop)
+                .title(t!("network_settings.change_value"));
+            Navigator::show_modal(ftl_modal);
+            cb.show_keyboard();
+        });
+        ui.add_space(6.0);
+        ui.label(RichText::new(t!("network_settings.ftl_description"))
+            .size(16.0)
+            .color(Colors::INACTIVE_TEXT)
+        );
+
+        if Node::is_running() {
+            ui.add_space(2.0);
+            // Show reminder to restart node if settings are changed.
+            ui.label(RichText::new(t!("network_settings.restart_node_required"))
+                .size(16.0)
+                .color(Colors::GREEN)
+            );
+            ui.add_space(2.0);
+        }
+        ui.add_space(6.0);
+    }
+
+    /// Draw FTL [`Modal`] content.
+    pub fn ftl_modal(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
+        ui.add_space(6.0);
+        ui.vertical_centered(|ui| {
+            ui.label(RichText::new(t!("network_settings.ftl"))
+                .size(18.0)
+                .color(Colors::GRAY));
+            ui.add_space(8.0);
+
+            // Draw stratum port text edit.
+            let text_edit_resp = egui::TextEdit::singleline(&mut self.ftl_edit)
+                .id(Id::from(modal.id))
+                .font(TextStyle::Heading)
+                .desired_width(34.0)
+                .cursor_at_end(true)
+                .ui(ui);
+            text_edit_resp.request_focus();
+            if text_edit_resp.clicked() {
+                cb.show_keyboard();
+            }
+
+            // Show error when specified value is not valid.
+            if self.ftl_edit.parse::<u64>().is_err() {
+                ui.add_space(12.0);
+                ui.label(RichText::new(t!("network_settings.not_valid_value"))
+                    .size(18.0)
+                    .color(Colors::RED));
+            }
+        });
+
+        ui.add_space(12.0);
+
+        // Show modal buttons.
+        ui.scope(|ui| {
+            // Setup spacing between buttons.
+            ui.spacing_mut().item_spacing = egui::Vec2::new(8.0, 0.0);
+
+            // Save button callback
+            let on_save = || {
+                if let Ok(ftl) = self.ftl_edit.parse::<u64>() {
+                    NodeConfig::save_ftl(ftl);
+                    cb.hide_keyboard();
+                    modal.close();
+                }
+            };
+
+            ui.columns(2, |columns| {
+                columns[0].vertical_centered_justified(|ui| {
+                    View::button(ui, t!("modal.cancel"), Colors::WHITE, || {
+                        // Close modal.
+                        cb.hide_keyboard();
+                        modal.close();
+                    });
+                });
+                columns[1].vertical_centered_justified(|ui| {
+                    View::button(ui, t!("modal.save"), Colors::WHITE, on_save);
+                });
+            });
+            ui.add_space(6.0);
         });
     }
 }

@@ -15,6 +15,7 @@
 use std::fs::File;
 use std::io::{BufRead, BufReader, Write};
 use std::net::{IpAddr, Ipv4Addr, SocketAddrV4, TcpListener};
+use std::path::PathBuf;
 use std::str::FromStr;
 
 use grin_config::{config, ConfigError, ConfigMembers, GlobalConfig};
@@ -26,7 +27,7 @@ use grin_servers::common::types::ChainValidationMode;
 use serde::{Deserialize, Serialize};
 use crate::node::Node;
 
-use crate::Settings;
+use crate::{AppConfig, Settings};
 
 /// Wrapped node config to be used by [`grin_servers::Server`].
 #[derive(Serialize, Deserialize)]
@@ -37,9 +38,6 @@ pub struct NodeConfig {
 impl NodeConfig {
     /// Initialize integrated node config.
     pub fn init(chain_type: &ChainTypes) -> Self {
-        let _ = Self::check_api_secret_files(chain_type, API_SECRET_FILE_NAME);
-        let _ = Self::check_api_secret_files(chain_type, FOREIGN_API_SECRET_FILE_NAME);
-
         let config_members = Self::for_chain_type(chain_type);
         Self {
             members: config_members
@@ -48,6 +46,11 @@ impl NodeConfig {
 
     /// Initialize config with provided [`ChainTypes`].
     pub fn for_chain_type(chain_type: &ChainTypes) -> ConfigMembers {
+        // Check secret files for current chain type.
+        let _ = Self::check_api_secret_files(chain_type, API_SECRET_FILE_NAME);
+        let _ = Self::check_api_secret_files(chain_type, FOREIGN_API_SECRET_FILE_NAME);
+
+        // Create config.
         let path = Settings::get_config_path(SERVER_CONFIG_FILE_NAME, Some(chain_type));
         let parsed = Settings::read_from_file::<ConfigMembers>(path.clone());
         if !path.exists() || parsed.is_err() {
@@ -81,9 +84,7 @@ impl NodeConfig {
         chain_type: &ChainTypes,
         secret_file_name: &str,
     ) -> Result<(), ConfigError> {
-        let grin_path = Settings::get_working_path(Some(chain_type));
-        let mut api_secret_path = grin_path;
-        api_secret_path.push(secret_file_name);
+        let api_secret_path = Self::get_secret_path(chain_type, secret_file_name);
         if !api_secret_path.exists() {
             config::init_api_secret(&api_secret_path)
         } else {
@@ -91,8 +92,16 @@ impl NodeConfig {
         }
     }
 
+    /// Get path for secret file.
+    fn get_secret_path(chain_type: &ChainTypes, secret_file_name: &str) -> PathBuf {
+        let grin_path = Settings::get_working_path(Some(chain_type));
+        let mut api_secret_path = grin_path;
+        api_secret_path.push(secret_file_name);
+        api_secret_path
+    }
+
     /// Check whether a port is available on the provided host.
-    pub fn is_port_available(host: &String, port: &String) -> bool {
+    fn is_port_available(host: &String, port: &String) -> bool {
         if let Ok(p) = port.parse::<u16>() {
             let ip_addr = Ipv4Addr::from_str(host.as_str()).unwrap();
             let ipv4 = SocketAddrV4::new(ip_addr, p);
@@ -102,7 +111,7 @@ impl NodeConfig {
     }
 
     /// Get stratum server IP address and port.
-    pub fn get_stratum_address_port() -> (String, String) {
+    pub fn get_stratum_address() -> (String, String) {
         let r_config = Settings::node_config_to_read();
         let saved_stratum_addr = r_config
             .members
@@ -118,7 +127,7 @@ impl NodeConfig {
     }
 
     /// Save stratum server IP address and port.
-    pub fn save_stratum_address_port(addr: &String, port: &String) {
+    pub fn save_stratum_address(addr: &String, port: &String) {
         let addr_to_save = format!("{}:{}", addr, port);
         let mut w_node_config = Settings::node_config_to_update();
         w_node_config
@@ -135,7 +144,7 @@ impl NodeConfig {
     pub fn is_stratum_port_available(ip: &String, port: &String) -> bool {
         if Self::is_port_available(&ip, &port) {
             if &Self::get_p2p_port().to_string() != port {
-                let (api_ip, api_port) = Self::get_api_address_port();
+                let (api_ip, api_port) = Self::get_api_address();
                 return if &api_ip == ip {
                     &api_port != port
                 } else {
@@ -180,7 +189,7 @@ impl NodeConfig {
     }
 
     /// Get API server IP address and port.
-    pub fn get_api_address_port() -> (String, String) {
+    pub fn get_api_address() -> (String, String) {
         let r_config = Settings::node_config_to_read();
         let saved_api_addr = r_config
             .members
@@ -192,7 +201,7 @@ impl NodeConfig {
     }
 
     /// Save API server IP address and port.
-    pub fn save_api_address_port(addr: &String, port: &String) {
+    pub fn save_api_address(addr: &String, port: &String) {
         let addr_to_save = format!("{}:{}", addr, port);
         let mut w_node_config = Settings::node_config_to_update();
         w_node_config.members.server.api_http_addr = addr_to_save;
@@ -219,72 +228,102 @@ impl NodeConfig {
     }
 
     /// Get API secret text.
-    pub fn get_api_secret() -> String {
+    pub fn get_api_secret() -> Option<String> {
         let r_config = Settings::node_config_to_read();
         let api_secret_path = r_config
             .members
             .server
             .api_secret_path
-            .as_ref()
-            .unwrap();
-        let api_secret_file = File::open(api_secret_path).unwrap();
-        let buf_reader = BufReader::new(api_secret_file);
-        let mut lines_iter = buf_reader.lines();
-        let first_line = lines_iter.next().unwrap();
-        first_line.unwrap()
+            .clone();
+        return if let Some(secret_path) = api_secret_path {
+            let api_secret_file = File::open(secret_path).unwrap();
+            let buf_reader = BufReader::new(api_secret_file);
+            let mut lines_iter = buf_reader.lines();
+            let first_line = lines_iter.next().unwrap();
+            Some(first_line.unwrap())
+        } else {
+            None
+        }
     }
 
     /// Save API secret text.
     pub fn save_api_secret(api_secret: &String) {
-        if api_secret.is_empty() {
-            return;
-        }
-        let r_config = Settings::node_config_to_read();
-        let api_secret_path = r_config
-            .members
-            .server
-            .api_secret_path
-            .as_ref()
-            .unwrap();
-        let mut api_secret_file = File::create(api_secret_path).unwrap();
-        api_secret_file.write_all(api_secret.as_bytes()).unwrap();
+        Self::save_secret(api_secret, API_SECRET_FILE_NAME);
     }
 
     /// Get Foreign API secret text.
-    pub fn get_foreign_api_secret() -> String {
+    pub fn get_foreign_api_secret() -> Option<String> {
         let r_config = Settings::node_config_to_read();
-        let foreign_api_secret_path = r_config
+        let foreign_secret_path = r_config
             .members
             .server
             .foreign_api_secret_path
-            .as_ref()
-            .unwrap();
-        let foreign_api_secret_file = File::open(foreign_api_secret_path).unwrap();
-        let buf_reader = BufReader::new(foreign_api_secret_file);
-        let mut lines_iter = buf_reader.lines();
-        let first_line = lines_iter.next().unwrap();
-        first_line.unwrap()
+            .clone();
+        return if let Some(secret_path) = foreign_secret_path {
+            let foreign_secret_file = File::open(secret_path).unwrap();
+            let buf_reader = BufReader::new(foreign_secret_file);
+            let mut lines_iter = buf_reader.lines();
+            let first_line = lines_iter.next().unwrap();
+            Some(first_line.unwrap())
+        } else {
+            None
+        }
     }
 
-    /// Save Foreign API secret text.
+    /// Update Foreign API secret.
     pub fn save_foreign_api_secret(api_secret: &String) {
-        if api_secret.is_empty() {
+        Self::save_secret(api_secret, FOREIGN_API_SECRET_FILE_NAME);
+    }
+
+    /// Save secret value into specified file.
+    fn save_secret(value: &String, file_name: &str) {
+        // Remove config value to remove authorization.
+        if value.is_empty() {
+            let mut w_config = Settings::node_config_to_update();
+            match file_name {
+                API_SECRET_FILE_NAME => w_config.members.server.api_secret_path = None,
+                _ => w_config.members.server.foreign_api_secret_path = None
+            }
+            w_config.save();
             return;
         }
-        let r_config = Settings::node_config_to_read();
-        let foreign_api_secret_path = r_config
-            .members
-            .server
-            .foreign_api_secret_path
-            .as_ref()
-            .unwrap();
-        let mut foreign_api_secret_file = File::create(foreign_api_secret_path).unwrap();
-        foreign_api_secret_file.write_all(api_secret.as_bytes()).unwrap();
+
+        let mut secret_enabled = true;
+        // Get path for specified secret file.
+        let secret_path = {
+            let r_config = Settings::node_config_to_read();
+            let path = match file_name {
+                API_SECRET_FILE_NAME => r_config.members.server.api_secret_path.clone(),
+                _ => r_config.members.server.foreign_api_secret_path.clone()
+            };
+            path.unwrap_or_else(|| {
+                secret_enabled = false;
+                let chain_type = AppConfig::chain_type();
+                let path = Self::get_secret_path(&chain_type, file_name);
+                path.to_str().unwrap().to_string()
+            })
+        };
+        // Update secret path at config if authorization was disabled before.
+        if !secret_enabled {
+            let mut w_config = Settings::node_config_to_update();
+            match file_name {
+                API_SECRET_FILE_NAME => w_config
+                    .members
+                    .server
+                    .api_secret_path = Some(secret_path.clone()),
+                _ => w_config.members.server.foreign_api_secret_path = Some(secret_path.clone())
+            };
+
+            w_config.save();
+        }
+        // Write secret text into file.
+        let mut secret_file = File::create(secret_path).unwrap();
+        secret_file.write_all(value.as_bytes()).unwrap();
     }
 
     /// Get Future Time Limit.
-    pub fn get_ftl() -> u64 {
-        Settings::node_config_to_read().members.server.future_time_limit
+    pub fn get_ftl() -> String {
+        Settings::node_config_to_read().members.server.future_time_limit.to_string()
     }
 
     /// Save Future Time Limit.

@@ -23,7 +23,6 @@ use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, Network, NetworkTab, NetworkTabType, View};
 use crate::gui::views::settings_stratum::StratumServerSetup;
 use crate::node::{Node, NodeConfig};
-use crate::Settings;
 
 #[derive(Default)]
 pub struct NetworkMining {
@@ -38,7 +37,7 @@ impl NetworkTab for NetworkMining {
     fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         let server_stats = Node::get_stats();
 
-        // Show message when node is not running or loading spinner when mining are not available.
+        // Show message when node is not running or loading spinner when mining is not available.
         if !server_stats.is_some() || Node::get_sync_status().unwrap() != SyncStatus::NoSync {
             if !Node::is_running() {
                 Network::disabled_node_ui(ui);
@@ -105,7 +104,7 @@ impl NetworkTab for NetworkMining {
         View::sub_title(ui, format!("{} {}", COMPUTER_TOWER, t!("network_mining.server")));
         ui.columns(2, |columns| {
             columns[0].vertical_centered(|ui| {
-                let (stratum_addr, stratum_port) = NodeConfig::get_stratum_address_port();
+                let (stratum_addr, stratum_port) = NodeConfig::get_stratum_address();
                 View::rounded_box(ui,
                                   format!("{}:{}", stratum_addr, stratum_port),
                                   t!("network_mining.address"),
@@ -256,8 +255,8 @@ fn draw_workers_stats(ui: &mut egui::Ui, ws: &WorkerStats, rounding: [bool; 2]) 
             ui.add_space(2.0);
             ui.horizontal_top(|ui| {
                 let (status_text, status_icon, status_color) = match ws.is_connected {
-                    true => { (t!("network_mining.connected"), PLUGS_CONNECTED, Colors::BLACK) }
-                    false => { (t!("network_mining.disconnected"), PLUGS, Colors::INACTIVE_TEXT) }
+                    true => (t!("network_mining.connected"), PLUGS_CONNECTED, Colors::BLACK),
+                    false => (t!("network_mining.disconnected"), PLUGS, Colors::INACTIVE_TEXT)
                 };
                 ui.add_space(5.0);
                 ui.heading(RichText::new(status_icon)

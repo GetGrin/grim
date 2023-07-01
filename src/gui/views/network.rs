@@ -12,14 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::net::{IpAddr, Ipv4Addr, SocketAddrV4, TcpListener};
-use std::str::FromStr;
 use std::time::Duration;
 
 use egui::{Color32, lerp, Rgba, RichText};
 use egui::style::Margin;
 use egui_extras::{Size, StripBuilder};
 use grin_chain::SyncStatus;
+use crate::AppConfig;
 
 use crate::gui::{Colors, Navigator};
 use crate::gui::icons::{CARDHOLDER, DATABASE, DOTS_THREE_OUTLINE_VERTICAL, FACTORY, FADERS, GAUGE};
@@ -32,7 +31,6 @@ use crate::gui::views::network_settings::NetworkSettings;
 use crate::gui::views::settings_node::NodeSetup;
 use crate::gui::views::settings_stratum::StratumServerSetup;
 use crate::node::Node;
-use crate::Settings;
 
 pub trait NetworkTab {
     fn get_type(&self) -> NetworkTabType;
@@ -69,8 +67,12 @@ impl Default for Network {
         Self {
             current_tab: Box::new(NetworkNode::default()),
             modal_ids: vec![
+                NetworkSettings::NODE_RESTART_REQUIRED_MODAL,
                 StratumServerSetup::STRATUM_PORT_MODAL,
-                NodeSetup::API_PORT_MODAL
+                NodeSetup::API_PORT_MODAL,
+                NodeSetup::API_SECRET_MODAL,
+                NodeSetup::FOREIGN_API_SECRET_MODAL,
+                NodeSetup::FTL_MODAL
             ]
         }
     }
@@ -101,7 +103,7 @@ impl Network {
                 ..Default::default()
             })
             .show_inside(ui, |ui| {
-                self.draw_title(ui, frame);
+                self.title_ui(ui, frame);
             });
 
         egui::TopBottomPanel::bottom("network_tabs")
@@ -110,7 +112,7 @@ impl Network {
                 ..Default::default()
             })
             .show_inside(ui, |ui| {
-                self.draw_tabs(ui);
+                self.tabs_ui(ui);
             });
 
         egui::CentralPanel::default()
@@ -125,7 +127,8 @@ impl Network {
             });
     }
 
-    fn draw_tabs(&mut self, ui: &mut egui::Ui) {
+    /// Draw tab buttons in the bottom of the screen.
+    fn tabs_ui(&mut self, ui: &mut egui::Ui) {
         ui.scope(|ui| {
             // Setup spacing between tabs.
             ui.style_mut().spacing.item_spacing = egui::vec2(5.0, 0.0);
@@ -157,11 +160,13 @@ impl Network {
         });
     }
 
+    /// Check if current tab equals providing [`NetworkTabType`].
     fn is_current_tab(&self, tab_type: NetworkTabType) -> bool {
         self.current_tab.get_type() == tab_type
     }
 
-    fn draw_title(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame) {
+    /// Draw title content.
+    fn title_ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame) {
         StripBuilder::new(ui)
             .size(Size::exact(52.0))
             .vertical(|mut strip| {
@@ -179,7 +184,7 @@ impl Network {
                                 });
                             });
                             strip.strip(|builder| {
-                                self.draw_title_text(builder);
+                                self.title_text_ui(builder);
                             });
                             strip.cell(|ui| {
                                 if !View::is_dual_panel_mode(frame) {
@@ -195,7 +200,8 @@ impl Network {
             });
     }
 
-    fn draw_title_text(&self, builder: StripBuilder) {
+    /// Draw title text.
+    fn title_text_ui(&self, builder: StripBuilder) {
         builder
             .size(Size::remainder())
             .size(Size::exact(32.0))
@@ -214,8 +220,8 @@ impl Network {
 
                         // Setup text color animation based on sync status
                         let idle = match sync_status {
-                            None => { !Node::is_starting() }
-                            Some(ss) => { ss == SyncStatus::NoSync }
+                            None => !Node::is_starting(),
+                            Some(ss) => ss == SyncStatus::NoSync
                         };
                         let (dark, bright) = (0.3, 1.0);
                         let color_factor = if !idle {
@@ -253,89 +259,15 @@ impl Network {
                 Node::start();
             });
             ui.add_space(2.0);
-            Self::autorun_node_checkbox(ui);
+            Self::autorun_node_ui(ui);
         });
     }
 
     /// Draw checkbox with setting to run node on app launch.
-    pub fn autorun_node_checkbox(ui: &mut egui::Ui) {
-        let autostart: bool = Settings::app_config_to_read().auto_start_node;
+    pub fn autorun_node_ui(ui: &mut egui::Ui) {
+        let autostart = AppConfig::autostart_node();
         View::checkbox(ui, autostart, t!("network.autorun"), || {
-            let mut w_app_config = Settings::app_config_to_update();
-            w_app_config.auto_start_node = !autostart;
-            w_app_config.save();
-        });
-    }
-
-    /// List of available IP addresses.
-    pub fn get_ip_list() -> Vec<IpAddr> {
-        let mut addresses = Vec::new();
-        for net_if in pnet::datalink::interfaces() {
-            for ip in net_if.ips {
-                if ip.is_ipv4() {
-                    addresses.push(ip.ip());
-                }
-            }
-        }
-        addresses
-    }
-
-    /// Draw IP list radio buttons.
-    pub fn ip_list_ui(ui: &mut egui::Ui,
-                      saved_ip: &String,
-                      ips: &Vec<IpAddr>,
-                      on_change: impl FnOnce(&String)) {
-        let saved_ip_addr = &IpAddr::from_str(saved_ip.as_str()).unwrap();
-        let mut selected_ip_addr = saved_ip_addr;
-
-        // Set first IP address as current if saved is not present at system.
-        if !ips.contains(selected_ip_addr) {
-            selected_ip_addr = ips.get(0).unwrap();
-        }
-
-        // Show available IP addresses on the system.
-        let _ = ips.chunks(2).map(|x| {
-            if x.len() == 2 {
-                ui.columns(2, |columns| {
-                    let ip_addr_l = x.get(0).unwrap();
-                    columns[0].vertical_centered(|ui| {
-                        View::radio_value(ui,
-                                          &mut selected_ip_addr,
-                                          ip_addr_l,
-                                          ip_addr_l.to_string());
-                    });
-                    let ip_addr_r = x.get(1).unwrap();
-                    columns[1].vertical_centered(|ui| {
-                        View::radio_value(ui,
-                                          &mut selected_ip_addr,
-                                          ip_addr_r,
-                                          ip_addr_r.to_string());
-                    })
-                });
-            } else {
-                let ip_addr = x.get(0).unwrap();
-                View::radio_value(ui,
-                                  &mut selected_ip_addr,
-                                  ip_addr,
-                                  ip_addr.to_string());
-            }
-            ui.add_space(12.0);
-        }).collect::<Vec<_>>();
-
-        if saved_ip_addr != selected_ip_addr {
-            (on_change)(&selected_ip_addr.to_string());
-        }
-    }
-
-    /// Show message when IP addresses are not available at system.
-    pub fn no_ip_address_ui(ui: &mut egui::Ui) {
-        ui.vertical_centered(|ui| {
-            ui.label(RichText::new(t!("network.no_ips"))
-                .size(16.0)
-                .color(Colors::INACTIVE_TEXT)
-            );
-            ui.add_space(6.0);
+            AppConfig::toggle_node_autostart();
         });
     }
 }
-

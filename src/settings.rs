@@ -64,20 +64,43 @@ impl AppConfig {
         }
     }
 
-    /// Change chain type and load new [`NodeConfig`] accordingly.
-    pub fn change_chain_type(&mut self, chain_type: &ChainTypes) {
-        if self.chain_type != *chain_type {
-            self.chain_type = *chain_type;
-            self.save();
-
-            // Load config for selected chain type.
-            Settings::node_config_to_update().members = NodeConfig::for_chain_type(chain_type);
-        }
-    }
-
     /// Save app config to disk.
     pub fn save(&self) {
         Settings::write_to_file(self, Settings::get_config_path(APP_CONFIG_FILE_NAME, None));
+    }
+
+    /// Change chain type and load new [`NodeConfig`] accordingly.
+    pub fn change_chain_type(chain_type: &ChainTypes) {
+        let current_chain_type = Self::chain_type();
+        if current_chain_type != *chain_type {
+            let mut w_app_config = Settings::app_config_to_update();
+            w_app_config.chain_type = *chain_type;
+            w_app_config.save();
+            // Load config for selected chain type.
+            let mut w_node_config = Settings::node_config_to_update();
+            w_node_config.members = NodeConfig::for_chain_type(chain_type);
+            w_node_config.save();
+        }
+    }
+
+    /// Get current [`ChainTypes`] for node and wallets.
+    pub fn chain_type() -> ChainTypes {
+        let r_config = Settings::app_config_to_read();
+        r_config.chain_type
+    }
+
+    /// Check if integrated node is starting with application.
+    pub fn autostart_node() -> bool {
+        let r_config = Settings::app_config_to_read();
+        r_config.auto_start_node
+    }
+
+    /// Toggle integrated node autostart.
+    pub fn toggle_node_autostart() {
+        let autostart = Self::autostart_node();
+        let mut w_app_config = Settings::app_config_to_update();
+        w_app_config.auto_start_node = !autostart;
+        w_app_config.save();
     }
 }
 
@@ -150,7 +173,7 @@ impl Settings {
         let file_content = fs::read_to_string(config_path.clone())?;
         let parsed = toml::from_str::<T>(file_content.as_str());
         match parsed {
-            Ok(cfg) => { Ok(cfg) }
+            Ok(cfg) => Ok(cfg),
             Err(e) => {
                 return Err(ConfigError::ParseError(
                     config_path.to_str().unwrap().to_string(),

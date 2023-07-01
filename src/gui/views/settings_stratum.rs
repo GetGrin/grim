@@ -12,17 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::net::IpAddr;
-use std::str::FromStr;
-
 use egui::{RichText, TextStyle, Widget};
 
 use crate::gui::{Colors, Navigator};
 use crate::gui::icons::WRENCH;
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Modal, ModalPosition, Network, View};
+use crate::gui::views::{Modal, ModalPosition, View};
+use crate::gui::views::network_settings::NetworkSettings;
 use crate::node::NodeConfig;
-use crate::Settings;
 
 /// Stratum server setup ui section.
 pub struct StratumServerSetup {
@@ -37,7 +34,7 @@ pub struct StratumServerSetup {
 
 impl Default for StratumServerSetup {
     fn default() -> Self {
-        let (ip, port) = NodeConfig::get_stratum_address_port();
+        let (ip, port) = NodeConfig::get_stratum_address();
         let is_port_available = NodeConfig::is_stratum_port_available(&ip, &port);
         Self {
             stratum_port_edit: port,
@@ -57,9 +54,9 @@ impl StratumServerSetup {
         ui.add_space(4.0);
 
         // Show message when IP addresses are not available on the system.
-        let all_ips = Network::get_ip_list();
+        let all_ips = NetworkSettings::get_ip_addrs();
         if all_ips.is_empty() {
-            Network::no_ip_address_ui(ui);
+            NetworkSettings::no_ip_address_ui(ui);
             return;
         }
 
@@ -70,10 +67,10 @@ impl StratumServerSetup {
             );
             ui.add_space(6.0);
             // Show stratum IP addresses to select.
-            let (ip, port) = NodeConfig::get_stratum_address_port();
-            Network::ip_list_ui(ui, &ip, &all_ips, |selected_ip| {
+            let (ip, port) = NodeConfig::get_stratum_address();
+            NetworkSettings::ip_addrs_ui(ui, &ip, &all_ips, |selected_ip| {
                 self.is_port_available = NodeConfig::is_stratum_port_available(selected_ip, &port);
-                NodeConfig::save_stratum_address_port(selected_ip, &port);
+                NodeConfig::save_stratum_address(selected_ip, &port);
             });
 
             ui.label(RichText::new(t!("network_settings.port"))
@@ -91,17 +88,16 @@ impl StratumServerSetup {
 
     /// Draw stratum port setup ui.
     fn port_setup_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
-        let (_, port) = NodeConfig::get_stratum_address_port();
-        // Show button to choose stratum server port.
+        let (_, port) = NodeConfig::get_stratum_address();
+        // Show button to enter stratum server port.
         View::button(ui, port.clone(), Colors::BUTTON, || {
             // Setup values for modal.
             self.stratum_port_edit = port;
             self.stratum_port_available_edit = self.is_port_available;
-
             // Show stratum port modal.
             let port_modal = Modal::new(Self::STRATUM_PORT_MODAL)
                 .position(ModalPosition::CenterTop)
-                .title(t!("network_settings.change_port"));
+                .title(t!("network_settings.change_value"));
             Navigator::show_modal(port_modal);
             cb.show_keyboard();
         });
@@ -123,8 +119,8 @@ impl StratumServerSetup {
                                  cb: &dyn PlatformCallbacks) {
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
-            ui.label(RichText::new(t!("network_settings.enter_value"))
-                .size(16.0)
+            ui.label(RichText::new(t!("network_settings.stratum_port"))
+                .size(18.0)
                 .color(Colors::GRAY));
             ui.add_space(8.0);
 
@@ -143,7 +139,7 @@ impl StratumServerSetup {
             if !self.stratum_port_available_edit {
                 ui.add_space(12.0);
                 ui.label(RichText::new(t!("network_settings.port_unavailable"))
-                    .size(16.0)
+                    .size(18.0)
                     .color(Colors::RED));
             }
 
@@ -154,6 +150,26 @@ impl StratumServerSetup {
                 // Setup spacing between buttons.
                 ui.spacing_mut().item_spacing = egui::Vec2::new(8.0, 0.0);
 
+                // Save button callback
+                let on_save = || {
+                    // Check if port is available.
+                    let (stratum_ip, _) = NodeConfig::get_stratum_address();
+                    let available = NodeConfig::is_stratum_port_available(
+                        &stratum_ip,
+                        &self.stratum_port_edit
+                    );
+                    self.stratum_port_available_edit = available;
+
+                    // Save port at config if it's available.
+                    if available {
+                        NodeConfig::save_stratum_address(&stratum_ip, &self.stratum_port_edit);
+
+                        self.is_port_available = true;
+                        cb.hide_keyboard();
+                        modal.close();
+                    }
+                };
+
                 ui.columns(2, |columns| {
                     columns[0].vertical_centered_justified(|ui| {
                         View::button(ui, t!("modal.cancel"), Colors::WHITE, || {
@@ -163,24 +179,7 @@ impl StratumServerSetup {
                         });
                     });
                     columns[1].vertical_centered_justified(|ui| {
-                        View::button(ui, t!("modal.save"), Colors::WHITE, || {
-                            // Check if port is available.
-                            let (ip, _) = NodeConfig::get_api_address_port();
-                            let available = NodeConfig::is_stratum_port_available(
-                                &ip,
-                                &self.stratum_port_edit
-                            );
-                            self.stratum_port_available_edit = available;
-
-                            // Save port at config if it's available.
-                            if self.stratum_port_available_edit {
-                                NodeConfig::save_stratum_address_port(&ip, &self.stratum_port_edit);
-
-                                self.is_port_available = true;
-                                cb.hide_keyboard();
-                                modal.close();
-                            }
-                        });
+                        View::button(ui, t!("modal.save"), Colors::WHITE, on_save);
                     });
                 });
                 ui.add_space(6.0);

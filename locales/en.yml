@@ -70,23 +70,31 @@ network_mining:
   connected: Connected
   disconnected: Disconnected
 network_settings:
-  port: Port
   ip: IP Address
+  port: Port
   change_port: Change port
-  enter_value: Enter value
+  change_value: Change value
+  stratum_port: Stratum server port
   port_unavailable: Specified port is unavailable
   restart_app_required: App restart is required to apply changes.
-  restart_node_required: Node server restart is required to apply changes.
+  restart_node_required: Node restart is required to apply changes.
   enable: Enable
   disable: Disable
   restart: Restart
   server: Server
   api_ip: API IP Address
   api_port: API Port
+  api_secret: Rest API and V2 Owner API token
+  foreign_api_secret: Foreign API token
+  disabled: Disabled
+  copy: Copy
+  paste: Paste
+  ftl: The Future Time Limit (FTL)
+  ftl_description: Limit on how far into the future, relative to a node's local time in seconds, the timestamp on a new block can be, in order for the block to be accepted.
+  not_valid_value: Entered value is not valid
 modal:
   cancel: Cancel
   save: Save
-  confirmation: Confirmation
 modal_exit:
   description: Are you sure you want to quit the application?
   exit: Exit
