@@ -28,8 +28,6 @@ use jni::sys::{jboolean, jstring};
 use lazy_static::lazy_static;
 use crate::node::NodeConfig;
 
-use crate::Settings;
-
 lazy_static! {
     /// Static thread-aware state of [`Node`] to be updated from another thread.
     static ref NODE_STATE: Arc<Node> = Arc::new(Node::default());
@@ -481,6 +479,8 @@ fn start_server() -> Result<Server, Error>  {
     // These are read via global and not read from config beyond this point.
     if !global::GLOBAL_CHAIN_TYPE.is_init() {
         global::init_global_chain_type(config.server.chain_type);
+    } else {
+        global::set_global_chain_type(config.server.chain_type);
     }
 
     if !global::GLOBAL_NRD_FEATURE_ENABLED.is_init() {
@@ -495,13 +495,19 @@ fn start_server() -> Result<Server, Error>  {
             }
         }
     }
+
+    let afb = config.server.pool_config.accept_fee_base;
     if !global::GLOBAL_ACCEPT_FEE_BASE.is_init() {
-        let afb = config.server.pool_config.accept_fee_base;
         global::init_global_accept_fee_base(afb);
+    } else {
+        global::set_global_accept_fee_base(afb);
     }
+
+    let future_time_limit = config.server.future_time_limit;
     if !global::GLOBAL_FUTURE_TIME_LIMIT.is_init() {
-        let future_time_limit = config.server.future_time_limit;
         global::init_global_future_time_limit(future_time_limit);
+    } else {
+        global::set_global_future_time_limit(future_time_limit);
     }
 
     let api_chan: &'static mut (oneshot::Sender<()>, oneshot::Receiver<()>) =
