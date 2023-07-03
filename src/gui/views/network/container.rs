@@ -23,7 +23,7 @@ use crate::AppConfig;
 use crate::gui::{Colors, Navigator};
 use crate::gui::icons::{CARDHOLDER, DATABASE, DOTS_THREE_OUTLINE_VERTICAL, FACTORY, FADERS, GAUGE};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Modal, ModalContainer, View};
+use crate::gui::views::{Modal, ModalContainer, TitlePanel, View};
 use crate::gui::views::network::configs::server::ServerSetup;
 use crate::gui::views::network::configs::stratum::StratumServerSetup;
 use crate::gui::views::network::metrics::NetworkMetrics;
@@ -171,7 +171,7 @@ impl NetworkContainer {
     /// Draw title content.
     fn title_ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame) {
         StripBuilder::new(ui)
-            .size(Size::exact(52.0))
+            .size(Size::exact(TitlePanel::DEFAULT_HEIGHT))
             .vertical(|mut strip| {
                 strip.strip(|builder| {
                     builder

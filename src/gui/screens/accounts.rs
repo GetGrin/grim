@@ -18,7 +18,7 @@ use crate::gui::icons::{ARROW_CIRCLE_LEFT, GLOBE, PLUS};
 use crate::gui::{Colors, Navigator};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::screens::{Screen, ScreenId};
-use crate::gui::views::{TitlePanel, TitlePanelAction, View};
+use crate::gui::views::{TitlePanel, TitleAction, View};
 
 #[derive(Default)]
 pub struct Accounts;
@@ -29,16 +29,15 @@ impl Screen for Accounts {
     }
 
     fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame, cb: &dyn PlatformCallbacks) {
-        TitlePanel::new(t!("screen_accounts.title"))
-            .ui(if !View::is_dual_panel_mode(frame) {
-                TitlePanelAction::new(GLOBE, || {
-                    Navigator::toggle_side_panel();
-                })
-            } else {
-                None
-            }, TitlePanelAction::new(PLUS, || {
-                //TODO: add account
-            }), ui);
+        TitlePanel::ui(t!("screen_accounts.title"), if !View::is_dual_panel_mode(frame) {
+            TitleAction::new(GLOBE, || {
+                Navigator::toggle_side_panel();
+            })
+        } else {
+            None
+        }, TitleAction::new(PLUS, || {
+            //TODO: add account
+        }), ui);
 
         egui::CentralPanel::default()
             .frame(Frame {
