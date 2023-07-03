@@ -64,6 +64,7 @@ public class MainActivity extends GameActivity {
         BackgroundService.start(this);
     }
 
+    // Implemented into native code to handle display cutouts change.
     native void onDisplayCutoutsChanged(int[] cutouts);
 
     @Override
@@ -82,6 +83,7 @@ public class MainActivity extends GameActivity {
         return super.onKeyDown(keyCode, event);
     }
 
+    // Implemented into native code to handle back button press.
     public native void onBackButtonPress();
 
     private boolean mManualExit;
@@ -120,29 +122,17 @@ public class MainActivity extends GameActivity {
         finish();
     }
 
-    // Called from native code to restart the app.
-    public void onAppRestart() {
-        BackgroundService.stop(this);
-
-        // Restart Activity.
-        Intent intent = getPackageManager().getLaunchIntentForPackage(getPackageName());
-        ComponentName componentName = intent.getComponent();
-        Intent mainIntent = Intent.makeRestartActivityTask(componentName);
-        startActivity(mainIntent);
-
-        // Kill old process.
-        Process.killProcess(Process.myPid());
-    }
-
     // Notify native code to stop activity (e.g. node) on app destroy.
     public native void onTermination();
 
+    // Called from native code to set text into clipboard.
     public void copyText(String data) {
         ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
         ClipData clip = ClipData.newPlainText(data, data);
         clipboard.setPrimaryClip(clip);
     }
 
+    // Called from native code to get text from clipboard.
     public String pasteText() {
         ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
         String text;
