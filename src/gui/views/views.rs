@@ -17,7 +17,7 @@ use egui::epaint::{Color32, FontId, RectShape, Rounding, Stroke};
 use egui::epaint::text::TextWrapping;
 use egui::text::{LayoutJob, TextFormat};
 
-use crate::gui::{Colors, Navigator};
+use crate::gui::Colors;
 use crate::gui::icons::{CHECK_SQUARE, SQUARE};
 
 pub struct View;
@@ -93,16 +93,16 @@ impl View {
     /// Tab button with white background fill color, contains only icon.
     pub fn tab_button(ui: &mut egui::Ui, icon: &str, active: bool, action: impl FnOnce()) {
         let text_color = match active {
-            true => { Colors::TITLE }
-            false => { Colors::TEXT }
+            true => Colors::TITLE,
+            false => Colors::TEXT
         };
         let stroke = match active {
-            true => { Stroke::NONE }
-            false => { Self::DEFAULT_STROKE }
+            true => Stroke::NONE,
+            false => Self::DEFAULT_STROKE
         };
         let color = match active {
-            true => { Colors::FILL }
-            false => { Colors::WHITE }
+            true => Colors::FILL,
+            false => Colors::WHITE
         };
         let br = Button::new(RichText::new(icon.to_string()).size(24.0).color(text_color))
             .stroke(stroke)
@@ -115,7 +115,8 @@ impl View {
 
     /// Draw [`Button`] with specified background fill color.
     pub fn button(ui: &mut egui::Ui, text: String, fill_color: Color32, action: impl FnOnce()) {
-        let br = Button::new(RichText::new(text.to_uppercase()).size(18.0).color(Colors::TEXT_BUTTON))
+        let button_text = RichText::new(text.to_uppercase()).size(18.0).color(Colors::TEXT_BUTTON);
+        let br = Button::new(button_text)
             .stroke(Self::DEFAULT_STROKE)
             .fill(fill_color)
             .ui(ui);
@@ -201,14 +202,14 @@ impl View {
 
     /// Draw small gold loading spinner.
     pub fn small_loading_spinner(ui: &mut egui::Ui) {
-        Spinner::new().size(42.0).color(Colors::GOLD).ui(ui);
+        Spinner::new().size(38.0).color(Colors::GOLD).ui(ui);
     }
 
     /// Draw the button that looks like checkbox with callback on check.
     pub fn checkbox(ui: &mut egui::Ui, checked: bool, text: String, callback: impl FnOnce()) {
         let (text_value, color) = match checked {
-            true => { (format!("{} {}", CHECK_SQUARE, text), Colors::TEXT_BUTTON) }
-            false => { (format!("{} {}", SQUARE, text), Colors::TEXT) }
+            true => (format!("{} {}", CHECK_SQUARE, text), Colors::TEXT_BUTTON),
+            false => (format!("{} {}", SQUARE, text), Colors::TEXT)
         };
 
         let br = Button::new(RichText::new(text_value).size(18.0).color(color))

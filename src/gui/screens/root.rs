@@ -17,12 +17,12 @@ use egui::RichText;
 use crate::gui::{App, Colors, Navigator};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::screens::{Account, Accounts, Screen, ScreenId};
-use crate::gui::views::{ModalContainer, Network, View};
+use crate::gui::views::{ModalContainer, NetworkContainer, View};
 use crate::node::Node;
 
 pub struct Root {
     screens: Vec<Box<dyn Screen>>,
-    network: Network,
+    network_panel: NetworkContainer,
     show_exit_progress: bool,
     allowed_modal_ids: Vec<&'static str>
 }
@@ -36,7 +36,7 @@ impl Default for Root {
                 Box::new(Accounts::default()),
                 Box::new(Account::default())
             ],
-            network: Network::default(),
+            network_panel: NetworkContainer::default(),
             show_exit_progress: false,
             allowed_modal_ids: vec![
                 Navigator::EXIT_MODAL
@@ -65,7 +65,7 @@ impl Root {
             .exact_width(panel_width)
             .frame(egui::Frame::default())
             .show_animated_inside(ui, is_panel_open, |ui| {
-                self.network.ui(ui, frame, cb);
+                self.network_panel.ui(ui, frame, cb);
             });
 
         egui::CentralPanel::default()

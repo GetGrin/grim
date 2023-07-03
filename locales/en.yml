@@ -58,8 +58,8 @@ network_mining:
   loading: Mining will be available after the synchronization
   server_setup: Stratum server setup
   enable_server: Enable server
-  server_setting: 'Enable stratum server or change more settings by selecting %{settings} at the bottom of the screen. App restart is required to change settings of the running server.'
   info: 'Mining server is enabled, you can change its settings by selecting %{settings} at the bottom of the screen. Data is updating when devices are connected.'
+  info_settings: To change the settings of enabled server, you will need to restart the node.
   rewards_wallet: Wallet for rewards
   server: Stratum server
   address: Address
@@ -72,11 +72,9 @@ network_mining:
 network_settings:
   ip: IP Address
   port: Port
-  change_port: Change port
   change_value: Change value
   stratum_port: Stratum server port
   port_unavailable: Specified port is unavailable
-  restart_app_required: App restart is required to apply changes.
   restart_node_required: Node restart is required to apply changes.
   enable: Enable
   disable: Disable
@@ -97,6 +95,11 @@ network_settings:
   full_validation_description: Whether to run a full chain validation when processing each block (except during synchronization).
   archive_mode: Archive mode
   archive_mode_desc: Run the node in full archive mode (more disk space and time will be required for synchronization).
+  attempt_time: Attempt time
+  attempt_time_desc: The amount of time in seconds to attempt to mine on a particular header before stopping and re-collecting transactions from the pool
+  min_share_diff: The minimum acceptable share difficulty
+  reset_settings_desc: Reset integrated node settings to default values
+  reset_settings: Reset settings
 modal:
   cancel: Cancel
   save: Save

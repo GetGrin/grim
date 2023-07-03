@@ -22,11 +22,12 @@ use futures::channel::oneshot;
 use grin_chain::SyncStatus;
 use grin_core::global;
 use grin_core::global::ChainTypes;
-use grin_servers::{Server, ServerStats};
+use grin_servers::{Server, ServerStats, StratumServerConfig, StratumStats};
 use grin_servers::common::types::Error;
 use jni::sys::{jboolean, jstring};
 use lazy_static::lazy_static;
 use crate::node::NodeConfig;
+use crate::node::stratum::StratumServer;
 
 lazy_static! {
     /// Static thread-aware state of [`Node`] to be updated from another thread.
@@ -35,8 +36,10 @@ lazy_static! {
 
 /// Provides [`Server`] control, holds current status and statistics.
 pub struct Node {
-    /// Statistics data for UI.
+    /// The node [`Server`] statistics for UI.
     stats: Arc<RwLock<Option<ServerStats>>>,
+    /// Stratum server statistics.
+    stratum_stats: Arc<grin_util::RwLock<StratumStats>>,
     /// Running API server address.
     api_addr: Arc<RwLock<Option<String>>>,
     /// Running P2P server port.
@@ -49,8 +52,8 @@ pub struct Node {
     stop_needed: AtomicBool,
     /// Flag to check if app exit is needed after server stop.
     exit_after_stop: AtomicBool,
-    /// Thread flag to start stratum server at separate.
-    start_stratum_server: AtomicBool,
+    /// Thread flag to start stratum server.
+    start_stratum_needed: AtomicBool,
     /// Error on [`Server`] start.
     init_error: Option<Error>
 }
@@ -59,13 +62,14 @@ impl Default for Node {
     fn default() -> Self {
         Self {
             stats: Arc::new(RwLock::new(None)),
+            stratum_stats: Arc::new(grin_util::RwLock::new(StratumStats::default())),
             api_addr: Arc::new(RwLock::new(None)),
             p2p_port: Arc::new(RwLock::new(None)),
             starting: AtomicBool::new(false),
             restart_needed: AtomicBool::new(false),
             stop_needed: AtomicBool::new(false),
             exit_after_stop: AtomicBool::new(false),
-            start_stratum_server: AtomicBool::new(false),
+            start_stratum_needed: AtomicBool::new(false),
             init_error: None
         }
     }
@@ -114,14 +118,14 @@ impl Node {
         }
     }
 
-    /// Start stratum server.
+    /// Request to start stratum server.
     pub fn start_stratum_server() {
-        NODE_STATE.start_stratum_server.store(true, Ordering::Relaxed);
+        NODE_STATE.start_stratum_needed.store(true, Ordering::Relaxed);
     }
 
     /// Check if stratum server is starting.
     pub fn is_stratum_server_starting() -> bool {
-        NODE_STATE.start_stratum_server.load(Ordering::Relaxed)
+        NODE_STATE.start_stratum_needed.load(Ordering::Relaxed)
     }
 
     /// Check if node is starting.
@@ -149,6 +153,11 @@ impl Node {
         NODE_STATE.stats.read().unwrap()
     }
 
+    /// Get stratum server [`Server`] statistics.
+    pub fn get_stratum_stats() -> grin_util::RwLockReadGuard<'static, StratumStats> {
+        NODE_STATE.stratum_stats.read()
+    }
+
     /// Get synchronization status, empty when [`Server`] is not running.
     pub fn get_sync_status() -> Option<SyncStatus> {
         // Return Shutdown status when node is stopping.
@@ -169,13 +178,13 @@ impl Node {
         None
     }
 
-    /// Start node [`Server`] at separate thread to update [`NODE_STATE`] with [`ServerStats`].
+    /// Start the [`Server`] at separate thread to update state with stats and handle statuses.
     fn start_server_thread() {
         thread::spawn(move || {
             NODE_STATE.starting.store(true, Ordering::Relaxed);
 
             // Start the server.
-            match start_server() {
+            match start_node_server() {
                 Ok(mut server) => {
                     let mut first_start = true;
                     loop {
@@ -183,84 +192,85 @@ impl Node {
                             // Stop the server.
                             server.stop();
 
+                            // Reset stratum stats
+                            {
+                                let mut w_stratum_stats = NODE_STATE.stratum_stats.write();
+                                *w_stratum_stats = StratumStats::default();
+                            }
+
                             // Create new server.
-                            match start_server() {
+                            match start_node_server() {
                                 Ok(s) => {
                                     server = s;
                                     NODE_STATE.restart_needed.store(false, Ordering::Relaxed);
                                 }
                                 Err(e) => {
-                                    NODE_STATE.restart_needed.store(false, Ordering::Relaxed);
                                     Self::on_start_error(&e);
                                     break;
                                 }
                             }
                         } else if Self::is_stopping() {
-                            // Clean server stats.
-                            {
-                                let mut w_stats = NODE_STATE.stats.write().unwrap();
-                                *w_stats = None;
-                            }
-
                             // Stop the server.
                             server.stop();
-
-                            NODE_STATE.starting.store(false, Ordering::Relaxed);
-                            NODE_STATE.stop_needed.store(false, Ordering::Relaxed);
-                            NODE_STATE.start_stratum_server.store(false, Ordering::Relaxed);
-
-                            // Clean launched API server address.
-                            {
-                                let mut w_api_addr = NODE_STATE.api_addr.write().unwrap();
-                                *w_api_addr = None;
-                            }
-                            // Clean launched P2P server port.
-                            {
-                                let mut w_p2p_port = NODE_STATE.p2p_port.write().unwrap();
-                                *w_p2p_port = None;
-                            }
+                            // Clean stats and statuses.
+                            Self::on_thread_stop();
+                            // Exit thread loop.
                             break;
-                        } else {
-                            // Start stratum mining server.
-                            if Self::is_stratum_server_starting() {
+                        }
+
+                        // Start stratum mining server if requested.
+                        let stratum_start_requested = Self::is_stratum_server_starting();
+                        if stratum_start_requested {
+                            let (s_ip, s_port) = NodeConfig::get_stratum_address();
+                            if NodeConfig::is_stratum_port_available(&s_ip, &s_port) {
                                 let stratum_config = server
                                     .config
                                     .stratum_mining_config
                                     .clone()
                                     .unwrap();
-                                server.start_stratum_server(stratum_config);
-
-                                // Wait for mining server to start and update status.
-                                thread::sleep(Duration::from_millis(100));
-                                NODE_STATE.start_stratum_server.store(false, Ordering::Relaxed);
-                            }
-
-                            // Update server stats.
-                            if let Ok(stats) = server.get_server_stats() {
-                                {
-                                    let mut w_stats = NODE_STATE.stats.write().unwrap();
-                                    *w_stats = Some(stats);
-                                }
-
-                                if first_start {
-                                    NODE_STATE.starting.store(false, Ordering::Relaxed);
-                                    first_start = false;
-                                }
+                                start_stratum_mining_server(&server, stratum_config);
                             }
                         }
+
+                        // Update server stats.
+                        if let Ok(stats) = server.get_server_stats() {
+                            {
+                                let mut w_stats = NODE_STATE.stats.write().unwrap();
+                                *w_stats = Some(stats.clone());
+                            }
+
+                            if first_start {
+                                NODE_STATE.starting.store(false, Ordering::Relaxed);
+                                first_start = false;
+                            }
+                        }
+
+                        if stratum_start_requested {
+                            NODE_STATE.start_stratum_needed.store(false, Ordering::Relaxed);
+                        }
+
                         thread::sleep(Duration::from_millis(250));
                     }
                 }
                 Err(e) => {
-                    NODE_STATE.starting.store(false, Ordering::Relaxed);
                     Self::on_start_error(&e);
                 }
             }
         });
     }
 
-    /// Handle node [`Server`] error on start.
-    fn on_start_error(e: &Error) {
+    /// Reset stats and statuses on [`Server`] thread stop.
+    fn on_thread_stop() {
+        NODE_STATE.starting.store(false, Ordering::Relaxed);
+        NODE_STATE.restart_needed.store(false, Ordering::Relaxed);
+        NODE_STATE.start_stratum_needed.store(false, Ordering::Relaxed);
+        NODE_STATE.stop_needed.store(false, Ordering::Relaxed);
+
+        // Reset stratum stats.
+        {
+            let mut w_stratum_stats = NODE_STATE.stratum_stats.write();
+            *w_stratum_stats = StratumStats::default();
+        }
         // Clean server stats.
         {
             let mut w_stats = NODE_STATE.stats.write().unwrap();
@@ -276,6 +286,12 @@ impl Node {
             let mut w_p2p_port = NODE_STATE.p2p_port.write().unwrap();
             *w_p2p_port = None;
         }
+    }
+
+    /// Handle node [`Server`] error on start.
+    fn on_start_error(e: &Error) {
+        Self::on_thread_stop();
+
         //TODO: Create error
         // NODE_STATE.init_error = Some(e);
 
@@ -464,8 +480,8 @@ impl Node {
     }
 }
 
-/// Start the [`Server`] for node.
-fn start_server() -> Result<Server, Error>  {
+/// Start the node [`Server`].
+fn start_node_server() -> Result<Server, Error>  {
     // Get current global config
     let config = NodeConfig::get_members();
     let server_config = config.server.clone();
@@ -545,8 +561,32 @@ fn start_server() -> Result<Server, Error>  {
         *w_p2p_port = Some(config.server.p2p_config.port);
     }
 
+    // Put flag to start stratum server if autorun is available.
+    if NodeConfig::is_stratum_autorun_enabled() {
+        NODE_STATE.start_stratum_needed.store(true, Ordering::Relaxed);
+    }
+
     let server_result = Server::new(server_config.clone(), None, api_chan);
     server_result
+}
+
+/// Start stratum mining server on a separate thread.
+pub fn start_stratum_mining_server(server: &Server, config: StratumServerConfig) {
+    let proof_size = global::proofsize();
+    let sync_state = server.sync_state.clone();
+
+    let mut stratum_server = StratumServer::new(
+        config,
+        server.chain.clone(),
+        server.tx_pool.clone(),
+        NODE_STATE.stratum_stats.clone(),
+    );
+    let stop_state = server.stop_state.clone();
+    let _ = thread::Builder::new()
+        .name("stratum_server".to_string())
+        .spawn(move || {
+            stratum_server.run_loop(proof_size, sync_state, stop_state);
+        });
 }
 
 #[allow(dead_code)]

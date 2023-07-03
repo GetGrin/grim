@@ -126,7 +126,7 @@ impl Modal {
 
         // Show main content Window at given position.
         let (content_align, content_offset) = self.modal_position();
-        let layer_id = egui::Window::new("modal_window")
+        let layer_id = egui::Window::new(format!("modal_window_{}", self.id))
             .title_bar(false)
             .resizable(false)
             .collapsible(false)
@@ -152,12 +152,12 @@ impl Modal {
     /// Get [`egui::Window`] position based on [`ModalPosition`].
     fn modal_position(&self) -> (Align2, Vec2) {
         let align = match self.position {
-            ModalPosition::CenterTop => { Align2::CENTER_TOP }
-            ModalPosition::Center => { Align2::CENTER_CENTER }
+            ModalPosition::CenterTop => Align2::CENTER_TOP,
+            ModalPosition::Center => Align2::CENTER_CENTER
         };
         let offset = match self.position {
-            ModalPosition::CenterTop => { Vec2::new(0.0, 20.0) }
-            ModalPosition::Center => { Vec2::new(0.0, 0.0) }
+            ModalPosition::CenterTop => Vec2::new(0.0, 20.0),
+            ModalPosition::Center => Vec2::new(0.0, 0.0)
         };
         (align, offset)
     }

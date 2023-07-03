@@ -38,7 +38,7 @@ impl App {
         egui::CentralPanel::default()
             .frame(egui::Frame {
                 fill: Colors::FILL,
-                .. Default::default()
+                ..Default::default()
             })
             .show(ctx, |ui| {
                 self.root.ui(ui, frame, cb);

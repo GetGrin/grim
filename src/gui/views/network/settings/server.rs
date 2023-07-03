@@ -15,16 +15,17 @@
 use eframe::emath::Align;
 use egui::{Id, Layout, RichText, TextStyle, Widget};
 use grin_core::global::ChainTypes;
+
 use crate::AppConfig;
 use crate::gui::{Colors, Navigator};
-use crate::gui::icons::{CLIPBOARD_TEXT, COMPUTER_TOWER, COPY, POWER, SHIELD, SHIELD_SLASH};
+use crate::gui::icons::{CLIPBOARD_TEXT, CLOCK_CLOCKWISE, COMPUTER_TOWER, COPY, PLUG, POWER, SHIELD, SHIELD_SLASH};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Modal, ModalPosition, Network, View};
-use crate::gui::views::network_settings::NetworkSettings;
+use crate::gui::views::{Modal, ModalPosition, NetworkContainer, View};
+use crate::gui::views::network::node_settings::NetworkNodeSettings;
 use crate::node::{Node, NodeConfig};
 
 /// Integrated node server setup ui section.
-pub struct NodeSetup {
+pub struct ServerSetup {
     /// API port to be used inside edit modal.
     api_port_edit: String,
     /// Flag to check if API port is available inside edit modal.
@@ -43,7 +44,7 @@ pub struct NodeSetup {
     ftl_edit: String,
 }
 
-impl Default for NodeSetup {
+impl Default for ServerSetup {
     fn default() -> Self {
         let (api_ip, api_port) = NodeConfig::get_api_address();
         let is_api_port_available = NodeConfig::is_api_port_available(&api_ip, &api_port);
@@ -58,7 +59,7 @@ impl Default for NodeSetup {
     }
 }
 
-impl NodeSetup {
+impl ServerSetup {
     pub const API_PORT_MODAL: &'static str = "api_port";
     pub const API_SECRET_MODAL: &'static str = "api_secret";
     pub const FOREIGN_API_SECRET_MODAL: &'static str = "foreign_api_secret";
@@ -67,7 +68,7 @@ impl NodeSetup {
     pub fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         View::sub_title(ui, format!("{} {}", COMPUTER_TOWER, t!("network_settings.server")));
         View::horizontal_line(ui, Colors::ITEM_STROKE);
-        ui.add_space(8.0);
+        ui.add_space(4.0);
 
         // Show chain type setup.
         self.chain_type_ui(ui);
@@ -75,8 +76,9 @@ impl NodeSetup {
         // Show loading indicator or controls to stop/start/restart node.
         if Node::is_stopping() || Node::is_restarting() || Node::is_starting() {
             ui.vertical_centered(|ui| {
-                ui.add_space(6.0);
+                ui.add_space(8.0);
                 View::small_loading_spinner(ui);
+                ui.add_space(2.0);
             });
         } else {
             if Node::is_running() {
@@ -110,21 +112,29 @@ impl NodeSetup {
         }
 
         // Autorun node setup.
-        ui.add_space(4.0);
         ui.vertical_centered(|ui| {
-            Network::autorun_node_ui(ui);
+            ui.add_space(6.0);
+            NetworkContainer::autorun_node_ui(ui);
+            if Node::is_running() {
+                ui.add_space(2.0);
+                ui.label(RichText::new(t!("network_settings.restart_node_required"))
+                    .size(16.0)
+                    .color(Colors::INACTIVE_TEXT)
+                );
+                ui.add_space(4.0);
+            }
         });
-        ui.add_space(4.0);
+        ui.add_space(6.0);
 
-        let addrs = NetworkSettings::get_ip_addrs();
+        let addrs = NodeConfig::get_ip_addrs();
         if addrs.is_empty() {
             // Show message when IP addresses are not available on the system.
-            NetworkSettings::no_ip_address_ui(ui);
+            NetworkNodeSettings::no_ip_address_ui(ui);
 
             ui.add_space(4.0);
         } else {
             View::horizontal_line(ui, Colors::ITEM_STROKE);
-            ui.add_space(4.0);
+            ui.add_space(6.0);
 
             ui.vertical_centered(|ui| {
                 ui.label(RichText::new(t!("network_settings.api_ip"))
@@ -132,15 +142,13 @@ impl NodeSetup {
                     .color(Colors::GRAY)
                 );
                 ui.add_space(6.0);
+
                 // Show API IP addresses to select.
                 let (api_ip, api_port) = NodeConfig::get_api_address();
-                NetworkSettings::ip_addrs_ui(ui, &api_ip, &addrs, |selected_ip| {
+                NetworkNodeSettings::ip_addrs_ui(ui, &api_ip, &addrs, |selected_ip| {
                     let api_available = NodeConfig::is_api_port_available(selected_ip, &api_port);
                     self.is_api_port_available = api_available;
                     NodeConfig::save_api_address(selected_ip, &api_port);
-                    if api_available {
-                        NetworkSettings::show_node_restart_required_modal();
-                    }
                 });
 
                 ui.label(RichText::new(t!("network_settings.api_port"))
@@ -209,6 +217,7 @@ impl NodeSetup {
         let saved_chain_type = AppConfig::chain_type();
         let mut selected_chain_type = saved_chain_type;
 
+        ui.add_space(8.0);
         ui.columns(2, |columns| {
             columns[0].vertical_centered(|ui| {
                 let main_type = ChainTypes::Mainnet;
@@ -219,19 +228,18 @@ impl NodeSetup {
                 View::radio_value(ui, &mut selected_chain_type, test_type, "Testnet".to_string());
             })
         });
-        ui.add_space(4.0);
+        ui.add_space(8.0);
 
         if saved_chain_type != selected_chain_type {
             AppConfig::change_chain_type(&selected_chain_type);
-            NetworkSettings::show_node_restart_required_modal();
+            NetworkNodeSettings::show_node_restart_required_modal();
         }
     }
 
     /// Draw API port setup ui.
     fn api_port_setup_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         let (_, port) = NodeConfig::get_api_address();
-        // Show button to enter API server port.
-        View::button(ui, port.clone(), Colors::BUTTON, || {
+        View::button(ui, format!("{} {}", PLUG, port.clone()), Colors::BUTTON, || {
             // Setup values for modal.
             self.api_port_edit = port;
             self.api_port_available_edit = self.is_api_port_available;
@@ -285,7 +293,7 @@ impl NodeSetup {
                     .size(16.0)
                     .color(Colors::RED));
             } else {
-                NetworkSettings::node_restart_required_ui(ui);
+                NetworkNodeSettings::node_restart_required_ui(ui);
             }
             ui.add_space(12.0);
         });
@@ -329,7 +337,6 @@ impl NodeSetup {
 
     /// Draw API secret token setup ui.
     fn secret_ui(&mut self, modal_id: &'static str, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
-        // Setup values for modal
         let secret_value = match modal_id {
             Self::API_SECRET_MODAL => NodeConfig::get_api_secret(),
             _ => NodeConfig::get_foreign_api_secret()
@@ -341,7 +348,6 @@ impl NodeSetup {
             format!("{} {}", SHIELD_SLASH, t!("network_settings.disabled"))
         };
 
-        // Show button to open secret modal.
         View::button(ui, secret_text, Colors::BUTTON, || {
             // Setup values for modal.
             match modal_id {
@@ -428,7 +434,7 @@ impl NodeSetup {
             });
 
             // Show reminder to restart enabled node.
-            NetworkSettings::node_restart_required_ui(ui);
+            NetworkNodeSettings::node_restart_required_ui(ui);
 
             ui.add_space(12.0);
         });
@@ -472,8 +478,7 @@ impl NodeSetup {
     /// Draw FTL setup ui.
     fn ftl_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         let ftl = NodeConfig::get_ftl();
-        // Show button to enter FTL value.
-        View::button(ui, ftl.clone(), Colors::BUTTON, || {
+        View::button(ui, format!("{} {}", CLOCK_CLOCKWISE, ftl.clone()), Colors::BUTTON, || {
             // Setup values for modal.
             self.ftl_edit = ftl;
             // Show stratum port modal.
@@ -519,7 +524,7 @@ impl NodeSetup {
                     .size(18.0)
                     .color(Colors::RED));
             } else {
-                NetworkSettings::node_restart_required_ui(ui);
+                NetworkNodeSettings::node_restart_required_ui(ui);
             }
             ui.add_space(12.0);
         });
@@ -559,9 +564,9 @@ impl NodeSetup {
         let validate = NodeConfig::is_full_chain_validation();
         View::checkbox(ui, validate, t!("network_settings.full_validation"), || {
             NodeConfig::toggle_full_chain_validation();
-            NetworkSettings::show_node_restart_required_modal();
+            NetworkNodeSettings::show_node_restart_required_modal();
         });
-        ui.add_space(6.0);
+        ui.add_space(4.0);
         ui.label(RichText::new(t!("network_settings.full_validation_description"))
             .size(16.0)
             .color(Colors::INACTIVE_TEXT)
@@ -573,9 +578,9 @@ impl NodeSetup {
         let archive_mode = NodeConfig::is_archive_mode();
         View::checkbox(ui, archive_mode, t!("network_settings.archive_mode"), || {
             NodeConfig::toggle_archive_mode();
-            NetworkSettings::show_node_restart_required_modal();
+            NetworkNodeSettings::show_node_restart_required_modal();
         });
-        ui.add_space(6.0);
+        ui.add_space(4.0);
         ui.label(RichText::new(t!("network_settings.archive_mode_desc"))
             .size(16.0)
             .color(Colors::INACTIVE_TEXT)

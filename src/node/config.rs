@@ -100,6 +100,19 @@ impl NodeConfig {
         api_secret_path
     }
 
+    /// List of available IP addresses.
+    pub fn get_ip_addrs() -> Vec<IpAddr> {
+        let mut ip_addrs = Vec::new();
+        for net_if in pnet::datalink::interfaces() {
+            for ip in net_if.ips {
+                if ip.is_ipv4() {
+                    ip_addrs.push(ip.ip());
+                }
+            }
+        }
+        ip_addrs
+    }
+
     /// Check whether a port is available on the provided host.
     fn is_port_available(host: &String, port: &String) -> bool {
         if let Ok(p) = port.parse::<u16>() {
@@ -142,6 +155,17 @@ impl NodeConfig {
 
     /// Check if stratum server port is available across the system and config.
     pub fn is_stratum_port_available(ip: &String, port: &String) -> bool {
+        if Node::get_stratum_stats().is_running {
+            // Check if Stratum server with same address is running.
+            let (cur_ip, cur_port) = Self::get_stratum_address();
+            let same_running = ip == &cur_ip && port == &cur_port;
+            return same_running || Self::is_not_running_stratum_port_available(ip, port);
+        }
+        Self::is_not_running_stratum_port_available(&ip, &port)
+    }
+
+    /// Check if stratum port is available when server is not running.
+    fn is_not_running_stratum_port_available(ip: &String, port: &String) -> bool {
         if Self::is_port_available(&ip, &port) {
             if &Self::get_p2p_port().to_string() != port {
                 let (api_ip, api_port) = Self::get_api_address();
@@ -159,6 +183,54 @@ impl NodeConfig {
     pub fn get_stratum_wallet_addr() -> String {
         let r_config = Settings::node_config_to_read();
         r_config.members.clone().server.stratum_mining_config.unwrap().wallet_listener_url
+    }
+
+    /// Get the amount of time in seconds to attempt to mine on a particular header.
+    pub fn get_stratum_attempt_time() -> String {
+        let r_config = Settings::node_config_to_read();
+        r_config.members
+            .clone()
+            .server
+            .stratum_mining_config
+            .unwrap()
+            .attempt_time_per_block
+            .to_string()
+    }
+
+    /// Save stratum attempt time value in seconds.
+    pub fn save_stratum_attempt_time(time: u32) {
+        let mut w_node_config = Settings::node_config_to_update();
+        w_node_config.members
+            .clone()
+            .server
+            .stratum_mining_config
+            .unwrap()
+            .attempt_time_per_block = time;
+        w_node_config.save();
+    }
+
+    /// Get minimum acceptable share difficulty to request from miners.
+    pub fn get_stratum_min_share_diff() -> String {
+        let r_config = Settings::node_config_to_read();
+        r_config.members
+            .clone()
+            .server
+            .stratum_mining_config
+            .unwrap()
+            .minimum_share_difficulty
+            .to_string()
+    }
+
+    /// Save minimum acceptable share difficulty.
+    pub fn save_stratum_min_share_diff(diff: u64) {
+        let mut w_node_config = Settings::node_config_to_update();
+        w_node_config.members
+            .clone()
+            .server
+            .stratum_mining_config
+            .unwrap()
+            .minimum_share_difficulty = diff;
+        w_node_config.save();
     }
 
     /// Check if stratum mining server autorun is enabled.
@@ -212,17 +284,17 @@ impl NodeConfig {
     pub fn is_api_port_available(ip: &String, port: &String) -> bool {
         if Node::is_running() {
             // Check if API server with same address is running.
-            let same_running = if let Some(running_addr) =  Node::get_api_addr() {
+            let same_running = if let Some(running_addr) = Node::get_api_addr() {
                 running_addr == format!("{}:{}", ip, port)
             } else {
                 false
             };
-            if same_running || NodeConfig::is_port_available(&ip, &port) {
-                return &NodeConfig::get_p2p_port().to_string() != port;
+            if same_running || Self::is_port_available(&ip, &port) {
+                return &Self::get_p2p_port().to_string() != port;
             }
             return false;
-        } else if NodeConfig::is_port_available(&ip, &port) {
-            return &NodeConfig::get_p2p_port().to_string() != port;
+        } else if Self::is_port_available(&ip, &port) {
+            return &Self::get_p2p_port().to_string() != port;
         }
         false
     }
@@ -472,7 +544,7 @@ impl NodeConfig {
     }
 
     /// Set how long a banned peer should stay banned in ms.
-    pub fn set_ban_window(time: i64) {
+    pub fn save_ban_window(time: i64) {
         let mut w_node_config = Settings::node_config_to_update();
         w_node_config.members.server.p2p_config.ban_window = Some(time);
         w_node_config.save();
@@ -484,7 +556,7 @@ impl NodeConfig {
     }
 
     /// Set maximum number of inbound peer connections.
-    pub fn set_max_inbound_count(count: u32) {
+    pub fn save_max_inbound_count(count: u32) {
         let mut w_node_config = Settings::node_config_to_update();
         w_node_config.members.server.p2p_config.peer_max_inbound_count = Some(count);
         w_node_config.save();
@@ -496,7 +568,7 @@ impl NodeConfig {
     }
 
     /// Set maximum number of outbound peer connections.
-    pub fn set_max_outbound_count(count: u32) {
+    pub fn save_max_outbound_count(count: u32) {
         let mut w_node_config = Settings::node_config_to_update();
         w_node_config.members.server.p2p_config.peer_max_outbound_count = Some(count);
         w_node_config.save();
@@ -512,7 +584,7 @@ impl NodeConfig {
     }
 
     /// Set minimum number of outbound peer connections.
-    pub fn set_min_outbound_count(count: u32) {
+    pub fn save_min_outbound_count(count: u32) {
         let mut w_node_config = Settings::node_config_to_update();
         w_node_config.members.server.p2p_config.peer_min_preferred_outbound_count = Some(count);
         w_node_config.save();
@@ -526,7 +598,7 @@ impl NodeConfig {
     }
 
     /// Set base fee that's accepted into the pool.
-    pub fn set_base_fee(fee: u64) {
+    pub fn save_base_fee(fee: u64) {
         let mut w_node_config = Settings::node_config_to_update();
         w_node_config.members.server.pool_config.accept_fee_base = fee;
         w_node_config.save();
@@ -538,7 +610,7 @@ impl NodeConfig {
     }
 
     /// Set reorg cache retention period in minute.
-    pub fn set_reorg_cache_period(period: u32) {
+    pub fn save_reorg_cache_period(period: u32) {
         let mut w_node_config = Settings::node_config_to_update();
         w_node_config.members.server.pool_config.reorg_cache_period = period;
         w_node_config.save();
@@ -550,7 +622,7 @@ impl NodeConfig {
     }
 
     /// Set max amount of transactions at pool.
-    pub fn set_max_pool_size(amount: usize) {
+    pub fn save_max_pool_size(amount: usize) {
         let mut w_node_config = Settings::node_config_to_update();
         w_node_config.members.server.pool_config.max_pool_size = amount;
         w_node_config.save();
@@ -562,7 +634,7 @@ impl NodeConfig {
     }
 
     /// Set max amount of transactions at stem pool.
-    pub fn set_max_stempool_size(amount: usize) {
+    pub fn save_max_stempool_size(amount: usize) {
         let mut w_node_config = Settings::node_config_to_update();
         w_node_config.members.server.pool_config.max_stempool_size = amount;
         w_node_config.save();
@@ -574,7 +646,7 @@ impl NodeConfig {
     }
 
     /// Set max total weight of transactions that can get selected to build a block.
-    pub fn set_mineable_max_weight(weight: u64) {
+    pub fn save_mineable_max_weight(weight: u64) {
         let mut w_node_config = Settings::node_config_to_update();
         w_node_config.members.server.pool_config.mineable_max_weight = weight;
         w_node_config.save();
@@ -588,7 +660,7 @@ impl NodeConfig {
     }
 
     /// Set Dandelion epoch duration in secs.
-    pub fn set_epoch(secs: u16) {
+    pub fn save_epoch(secs: u16) {
         let mut w_node_config = Settings::node_config_to_update();
         w_node_config.members.server.dandelion_config.epoch_secs = secs;
         w_node_config.save();
@@ -601,7 +673,7 @@ impl NodeConfig {
     }
 
     /// Set Dandelion embargo timer.
-    pub fn set_embargo(secs: u16) {
+    pub fn save_embargo(secs: u16) {
         let mut w_node_config = Settings::node_config_to_update();
         w_node_config.members.server.dandelion_config.embargo_secs = secs;
         w_node_config.save();
@@ -613,7 +685,7 @@ impl NodeConfig {
     }
 
     /// Set Dandelion stem probability.
-    pub fn set_stem_probability(percent: u8) {
+    pub fn save_stem_probability(percent: u8) {
         let mut w_node_config = Settings::node_config_to_update();
         w_node_config.members.server.dandelion_config.stem_probability = percent;
         w_node_config.save();

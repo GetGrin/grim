@@ -775,9 +775,9 @@ dependencies = [
 
 [[package]]
 name = "cpufeatures"
-version = "0.2.7"
+version = "0.2.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3e4c1eaa2012c47becbbad2ab175484c2a84d1185b566fb2cc5b8707343dfe58"
+checksum = "03e69e28e9f7f77debdedbaafa2866e1de9ba56df55a8bd7cfc724c25a09987c"
 dependencies = [
  "libc",
 ]
@@ -1542,9 +1542,9 @@ dependencies = [
 
 [[package]]
 name = "gimli"
-version = "0.27.2"
+version = "0.27.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ad0a93d233ebf96623465aad4046a8d3aa4da22d4f4beba5388838c8a434bbb4"
+checksum = "b6c80984affa11d98d1b88b66ac8853f143217b399d3c74116778ff8fdb4ed2e"
 
 [[package]]
 name = "git2"
@@ -1590,6 +1590,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "globwalk"
+version = "0.8.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "93e3af942408868f6934a7b85134a3230832b9977cf66125df2f9edcfce4ddcc"
+dependencies = [
+ "bitflags 1.3.2",
+ "ignore",
+ "walkdir",
+]
+
+[[package]]
 name = "glow"
 version = "0.11.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1603,9 +1614,9 @@ dependencies = [
 
 [[package]]
 name = "glutin"
-version = "0.30.8"
+version = "0.30.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "62f9b771a65f0a1e3ddb6aa16f867d87dc73c922411c255e6c4ab7f6d45c7327"
+checksum = "23b0385782048be65f0a9dd046c469d6a758a53fe1aa63a8111dea394d2ffa2f"
 dependencies = [
  "bitflags 1.3.2",
  "cfg_aliases",
@@ -1706,9 +1717,12 @@ dependencies = [
  "egui_extras",
  "env_logger 0.10.0",
  "futures 0.3.28",
+ "grin_api",
  "grin_chain",
  "grin_config",
  "grin_core",
+ "grin_keychain",
+ "grin_p2p",
  "grin_servers",
  "grin_util",
  "jni",
@@ -1716,10 +1730,16 @@ dependencies = [
  "log",
  "once_cell",
  "openssl-sys",
+ "pnet",
  "pollster 0.3.0",
+ "rand 0.6.5",
  "rust-i18n",
  "serde",
+ "serde_derive",
+ "serde_json",
  "sys-locale",
+ "tokio",
+ "tokio-util 0.2.0",
  "toml 0.7.4",
  "wgpu",
  "winit",
@@ -1728,7 +1748,6 @@ dependencies = [
 [[package]]
 name = "grin_api"
 version = "5.2.0-beta.1"
-source = "git+https://github.com/mimblewimble/grin.git#fd1410ebeb39fea6dc7bed5ebd55842466abdc69"
 dependencies = [
  "bytes 0.5.6",
  "easy-jsonrpc-mw",
@@ -1760,7 +1779,6 @@ dependencies = [
 [[package]]
 name = "grin_chain"
 version = "5.2.0-beta.1"
-source = "git+https://github.com/mimblewimble/grin.git#fd1410ebeb39fea6dc7bed5ebd55842466abdc69"
 dependencies = [
  "bit-vec",
  "bitflags 1.3.2",
@@ -1783,7 +1801,6 @@ dependencies = [
 [[package]]
 name = "grin_config"
 version = "5.2.0-beta.1"
-source = "git+https://github.com/mimblewimble/grin.git#fd1410ebeb39fea6dc7bed5ebd55842466abdc69"
 dependencies = [
  "dirs",
  "grin_core",
@@ -1799,7 +1816,6 @@ dependencies = [
 [[package]]
 name = "grin_core"
 version = "5.2.0-beta.1"
-source = "git+https://github.com/mimblewimble/grin.git#fd1410ebeb39fea6dc7bed5ebd55842466abdc69"
 dependencies = [
  "blake2-rfc",
  "byteorder",
@@ -1825,7 +1841,6 @@ dependencies = [
 [[package]]
 name = "grin_keychain"
 version = "5.2.0-beta.1"
-source = "git+https://github.com/mimblewimble/grin.git#fd1410ebeb39fea6dc7bed5ebd55842466abdc69"
 dependencies = [
  "blake2-rfc",
  "byteorder",
@@ -1847,7 +1862,6 @@ dependencies = [
 [[package]]
 name = "grin_p2p"
 version = "5.2.0-beta.1"
-source = "git+https://github.com/mimblewimble/grin.git#fd1410ebeb39fea6dc7bed5ebd55842466abdc69"
 dependencies = [
  "bitflags 1.3.2",
  "bytes 0.5.6",
@@ -1869,7 +1883,6 @@ dependencies = [
 [[package]]
 name = "grin_pool"
 version = "5.2.0-beta.1"
-source = "git+https://github.com/mimblewimble/grin.git#fd1410ebeb39fea6dc7bed5ebd55842466abdc69"
 dependencies = [
  "blake2-rfc",
  "chrono",
@@ -1902,7 +1915,6 @@ dependencies = [
 [[package]]
 name = "grin_servers"
 version = "5.2.0-beta.1"
-source = "git+https://github.com/mimblewimble/grin.git#fd1410ebeb39fea6dc7bed5ebd55842466abdc69"
 dependencies = [
  "chrono",
  "fs2",
@@ -1932,7 +1944,6 @@ dependencies = [
 [[package]]
 name = "grin_store"
 version = "5.2.0-beta.1"
-source = "git+https://github.com/mimblewimble/grin.git#fd1410ebeb39fea6dc7bed5ebd55842466abdc69"
 dependencies = [
  "byteorder",
  "croaring",
@@ -1951,7 +1962,6 @@ dependencies = [
 [[package]]
 name = "grin_util"
 version = "5.2.0-beta.1"
-source = "git+https://github.com/mimblewimble/grin.git#fd1410ebeb39fea6dc7bed5ebd55842466abdc69"
 dependencies = [
  "backtrace",
  "base64 0.12.3",
@@ -2254,6 +2264,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b2b3ea6ff95e175473f8ffe6a7eb7c00d054240321b84c57051175fe3c1e075e"
 dependencies = [
  "libc",
+]
+
+[[package]]
+name = "ipnetwork"
+version = "0.20.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bf466541e9d546596ee94f9f69590f89473455f88372423e0008fc1a7daf100e"
+dependencies = [
+ "serde",
 ]
 
 [[package]]
@@ -2750,9 +2769,9 @@ dependencies = [
 
 [[package]]
 name = "net2"
-version = "0.2.38"
+version = "0.2.39"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "74d0df99cfcd2530b2e694f6e17e7f37b8e26bb23983ac530c0c97408837c631"
+checksum = "b13b648036a2339d06de780866fbdfda0dde886de7b3af2ddeba8b14f4ee34ac"
 dependencies = [
  "cfg-if 0.1.10",
  "libc",
@@ -2783,6 +2802,12 @@ dependencies = [
  "libc",
  "memoffset",
 ]
+
+[[package]]
+name = "no-std-net"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "43794a0ace135be66a25d3ae77d41b91615fb68ae937f904090203e81f755b65"
 
 [[package]]
 name = "nodrop"
@@ -3205,6 +3230,97 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "26072860ba924cbfa98ea39c8c19b4dd6a4a25423dbdf219c1eca91aa0cf6964"
 
 [[package]]
+name = "pnet"
+version = "0.33.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cd959a8268165518e2bf5546ba84c7b3222744435616381df3c456fe8d983576"
+dependencies = [
+ "ipnetwork",
+ "pnet_base",
+ "pnet_datalink",
+ "pnet_packet",
+ "pnet_sys",
+ "pnet_transport",
+]
+
+[[package]]
+name = "pnet_base"
+version = "0.33.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "872e46346144ebf35219ccaa64b1dffacd9c6f188cd7d012bd6977a2a838f42e"
+dependencies = [
+ "no-std-net",
+]
+
+[[package]]
+name = "pnet_datalink"
+version = "0.33.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c302da22118d2793c312a35fb3da6846cb0fab6c3ad53fd67e37809b06cdafce"
+dependencies = [
+ "ipnetwork",
+ "libc",
+ "pnet_base",
+ "pnet_sys",
+ "winapi 0.3.9",
+]
+
+[[package]]
+name = "pnet_macros"
+version = "0.33.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2a780e80005c2e463ec25a6e9f928630049a10b43945fea83207207d4a7606f4"
+dependencies = [
+ "proc-macro2 1.0.60",
+ "quote 1.0.28",
+ "regex",
+ "syn 1.0.109",
+]
+
+[[package]]
+name = "pnet_macros_support"
+version = "0.33.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e6d932134f32efd7834eb8b16d42418dac87086347d1bc7d142370ef078582bc"
+dependencies = [
+ "pnet_base",
+]
+
+[[package]]
+name = "pnet_packet"
+version = "0.33.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8bde678bbd85cb1c2d99dc9fc596e57f03aa725f84f3168b0eaf33eeccb41706"
+dependencies = [
+ "glob",
+ "pnet_base",
+ "pnet_macros",
+ "pnet_macros_support",
+]
+
+[[package]]
+name = "pnet_sys"
+version = "0.33.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "faf7a58b2803d818a374be9278a1fe8f88fce14b936afbe225000cfcd9c73f16"
+dependencies = [
+ "libc",
+ "winapi 0.3.9",
+]
+
+[[package]]
+name = "pnet_transport"
+version = "0.33.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "813d1c0e4defbe7ee22f6fe1755f122b77bfb5abe77145b1b5baaf463cab9249"
+dependencies = [
+ "libc",
+ "pnet_base",
+ "pnet_packet",
+ "pnet_sys",
+]
+
+[[package]]
 name = "png"
 version = "0.17.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3528,19 +3644,20 @@ dependencies = [
 
 [[package]]
 name = "rust-i18n"
-version = "1.2.2"
+version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5340b7b546416b54cb3dc2184038b6ed6e45654e7b2f52bb206b52bb86c6d493"
+checksum = "9a516a7ceb61ddcdad9cf723de82b86f6ed8c78ebe25255c5686a061bf7318a6"
 dependencies = [
  "anyhow",
  "clap",
- "glob",
+ "globwalk",
  "itertools",
  "once_cell",
  "quote 1.0.28",
  "regex",
  "rust-i18n-extract",
  "rust-i18n-macro",
+ "rust-i18n-support",
  "serde",
  "serde_derive",
  "toml 0.5.11",
@@ -3548,9 +3665,9 @@ dependencies = [
 
 [[package]]
 name = "rust-i18n-extract"
-version = "1.1.0"
+version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ec44568e2cdf4bfb7a62381bbc6fcdf0a27c60cd503dfa12c59e6c17cf3177fa"
+checksum = "e89ac25fb50c8d0893ee6436056fb4a0cc6f6e1df99239d7c104421d007d445e"
 dependencies = [
  "anyhow",
  "ignore",
@@ -3566,9 +3683,9 @@ dependencies = [
 
 [[package]]
 name = "rust-i18n-macro"
-version = "1.3.0"
+version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "89ef5911f7c8324f62c44151fa7461bbdf6a00cbfa9beb04d963d9d02ec05634"
+checksum = "e09ef5c1e310112eea3c19c4e18e3e62968b002eb535ff5b242ca1200742f996"
 dependencies = [
  "glob",
  "once_cell",
@@ -3583,16 +3700,17 @@ dependencies = [
 
 [[package]]
 name = "rust-i18n-support"
-version = "1.1.0"
+version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9e6bbf2d058c3558bef952564ceb9afcb19631cde22b47dc44f436e62ecfb916"
+checksum = "14eb094cd0072c5f09f333eea36fcd8c64961f9eb61dbd09e82eff51c58e8414"
 dependencies = [
- "glob",
+ "globwalk",
  "once_cell",
  "proc-macro2 1.0.60",
  "serde",
  "serde_json",
  "serde_yaml",
+ "toml 0.7.4",
 ]
 
 [[package]]
@@ -3783,9 +3901,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.96"
+version = "1.0.97"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "057d394a50403bcac12672b2b18fb387ab6d289d957dab67dd201875391e52f1"
+checksum = "bdf3bf93142acad5821c99197022e170842cdbc1c30482b98750c688c640842a"
 dependencies = [
  "itoa 1.0.6",
  "ryu",
@@ -4465,11 +4583,10 @@ dependencies = [
 
 [[package]]
 name = "want"
-version = "0.3.0"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1ce8a968cb1cd110d136ff8b819a556d6fb6d919363c61534f6860c7eb172ba0"
+checksum = "bfa7760aed19e106de2c7c0b581b509f2f25d3dacaf737cb82ac61bc6d760b0e"
 dependencies = [
- "log",
  "try-lock",
 ]
 
@@ -5088,9 +5205,9 @@ dependencies = [
 
 [[package]]
 name = "winnow"
-version = "0.4.6"
+version = "0.4.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "61de7bac303dc551fe038e2b3cef0f571087a47571ea6e79a87692ac99b99699"
+checksum = "ca0ace3845f0d96209f0375e6d367e3eb87eb65d27d445bdc9f1843a26f39448"
 dependencies = [
  "memchr",
 ]

@@ -19,7 +19,8 @@ use grin_servers::DiffBlock;
 use crate::gui::Colors;
 use crate::gui::icons::{AT, COINS, CUBE_TRANSPARENT, HASH, HOURGLASS_LOW, HOURGLASS_MEDIUM, TIMER};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Modal, Network, NetworkTab, NetworkTabType, View};
+use crate::gui::views::network::{NetworkTab, NetworkTabType};
+use crate::gui::views::{Modal, NetworkContainer, View};
 use crate::node::Node;
 
 #[derive(Default)]
@@ -36,23 +37,31 @@ impl NetworkTab for NetworkMetrics {
 
     fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         let server_stats = Node::get_stats();
-        // Show message when node is not running or loading spinner when metrics are not available.
+        // Show message to enable node when it's not running.
+        if !Node::is_running() {
+            NetworkContainer::disabled_node_ui(ui);
+            return;
+        }
+
+        // Show loading spinner when node is stopping.
+        if Node::is_stopping() {
+            ui.centered_and_justified(|ui| {
+                View::big_loading_spinner(ui);
+            });
+            return;
+        }
+
+        // Show message when metrics are not available.
         if server_stats.is_none() || Node::is_restarting()
             || server_stats.as_ref().unwrap().diff_stats.height == 0 {
-            if !Node::is_running() {
-                Network::disabled_node_ui(ui);
-            } else {
-                View::center_content(ui, 162.0, |ui| {
-                    View::big_loading_spinner(ui);
-                    if !Node::is_stopping() {
-                        ui.add_space(18.0);
-                        ui.label(RichText::new(t!("network_metrics.loading"))
-                            .size(16.0)
-                            .color(Colors::INACTIVE_TEXT)
-                        );
-                    }
-                });
-            }
+            View::center_content(ui, 162.0, |ui| {
+                View::big_loading_spinner(ui);
+                ui.add_space(18.0);
+                ui.label(RichText::new(t!("network_metrics.loading"))
+                    .size(16.0)
+                    .color(Colors::INACTIVE_TEXT)
+                );
+            });
             return;
         }
 

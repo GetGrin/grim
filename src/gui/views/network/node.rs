@@ -19,7 +19,8 @@ use grin_servers::PeerStats;
 use crate::gui::Colors;
 use crate::gui::icons::{AT, CUBE, DEVICES, FLOW_ARROW, HANDSHAKE, PACKAGE, PLUGS_CONNECTED, SHARE_NETWORK};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Modal, Network, NetworkTab, NetworkTabType, View};
+use crate::gui::views::{Modal, View};
+use crate::gui::views::network::{NetworkContainer, NetworkTab, NetworkTabType};
 use crate::node::Node;
 
 #[derive(Default)]
@@ -32,15 +33,17 @@ impl NetworkTab for NetworkNode {
 
     fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         let server_stats = Node::get_stats();
-        // Show message when node is not running or loading spinner when stats are not available.
-        if !server_stats.is_some() || Node::is_restarting() {
-            if !Node::is_running() {
-                Network::disabled_node_ui(ui);
-            } else {
-                ui.centered_and_justified(|ui| {
-                    View::big_loading_spinner(ui);
-                });
-            }
+        // Show message to enable node when it's not running.
+        if !Node::is_running() {
+            NetworkContainer::disabled_node_ui(ui);
+            return;
+        }
+
+        // Show loading spinner when stats are not available.
+        if server_stats.is_none() || Node::is_restarting() || Node::is_stopping() {
+            ui.centered_and_justified(|ui| {
+                View::big_loading_spinner(ui);
+            });
             return;
         }
 

@@ -59,7 +59,7 @@ impl PlatformCallbacks for Android {
     }
 
     fn get_string_from_buffer(&self) -> String {
-        use jni::objects::{JObject, JValue, JString};
+        use jni::objects::{JObject, JString};
 
         let vm = unsafe { jni::JavaVM::from_raw(self.android_app.vm_as_ptr() as _) }.unwrap();
         let mut env = vm.attach_current_thread().unwrap();

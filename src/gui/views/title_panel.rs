@@ -18,13 +18,13 @@ use egui_extras::{Size, StripBuilder};
 use crate::gui::Colors;
 use crate::gui::views::View;
 
-pub struct TitlePanelAction<'action> {
-    pub(crate) icon: Box<&'action str>,
+pub struct TitlePanelAction {
+    pub(crate) icon: Box<&'static str>,
     pub(crate) on_click: Box<dyn Fn()>,
 }
 
-impl<'action> TitlePanelAction<'action> {
-    pub fn new(icon: &'action str, on_click: fn()) -> Option<Self> {
+impl TitlePanelAction {
+    pub fn new(icon: &'static str, on_click: fn()) -> Option<Self> {
         Option::from(Self { icon: Box::new(icon), on_click: Box::new(on_click) })
     }
 }

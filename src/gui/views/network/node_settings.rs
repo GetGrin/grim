@@ -19,16 +19,19 @@ use egui::{RichText, ScrollArea};
 
 use crate::gui::{Colors, Navigator};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Modal, ModalPosition, NetworkTab, NetworkTabType, View};
-use crate::gui::views::settings_node::NodeSetup;
+use crate::gui::views::{Modal, ModalPosition, View};
+use crate::gui::views::network::{NetworkTab, NetworkTabType};
+use crate::gui::views::network::settings::server::ServerSetup;
+use crate::gui::views::network::settings::stratum::StratumServerSetup;
 use crate::node::Node;
 
 #[derive(Default)]
-pub struct NetworkSettings {
-    node_setup: NodeSetup
+pub struct NetworkNodeSettings {
+    server_setup: ServerSetup,
+    stratum_server_setup: StratumServerSetup
 }
 
-impl NetworkTab for NetworkSettings {
+impl NetworkTab for NetworkNodeSettings {
     fn get_type(&self) -> NetworkTabType {
         NetworkTabType::Settings
     }
@@ -38,7 +41,8 @@ impl NetworkTab for NetworkSettings {
             .id_source("network_settings")
             .auto_shrink([false; 2])
             .show(ui, |ui| {
-                self.node_setup.ui(ui, cb);
+                self.server_setup.ui(ui, cb);
+                self.stratum_server_setup.ui(ui, cb);
             });
     }
 
@@ -47,24 +51,35 @@ impl NetworkTab for NetworkSettings {
             Self::NODE_RESTART_REQUIRED_MODAL => {
                 self.node_restart_required_modal(ui, modal);
             }
-            NodeSetup::API_PORT_MODAL => {
-                self.node_setup.api_port_modal(ui, modal, cb);
+
+            ServerSetup::API_PORT_MODAL => {
+                self.server_setup.api_port_modal(ui, modal, cb);
             },
-            NodeSetup::API_SECRET_MODAL => {
-                self.node_setup.secret_modal(ui, modal, cb);
+            ServerSetup::API_SECRET_MODAL => {
+                self.server_setup.secret_modal(ui, modal, cb);
             },
-            NodeSetup::FOREIGN_API_SECRET_MODAL => {
-                self.node_setup.secret_modal(ui, modal, cb);
+            ServerSetup::FOREIGN_API_SECRET_MODAL => {
+                self.server_setup.secret_modal(ui, modal, cb);
             },
-            NodeSetup::FTL_MODAL => {
-                self.node_setup.ftl_modal(ui, modal, cb);
+            ServerSetup::FTL_MODAL => {
+                self.server_setup.ftl_modal(ui, modal, cb);
+            },
+
+            StratumServerSetup::STRATUM_PORT_MODAL => {
+                self.stratum_server_setup.port_modal(ui, modal, cb);
+            }
+            StratumServerSetup::STRATUM_ATTEMPT_TIME_MODAL => {
+                self.stratum_server_setup.attempt_modal(ui, modal, cb);
+            }
+            StratumServerSetup::STRATUM_MIN_SHARE_MODAL => {
+                self.stratum_server_setup.min_diff_modal(ui, modal, cb);
             }
             _ => {}
         }
     }
 }
 
-impl NetworkSettings {
+impl NetworkNodeSettings {
     pub const NODE_RESTART_REQUIRED_MODAL: &'static str = "node_restart_required";
 
     /// Reminder to restart enabled node to show on edit setting at [`Modal`].
@@ -82,7 +97,7 @@ impl NetworkSettings {
     pub fn show_node_restart_required_modal() {
         if Node::is_running() {
             // Show modal to apply changes by node restart.
-            let port_modal = Modal::new(NetworkSettings::NODE_RESTART_REQUIRED_MODAL)
+            let port_modal = Modal::new(NetworkNodeSettings::NODE_RESTART_REQUIRED_MODAL)
                 .position(ModalPosition::Center)
                 .title(t!("network.settings"));
             Navigator::show_modal(port_modal);
@@ -121,19 +136,6 @@ impl NetworkSettings {
         });
     }
 
-    /// List of available IP addresses.
-    pub fn get_ip_addrs() -> Vec<IpAddr> {
-        let mut ip_addrs = Vec::new();
-        for net_if in pnet::datalink::interfaces() {
-            for ip in net_if.ips {
-                if ip.is_ipv4() {
-                    ip_addrs.push(ip.ip());
-                }
-            }
-        }
-        ip_addrs
-    }
-
     /// Draw IP addresses as radio buttons.
     pub fn ip_addrs_ui(ui: &mut egui::Ui,
                        saved_ip: &String,
@@ -147,6 +149,7 @@ impl NetworkSettings {
             selected_ip_addr = ip_addrs.get(0).unwrap();
         }
 
+        ui.add_space(2.0);
         // Show available IP addresses on the system.
         let _ = ip_addrs.chunks(2).map(|x| {
             if x.len() == 2 {

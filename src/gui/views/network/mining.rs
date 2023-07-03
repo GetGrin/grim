@@ -20,8 +20,9 @@ use grin_servers::WorkerStats;
 use crate::gui::Colors;
 use crate::gui::icons::{BARBELL, CLOCK_AFTERNOON, COMPUTER_TOWER, CPU, CUBE, FADERS, FOLDER_DASHED, FOLDER_NOTCH_MINUS, FOLDER_NOTCH_PLUS, PLUGS, PLUGS_CONNECTED, POLYGON};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Modal, Network, NetworkTab, NetworkTabType, View};
-use crate::gui::views::settings_stratum::StratumServerSetup;
+use crate::gui::views::{Modal, NetworkContainer, View};
+use crate::gui::views::network::{NetworkTab, NetworkTabType};
+use crate::gui::views::network::settings::stratum::StratumServerSetup;
 use crate::node::{Node, NodeConfig};
 
 #[derive(Default)]
@@ -37,66 +38,44 @@ impl NetworkTab for NetworkMining {
     fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         let server_stats = Node::get_stats();
 
-        // Show message when node is not running or loading spinner when mining is not available.
-        if !server_stats.is_some() || Node::get_sync_status().unwrap() != SyncStatus::NoSync {
-            if !Node::is_running() {
-                Network::disabled_node_ui(ui);
-            } else {
-                View::center_content(ui, 162.0, |ui| {
-                    View::big_loading_spinner(ui);
-                    if !Node::is_stopping() {
-                        ui.add_space(18.0);
-                        ui.label(RichText::new(t!("network_mining.loading"))
-                            .size(16.0)
-                            .color(Colors::INACTIVE_TEXT)
-                        );
-                    }
-                });
-            }
+        // Show message to enable node when it's not running.
+        if !Node::is_running() {
+            NetworkContainer::disabled_node_ui(ui);
             return;
         }
 
-        let stratum_stats = &server_stats.as_ref().unwrap().stratum_stats;
-
-        // Show stratum server setup when mining server is not running.
-        if !stratum_stats.is_running && !Node::is_stratum_server_starting() {
-            ScrollArea::vertical()
-                .id_source("stratum_server_setup")
-                .auto_shrink([false; 2])
-                .show(ui, |ui| {
-                    self.stratum_server_setup.ui(ui, cb);
-
-                    ui.vertical_centered(|ui| {
-                        // Show message about stratum server config.
-                        let text = t!("network_mining.server_setting", "settings" => FADERS);
-                        ui.label(RichText::new(text)
-                            .size(16.0)
-                            .color(Colors::INACTIVE_TEXT)
-                        );
-                        ui.add_space(4.0);
-
-                        // Show button to enable stratum server if port is available.
-                        if self.stratum_server_setup.is_port_available {
-                            ui.add_space(6.0);
-                            View::button(ui, t!("network_mining.enable_server"), Colors::GOLD, || {
-                                Node::start_stratum_server();
-                            });
-                            ui.add_space(2.0);
-
-                            // Show stratum server autorun checkbox.
-                            let stratum_enabled = NodeConfig::is_stratum_autorun_enabled();
-                            View::checkbox(ui, stratum_enabled, t!("network.autorun"), || {
-                                NodeConfig::toggle_stratum_autorun();
-                            });
-                            ui.add_space(6.0);
-                        }
-                    });
-                });
-            return;
-        } else if Node::is_stratum_server_starting() {
+        // Show loading spinner when node is stopping or stratum server is starting.
+        if Node::is_stopping() || Node::is_stratum_server_starting() {
             ui.centered_and_justified(|ui| {
                 View::big_loading_spinner(ui);
             });
+            return;
+        }
+
+        // Show message when mining is not available.
+        if server_stats.is_none() || Node::is_restarting()
+            || Node::get_sync_status().unwrap() != SyncStatus::NoSync {
+            View::center_content(ui, 162.0, |ui| {
+                View::big_loading_spinner(ui);
+                ui.add_space(18.0);
+                ui.label(RichText::new(t!("network_mining.loading"))
+                    .size(16.0)
+                    .color(Colors::INACTIVE_TEXT)
+                );
+            });
+            return;
+        }
+
+        let stratum_stats = Node::get_stratum_stats();
+
+        // Show stratum server setup when mining server is not running.
+        if !stratum_stats.is_running {
+            ScrollArea::vertical()
+                .id_source("stratum_setup_scroll")
+                .auto_shrink([false; 2])
+                .show(ui, |ui| {
+                    self.stratum_server_setup.ui(ui, cb);
+                });
             return;
         }
 
@@ -221,7 +200,7 @@ impl NetworkTab for NetworkMining {
     fn on_modal_ui(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
         match modal.id {
             StratumServerSetup::STRATUM_PORT_MODAL => {
-                self.stratum_server_setup.stratum_port_modal_ui(ui, modal, cb);
+                self.stratum_server_setup.port_modal(ui, modal, cb);
             },
             _ => {}
         }

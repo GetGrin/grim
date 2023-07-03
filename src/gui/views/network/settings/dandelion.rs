@@ -12,12 +12,3 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-mod node;
-pub use node::Node;
-
-mod config;
-
-mod stratum;
-mod mine_block;
-
-pub use config::NodeConfig;

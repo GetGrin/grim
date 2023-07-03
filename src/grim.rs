@@ -89,7 +89,7 @@ fn setup_i18n() {
     } else {
         DEFAULT_LOCALE
     };
-    if crate::available_locales().contains(&locale_str) {
+    if crate::_rust_i18n_available_locales().contains(&locale_str) {
         rust_i18n::set_locale(locale_str);
     }
 }
