@@ -98,11 +98,13 @@ network_settings:
   attempt_time: Attempt time
   attempt_time_desc: The amount of time in seconds to attempt to mine on a particular header before stopping and re-collecting transactions from the pool
   min_share_diff: The minimum acceptable share difficulty
-  reset_settings_desc: Reset integrated node settings to default values
+  reset_settings_desc: Reset node settings to default values
   reset_settings: Reset settings
+  reset: Reset
 modal:
   cancel: Cancel
   save: Save
+  confirmation: Confirmation
 modal_exit:
   description: Are you sure you want to quit the application?
   exit: Exit

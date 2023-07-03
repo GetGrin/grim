@@ -18,7 +18,7 @@ use crate::gui::{Colors, Navigator};
 use crate::gui::icons::{BARBELL, HARD_DRIVES, PLUG, TIMER};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, ModalPosition, View};
-use crate::gui::views::network::node_settings::NetworkNodeSettings;
+use crate::gui::views::network::settings::NetworkSettings;
 use crate::node::{Node, NodeConfig};
 
 /// Stratum server setup ui section.
@@ -59,9 +59,9 @@ impl StratumServerSetup {
     /// Identifier for stratum port [`Modal`].
     pub const STRATUM_PORT_MODAL: &'static str = "stratum_port";
     /// Identifier for attempt time [`Modal`].
-    pub const STRATUM_ATTEMPT_TIME_MODAL: &'static str = "stratum_attempt_time";
+    pub const ATTEMPT_TIME_MODAL: &'static str = "stratum_attempt_time";
     /// Identifier for minimum share difficulty [`Modal`].
-    pub const STRATUM_MIN_SHARE_MODAL: &'static str = "stratum_min_share";
+    pub const MIN_SHARE_DIFF_MODAL: &'static str = "stratum_min_share_diff";
 
     pub fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         View::sub_title(ui, format!("{} {}", HARD_DRIVES, t!("network_mining.server_setup")));
@@ -100,7 +100,7 @@ impl StratumServerSetup {
         // Show message when IP addresses are not available on the system.
         let all_ips = NodeConfig::get_ip_addrs();
         if all_ips.is_empty() {
-            NetworkNodeSettings::no_ip_address_ui(ui);
+            NetworkSettings::no_ip_address_ui(ui);
             return;
         }
 
@@ -112,7 +112,7 @@ impl StratumServerSetup {
             ui.add_space(6.0);
             // Show stratum IP addresses to select.
             let (ip, port) = NodeConfig::get_stratum_address();
-            NetworkNodeSettings::ip_addrs_ui(ui, &ip, &all_ips, |selected_ip| {
+            NetworkSettings::ip_addrs_ui(ui, &ip, &all_ips, |selected_ip| {
                 NodeConfig::save_stratum_address(selected_ip, &port);
                 self.is_port_available = NodeConfig::is_stratum_port_available(selected_ip, &port);
 
@@ -253,7 +253,7 @@ impl StratumServerSetup {
             self.attempt_time_edit = time;
 
             // Show attempt time modal.
-            let time_modal = Modal::new(Self::STRATUM_ATTEMPT_TIME_MODAL)
+            let time_modal = Modal::new(Self::ATTEMPT_TIME_MODAL)
                 .position(ModalPosition::CenterTop)
                 .title(t!("network_settings.change_value"));
             Navigator::show_modal(time_modal);
@@ -290,7 +290,7 @@ impl StratumServerSetup {
                     .size(18.0)
                     .color(Colors::RED));
             } else {
-                NetworkNodeSettings::node_restart_required_ui(ui);
+                NetworkSettings::node_restart_required_ui(ui);
             }
             ui.add_space(12.0);
         });
@@ -339,7 +339,7 @@ impl StratumServerSetup {
             self.min_share_diff_edit = diff;
 
             // Show attempt time modal.
-            let diff_modal = Modal::new(Self::STRATUM_MIN_SHARE_MODAL)
+            let diff_modal = Modal::new(Self::MIN_SHARE_DIFF_MODAL)
                 .position(ModalPosition::CenterTop)
                 .title(t!("network_settings.change_value"));
             Navigator::show_modal(diff_modal);
@@ -376,7 +376,7 @@ impl StratumServerSetup {
                     .size(18.0)
                     .color(Colors::RED));
             } else {
-                NetworkNodeSettings::node_restart_required_ui(ui);
+                NetworkSettings::node_restart_required_ui(ui);
             }
             ui.add_space(12.0);
         });

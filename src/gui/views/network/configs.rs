@@ -12,11 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-mod container;
-mod metrics;
-mod mining;
-mod settings;
-mod node;
-mod configs;
-
-pub use container::*;
+pub mod stratum;
+pub mod server;
+pub mod p2p;
+pub mod pool;
+pub mod dandelion;

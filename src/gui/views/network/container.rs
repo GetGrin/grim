@@ -24,12 +24,12 @@ use crate::gui::{Colors, Navigator};
 use crate::gui::icons::{CARDHOLDER, DATABASE, DOTS_THREE_OUTLINE_VERTICAL, FACTORY, FADERS, GAUGE};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, ModalContainer, View};
+use crate::gui::views::network::configs::server::ServerSetup;
+use crate::gui::views::network::configs::stratum::StratumServerSetup;
 use crate::gui::views::network::metrics::NetworkMetrics;
 use crate::gui::views::network::mining::NetworkMining;
 use crate::gui::views::network::node::NetworkNode;
-use crate::gui::views::network::node_settings::NetworkNodeSettings;
-use crate::gui::views::network::settings::server::ServerSetup;
-use crate::gui::views::network::settings::stratum::StratumServerSetup;
+use crate::gui::views::network::settings::NetworkSettings;
 use crate::node::Node;
 
 pub trait NetworkTab {
@@ -67,10 +67,11 @@ impl Default for NetworkContainer {
         Self {
             current_tab: Box::new(NetworkNode::default()),
             modal_ids: vec![
-                NetworkNodeSettings::NODE_RESTART_REQUIRED_MODAL,
+                NetworkSettings::NODE_RESTART_REQUIRED_MODAL,
+                NetworkSettings::RESET_SETTINGS_MODAL,
                 StratumServerSetup::STRATUM_PORT_MODAL,
-                StratumServerSetup::STRATUM_ATTEMPT_TIME_MODAL,
-                StratumServerSetup::STRATUM_MIN_SHARE_MODAL,
+                StratumServerSetup::ATTEMPT_TIME_MODAL,
+                StratumServerSetup::MIN_SHARE_DIFF_MODAL,
                 ServerSetup::API_PORT_MODAL,
                 ServerSetup::API_SECRET_MODAL,
                 ServerSetup::FOREIGN_API_SECRET_MODAL,
@@ -155,7 +156,7 @@ impl NetworkContainer {
                 });
                 columns[3].vertical_centered_justified(|ui| {
                     View::tab_button(ui, FADERS, self.is_current_tab(NetworkTabType::Settings), || {
-                            self.current_tab = Box::new(NetworkNodeSettings::default());
+                            self.current_tab = Box::new(NetworkSettings::default());
                         });
                 });
             });

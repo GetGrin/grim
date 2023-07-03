@@ -54,14 +54,20 @@ impl NodeConfig {
         let path = Settings::get_config_path(SERVER_CONFIG_FILE_NAME, Some(chain_type));
         let parsed = Settings::read_from_file::<ConfigMembers>(path.clone());
         if !path.exists() || parsed.is_err() {
-            let mut default_config = GlobalConfig::for_chain(chain_type);
-            default_config.update_paths(&Settings::get_working_path(Some(chain_type)));
-            let config = default_config.members.unwrap();
-            Settings::write_to_file(&config, path);
-            config
+            Self::save_default_config(chain_type)
         } else {
             parsed.unwrap()
         }
+    }
+
+    /// Generate and save default node config for specified [`ChainTypes`].
+    fn save_default_config(chain_type: &ChainTypes) -> ConfigMembers {
+        let path = Settings::get_config_path(SERVER_CONFIG_FILE_NAME, Some(chain_type));
+        let mut default_config = GlobalConfig::for_chain(chain_type);
+        default_config.update_paths(&Settings::get_working_path(Some(chain_type)));
+        let config = default_config.members.unwrap();
+        Settings::write_to_file(&config, path);
+        config
     }
 
     /// Save node config to disk.
@@ -73,10 +79,24 @@ impl NodeConfig {
         Settings::write_to_file(&self.members, config_path);
     }
 
-    /// Get node config values, requires to start node.
+    /// Get node config values.
     pub fn get_members() -> ConfigMembers {
         let r_config = Settings::node_config_to_read();
         r_config.members.clone()
+    }
+
+    /// Reset node config to default values.
+    pub fn reset_to_default() {
+        let chain_type = {
+            let r_config = Settings::node_config_to_read();
+            r_config.members.server.chain_type
+        };
+        let members = Self::save_default_config(&chain_type);
+        {
+            let mut w_node_config = Settings::node_config_to_update();
+            w_node_config.members = members;
+            w_node_config.save();
+        }
     }
 
     /// Check that the api secret files exist and are valid.

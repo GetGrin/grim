@@ -21,7 +21,7 @@ use crate::gui::{Colors, Navigator};
 use crate::gui::icons::{CLIPBOARD_TEXT, CLOCK_CLOCKWISE, COMPUTER_TOWER, COPY, PLUG, POWER, SHIELD, SHIELD_SLASH};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, ModalPosition, NetworkContainer, View};
-use crate::gui::views::network::node_settings::NetworkNodeSettings;
+use crate::gui::views::network::settings::NetworkSettings;
 use crate::node::{Node, NodeConfig};
 
 /// Integrated node server setup ui section.
@@ -129,7 +129,7 @@ impl ServerSetup {
         let addrs = NodeConfig::get_ip_addrs();
         if addrs.is_empty() {
             // Show message when IP addresses are not available on the system.
-            NetworkNodeSettings::no_ip_address_ui(ui);
+            NetworkSettings::no_ip_address_ui(ui);
 
             ui.add_space(4.0);
         } else {
@@ -145,7 +145,7 @@ impl ServerSetup {
 
                 // Show API IP addresses to select.
                 let (api_ip, api_port) = NodeConfig::get_api_address();
-                NetworkNodeSettings::ip_addrs_ui(ui, &api_ip, &addrs, |selected_ip| {
+                NetworkSettings::ip_addrs_ui(ui, &api_ip, &addrs, |selected_ip| {
                     let api_available = NodeConfig::is_api_port_available(selected_ip, &api_port);
                     self.is_api_port_available = api_available;
                     NodeConfig::save_api_address(selected_ip, &api_port);
@@ -232,7 +232,7 @@ impl ServerSetup {
 
         if saved_chain_type != selected_chain_type {
             AppConfig::change_chain_type(&selected_chain_type);
-            NetworkNodeSettings::show_node_restart_required_modal();
+            NetworkSettings::show_node_restart_required_modal();
         }
     }
 
@@ -293,7 +293,7 @@ impl ServerSetup {
                     .size(16.0)
                     .color(Colors::RED));
             } else {
-                NetworkNodeSettings::node_restart_required_ui(ui);
+                NetworkSettings::node_restart_required_ui(ui);
             }
             ui.add_space(12.0);
         });
@@ -434,7 +434,7 @@ impl ServerSetup {
             });
 
             // Show reminder to restart enabled node.
-            NetworkNodeSettings::node_restart_required_ui(ui);
+            NetworkSettings::node_restart_required_ui(ui);
 
             ui.add_space(12.0);
         });
@@ -524,7 +524,7 @@ impl ServerSetup {
                     .size(18.0)
                     .color(Colors::RED));
             } else {
-                NetworkNodeSettings::node_restart_required_ui(ui);
+                NetworkSettings::node_restart_required_ui(ui);
             }
             ui.add_space(12.0);
         });
@@ -564,7 +564,7 @@ impl ServerSetup {
         let validate = NodeConfig::is_full_chain_validation();
         View::checkbox(ui, validate, t!("network_settings.full_validation"), || {
             NodeConfig::toggle_full_chain_validation();
-            NetworkNodeSettings::show_node_restart_required_modal();
+            NetworkSettings::show_node_restart_required_modal();
         });
         ui.add_space(4.0);
         ui.label(RichText::new(t!("network_settings.full_validation_description"))
@@ -578,7 +578,7 @@ impl ServerSetup {
         let archive_mode = NodeConfig::is_archive_mode();
         View::checkbox(ui, archive_mode, t!("network_settings.archive_mode"), || {
             NodeConfig::toggle_archive_mode();
-            NetworkNodeSettings::show_node_restart_required_modal();
+            NetworkSettings::show_node_restart_required_modal();
         });
         ui.add_space(4.0);
         ui.label(RichText::new(t!("network_settings.archive_mode_desc"))

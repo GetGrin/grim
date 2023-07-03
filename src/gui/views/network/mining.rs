@@ -22,7 +22,7 @@ use crate::gui::icons::{BARBELL, CLOCK_AFTERNOON, COMPUTER_TOWER, CPU, CUBE, FAD
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, NetworkContainer, View};
 use crate::gui::views::network::{NetworkTab, NetworkTabType};
-use crate::gui::views::network::settings::stratum::StratumServerSetup;
+use crate::gui::views::network::configs::stratum::StratumServerSetup;
 use crate::node::{Node, NodeConfig};
 
 #[derive(Default)]
