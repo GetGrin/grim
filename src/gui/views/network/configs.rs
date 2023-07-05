@@ -13,7 +13,7 @@
 // limitations under the License.
 
 pub mod stratum;
-pub mod server;
+pub mod node;
 pub mod p2p;
 pub mod pool;
 pub mod dandelion;

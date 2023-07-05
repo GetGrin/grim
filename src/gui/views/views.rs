@@ -209,7 +209,7 @@ impl View {
     pub fn checkbox(ui: &mut egui::Ui, checked: bool, text: String, callback: impl FnOnce()) {
         let (text_value, color) = match checked {
             true => (format!("{} {}", CHECK_SQUARE, text), Colors::TEXT_BUTTON),
-            false => (format!("{} {}", SQUARE, text), Colors::TEXT)
+            false => (format!("{} {}", SQUARE, text), Colors::CHECKBOX)
         };
 
         let br = Button::new(RichText::new(text_value).size(18.0).color(color))

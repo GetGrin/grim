@@ -22,12 +22,12 @@ use crate::gui::icons::{BARBELL, CLOCK_AFTERNOON, COMPUTER_TOWER, CPU, CUBE, FAD
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, NetworkContainer, View};
 use crate::gui::views::network::{NetworkTab, NetworkTabType};
-use crate::gui::views::network::configs::stratum::StratumServerSetup;
+use crate::gui::views::network::configs::stratum::StratumSetup;
 use crate::node::{Node, NodeConfig};
 
 #[derive(Default)]
 pub struct NetworkMining {
-    stratum_server_setup: StratumServerSetup
+    stratum_server_setup: StratumSetup
 }
 
 impl NetworkTab for NetworkMining {
@@ -199,7 +199,7 @@ impl NetworkTab for NetworkMining {
 
     fn on_modal_ui(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
         match modal.id {
-            StratumServerSetup::STRATUM_PORT_MODAL => {
+            StratumSetup::STRATUM_PORT_MODAL => {
                 self.stratum_server_setup.port_modal(ui, modal, cb);
             },
             _ => {}

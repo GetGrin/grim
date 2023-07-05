@@ -121,12 +121,12 @@ impl NodeConfig {
     }
 
     /// List of available IP addresses.
-    pub fn get_ip_addrs() -> Vec<IpAddr> {
+    pub fn get_ip_addrs() -> Vec<String> {
         let mut ip_addrs = Vec::new();
         for net_if in pnet::datalink::interfaces() {
             for ip in net_if.ips {
                 if ip.is_ipv4() {
-                    ip_addrs.push(ip.ip());
+                    ip_addrs.push(ip.ip().to_string());
                 }
             }
         }
@@ -563,7 +563,7 @@ impl NodeConfig {
         Settings::node_config_to_read().members.server.p2p_config.ban_window()
     }
 
-    /// Set how long a banned peer should stay banned in ms.
+    /// Save for how long a banned peer should stay banned in ms.
     pub fn save_ban_window(time: i64) {
         let mut w_node_config = Settings::node_config_to_update();
         w_node_config.members.server.p2p_config.ban_window = Some(time);
@@ -575,7 +575,7 @@ impl NodeConfig {
         Settings::node_config_to_read().members.server.p2p_config.peer_max_inbound_count()
     }
 
-    /// Set maximum number of inbound peer connections.
+    /// Save maximum number of inbound peer connections.
     pub fn save_max_inbound_count(count: u32) {
         let mut w_node_config = Settings::node_config_to_update();
         w_node_config.members.server.p2p_config.peer_max_inbound_count = Some(count);
@@ -587,7 +587,7 @@ impl NodeConfig {
         Settings::node_config_to_read().members.server.p2p_config.peer_max_outbound_count()
     }
 
-    /// Set maximum number of outbound peer connections.
+    /// Save maximum number of outbound peer connections.
     pub fn save_max_outbound_count(count: u32) {
         let mut w_node_config = Settings::node_config_to_update();
         w_node_config.members.server.p2p_config.peer_max_outbound_count = Some(count);
@@ -603,7 +603,7 @@ impl NodeConfig {
             .peer_min_preferred_outbound_count()
     }
 
-    /// Set minimum number of outbound peer connections.
+    /// Save minimum number of outbound peer connections.
     pub fn save_min_outbound_count(count: u32) {
         let mut w_node_config = Settings::node_config_to_update();
         w_node_config.members.server.p2p_config.peer_min_preferred_outbound_count = Some(count);
@@ -613,23 +613,23 @@ impl NodeConfig {
     // Pool settings
 
     /// Base fee that's accepted into the pool.
-    pub fn get_base_fee() -> u64 {
-        Settings::node_config_to_read().members.server.pool_config.accept_fee_base
+    pub fn get_base_fee() -> String {
+        Settings::node_config_to_read().members.server.pool_config.accept_fee_base.to_string()
     }
 
-    /// Set base fee that's accepted into the pool.
+    /// Save base fee that's accepted into the pool.
     pub fn save_base_fee(fee: u64) {
         let mut w_node_config = Settings::node_config_to_update();
         w_node_config.members.server.pool_config.accept_fee_base = fee;
         w_node_config.save();
     }
 
-    /// Reorg cache retention period in minute.
-    pub fn get_reorg_cache_period() -> u32 {
-        Settings::node_config_to_read().members.server.pool_config.reorg_cache_period
+    /// Reorg cache retention period in minutes.
+    pub fn get_reorg_cache_period() -> String {
+        Settings::node_config_to_read().members.server.pool_config.reorg_cache_period.to_string()
     }
 
-    /// Set reorg cache retention period in minute.
+    /// Save reorg cache retention period in minutes.
     pub fn save_reorg_cache_period(period: u32) {
         let mut w_node_config = Settings::node_config_to_update();
         w_node_config.members.server.pool_config.reorg_cache_period = period;
@@ -637,11 +637,11 @@ impl NodeConfig {
     }
 
     /// Max amount of transactions at pool.
-    pub fn get_max_pool_size() -> usize {
-        Settings::node_config_to_read().members.server.pool_config.max_pool_size
+    pub fn get_max_pool_size() -> String {
+        Settings::node_config_to_read().members.server.pool_config.max_pool_size.to_string()
     }
 
-    /// Set max amount of transactions at pool.
+    /// Save max amount of transactions at pool.
     pub fn save_max_pool_size(amount: usize) {
         let mut w_node_config = Settings::node_config_to_update();
         w_node_config.members.server.pool_config.max_pool_size = amount;
@@ -649,11 +649,11 @@ impl NodeConfig {
     }
 
     /// Max amount of transactions at stem pool.
-    pub fn get_max_stempool_size() -> usize {
-        Settings::node_config_to_read().members.server.pool_config.max_stempool_size
+    pub fn get_max_stempool_size() -> String {
+        Settings::node_config_to_read().members.server.pool_config.max_stempool_size.to_string()
     }
 
-    /// Set max amount of transactions at stem pool.
+    /// Save max amount of transactions at stem pool.
     pub fn save_max_stempool_size(amount: usize) {
         let mut w_node_config = Settings::node_config_to_update();
         w_node_config.members.server.pool_config.max_stempool_size = amount;
@@ -661,8 +661,8 @@ impl NodeConfig {
     }
 
     /// Max total weight of transactions that can get selected to build a block.
-    pub fn get_mineable_max_weight() -> u64 {
-        Settings::node_config_to_read().members.server.pool_config.mineable_max_weight
+    pub fn get_mineable_max_weight() -> String {
+        Settings::node_config_to_read().members.server.pool_config.mineable_max_weight.to_string()
     }
 
     /// Set max total weight of transactions that can get selected to build a block.
@@ -674,37 +674,49 @@ impl NodeConfig {
 
     // Dandelion settings
 
-    /// Dandelion epoch duration in secs.
-    pub fn get_epoch() -> u16 {
-        Settings::node_config_to_read().members.server.dandelion_config.epoch_secs
+    /// Dandelion epoch duration in seconds.
+    pub fn get_dandelion_epoch() -> String {
+        Settings::node_config_to_read().members.server.dandelion_config.epoch_secs.to_string()
     }
 
-    /// Set Dandelion epoch duration in secs.
-    pub fn save_epoch(secs: u16) {
+    /// Save Dandelion epoch duration in seconds.
+    pub fn save_dandelion_epoch(secs: u16) {
         let mut w_node_config = Settings::node_config_to_update();
         w_node_config.members.server.dandelion_config.epoch_secs = secs;
         w_node_config.save();
     }
 
-    /// Dandelion embargo timer in secs.
+    /// Dandelion embargo timer in seconds.
     /// Fluff and broadcast after embargo expires if tx not seen on network.
-    pub fn get_embargo() -> u16 {
-        Settings::node_config_to_read().members.server.dandelion_config.embargo_secs
+    pub fn get_dandelion_embargo() -> String {
+        Settings::node_config_to_read().members.server.dandelion_config.embargo_secs.to_string()
     }
 
-    /// Set Dandelion embargo timer.
-    pub fn save_embargo(secs: u16) {
+    /// Save Dandelion embargo timer in seconds.
+    pub fn save_dandelion_embargo(secs: u16) {
         let mut w_node_config = Settings::node_config_to_update();
         w_node_config.members.server.dandelion_config.embargo_secs = secs;
         w_node_config.save();
     }
 
-    /// Dandelion stem probability (default: stem 90% of the time, fluff 10% of the time).
-    pub fn get_stem_probability() -> u8 {
-        Settings::node_config_to_read().members.server.dandelion_config.stem_probability
+    /// Dandelion aggregation period in seconds.
+    pub fn get_dandelion_aggregation() -> String {
+        Settings::node_config_to_read().members.server.dandelion_config.aggregation_secs.to_string()
     }
 
-    /// Set Dandelion stem probability.
+    /// Save Dandelion aggregation period in seconds.
+    pub fn save_dandelion_aggregation(secs: u16) {
+        let mut w_node_config = Settings::node_config_to_update();
+        w_node_config.members.server.dandelion_config.aggregation_secs = secs;
+        w_node_config.save();
+    }
+
+    /// Dandelion stem probability (default: stem 90% of the time, fluff 10% of the time).
+    pub fn get_stem_probability() -> String {
+        Settings::node_config_to_read().members.server.dandelion_config.stem_probability.to_string()
+    }
+
+    /// Save Dandelion stem probability.
     pub fn save_stem_probability(percent: u8) {
         let mut w_node_config = Settings::node_config_to_update();
         w_node_config.members.server.dandelion_config.stem_probability = percent;
@@ -720,7 +732,7 @@ impl NodeConfig {
     pub fn toggle_always_stem_our_txs() {
         let stem_txs = Self::always_stem_our_txs();
         let mut w_node_config = Settings::node_config_to_update();
-        w_node_config.members.server.dandelion_config.always_stem_our_txs = stem_txs;
+        w_node_config.members.server.dandelion_config.always_stem_our_txs = !stem_txs;
         w_node_config.save();
     }
 }

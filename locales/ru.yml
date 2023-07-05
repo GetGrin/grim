@@ -70,10 +70,9 @@ network_mining:
   connected: Подключен
   disconnected: Отключен
 network_settings:
-  ip: IP Адрес
-  port: Порт
   change_value: Изменить значение
-  stratum_port: Порт Stratum сервера
+  stratum_ip: Stratum IP Адрес
+  stratum_port: Порт Stratum
   port_unavailable: Указанный порт недоступен
   restart_node_required: Для применения изменений требуется перезапуск узла.
   enable: Включить
@@ -101,6 +100,17 @@ network_settings:
   reset_settings_desc: Сбросить настройки узла до стандартных значений
   reset_settings: Сброс настроек
   reset: Сбросить
+  tx_pool: Пул транзакций
+  pool_fee: Базовая комиссия, принимаемая в пул
+  reorg_period: Срок хранения кэша реорганизации (в минутах)
+  max_tx_pool: Максимальное количество транзакций в пуле
+  max_tx_stempool: Максимальное количество транзакций в stem-пуле
+  max_tx_weight: Максимальный общий вес транзакций, которые могут быть выбраны для построения блока
+  epoch_duration: Длительность эпохи (в секундах)
+  embargo_timer: Таймер эмбарго (в секундах)
+  aggregation_period: Период агрегации (в секундах)
+  stem_probability: Вероятность фазы Stem
+  stem_txs: Stem транзакций
 modal:
   cancel: Отмена
   save: Сохранить

@@ -24,8 +24,10 @@ use crate::gui::{Colors, Navigator};
 use crate::gui::icons::{CARDHOLDER, DATABASE, DOTS_THREE_OUTLINE_VERTICAL, FACTORY, FADERS, GAUGE};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, ModalContainer, TitlePanel, View};
-use crate::gui::views::network::configs::server::ServerSetup;
-use crate::gui::views::network::configs::stratum::StratumServerSetup;
+use crate::gui::views::network::configs::dandelion::DandelionSetup;
+use crate::gui::views::network::configs::node::NodeSetup;
+use crate::gui::views::network::configs::pool::PoolSetup;
+use crate::gui::views::network::configs::stratum::StratumSetup;
 use crate::gui::views::network::metrics::NetworkMetrics;
 use crate::gui::views::network::mining::NetworkMining;
 use crate::gui::views::network::node::NetworkNode;
@@ -67,15 +69,29 @@ impl Default for NetworkContainer {
         Self {
             current_tab: Box::new(NetworkNode::default()),
             modal_ids: vec![
+                // Network settings modals.
                 NetworkSettings::NODE_RESTART_REQUIRED_MODAL,
                 NetworkSettings::RESET_SETTINGS_MODAL,
-                StratumServerSetup::STRATUM_PORT_MODAL,
-                StratumServerSetup::ATTEMPT_TIME_MODAL,
-                StratumServerSetup::MIN_SHARE_DIFF_MODAL,
-                ServerSetup::API_PORT_MODAL,
-                ServerSetup::API_SECRET_MODAL,
-                ServerSetup::FOREIGN_API_SECRET_MODAL,
-                ServerSetup::FTL_MODAL
+                // Node setup modals.
+                NodeSetup::API_PORT_MODAL,
+                NodeSetup::API_SECRET_MODAL,
+                NodeSetup::FOREIGN_API_SECRET_MODAL,
+                NodeSetup::FTL_MODAL,
+                // Stratum setup modals.
+                StratumSetup::STRATUM_PORT_MODAL,
+                StratumSetup::ATTEMPT_TIME_MODAL,
+                StratumSetup::MIN_SHARE_DIFF_MODAL,
+                // Pool setup modals.
+                PoolSetup::FEE_BASE_MODAL,
+                PoolSetup::REORG_PERIOD_MODAL,
+                PoolSetup::POOL_SIZE_MODAL,
+                PoolSetup::STEMPOOL_SIZE_MODAL,
+                PoolSetup::MAX_WEIGHT_MODAL,
+                // Dandelion setup modals.
+                DandelionSetup::EPOCH_MODAL,
+                DandelionSetup::EMBARGO_MODAL,
+                DandelionSetup::AGGREGATION_MODAL,
+                DandelionSetup::STEM_PROBABILITY_MODAL,
             ]
         }
     }
@@ -240,7 +256,7 @@ impl NetworkContainer {
 
                         // Repaint based on sync status
                         if idle {
-                            ui.ctx().request_repaint_after(Duration::from_millis(600));
+                            ui.ctx().request_repaint_after(Duration::from_millis(250));
                         } else {
                             ui.ctx().request_repaint();
                         }

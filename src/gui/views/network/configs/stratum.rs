@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::{Id, RichText, TextStyle, Widget};
+use egui::{Id, RichText, TextStyle, Ui, Widget};
 
 use crate::gui::{Colors, Navigator};
 use crate::gui::icons::{BARBELL, HARD_DRIVES, PLUG, TIMER};
@@ -22,40 +22,41 @@ use crate::gui::views::network::settings::NetworkSettings;
 use crate::node::{Node, NodeConfig};
 
 /// Stratum server setup ui section.
-pub struct StratumServerSetup {
-    /// Stratum port value to be used inside edit modal.
+pub struct StratumSetup {
+    /// IP Addresses available at system.
+    available_ips: Vec<String>,
+
+    /// Stratum port value.
     stratum_port_edit: String,
-    /// Flag to check if stratum port is available inside edit modal.
+    /// Flag to check if stratum port is available.
     stratum_port_available_edit: bool,
 
-    /// Flag to check if stratum port is available from saved config value.
+    /// Flag to check if stratum port from saved config value is available.
     pub(crate) is_port_available: bool,
 
-    /// Attempt time value to be used inside edit modal.
+    /// Attempt time value in seconds to mine on a particular header.
     attempt_time_edit: String,
 
-    /// Minimum share difficulty value to be used inside edit modal.
+    /// Minimum share difficulty value to request from miners.
     min_share_diff_edit: String
 }
 
-impl Default for StratumServerSetup {
+impl Default for StratumSetup {
     fn default() -> Self {
         let (ip, port) = NodeConfig::get_stratum_address();
         let is_port_available = NodeConfig::is_stratum_port_available(&ip, &port);
-        let attempt_time = NodeConfig::get_stratum_attempt_time();
-        let min_share_diff = NodeConfig::get_stratum_min_share_diff();
         Self {
+            available_ips: NodeConfig::get_ip_addrs(),
             stratum_port_edit: port,
             stratum_port_available_edit: is_port_available,
             is_port_available,
-            attempt_time_edit: attempt_time,
-            min_share_diff_edit: min_share_diff
-
+            attempt_time_edit: NodeConfig::get_stratum_attempt_time(),
+            min_share_diff_edit: NodeConfig::get_stratum_min_share_diff()
         }
     }
 }
 
-impl StratumServerSetup {
+impl StratumSetup {
     /// Identifier for stratum port [`Modal`].
     pub const STRATUM_PORT_MODAL: &'static str = "stratum_port";
     /// Identifier for attempt time [`Modal`].
@@ -63,9 +64,9 @@ impl StratumServerSetup {
     /// Identifier for minimum share difficulty [`Modal`].
     pub const MIN_SHARE_DIFF_MODAL: &'static str = "stratum_min_share_diff";
 
-    pub fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
+    pub fn ui(&mut self, ui: &mut Ui, cb: &dyn PlatformCallbacks) {
         View::sub_title(ui, format!("{} {}", HARD_DRIVES, t!("network_mining.server_setup")));
-        View::horizontal_line(ui, Colors::ITEM_STROKE);
+        View::horizontal_line(ui, Colors::STROKE);
         ui.add_space(6.0);
 
         ui.vertical_centered(|ui| {
@@ -98,21 +99,20 @@ impl StratumServerSetup {
         ui.add_space(6.0);
 
         // Show message when IP addresses are not available on the system.
-        let all_ips = NodeConfig::get_ip_addrs();
-        if all_ips.is_empty() {
+        if self.available_ips.is_empty() {
             NetworkSettings::no_ip_address_ui(ui);
             return;
         }
 
         ui.vertical_centered(|ui| {
-            ui.label(RichText::new(t!("network_settings.ip"))
+            ui.label(RichText::new(t!("network_settings.stratum_ip"))
                 .size(16.0)
                 .color(Colors::GRAY)
             );
             ui.add_space(6.0);
             // Show stratum IP addresses to select.
             let (ip, port) = NodeConfig::get_stratum_address();
-            NetworkSettings::ip_addrs_ui(ui, &ip, &all_ips, |selected_ip| {
+            NetworkSettings::ip_addrs_ui(ui, &ip, &self.available_ips, |selected_ip| {
                 NodeConfig::save_stratum_address(selected_ip, &port);
                 self.is_port_available = NodeConfig::is_stratum_port_available(selected_ip, &port);
 
@@ -134,9 +134,9 @@ impl StratumServerSetup {
         });
     }
 
-    /// Draw stratum port value setup ui.
-    fn port_setup_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
-        ui.label(RichText::new(t!("network_settings.port"))
+    /// Draw stratum port value setup content.
+    fn port_setup_ui(&mut self, ui: &mut Ui, cb: &dyn PlatformCallbacks) {
+        ui.label(RichText::new(t!("network_settings.stratum_port"))
             .size(16.0)
             .color(Colors::GRAY)
         );
@@ -166,8 +166,8 @@ impl StratumServerSetup {
         }
     }
 
-    /// Draw stratum port [`Modal`] content ui.
-    pub fn port_modal(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
+    /// Draw stratum port [`Modal`] content.
+    pub fn port_modal(&mut self, ui: &mut Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.stratum_port"))
@@ -202,7 +202,7 @@ impl StratumServerSetup {
                 // Setup spacing between buttons.
                 ui.spacing_mut().item_spacing = egui::Vec2::new(8.0, 0.0);
 
-                // Save button callback
+                // Save button callback.
                 let on_save = || {
                     // Check if port is available.
                     let (stratum_ip, _) = NodeConfig::get_stratum_address();
@@ -239,8 +239,8 @@ impl StratumServerSetup {
         });
     }
 
-    /// Draw attempt time value setup ui.
-    fn attempt_time_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
+    /// Draw attempt time value setup content.
+    fn attempt_time_ui(&mut self, ui: &mut Ui, cb: &dyn PlatformCallbacks) {
         ui.label(RichText::new(t!("network_settings.attempt_time_desc"))
             .size(16.0)
             .color(Colors::GRAY)
@@ -262,8 +262,8 @@ impl StratumServerSetup {
         ui.add_space(12.0);
     }
 
-    /// Draw attempt time [`Modal`] content ui.
-    pub fn attempt_modal(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
+    /// Draw attempt time [`Modal`] content.
+    pub fn attempt_modal(&mut self, ui: &mut Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.attempt_time"))
@@ -275,7 +275,7 @@ impl StratumServerSetup {
             let text_edit_resp = egui::TextEdit::singleline(&mut self.attempt_time_edit)
                 .id(Id::from(modal.id))
                 .font(TextStyle::Heading)
-                .desired_width(34.0)
+                .desired_width(36.0)
                 .cursor_at_end(true)
                 .ui(ui);
             text_edit_resp.request_focus();
@@ -300,7 +300,7 @@ impl StratumServerSetup {
             // Setup spacing between buttons.
             ui.spacing_mut().item_spacing = egui::Vec2::new(8.0, 0.0);
 
-            // Save button callback
+            // Save button callback.
             let on_save = || {
                 if let Ok(time) = self.attempt_time_edit.parse::<u32>() {
                     NodeConfig::save_stratum_attempt_time(time);
@@ -325,8 +325,8 @@ impl StratumServerSetup {
         });
     }
 
-    /// Draw minimum share difficulty value setup ui.
-    fn min_diff_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
+    /// Draw minimum share difficulty value setup content.
+    fn min_diff_ui(&mut self, ui: &mut Ui, cb: &dyn PlatformCallbacks) {
         ui.label(RichText::new(t!("network_settings.min_share_diff"))
             .size(16.0)
             .color(Colors::GRAY)
@@ -348,8 +348,8 @@ impl StratumServerSetup {
         ui.add_space(12.0);
     }
 
-    /// Draw minimum acceptable share difficulty [`Modal`] content ui.
-    pub fn min_diff_modal(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
+    /// Draw minimum acceptable share difficulty [`Modal`] content.
+    pub fn min_diff_modal(&mut self, ui: &mut Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.min_share_diff"))
@@ -361,7 +361,7 @@ impl StratumServerSetup {
             let text_edit_resp = egui::TextEdit::singleline(&mut self.min_share_diff_edit)
                 .id(Id::from(modal.id))
                 .font(TextStyle::Heading)
-                .desired_width(34.0)
+                .desired_width(36.0)
                 .cursor_at_end(true)
                 .ui(ui);
             text_edit_resp.request_focus();
@@ -386,7 +386,7 @@ impl StratumServerSetup {
             // Setup spacing between buttons.
             ui.spacing_mut().item_spacing = egui::Vec2::new(8.0, 0.0);
 
-            // Save button callback
+            // Save button callback.
             let on_save = || {
                 if let Ok(diff) = self.min_share_diff_edit.parse::<u64>() {
                     NodeConfig::save_stratum_min_share_diff(diff);

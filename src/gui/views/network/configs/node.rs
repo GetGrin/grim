@@ -13,7 +13,7 @@
 // limitations under the License.
 
 use eframe::emath::Align;
-use egui::{Id, Layout, RichText, TextStyle, Widget};
+use egui::{Id, Layout, RichText, TextStyle, Ui, Widget};
 use grin_core::global::ChainTypes;
 
 use crate::AppConfig;
@@ -25,49 +25,53 @@ use crate::gui::views::network::settings::NetworkSettings;
 use crate::node::{Node, NodeConfig};
 
 /// Integrated node server setup ui section.
-pub struct ServerSetup {
-    /// API port to be used inside edit modal.
+pub struct NodeSetup {
+    /// IP Addresses available at system.
+    available_ips: Vec<String>,
+
+    /// API port value.
     api_port_edit: String,
-    /// Flag to check if API port is available inside edit modal.
+    /// Flag to check if API port is available.
     api_port_available_edit: bool,
 
-    /// Flag to check if API port is available from saved config value.
+    /// Flag to check if API port from saved config value is available.
     pub(crate) is_api_port_available: bool,
 
-    /// API secret to be used inside edit modal.
+    /// Rest API and v2 Owner API secret value.
     api_secret_edit: String,
 
-    /// Foreign API secret to be used inside edit modal.
+    /// Foreign API secret value.
     foreign_api_secret_edit: String,
 
-    /// Future Time Limit to be used inside edit modal.
+    /// Future Time Limit value.
     ftl_edit: String,
 }
 
-impl Default for ServerSetup {
+impl Default for NodeSetup {
     fn default() -> Self {
         let (api_ip, api_port) = NodeConfig::get_api_address();
         let is_api_port_available = NodeConfig::is_api_port_available(&api_ip, &api_port);
         Self {
+            available_ips: NodeConfig::get_ip_addrs(),
             api_port_edit: api_port,
             api_port_available_edit: is_api_port_available,
             is_api_port_available,
             api_secret_edit: "".to_string(),
             foreign_api_secret_edit: "".to_string(),
-            ftl_edit: "".to_string(),
+            ftl_edit: NodeConfig::get_ftl(),
         }
     }
 }
 
-impl ServerSetup {
+impl NodeSetup {
     pub const API_PORT_MODAL: &'static str = "api_port";
     pub const API_SECRET_MODAL: &'static str = "api_secret";
     pub const FOREIGN_API_SECRET_MODAL: &'static str = "foreign_api_secret";
     pub const FTL_MODAL: &'static str = "ftl";
 
-    pub fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
+    pub fn ui(&mut self, ui: &mut Ui, cb: &dyn PlatformCallbacks) {
         View::sub_title(ui, format!("{} {}", COMPUTER_TOWER, t!("network_settings.server")));
-        View::horizontal_line(ui, Colors::ITEM_STROKE);
+        View::horizontal_line(ui, Colors::STROKE);
         ui.add_space(4.0);
 
         // Show chain type setup.
@@ -126,12 +130,9 @@ impl ServerSetup {
         });
         ui.add_space(6.0);
 
-        let addrs = NodeConfig::get_ip_addrs();
-        if addrs.is_empty() {
+        if self.available_ips.is_empty() {
             // Show message when IP addresses are not available on the system.
             NetworkSettings::no_ip_address_ui(ui);
-
-            ui.add_space(4.0);
         } else {
             View::horizontal_line(ui, Colors::ITEM_STROKE);
             ui.add_space(6.0);
@@ -145,35 +146,15 @@ impl ServerSetup {
 
                 // Show API IP addresses to select.
                 let (api_ip, api_port) = NodeConfig::get_api_address();
-                NetworkSettings::ip_addrs_ui(ui, &api_ip, &addrs, |selected_ip| {
+                NetworkSettings::ip_addrs_ui(ui, &api_ip, &self.available_ips, |selected_ip| {
                     let api_available = NodeConfig::is_api_port_available(selected_ip, &api_port);
                     self.is_api_port_available = api_available;
                     NodeConfig::save_api_address(selected_ip, &api_port);
                 });
-
-                ui.label(RichText::new(t!("network_settings.api_port"))
-                    .size(16.0)
-                    .color(Colors::GRAY)
-                );
-                ui.add_space(6.0);
                 // Show API port setup.
                 self.api_port_setup_ui(ui, cb);
-
-                ui.label(RichText::new(t!("network_settings.api_secret"))
-                    .size(16.0)
-                    .color(Colors::GRAY)
-                );
-                ui.add_space(6.0);
                 // Show API secret setup.
                 self.secret_ui(Self::API_SECRET_MODAL, ui, cb);
-
-                ui.add_space(6.0);
-
-                ui.label(RichText::new(t!("network_settings.foreign_api_secret"))
-                    .size(16.0)
-                    .color(Colors::GRAY)
-                );
-                ui.add_space(6.0);
                 // Show Foreign API secret setup.
                 self.secret_ui(Self::FOREIGN_API_SECRET_MODAL, ui, cb);
             });
@@ -184,11 +165,6 @@ impl ServerSetup {
         ui.add_space(6.0);
 
         ui.vertical_centered(|ui| {
-            ui.label(RichText::new(t!("network_settings.ftl"))
-                .size(16.0)
-                .color(Colors::GRAY)
-            );
-            ui.add_space(6.0);
             // Show FTL setup.
             self.ftl_ui(ui, cb);
 
@@ -205,15 +181,11 @@ impl ServerSetup {
 
             // Archive mode setup.
             self.archive_mode_ui(ui);
-
-            ui.add_space(6.0);
-            View::horizontal_line(ui, Colors::ITEM_STROKE);
-            ui.add_space(6.0);
         });
     }
 
-    /// Draw [`ChainTypes`] setup ui.
-    fn chain_type_ui(&mut self, ui: &mut egui::Ui) {
+    /// Draw [`ChainTypes`] setup content.
+    fn chain_type_ui(&mut self, ui: &mut Ui) {
         let saved_chain_type = AppConfig::chain_type();
         let mut selected_chain_type = saved_chain_type;
 
@@ -236,8 +208,14 @@ impl ServerSetup {
         }
     }
 
-    /// Draw API port setup ui.
-    fn api_port_setup_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
+    /// Draw API port setup content.
+    fn api_port_setup_ui(&mut self, ui: &mut Ui, cb: &dyn PlatformCallbacks) {
+        ui.label(RichText::new(t!("network_settings.api_port"))
+            .size(16.0)
+            .color(Colors::GRAY)
+        );
+        ui.add_space(6.0);
+
         let (_, port) = NodeConfig::get_api_address();
         View::button(ui, format!("{} {}", PLUG, port.clone()), Colors::BUTTON, || {
             // Setup values for modal.
@@ -263,11 +241,8 @@ impl ServerSetup {
         ui.add_space(6.0);
     }
 
-    /// Draw API port [`Modal`] content ui.
-    pub fn api_port_modal(&mut self,
-                          ui: &mut egui::Ui,
-                          modal: &Modal,
-                          cb: &dyn PlatformCallbacks) {
+    /// Draw API port [`Modal`] content.
+    pub fn api_port_modal(&mut self, ui: &mut Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.api_port"))
@@ -335,8 +310,18 @@ impl ServerSetup {
         });
     }
 
-    /// Draw API secret token setup ui.
-    fn secret_ui(&mut self, modal_id: &'static str, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
+    /// Draw API secret token setup content.
+    fn secret_ui(&mut self, modal_id: &'static str, ui: &mut Ui, cb: &dyn PlatformCallbacks) {
+        let secret_title = match modal_id {
+            Self::API_SECRET_MODAL => t!("network_settings.api_secret"),
+            _ => t!("network_settings.foreign_api_secret")
+        };
+        ui.label(RichText::new(secret_title)
+            .size(16.0)
+            .color(Colors::GRAY)
+        );
+        ui.add_space(6.0);
+
         let secret_value = match modal_id {
             Self::API_SECRET_MODAL => NodeConfig::get_api_secret(),
             _ => NodeConfig::get_foreign_api_secret()
@@ -365,11 +350,11 @@ impl ServerSetup {
             Navigator::show_modal(port_modal);
             cb.show_keyboard();
         });
-        ui.add_space(6.0);
+        ui.add_space(12.0);
     }
 
-    /// Draw API port [`Modal`] content ui.
-    pub fn secret_modal(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
+    /// Draw API port [`Modal`] content.
+    pub fn secret_modal(&mut self, ui: &mut Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             let description = match modal.id {
@@ -475,8 +460,14 @@ impl ServerSetup {
         });
     }
 
-    /// Draw FTL setup ui.
-    fn ftl_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
+    /// Draw FTL setup content.
+    fn ftl_ui(&mut self, ui: &mut Ui, cb: &dyn PlatformCallbacks) {
+        ui.label(RichText::new(t!("network_settings.ftl"))
+            .size(16.0)
+            .color(Colors::GRAY)
+        );
+        ui.add_space(6.0);
+
         let ftl = NodeConfig::get_ftl();
         View::button(ui, format!("{} {}", CLOCK_CLOCKWISE, ftl.clone()), Colors::BUTTON, || {
             // Setup values for modal.
@@ -497,7 +488,7 @@ impl ServerSetup {
     }
 
     /// Draw FTL [`Modal`] content.
-    pub fn ftl_modal(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
+    pub fn ftl_modal(&mut self, ui: &mut Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.ftl"))
@@ -534,7 +525,7 @@ impl ServerSetup {
             // Setup spacing between buttons.
             ui.spacing_mut().item_spacing = egui::Vec2::new(8.0, 0.0);
 
-            // Save button callback
+            // Save button callback.
             let on_save = || {
                 if let Ok(ftl) = self.ftl_edit.parse::<u64>() {
                     NodeConfig::save_ftl(ftl);
@@ -559,8 +550,8 @@ impl ServerSetup {
         });
     }
 
-    /// Draw chain validation mode setup ui.
-    pub fn validation_mode_ui(&mut self, ui: &mut egui::Ui) {
+    /// Draw chain validation mode setup content.
+    pub fn validation_mode_ui(&mut self, ui: &mut Ui) {
         let validate = NodeConfig::is_full_chain_validation();
         View::checkbox(ui, validate, t!("network_settings.full_validation"), || {
             NodeConfig::toggle_full_chain_validation();
@@ -573,8 +564,8 @@ impl ServerSetup {
         );
     }
 
-    /// Draw archive mode setup ui.
-    pub fn archive_mode_ui(&mut self, ui: &mut egui::Ui) {
+    /// Draw archive mode setup content.
+    pub fn archive_mode_ui(&mut self, ui: &mut Ui) {
         let archive_mode = NodeConfig::is_archive_mode();
         View::checkbox(ui, archive_mode, t!("network_settings.archive_mode"), || {
             NodeConfig::toggle_archive_mode();

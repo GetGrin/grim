@@ -70,10 +70,9 @@ network_mining:
   connected: Connected
   disconnected: Disconnected
 network_settings:
-  ip: IP Address
-  port: Port
   change_value: Change value
-  stratum_port: Stratum server port
+  stratum_ip: Stratum IP Address
+  stratum_port: Stratum port
   port_unavailable: Specified port is unavailable
   restart_node_required: Node restart is required to apply changes.
   enable: Enable
@@ -101,6 +100,17 @@ network_settings:
   reset_settings_desc: Reset node settings to default values
   reset_settings: Reset settings
   reset: Reset
+  tx_pool: Transaction pool
+  pool_fee: Base fee that's accepted into the pool
+  reorg_period: Reorg cache retention period (in minutes)
+  max_tx_pool: Maximum number of transactions in the pool
+  max_tx_stempool: Maximum number of transactions in the stem-pool
+  max_tx_weight: Maximum total weight of transactions that can get selected to build a block
+  epoch_duration: Epoch duration (in seconds)
+  embargo_timer: Embargo timer (in seconds)
+  aggregation_period: Aggregation period (in seconds)
+  stem_probability: Stem phase probability
+  stem_txs: Stem transactions
 modal:
   cancel: Cancel
   save: Save
