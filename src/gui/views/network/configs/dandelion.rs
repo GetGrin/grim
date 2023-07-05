@@ -34,9 +34,6 @@ pub struct DandelionSetup {
 
     /// Stem phase probability value (stem 90% of the time, fluff 10% of the time by default).
     stem_prob_edit: String,
-
-    /// Flag to always stem our (pushed via api) txs regardless of stem/fluff epoch.
-    always_stem_our_txs_edit: bool,
 }
 
 impl Default for DandelionSetup {
@@ -45,8 +42,7 @@ impl Default for DandelionSetup {
             epoch_edit: NodeConfig::get_dandelion_epoch(),
             embargo_edit: NodeConfig::get_reorg_cache_period(),
             aggregation_edit: NodeConfig::get_dandelion_aggregation(),
-            stem_prob_edit: NodeConfig::get_stem_probability(),
-            always_stem_our_txs_edit: NodeConfig::always_stem_our_txs(),
+            stem_prob_edit: NodeConfig::get_stem_probability()
         }
     }
 }
