@@ -536,20 +536,6 @@ impl Handler {
         let mut head = self.chain.head().unwrap();
         let mut current_hash = head.prev_block_h;
         loop {
-            // Ping stratum socket on stop to handle TcpListener unbind.
-            if stop_state.is_stopped() {
-                let listen_addr: SocketAddr = config
-                    .stratum_server_addr
-                    .clone()
-                    .unwrap()
-                    .parse()
-                    .expect("Stratum: Incorrect address ");
-                thread::spawn(move || {
-                    let _ = TcpStream::connect(listen_addr).unwrap();
-                });
-                break;
-            }
-
             // get the latest chain state
             head = self.chain.head().unwrap();
             let latest_hash = head.last_block_h;
@@ -621,6 +607,8 @@ impl Handler {
 fn accept_connections(listen_addr: SocketAddr, handler: Arc<Handler>, stop_state: Arc<StopState>) {
     info!("Start tokio stratum server");
 
+    let state_to_check = stop_state.clone();
+
     let task = async move {
         let mut listener = TcpListener::bind(&listen_addr).await.unwrap_or_else(|_| {
             panic!("Stratum: Failed to bind to listen address {}", listen_addr)
@@ -683,8 +671,23 @@ fn accept_connections(listen_addr: SocketAddr, handler: Arc<Handler>, stop_state
             });
         server.await
     };
+
     let mut rt = Runtime::new().unwrap();
+    rt.spawn(check_stop_state(state_to_check, listen_addr));
     rt.block_on(task);
+}
+
+async fn check_stop_state(stop_state: Arc<StopState>, listen_addr: SocketAddr) {
+    loop {
+        // Ping stratum socket on stop to handle TcpListener unbind.
+        if stop_state.is_stopped() {
+            thread::spawn(move || {
+                let _ = TcpStream::connect(listen_addr).unwrap();
+            });
+            break;
+        }
+        thread::sleep(Duration::from_millis(1000));
+    }
 }
 
 // ----------------------------------------
