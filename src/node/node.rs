@@ -27,7 +27,7 @@ use grin_servers::common::types::Error;
 use jni::sys::{jboolean, jstring};
 use lazy_static::lazy_static;
 use crate::node::NodeConfig;
-use crate::node::stratum::StratumServer;
+use crate::node::stratum::{StratumStopState, StratumServer};
 
 lazy_static! {
     /// Static thread-aware state of [`Node`] to be updated from another thread.
@@ -40,6 +40,8 @@ pub struct Node {
     stats: Arc<RwLock<Option<ServerStats>>>,
     /// Stratum server statistics.
     stratum_stats: Arc<grin_util::RwLock<StratumStats>>,
+    /// Stratum server statistics.
+    stratum_stop_state: Arc<StratumStopState>,
     /// Running API server address.
     api_addr: Arc<RwLock<Option<String>>>,
     /// Running P2P server port.
@@ -63,6 +65,7 @@ impl Default for Node {
         Self {
             stats: Arc::new(RwLock::new(None)),
             stratum_stats: Arc::new(grin_util::RwLock::new(StratumStats::default())),
+            stratum_stop_state: Arc::new(StratumStopState::default()),
             api_addr: Arc::new(RwLock::new(None)),
             p2p_port: Arc::new(RwLock::new(None)),
             starting: AtomicBool::new(false),
@@ -119,13 +122,28 @@ impl Node {
     }
 
     /// Request to start stratum server.
-    pub fn start_stratum_server() {
+    pub fn start_stratum() {
         NODE_STATE.start_stratum_needed.store(true, Ordering::Relaxed);
     }
 
     /// Check if stratum server is starting.
-    pub fn is_stratum_server_starting() -> bool {
+    pub fn is_stratum_starting() -> bool {
         NODE_STATE.start_stratum_needed.load(Ordering::Relaxed)
+    }
+
+    /// Get stratum server statistics.
+    pub fn get_stratum_stats() -> grin_util::RwLockReadGuard<'static, StratumStats> {
+        NODE_STATE.stratum_stats.read()
+    }
+
+    /// Stop stratum server.
+    pub fn stop_stratum() {
+        NODE_STATE.stratum_stop_state.stop()
+    }
+
+    /// Check if stratum server is stopping.
+    pub fn is_stratum_stopping() -> bool {
+        NODE_STATE.stratum_stop_state.is_stopped()
     }
 
     /// Check if node is starting.
@@ -151,11 +169,6 @@ impl Node {
     /// Get node [`Server`] statistics.
     pub fn get_stats() -> RwLockReadGuard<'static, Option<ServerStats>> {
         NODE_STATE.stats.read().unwrap()
-    }
-
-    /// Get stratum server [`Server`] statistics.
-    pub fn get_stratum_stats() -> grin_util::RwLockReadGuard<'static, StratumStats> {
-        NODE_STATE.stratum_stats.read()
     }
 
     /// Get synchronization status, empty when [`Server`] is not running.
@@ -219,7 +232,7 @@ impl Node {
                         }
 
                         // Start stratum mining server if requested.
-                        let stratum_start_requested = Self::is_stratum_server_starting();
+                        let stratum_start_requested = Self::is_stratum_starting();
                         if stratum_start_requested {
                             let (s_ip, s_port) = NodeConfig::get_stratum_address();
                             if NodeConfig::is_stratum_port_available(&s_ip, &s_port) {
@@ -581,7 +594,8 @@ pub fn start_stratum_mining_server(server: &Server, config: StratumServerConfig)
         server.tx_pool.clone(),
         NODE_STATE.stratum_stats.clone(),
     );
-    let stop_state = server.stop_state.clone();
+    let stop_state = NODE_STATE.stratum_stop_state.clone();
+    stop_state.reset();
     let _ = thread::Builder::new()
         .name("stratum_server".to_string())
         .spawn(move || {

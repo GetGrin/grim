@@ -18,7 +18,7 @@ use grin_chain::SyncStatus;
 use grin_servers::WorkerStats;
 
 use crate::gui::Colors;
-use crate::gui::icons::{BARBELL, CLOCK_AFTERNOON, COMPUTER_TOWER, CPU, CUBE, FADERS, FOLDER_DASHED, FOLDER_NOTCH_MINUS, FOLDER_NOTCH_PLUS, PLUGS, PLUGS_CONNECTED, POLYGON};
+use crate::gui::icons::{BARBELL, CLOCK_AFTERNOON, CPU, CUBE, FADERS, FOLDER_DASHED, FOLDER_NOTCH_MINUS, FOLDER_NOTCH_PLUS, HARD_DRIVES, PLUGS, PLUGS_CONNECTED, POLYGON};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, NetworkContainer, View};
 use crate::gui::views::network::{NetworkTab, NetworkTabType};
@@ -45,7 +45,7 @@ impl NetworkTab for NetworkMining {
         }
 
         // Show loading spinner when node is stopping or stratum server is starting.
-        if Node::is_stopping() || Node::is_stratum_server_starting() {
+        if Node::is_stopping() || Node::is_stratum_starting() {
             ui.centered_and_justified(|ui| {
                 View::big_loading_spinner(ui);
             });
@@ -80,7 +80,7 @@ impl NetworkTab for NetworkMining {
         }
 
         // Show stratum mining server info.
-        View::sub_title(ui, format!("{} {}", COMPUTER_TOWER, t!("network_mining.server")));
+        View::sub_title(ui, format!("{} {}", HARD_DRIVES, t!("network_mining.server")));
         ui.columns(2, |columns| {
             columns[0].vertical_centered(|ui| {
                 let (stratum_addr, stratum_port) = NodeConfig::get_stratum_address();
