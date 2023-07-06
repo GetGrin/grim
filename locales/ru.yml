@@ -56,12 +56,12 @@ network_metrics:
   difficulty_window: 'Окно сложности %{size}'
 network_mining:
   loading: Майнинг будет доступен после синхронизации
-  server_setup: Настройка stratum-сервера
   enable_server: Включить сервер
+  disable_server: Выключить сервер
   info: 'Сервер майнинга запущен, вы можете изменить его настройки, выбрав %{settings} внизу экрана. Данные обновляются, когда устройства подключены.'
   info_settings: Для изменения настроек запущенного сервера потребуется перезапуск узла.
   rewards_wallet: Кошелёк для наград
-  server: Stratum-сервер
+  server: Stratum сервер
   address: Адрес
   miners: Майнеры
   devices: Устройства

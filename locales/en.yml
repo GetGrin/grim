@@ -56,8 +56,8 @@ network_metrics:
   difficulty_window: 'Difficulty window %{size}'
 network_mining:
   loading: Mining will be available after the synchronization
-  server_setup: Stratum server setup
   enable_server: Enable server
+  disable_server: Disable server
   info: 'Mining server is enabled, you can change its settings by selecting %{settings} at the bottom of the screen. Data is updating when devices are connected.'
   info_settings: To change the settings of enabled server, you will need to restart the node.
   rewards_wallet: Wallet for rewards

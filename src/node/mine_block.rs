@@ -15,6 +15,7 @@
 //! Build a block to mine: gathers transactions from the pool, assembles
 //! them into a block and returns it.
 
+use std::panic::panic_any;
 use chrono::prelude::{DateTime, NaiveDateTime, Utc};
 use rand::{thread_rng, Rng};
 use serde_json::{json, Value};
@@ -33,6 +34,7 @@ use grin_keychain::{ExtKeychain, Identifier, Keychain};
 use grin_servers::ServerTxPool;
 use log::{debug, error, trace, warn};
 use serde_derive::{Deserialize, Serialize};
+use crate::node::stratum::StratumStopState;
 
 /// Fees in block to use for coinbase amount calculation
 /// (Duplicated from Grin wallet project)
@@ -74,6 +76,7 @@ pub fn get_block(
     tx_pool: &ServerTxPool,
     key_id: Option<Identifier>,
     wallet_listener_url: Option<String>,
+    stop_state: &Arc<StratumStopState>
 ) -> (core::Block, BlockFees) {
     let wallet_retry_interval = 5;
     // get the latest chain state and build a block on top of it
@@ -109,6 +112,11 @@ pub fn get_block(
         // to have duplication
         if new_key_id.is_some() {
             thread::sleep(Duration::from_millis(100));
+        }
+
+        // Stop attempts to build a block on stop.
+        if stop_state.is_stopped() {
+            panic_any("Stopped");
         }
 
         result = build_block(chain, tx_pool, new_key_id, wallet_listener_url.clone());

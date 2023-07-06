@@ -65,19 +65,32 @@ impl StratumSetup {
     pub const MIN_SHARE_DIFF_MODAL: &'static str = "stratum_min_share_diff";
 
     pub fn ui(&mut self, ui: &mut Ui, cb: &dyn PlatformCallbacks) {
-        View::sub_title(ui, format!("{} {}", HARD_DRIVES, t!("network_mining.server_setup")));
+        View::sub_title(ui, format!("{} {}", HARD_DRIVES, t!("network_mining.server")));
         View::horizontal_line(ui, Colors::STROKE);
         ui.add_space(6.0);
 
         ui.vertical_centered(|ui| {
-            // Show button to enable stratum server if port is available and server is not running.
-            if self.is_port_available && !Node::is_stratum_server_starting() && Node::is_running()
-                && !Node::get_stratum_stats().is_running {
-                ui.add_space(6.0);
-                View::button(ui, t!("network_mining.enable_server"), Colors::GOLD, || {
-                    Node::start_stratum_server();
-                });
-                ui.add_space(6.0);
+            // Show loading indicator or controls to start/stop stratum server if port is available.
+            if self.is_port_available {
+                if Node::is_stratum_starting() || Node::is_stratum_stopping() {
+                    ui.vertical_centered(|ui| {
+                        ui.add_space(8.0);
+                        View::small_loading_spinner(ui);
+                        ui.add_space(8.0);
+                    });
+                } else if Node::get_stratum_stats().is_running {
+                    ui.add_space(6.0);
+                    View::button(ui, t!("network_mining.disable_server"), Colors::GOLD, || {
+                        Node::stop_stratum();
+                    });
+                    ui.add_space(6.0);
+                } else {
+                    ui.add_space(6.0);
+                    View::button(ui, t!("network_mining.enable_server"), Colors::GOLD, || {
+                        Node::start_stratum();
+                    });
+                    ui.add_space(6.0);
+                }
             }
 
             // Show stratum server autorun checkbox.
