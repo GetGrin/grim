@@ -100,8 +100,9 @@ impl App {
                 "../../fonts/phosphor.ttf"
             )).tweak(egui::FontTweak {
                 scale: 1.0,
-                y_offset_factor: 0.14,
-                y_offset: 0.0
+                y_offset_factor: -0.30,
+                y_offset: 0.0,
+                baseline_offset_factor: 0.30,
             }),
         );
         fonts
@@ -117,7 +118,8 @@ impl App {
             )).tweak(egui::FontTweak {
                 scale: 1.0,
                 y_offset_factor: -0.25,
-                y_offset: 0.0
+                y_offset: 0.0,
+                baseline_offset_factor: 0.17,
             }),
         );
         fonts

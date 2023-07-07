@@ -153,7 +153,7 @@ impl NetworkTab for NetworkMetrics {
     fn on_modal_ui(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {}
 }
 
-const DIFF_BLOCK_UI_HEIGHT: f32 = 76.60;
+const DIFF_BLOCK_UI_HEIGHT: f32 = 78.30;
 
 fn draw_diff_block(ui: &mut egui::Ui, db: &DiffBlock, rounding: [bool; 2]) {
     // Add space before the first item.
@@ -179,26 +179,17 @@ fn draw_diff_block(ui: &mut egui::Ui, db: &DiffBlock, rounding: [bool; 2]) {
             );
 
             ui.add_space(2.0);
-            ui.horizontal_top(|ui| {
+            ui.horizontal(|ui| {
                 ui.add_space(5.0);
-                ui.heading(RichText::new(HASH)
-                    .color(Colors::BLACK)
-                    .size(18.0));
-                ui.add_space(2.0);
-
                 // Draw block hash.
-                ui.heading(RichText::new(db.block_hash.to_string())
+                ui.heading(RichText::new(format!("{} {}", HASH, db.block_hash))
                     .color(Colors::BLACK)
                     .size(18.0));
             });
-            ui.horizontal_top(|ui| {
+            ui.horizontal(|ui| {
                 ui.add_space(6.0);
-                ui.heading(RichText::new(CUBE_TRANSPARENT)
-                    .color(Colors::TITLE)
-                    .size(16.0));
-                ui.add_space(3.0);
                 // Draw block difficulty and height.
-                ui.heading(RichText::new(db.difficulty.to_string())
+                ui.heading(RichText::new(format!("{} {}", CUBE_TRANSPARENT, db.difficulty))
                     .color(Colors::TITLE)
                     .size(16.0));
                 ui.add_space(2.0);
@@ -208,14 +199,10 @@ fn draw_diff_block(ui: &mut egui::Ui, db: &DiffBlock, rounding: [bool; 2]) {
                     .color(Colors::TITLE)
                     .size(16.0));
             });
-            ui.horizontal_top(|ui| {
+            ui.horizontal(|ui| {
                 ui.add_space(6.0);
-                ui.heading(RichText::new(TIMER)
-                    .color(Colors::GRAY)
-                    .size(16.0));
-                ui.add_space(3.0);
                 // Draw block date.
-                ui.heading(RichText::new(format!("{}s", db.duration))
+                ui.heading(RichText::new(format!("{} {}s", TIMER, db.duration))
                     .color(Colors::GRAY)
                     .size(16.0));
                 ui.add_space(4.0);
@@ -229,7 +216,7 @@ fn draw_diff_block(ui: &mut egui::Ui, db: &DiffBlock, rounding: [bool; 2]) {
                     .color(Colors::GRAY)
                     .size(16.0));
             });
-            ui.add_space(2.0);
+            ui.add_space(4.0);
         });
     });
 }

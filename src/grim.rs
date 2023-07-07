@@ -78,7 +78,7 @@ fn start(mut options: NativeOptions, app_creator: AppCreator) {
         Node::start();
     }
 
-    eframe::run_native("Grim", options, app_creator);
+    let _ = eframe::run_native("Grim", options, app_creator);
 }
 
 fn setup_i18n() {

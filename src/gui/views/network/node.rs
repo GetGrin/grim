@@ -189,7 +189,7 @@ impl NetworkTab for NetworkNode {
 fn draw_peer_stats(ui: &mut egui::Ui, peer: &PeerStats, rounding: [bool; 2]) {
     ui.vertical(|ui| {
         let mut rect = ui.available_rect_before_wrap();
-        rect.set_height(77.3);
+        rect.set_height(78.3);
 
         ui.painter().rect(
             rect,
@@ -204,27 +204,17 @@ fn draw_peer_stats(ui: &mut egui::Ui, peer: &PeerStats, rounding: [bool; 2]) {
         );
 
         ui.add_space(2.0);
-        ui.horizontal_top(|ui| {
+        ui.horizontal(|ui| {
             ui.add_space(5.0);
-            ui.heading(RichText::new(PLUGS_CONNECTED)
-                .color(Colors::BLACK)
-                .size(18.0));
-            ui.add_space(3.0);
-
             // Draw peer address
-            ui.heading(RichText::new(&peer.addr)
+            ui.heading(RichText::new(format!("{} {}", PLUGS_CONNECTED, &peer.addr))
                 .color(Colors::BLACK)
                 .size(18.0));
         });
-        ui.horizontal_top(|ui| {
+        ui.horizontal(|ui| {
             ui.add_space(6.0);
-            ui.heading(RichText::new(PACKAGE)
-                .color(Colors::TITLE)
-                .size(16.0));
-            ui.add_space(4.0);
-
             // Draw peer difficulty and height
-            ui.heading(RichText::new(peer.total_difficulty.to_string())
+            ui.heading(RichText::new(format!("{} {}", PACKAGE, peer.total_difficulty))
                 .color(Colors::TITLE)
                 .size(16.0));
             ui.add_space(2.0);
@@ -235,23 +225,18 @@ fn draw_peer_stats(ui: &mut egui::Ui, peer: &PeerStats, rounding: [bool; 2]) {
                 .size(16.0));
         });
 
-        ui.horizontal_top(|ui| {
+        ui.horizontal(|ui| {
             ui.add_space(6.0);
-            ui.heading(RichText::new(DEVICES)
-                .color(Colors::GRAY)
-                .size(16.0));
-            ui.add_space(4.0);
-
             // Draw peer user-agent
-            ui.heading(RichText::new(&peer.user_agent)
+            ui.heading(RichText::new(format!("{} {}", DEVICES, &peer.user_agent))
                 .color(Colors::GRAY)
                 .size(16.0));
         });
-        ui.add_space(3.0);
+        ui.add_space(4.0);
     });
 
     // Add space after last item
-    if rounding[1] {
-        ui.add_space(2.0);
-    }
+    // if rounding[1] {
+    //     ui.add_space(2.0);
+    // }
 }

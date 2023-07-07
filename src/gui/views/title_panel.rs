@@ -81,6 +81,7 @@ impl TitlePanel {
     }
 
     fn draw_title(ui: &mut egui::Ui, title: String) {
+        ui.add_space(2.0);
         ui.centered_and_justified(|ui| {
             View::ellipsize_text(ui, title.to_uppercase(), 20.0, Colors::TITLE);
         });

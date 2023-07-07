@@ -67,7 +67,7 @@ impl View {
         let drag_resp = resp.interact(Sense::click_and_drag());
         // Clear pointer event if dragging is out of button area
         if drag_resp.dragged() && !ui.rect_contains_pointer(drag_resp.rect) {
-            ui.input_mut().pointer = PointerState::default();
+            ui.input_mut(|i| i.pointer = PointerState::default());
         }
         if drag_resp.drag_released() || drag_resp.clicked() {
             return true;

@@ -127,7 +127,7 @@ impl NetworkContainer {
 
         egui::TopBottomPanel::bottom("network_tabs")
             .frame(egui::Frame {
-                outer_margin: Margin::same(5.0),
+                outer_margin: Margin::same(4.0),
                 ..Default::default()
             })
             .show_inside(ui, |ui| {
@@ -150,9 +150,9 @@ impl NetworkContainer {
     fn tabs_ui(&mut self, ui: &mut egui::Ui) {
         ui.scope(|ui| {
             // Setup spacing between tabs.
-            ui.style_mut().spacing.item_spacing = egui::vec2(5.0, 0.0);
+            ui.style_mut().spacing.item_spacing = egui::vec2(4.0, 0.0);
             // Setup vertical padding inside tab button.
-            ui.style_mut().spacing.button_padding = egui::vec2(0.0, 3.0);
+            ui.style_mut().spacing.button_padding = egui::vec2(0.0, 8.0);
 
             ui.columns(4, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
@@ -244,7 +244,7 @@ impl NetworkContainer {
                         };
                         let (dark, bright) = (0.3, 1.0);
                         let color_factor = if !idle {
-                            lerp(dark..=bright, ui.input().time.cos().abs()) as f32
+                            lerp(dark..=bright, ui.input(|i| i.time).cos().abs()) as f32
                         } else {
                             bright as f32
                         };

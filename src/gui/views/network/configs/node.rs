@@ -388,8 +388,12 @@ impl NodeSetup {
                 // Setup spacing between buttons.
                 ui.spacing_mut().item_spacing = egui::Vec2::new(12.0, 0.0);
 
+                let mut buttons_rect = ui.available_rect_before_wrap();
+                buttons_rect.set_height(46.0);
+                ui.allocate_ui_at_rect(buttons_rect, |ui| {
+
                 ui.columns(2, |columns| {
-                    columns[0].with_layout(Layout::right_to_left(Align::TOP), |ui| {
+                    columns[0].with_layout(Layout::right_to_left(Align::Center), |ui| {
                         let copy_title = format!("{} {}", COPY, t!("network_settings.copy"));
                         View::button(ui, copy_title, Colors::WHITE, || {
                             match modal.id {
@@ -403,10 +407,8 @@ impl NodeSetup {
 
                         });
                     });
-                    columns[1].with_layout(Layout::left_to_right(Align::TOP), |ui| {
-                        let paste_title = format!("{} {}",
-                                                  CLIPBOARD_TEXT,
-                                                  t!("network_settings.paste"));
+                    columns[1].with_layout(Layout::left_to_right(Align::Center), |ui| {
+                        let paste_title = format!("{} {}", CLIPBOARD_TEXT, t!("network_settings.paste"));
                         View::button(ui, paste_title, Colors::WHITE, || {
                             let text = cb.get_string_from_buffer();
                             match modal.id {
@@ -416,6 +418,8 @@ impl NodeSetup {
                         });
                     });
                 });
+                });
+
             });
 
             // Show reminder to restart enabled node.
