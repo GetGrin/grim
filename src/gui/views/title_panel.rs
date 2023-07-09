@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use egui::Id;
 use egui::style::Margin;
 use egui_extras::{Size, StripBuilder};
 
@@ -35,8 +36,9 @@ impl TitlePanel {
     pub const DEFAULT_HEIGHT: f32 = 52.0;
 
     pub fn ui(title: String, l: Option<TitleAction>, r: Option<TitleAction>, ui: &mut egui::Ui) {
-        egui::TopBottomPanel::top("title_panel")
+        egui::TopBottomPanel::top(Id::from(title.clone()))
             .resizable(false)
+            .exact_height(Self::DEFAULT_HEIGHT)
             .frame(egui::Frame {
                 fill: Colors::YELLOW,
                 inner_margin: Margin::same(0.0),
@@ -47,23 +49,17 @@ impl TitlePanel {
             .show_inside(ui, |ui| {
                 StripBuilder::new(ui)
                     .size(Size::exact(Self::DEFAULT_HEIGHT))
-                    .vertical(|mut strip| {
-                        strip.strip(|builder| {
-                            builder
-                                .size(Size::exact(Self::DEFAULT_HEIGHT))
-                                .size(Size::remainder())
-                                .size(Size::exact(Self::DEFAULT_HEIGHT))
-                                .horizontal(|mut strip| {
-                                    strip.cell(|ui| {
-                                        Self::draw_action(ui, l);
-                                    });
-                                    strip.cell(|ui| {
-                                        Self::draw_title(ui, title);
-                                    });
-                                    strip.cell(|ui| {
-                                        Self::draw_action(ui, r);
-                                    });
-                                });
+                    .size(Size::remainder())
+                    .size(Size::exact(Self::DEFAULT_HEIGHT))
+                    .horizontal(|mut strip| {
+                        strip.cell(|ui| {
+                            Self::draw_action(ui, l);
+                        });
+                        strip.cell(|ui| {
+                            Self::draw_title(ui, title);
+                        });
+                        strip.cell(|ui| {
+                            Self::draw_action(ui, r);
                         });
                     });
             });
