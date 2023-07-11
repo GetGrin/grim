@@ -149,7 +149,12 @@ impl NetworkContainer {
         egui::CentralPanel::default()
             .frame(egui::Frame {
                 stroke: View::DEFAULT_STROKE,
-                inner_margin: Margin::same(4.0),
+                inner_margin: Margin {
+                    left: 4.0,
+                    right: 4.0,
+                    top: 3.0,
+                    bottom: 4.0,
+                },
                 fill: Colors::WHITE,
                 ..Default::default()
             })
@@ -229,15 +234,16 @@ impl NetworkContainer {
     fn title_text_ui(&self, builder: StripBuilder) {
         builder
             .size(Size::remainder())
-            .size(Size::exact(32.0))
+            .size(Size::exact(30.0))
             .vertical(|mut strip| {
                 strip.cell(|ui| {
-                    ui.add_space(2.0);
+                    ui.add_space(3.0);
                     ui.vertical_centered(|ui| {
                         ui.label(RichText::new(self.current_tab.get_type().name().to_uppercase())
                             .size(18.0)
                             .color(Colors::TITLE));
                     });
+                    ui.add_space(1.0);
                 });
                 strip.cell(|ui| {
                     ui.centered_and_justified(|ui| {

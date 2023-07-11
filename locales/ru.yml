@@ -3,7 +3,7 @@ screen_accounts:
 network:
   self: Сеть
   node: Встроенный узел
-  metrics: Показатели цепи
+  metrics: Показатели
   mining: Майнинг
   settings: Настройки узла
   enable_node: Включить узел
@@ -47,7 +47,7 @@ network_node:
   size: Размер (ГБ)
   peers: Пиры
 network_metrics:
-  loading: Показатели цепи будут доступны после синхронизации
+  loading: Показатели будут доступны после синхронизации
   emission: Эмиссия
   inflation: Инфляция
   supply: Предложение

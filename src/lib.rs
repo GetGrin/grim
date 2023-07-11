@@ -21,6 +21,7 @@ use winit::platform::android::activity::AndroidApp;
 pub use settings::{AppConfig, Settings};
 
 use crate::gui::{App, PlatformApp};
+use crate::gui::platform::PlatformCallbacks;
 use crate::node::Node;
 
 i18n!("locales");
@@ -59,7 +60,7 @@ fn android_main(app: AndroidApp) {
 }
 
 pub fn app_creator<T: 'static>(app: PlatformApp<T>) -> eframe::AppCreator
-    where PlatformApp<T>: eframe::App {
+    where PlatformApp<T>: eframe::App, T: PlatformCallbacks {
     Box::new(|cc| {
         App::setup_visuals(&cc.egui_ctx);
         App::setup_fonts(&cc.egui_ctx);
@@ -71,6 +72,7 @@ pub fn app_creator<T: 'static>(app: PlatformApp<T>) -> eframe::AppCreator
 pub fn start(mut options: eframe::NativeOptions, app_creator: eframe::AppCreator) {
     options.default_theme = eframe::Theme::Light;
     options.renderer = eframe::Renderer::Wgpu;
+    options.initial_window_size = Some(egui::Vec2::new(1200.0, 720.0));
 
     setup_i18n();
 

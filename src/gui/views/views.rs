@@ -78,9 +78,15 @@ impl View {
     /// Title button with transparent background fill color, contains only icon.
     pub fn title_button(ui: &mut egui::Ui, icon: &str, action: impl FnOnce()) {
         ui.scope(|ui| {
-            // Disable stroke around title buttons on hover
+            // Disable stroke around title buttons on click.
             ui.style_mut().visuals.widgets.active.bg_stroke = Stroke::NONE;
+            // Disable rounding on hover.
+            ui.style_mut().visuals.widgets.hovered.rounding = Rounding::none();
+            // Disable stroke color on hover.
+            ui.style_mut().visuals.widgets.hovered.bg_stroke = Self::DEFAULT_STROKE;
+            // Setup text.
             let wt = RichText::new(icon.to_string()).size(24.0).color(Colors::TITLE);
+            // Draw button.
             let br = Button::new(wt)
                 .fill(Colors::TRANSPARENT)
                 .ui(ui);

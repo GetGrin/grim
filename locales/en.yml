@@ -3,7 +3,7 @@ screen_accounts:
 network:
   self: Network
   node: Integrated node
-  metrics: Chain metrics
+  metrics: Metrics
   mining: Mining
   settings: Node settings
   enable_node: Enable node
@@ -47,7 +47,7 @@ network_node:
   size: Size (GB)
   peers: Peers
 network_metrics:
-  loading: Chain metrics will be available after the synchronization
+  loading: Metrics will be available after the synchronization
   emission: Emission
   inflation: Inflation
   supply: Supply
