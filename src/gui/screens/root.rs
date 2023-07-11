@@ -13,18 +13,15 @@
 // limitations under the License.
 
 use std::cmp::min;
-use egui::RichText;
-use crate::gui::{App, Colors, Navigator};
+use crate::gui::Navigator;
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::screens::{Account, Accounts, Screen, ScreenId};
-use crate::gui::views::{ModalContainer, NetworkContainer, View};
-use crate::node::Node;
+use crate::gui::views::{NetworkContainer, View};
 
+/// Main ui container.
 pub struct Root {
     screens: Vec<Box<dyn Screen>>,
     network_panel: NetworkContainer,
-    show_exit_progress: bool,
-    allowed_modal_ids: Vec<&'static str>
 }
 
 impl Default for Root {
@@ -36,29 +33,13 @@ impl Default for Root {
                 Box::new(Accounts::default()),
                 Box::new(Account::default())
             ],
-            network_panel: NetworkContainer::default(),
-            show_exit_progress: false,
-            allowed_modal_ids: vec![
-                Navigator::EXIT_MODAL
-            ]
+            network_panel: NetworkContainer::default()
         }
-    }
-}
-
-impl ModalContainer for Root {
-    fn modal_ids(&self) -> &Vec<&'static str> {
-        self.allowed_modal_ids.as_ref()
     }
 }
 
 impl Root {
     pub fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame, cb: &dyn PlatformCallbacks) {
-        // Draw exit modal content if it's open.
-        let modal_id = Navigator::is_modal_open();
-        if modal_id.is_some() && self.can_show_modal(modal_id.unwrap()) {
-            self.exit_modal_content(ui, frame, cb);
-        }
-
         let (is_panel_open, panel_width) = Self::side_panel_state_width(frame);
         egui::SidePanel::left("network_panel")
             .resizable(false)
@@ -75,64 +56,7 @@ impl Root {
             });
     }
 
-    fn exit_modal_content(&mut self,
-                          ui: &mut egui::Ui,
-                          frame: &mut eframe::Frame,
-                          cb: &dyn PlatformCallbacks) {
-        Navigator::modal_ui(ui, |ui, modal| {
-            if self.show_exit_progress {
-                if !Node::is_running() {
-                    App::exit(frame, cb);
-                    modal.close();
-                }
-                ui.add_space(16.0);
-                ui.vertical_centered(|ui| {
-                    View::small_loading_spinner(ui);
-                    ui.add_space(12.0);
-                    ui.label(RichText::new(t!("sync_status.shutdown"))
-                        .size(18.0)
-                        .color(Colors::TEXT));
-                });
-                ui.add_space(10.0);
-            } else {
-                ui.add_space(8.0);
-                ui.vertical_centered(|ui| {
-                    ui.label(RichText::new(t!("modal_exit.description"))
-                        .size(18.0)
-                        .color(Colors::TEXT));
-                });
-                ui.add_space(10.0);
-
-                // Show modal buttons.
-                ui.scope(|ui| {
-                    // Setup spacing between buttons.
-                    ui.spacing_mut().item_spacing = egui::Vec2::new(6.0, 0.0);
-
-                    ui.columns(2, |columns| {
-                        columns[0].vertical_centered_justified(|ui| {
-                            View::button(ui, t!("modal_exit.exit"), Colors::WHITE, || {
-                                if !Node::is_running() {
-                                    App::exit(frame, cb);
-                                    modal.close();
-                                } else {
-                                    Node::stop(true);
-                                    modal.disable_closing();
-                                    self.show_exit_progress = true;
-                                }
-                            });
-                        });
-                        columns[1].vertical_centered_justified(|ui| {
-                            View::button(ui, t!("modal.cancel"), Colors::WHITE, || {
-                                modal.close();
-                            });
-                        });
-                    });
-                    ui.add_space(6.0);
-                });
-            }
-        });
-    }
-
+    /// Show current screen at central panel based on [`Navigator`] state.
     fn show_current_screen(&mut self,
                            ui: &mut egui::Ui,
                            frame: &mut eframe::Frame,

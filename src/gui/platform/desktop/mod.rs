@@ -45,4 +45,9 @@ impl eframe::App for PlatformApp<Desktop> {
     fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
         self.app.ui(ctx, frame, &self.platform);
     }
+
+    fn on_close_event(&mut self) -> bool {
+        self.app.exit_requested = true;
+        self.app.exit_allowed
+    }
 }

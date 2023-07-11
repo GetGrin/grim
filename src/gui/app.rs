@@ -12,41 +12,145 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::{Context, Stroke};
+use egui::{Context, RichText, Stroke};
 use egui::os::OperatingSystem;
 
 use crate::gui::{Colors, Navigator};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::screens::Root;
+use crate::gui::views::{ModalContainer, View};
 use crate::node::Node;
 
-/// To be implemented by platform-specific application.
+/// To be implemented at platform-specific module.
 pub struct PlatformApp<Platform> {
     pub(crate) app: App,
     pub(crate) platform: Platform,
 }
 
-#[derive(Default)]
-/// Contains main screen panel and ui setup.
+/// Contains main ui content, handles application exit and visual style setup.
 pub struct App {
+    /// Main ui container.
     root: Root,
+
+    /// Check if app exit is allowed on close event callback.
+    pub(crate) exit_allowed: bool,
+    /// Called from callback of [`eframe::App`] platform implementation on close event.
+    pub(crate) exit_requested: bool,
+
+    /// Flag to show exit progress at modal.
+    show_exit_progress: bool,
+    /// List of allowed modal ids for this [`ModalContainer`].
+    allowed_modal_ids: Vec<&'static str>
+}
+
+impl Default for App {
+    fn default() -> Self {
+        let os = OperatingSystem::from_target_os();
+        // Exit from eframe only for non-mobile platforms.
+        let allow_to_exit = os == OperatingSystem::Android || os == OperatingSystem::IOS;
+        Self {
+            root: Root::default(),
+            exit_allowed: allow_to_exit,
+            exit_requested: false,
+            show_exit_progress: false,
+            allowed_modal_ids: vec![
+                Navigator::EXIT_MODAL
+            ]
+        }
+    }
+}
+
+impl ModalContainer for App {
+    fn modal_ids(&self) -> &Vec<&'static str> {
+        &self.allowed_modal_ids
+    }
 }
 
 impl App {
     /// Draw content on main screen panel.
     pub fn ui(&mut self, ctx: &Context, frame: &mut eframe::Frame, cb: &dyn PlatformCallbacks) {
+        // Show exit modal if window closing was requested.
+        if self.exit_requested {
+            Navigator::show_exit_modal();
+            self.exit_requested = false;
+        }
+        // Draw main content.
         egui::CentralPanel::default()
             .frame(egui::Frame {
                 fill: Colors::FILL,
                 ..Default::default()
             })
             .show(ctx, |ui| {
+                // Draw exit modal content if it's open or exit requested.
+                let modal_id = Navigator::is_modal_open();
+                if modal_id.is_some() && self.can_show_modal(modal_id.unwrap()) {
+                    self.exit_modal_content(ui, frame, cb);
+                }
                 self.root.ui(ui, frame, cb);
             });
     }
 
-    /// Exit from the app.
-    pub fn exit(frame: &mut eframe::Frame, cb: &dyn PlatformCallbacks) {
+    /// Draw exit confirmation modal content.
+    fn exit_modal_content(&mut self,
+                          ui: &mut egui::Ui,
+                          frame: &mut eframe::Frame,
+                          cb: &dyn PlatformCallbacks) {
+        Navigator::modal_ui(ui, |ui, modal| {
+            if self.show_exit_progress {
+                if !Node::is_running() {
+                    self.exit(frame, cb);
+                    modal.close();
+                }
+                ui.add_space(16.0);
+                ui.vertical_centered(|ui| {
+                    View::small_loading_spinner(ui);
+                    ui.add_space(12.0);
+                    ui.label(RichText::new(t!("sync_status.shutdown"))
+                        .size(18.0)
+                        .color(Colors::TEXT));
+                });
+                ui.add_space(10.0);
+            } else {
+                ui.add_space(8.0);
+                ui.vertical_centered(|ui| {
+                    ui.label(RichText::new(t!("modal_exit.description"))
+                        .size(18.0)
+                        .color(Colors::TEXT));
+                });
+                ui.add_space(10.0);
+
+                // Show modal buttons.
+                ui.scope(|ui| {
+                    // Setup spacing between buttons.
+                    ui.spacing_mut().item_spacing = egui::Vec2::new(6.0, 0.0);
+
+                    ui.columns(2, |columns| {
+                        columns[0].vertical_centered_justified(|ui| {
+                            View::button(ui, t!("modal_exit.exit"), Colors::WHITE, || {
+                                if !Node::is_running() {
+                                    self.exit(frame, cb);
+                                    modal.close();
+                                } else {
+                                    Node::stop(true);
+                                    modal.disable_closing();
+                                    self.show_exit_progress = true;
+                                }
+                            });
+                        });
+                        columns[1].vertical_centered_justified(|ui| {
+                            View::button(ui, t!("modal.cancel"), Colors::WHITE, || {
+                                modal.close();
+                            });
+                        });
+                    });
+                    ui.add_space(6.0);
+                });
+            }
+        });
+    }
+
+    /// Platform-specific exit from the application.
+    fn exit(&mut self, frame: &mut eframe::Frame, cb: &dyn PlatformCallbacks) {
         match OperatingSystem::from_target_os() {
             OperatingSystem::Android => {
                 cb.exit();
@@ -55,6 +159,7 @@ impl App {
                 //TODO: exit on iOS
             }
             OperatingSystem::Nix | OperatingSystem::Mac | OperatingSystem::Windows => {
+                self.exit_allowed = true;
                 frame.close();
             }
             // Web
