@@ -107,18 +107,18 @@ impl Modal {
 
     /// Show Modal with provided content.
     pub fn ui(&self, ui: &mut egui::Ui, add_content: impl FnOnce(&mut egui::Ui, &Modal)) {
-        // Show background Window at full available size.
+        let mut rect = ui.ctx().screen_rect();
         egui::Window::new("modal_bg_window")
             .title_bar(false)
             .resizable(false)
             .collapsible(false)
-            .fixed_size(ui.ctx().used_size())
+            .fixed_rect(rect)
             .frame(egui::Frame {
                 fill: Colors::SEMI_TRANSPARENT,
                 ..Default::default()
             })
             .show(ui.ctx(), |ui| {
-                ui.set_min_size(ui.available_size());
+                ui.set_min_size(rect.size());
             });
 
         // Choose width of modal content.

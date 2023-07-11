@@ -51,7 +51,7 @@ impl Screen for Accounts {
                     Navigator::to(ScreenId::Account)
                 };
                 if ui.button(format!("{}BACK ", ARROW_CIRCLE_LEFT)).clicked() {
-                    Navigator::to(ScreenId::Account)
+                    Navigator::back()
                 };
             });
     }
