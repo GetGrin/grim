@@ -14,21 +14,20 @@
 
 use std::fs::File;
 use std::io::{BufRead, BufReader, Write};
-use std::net::{IpAddr, Ipv4Addr, SocketAddr, SocketAddrV4, TcpListener, ToSocketAddrs};
+use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4, TcpListener, ToSocketAddrs};
 use std::path::PathBuf;
 use std::str::FromStr;
-use egui::Key::P;
 
 use grin_config::{config, ConfigError, ConfigMembers, GlobalConfig};
 use grin_config::config::{API_SECRET_FILE_NAME, FOREIGN_API_SECRET_FILE_NAME, SERVER_CONFIG_FILE_NAME};
 use grin_core::global::ChainTypes;
-use grin_p2p::msg::PeerAddrs;
 use grin_p2p::{PeerAddr, Seeding};
+use grin_p2p::msg::PeerAddrs;
 use grin_servers::common::types::ChainValidationMode;
 use serde::{Deserialize, Serialize};
-use crate::node::Node;
 
 use crate::{AppConfig, Settings};
+use crate::node::Node;
 
 /// Peers config to save peers DNS names into the file.
 #[derive(Serialize, Deserialize, Default)]

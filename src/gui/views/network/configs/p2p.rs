@@ -12,8 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::fmt::format;
-use egui::{Direction, Id, Layout, RichText, Rounding, Stroke, TextStyle, Ui, Widget};
+use egui::{Id, RichText, Rounding, Stroke, TextStyle, Ui, Widget};
 use egui_extras::{Size, StripBuilder};
 use grin_core::global::ChainTypes;
 

@@ -12,8 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::time::Duration;
-
 use egui::{Color32, lerp, Rgba, RichText};
 use egui::style::Margin;
 use egui_extras::{Size, StripBuilder};
@@ -234,16 +232,15 @@ impl NetworkContainer {
     fn title_text_ui(&self, builder: StripBuilder) {
         builder
             .size(Size::remainder())
-            .size(Size::exact(30.0))
+            .size(Size::exact(28.0))
             .vertical(|mut strip| {
                 strip.cell(|ui| {
-                    ui.add_space(3.0);
+                    ui.add_space(4.0);
                     ui.vertical_centered(|ui| {
                         ui.label(RichText::new(self.current_tab.get_type().name().to_uppercase())
-                            .size(18.0)
+                            .size(19.0)
                             .color(Colors::TITLE));
                     });
-                    ui.add_space(1.0);
                 });
                 strip.cell(|ui| {
                     ui.centered_and_justified(|ui| {
