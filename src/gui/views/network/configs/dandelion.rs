@@ -15,7 +15,7 @@
 use egui::{Id, RichText, TextStyle, Ui, Widget};
 
 use crate::gui::{Colors, Navigator};
-use crate::gui::icons::{CLOCK_COUNTDOWN, LINE_SEGMENTS, TIMER, WATCH};
+use crate::gui::icons::{CLOCK_COUNTDOWN, GRAPH, TIMER, WATCH};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, ModalPosition, View};
 use crate::gui::views::network::settings::NetworkSettings;
@@ -58,7 +58,7 @@ impl DandelionSetup {
     pub const STEM_PROBABILITY_MODAL: &'static str = "stem_probability";
 
     pub fn ui(&mut self, ui: &mut Ui, cb: &dyn PlatformCallbacks) {
-        View::sub_title(ui, format!("{} {}", LINE_SEGMENTS, "Dandelion"));
+        View::sub_title(ui, format!("{} {}", GRAPH, "Dandelion"));
         View::horizontal_line(ui, Colors::STROKE);
         ui.add_space(6.0);
 
@@ -135,7 +135,7 @@ impl DandelionSetup {
             let text_edit_resp = egui::TextEdit::singleline(&mut self.epoch_edit)
                 .id(Id::from(modal.id))
                 .font(TextStyle::Heading)
-                .desired_width(46.0)
+                .desired_width(52.0)
                 .cursor_at_end(true)
                 .ui(ui);
             text_edit_resp.request_focus();
@@ -220,7 +220,7 @@ impl DandelionSetup {
             let text_edit_resp = egui::TextEdit::singleline(&mut self.embargo_edit)
                 .id(Id::from(modal.id))
                 .font(TextStyle::Heading)
-                .desired_width(46.0)
+                .desired_width(52.0)
                 .cursor_at_end(true)
                 .ui(ui);
             text_edit_resp.request_focus();
@@ -305,7 +305,7 @@ impl DandelionSetup {
             let text_edit_resp = egui::TextEdit::singleline(&mut self.aggregation_edit)
                 .id(Id::from(modal.id))
                 .font(TextStyle::Heading)
-                .desired_width(36.0)
+                .desired_width(42.0)
                 .cursor_at_end(true)
                 .ui(ui);
             text_edit_resp.request_focus();
@@ -390,7 +390,7 @@ impl DandelionSetup {
             let text_edit_resp = egui::TextEdit::singleline(&mut self.stem_prob_edit)
                 .id(Id::from(modal.id))
                 .font(TextStyle::Heading)
-                .desired_width(36.0)
+                .desired_width(42.0)
                 .cursor_at_end(true)
                 .ui(ui);
             text_edit_resp.request_focus();

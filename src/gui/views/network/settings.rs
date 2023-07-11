@@ -21,13 +21,16 @@ use crate::gui::views::{Modal, ModalPosition, View};
 use crate::gui::views::network::{NetworkTab, NetworkTabType};
 use crate::gui::views::network::configs::dandelion::DandelionSetup;
 use crate::gui::views::network::configs::node::NodeSetup;
+use crate::gui::views::network::configs::p2p::P2PSetup;
 use crate::gui::views::network::configs::pool::PoolSetup;
 use crate::gui::views::network::configs::stratum::StratumSetup;
 use crate::node::{Node, NodeConfig};
 
+/// Integrated node settings tab content.
 #[derive(Default)]
 pub struct NetworkSettings {
     node: NodeSetup,
+    p2p: P2PSetup,
     stratum: StratumSetup,
     pool: PoolSetup,
     dandelion: DandelionSetup
@@ -44,6 +47,12 @@ impl NetworkTab for NetworkSettings {
             .auto_shrink([false; 2])
             .show(ui, |ui| {
                 self.node.ui(ui, cb);
+
+                ui.add_space(6.0);
+                View::horizontal_line(ui, Colors::STROKE);
+                ui.add_space(4.0);
+
+                self.p2p.ui(ui, cb);
 
                 ui.add_space(6.0);
                 View::horizontal_line(ui, Colors::STROKE);
@@ -81,6 +90,16 @@ impl NetworkTab for NetworkSettings {
             NodeSetup::API_SECRET_MODAL => self.node.secret_modal(ui, modal, cb),
             NodeSetup::FOREIGN_API_SECRET_MODAL => self.node.secret_modal(ui, modal, cb),
             NodeSetup::FTL_MODAL => self.node.ftl_modal(ui, modal, cb),
+            // P2P setup modals.
+            P2PSetup::PORT_MODAL => self.p2p.port_modal(ui, modal, cb),
+            P2PSetup::CUSTOM_SEED_MODAL => self.p2p.peer_modal(ui, modal, cb),
+            P2PSetup::ALLOW_PEER_MODAL => self.p2p.peer_modal(ui, modal, cb),
+            P2PSetup::DENY_PEER_MODAL => self.p2p.peer_modal(ui, modal, cb),
+            P2PSetup::PREFER_PEER_MODAL => self.p2p.peer_modal(ui, modal, cb),
+            P2PSetup::BAN_WINDOW_MODAL => self.p2p.ban_window_modal(ui, modal, cb),
+            P2PSetup::MAX_INBOUND_MODAL => self.p2p.max_inbound_modal(ui, modal, cb),
+            P2PSetup::MAX_OUTBOUND_MODAL => self.p2p.max_outbound_modal(ui, modal, cb),
+            P2PSetup::MIN_OUTBOUND_MODAL => self.p2p.min_outbound_modal(ui, modal, cb),
             // Stratum server setup modals.
             StratumSetup::STRATUM_PORT_MODAL => self.stratum.port_modal(ui, modal, cb),
             StratumSetup::ATTEMPT_TIME_MODAL => self.stratum.attempt_modal(ui, modal, cb),

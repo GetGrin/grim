@@ -79,6 +79,9 @@ impl Default for Node {
 }
 
 impl Node {
+    /// Delay for server thread to update the stats.
+    pub const STATS_UPDATE_DELAY: Duration = Duration::from_millis(250);
+
     /// Stop the [`Server`] and setup exit flag after if needed.
     pub fn stop(exit_after_stop: bool) {
         NODE_STATE.stop_needed.store(true, Ordering::Relaxed);
@@ -262,7 +265,7 @@ impl Node {
                             NODE_STATE.start_stratum_needed.store(false, Ordering::Relaxed);
                         }
 
-                        thread::sleep(Duration::from_millis(250));
+                        thread::sleep(Self::STATS_UPDATE_DELAY);
                     }
                 }
                 Err(e) => {
@@ -495,11 +498,11 @@ impl Node {
 
 /// Start the node [`Server`].
 fn start_node_server() -> Result<Server, Error>  {
-    // Get current global config
-    let config = NodeConfig::get_members();
+    // Get saved server config.
+    let config = NodeConfig::node_server_config();
     let server_config = config.server.clone();
 
-    // Remove temporary file dir
+    // Remove temporary file dir.
     {
         let mut tmp_dir = PathBuf::from(&server_config.db_root);
         tmp_dir = tmp_dir.parent().unwrap().to_path_buf();
@@ -511,6 +514,7 @@ fn start_node_server() -> Result<Server, Error>  {
             }
         }
     }
+
     // Initialize our global chain_type, feature flags (NRD kernel support currently),
     // accept_fee_base, and future_time_limit.
     // These are read via global and not read from config beyond this point.
@@ -524,22 +528,18 @@ fn start_node_server() -> Result<Server, Error>  {
     if !global::GLOBAL_NRD_FEATURE_ENABLED.is_init() {
         match global::get_chain_type() {
             ChainTypes::Mainnet => {
-                // Set various mainnet specific feature flags.
                 global::init_global_nrd_enabled(false);
             }
             _ => {
-                // Set various non-mainnet feature flags.
                 global::init_global_nrd_enabled(true);
             }
         }
     } else {
         match global::get_chain_type() {
             ChainTypes::Mainnet => {
-                // Set various mainnet specific feature flags.
                 global::set_global_nrd_enabled(false);
             }
             _ => {
-                // Set various non-mainnet feature flags.
                 global::set_global_nrd_enabled(true);
             }
         }
@@ -562,13 +562,13 @@ fn start_node_server() -> Result<Server, Error>  {
     let api_chan: &'static mut (oneshot::Sender<()>, oneshot::Receiver<()>) =
         Box::leak(Box::new(oneshot::channel::<()>()));
 
-    // Write launching API server address.
+    // Set launching API server address from config to state.
     {
         let mut w_api_addr = NODE_STATE.api_addr.write().unwrap();
         *w_api_addr = Some(config.server.api_http_addr);
     }
 
-    // Write launching P2P server port.
+    // Set launching P2P server port from config to state.
     {
         let mut w_p2p_port = NODE_STATE.p2p_port.write().unwrap();
         *w_p2p_port = Some(config.server.p2p_config.port);
@@ -579,7 +579,7 @@ fn start_node_server() -> Result<Server, Error>  {
         NODE_STATE.start_stratum_needed.store(true, Ordering::Relaxed);
     }
 
-    let server_result = Server::new(server_config.clone(), None, api_chan);
+    let server_result = Server::new(server_config, None, api_chan);
     server_result
 }
 

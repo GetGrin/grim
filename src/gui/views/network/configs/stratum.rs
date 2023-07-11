@@ -32,7 +32,7 @@ pub struct StratumSetup {
     stratum_port_available_edit: bool,
 
     /// Flag to check if stratum port from saved config value is available.
-    pub(crate) is_port_available: bool,
+    is_port_available: bool,
 
     /// Attempt time value in seconds to mine on a particular header.
     attempt_time_edit: String,
@@ -192,7 +192,7 @@ impl StratumSetup {
             let text_edit_resp = egui::TextEdit::singleline(&mut self.stratum_port_edit)
                 .id(Id::from(modal.id))
                 .font(TextStyle::Heading)
-                .desired_width(58.0)
+                .desired_width(64.0)
                 .cursor_at_end(true)
                 .ui(ui);
             text_edit_resp.request_focus();
@@ -288,7 +288,7 @@ impl StratumSetup {
             let text_edit_resp = egui::TextEdit::singleline(&mut self.attempt_time_edit)
                 .id(Id::from(modal.id))
                 .font(TextStyle::Heading)
-                .desired_width(36.0)
+                .desired_width(42.0)
                 .cursor_at_end(true)
                 .ui(ui);
             text_edit_resp.request_focus();
@@ -374,7 +374,7 @@ impl StratumSetup {
             let text_edit_resp = egui::TextEdit::singleline(&mut self.min_share_diff_edit)
                 .id(Id::from(modal.id))
                 .font(TextStyle::Heading)
-                .desired_width(36.0)
+                .desired_width(42.0)
                 .cursor_at_end(true)
                 .ui(ui);
             text_edit_resp.request_focus();

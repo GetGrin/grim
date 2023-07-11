@@ -35,13 +35,10 @@ pub struct NodeSetup {
     api_port_available_edit: bool,
 
     /// Flag to check if API port from saved config value is available.
-    pub(crate) is_api_port_available: bool,
+    is_api_port_available: bool,
 
-    /// Rest API and v2 Owner API secret value.
-    api_secret_edit: String,
-
-    /// Foreign API secret value.
-    foreign_api_secret_edit: String,
+    /// Secret edit value for modal.
+    secret_edit: String,
 
     /// Future Time Limit value.
     ftl_edit: String,
@@ -56,8 +53,7 @@ impl Default for NodeSetup {
             api_port_edit: api_port,
             api_port_available_edit: is_api_port_available,
             is_api_port_available,
-            api_secret_edit: "".to_string(),
-            foreign_api_secret_edit: "".to_string(),
+            secret_edit: "".to_string(),
             ftl_edit: NodeConfig::get_ftl(),
         }
     }
@@ -253,7 +249,7 @@ impl NodeSetup {
             // Draw API port text edit.
             let text_edit_resp = egui::TextEdit::singleline(&mut self.api_port_edit)
                 .font(TextStyle::Heading)
-                .desired_width(58.0)
+                .desired_width(64.0)
                 .cursor_at_end(true)
                 .ui(ui);
             text_edit_resp.request_focus();
@@ -335,14 +331,7 @@ impl NodeSetup {
 
         View::button(ui, secret_text, Colors::BUTTON, || {
             // Setup values for modal.
-            match modal_id {
-                Self::API_SECRET_MODAL => {
-                    self.api_secret_edit = secret_value.unwrap_or("".to_string());
-                },
-                _ => {
-                    self.foreign_api_secret_edit = secret_value.unwrap_or("".to_string());
-                }
-            }
+            self.secret_edit = secret_value.unwrap_or("".to_string());
             // Show secret edit modal.
             let port_modal = Modal::new(modal_id)
                 .position(ModalPosition::CenterTop)
@@ -367,11 +356,7 @@ impl NodeSetup {
             ui.add_space(8.0);
 
             // Draw API port text edit.
-            let edit_text = match modal.id {
-                Self::API_SECRET_MODAL => &mut self.api_secret_edit,
-                _ => &mut self.foreign_api_secret_edit
-            };
-            let text_edit_resp = egui::TextEdit::singleline(edit_text)
+            let text_edit_resp = egui::TextEdit::singleline(&mut self.secret_edit)
                 .id(Id::from(modal.id))
                 .font(TextStyle::Heading)
                 .cursor_at_end(true)
@@ -396,25 +381,15 @@ impl NodeSetup {
                     columns[0].with_layout(Layout::right_to_left(Align::Center), |ui| {
                         let copy_title = format!("{} {}", COPY, t!("network_settings.copy"));
                         View::button(ui, copy_title, Colors::WHITE, || {
-                            match modal.id {
-                                Self::API_SECRET_MODAL => {
-                                    cb.copy_string_to_buffer(self.api_secret_edit.clone());
-                                },
-                                _ => {
-                                    cb.copy_string_to_buffer(self.foreign_api_secret_edit.clone());
-                                }
-                            };
-
+                            cb.copy_string_to_buffer(self.secret_edit.clone());
                         });
                     });
                     columns[1].with_layout(Layout::left_to_right(Align::Center), |ui| {
-                        let paste_title = format!("{} {}", CLIPBOARD_TEXT, t!("network_settings.paste"));
+                        let paste_title = format!("{} {}",
+                                                  CLIPBOARD_TEXT,
+                                                  t!("network_settings.paste"));
                         View::button(ui, paste_title, Colors::WHITE, || {
-                            let text = cb.get_string_from_buffer();
-                            match modal.id {
-                                Self::API_SECRET_MODAL => self.api_secret_edit = text,
-                                _ => self.foreign_api_secret_edit = text
-                            };
+                            self.secret_edit = cb.get_string_from_buffer();
                         });
                     });
                 });
@@ -435,14 +410,13 @@ impl NodeSetup {
 
             // Save button callback.
             let on_save = || {
+                let secret = self.secret_edit.clone();
                 match modal.id {
                     Self::API_SECRET_MODAL => {
-                        let api_secret = &self.api_secret_edit.clone();
-                        NodeConfig::save_api_secret(api_secret);
+                        NodeConfig::save_api_secret(&secret);
                     }
                     _ => {
-                        let foreign_api_secret = &self.foreign_api_secret_edit.clone();
-                        NodeConfig::save_foreign_api_secret(foreign_api_secret);
+                        NodeConfig::save_foreign_api_secret(&secret);
                     }
                 };
                 cb.hide_keyboard();
@@ -504,7 +478,7 @@ impl NodeSetup {
             let text_edit_resp = egui::TextEdit::singleline(&mut self.ftl_edit)
                 .id(Id::from(modal.id))
                 .font(TextStyle::Heading)
-                .desired_width(46.0)
+                .desired_width(52.0)
                 .cursor_at_end(true)
                 .ui(ui);
             text_edit_resp.request_focus();

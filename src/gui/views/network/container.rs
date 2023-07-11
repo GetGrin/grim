@@ -21,11 +21,12 @@ use grin_chain::SyncStatus;
 
 use crate::AppConfig;
 use crate::gui::{Colors, Navigator};
-use crate::gui::icons::{CARDHOLDER, DATABASE, DOTS_THREE_OUTLINE_VERTICAL, FACTORY, FADERS, GAUGE};
+use crate::gui::icons::{CARDHOLDER, DATABASE, DOTS_THREE_OUTLINE_VERTICAL, FACTORY, FADERS, GAUGE, POWER};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, ModalContainer, TitlePanel, View};
 use crate::gui::views::network::configs::dandelion::DandelionSetup;
 use crate::gui::views::network::configs::node::NodeSetup;
+use crate::gui::views::network::configs::p2p::P2PSetup;
 use crate::gui::views::network::configs::pool::PoolSetup;
 use crate::gui::views::network::configs::stratum::StratumSetup;
 use crate::gui::views::network::metrics::NetworkMetrics;
@@ -77,6 +78,16 @@ impl Default for NetworkContainer {
                 NodeSetup::API_SECRET_MODAL,
                 NodeSetup::FOREIGN_API_SECRET_MODAL,
                 NodeSetup::FTL_MODAL,
+                // P2P setup modals.
+                P2PSetup::PORT_MODAL,
+                P2PSetup::CUSTOM_SEED_MODAL,
+                P2PSetup::ALLOW_PEER_MODAL,
+                P2PSetup::DENY_PEER_MODAL,
+                P2PSetup::PREFER_PEER_MODAL,
+                P2PSetup::BAN_WINDOW_MODAL,
+                P2PSetup::MAX_INBOUND_MODAL,
+                P2PSetup::MAX_OUTBOUND_MODAL,
+                P2PSetup::MIN_OUTBOUND_MODAL,
                 // Stratum setup modals.
                 StratumSetup::STRATUM_PORT_MODAL,
                 StratumSetup::ATTEMPT_TIME_MODAL,
@@ -114,6 +125,7 @@ impl NetworkContainer {
         }
 
         egui::TopBottomPanel::top("network_title")
+            .exact_height(TitlePanel::DEFAULT_HEIGHT)
             .resizable(false)
             .frame(egui::Frame {
                 fill: Colors::YELLOW,
@@ -187,34 +199,28 @@ impl NetworkContainer {
     /// Draw title content.
     fn title_ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame) {
         StripBuilder::new(ui)
-            .size(Size::exact(TitlePanel::DEFAULT_HEIGHT))
-            .vertical(|mut strip| {
+            .size(Size::exact(52.0))
+            .size(Size::remainder())
+            .size(Size::exact(52.0))
+            .horizontal(|mut strip| {
+                strip.cell(|ui| {
+                    ui.centered_and_justified(|ui| {
+                        View::title_button(ui, DOTS_THREE_OUTLINE_VERTICAL, || {
+                            //TODO: Show connections
+                        });
+                    });
+                });
                 strip.strip(|builder| {
-                    builder
-                        .size(Size::exact(52.0))
-                        .size(Size::remainder())
-                        .size(Size::exact(52.0))
-                        .horizontal(|mut strip| {
-                            strip.cell(|ui| {
-                                ui.centered_and_justified(|ui| {
-                                    View::title_button(ui, DOTS_THREE_OUTLINE_VERTICAL, || {
-                                        //TODO: Actions for node
-                                    });
-                                });
-                            });
-                            strip.strip(|builder| {
-                                self.title_text_ui(builder);
-                            });
-                            strip.cell(|ui| {
-                                if !View::is_dual_panel_mode(frame) {
-                                    ui.centered_and_justified(|ui| {
-                                        View::title_button(ui, CARDHOLDER, || {
-                                            Navigator::toggle_side_panel();
-                                        });
-                                    });
-                                }
+                    self.title_text_ui(builder);
+                });
+                strip.cell(|ui| {
+                    if !View::is_dual_panel_mode(frame) {
+                        ui.centered_and_justified(|ui| {
+                            View::title_button(ui, CARDHOLDER, || {
+                                Navigator::toggle_side_panel();
                             });
                         });
+                    }
                 });
             });
     }
@@ -249,14 +255,14 @@ impl NetworkContainer {
                             bright as f32
                         };
 
-                        // Draw sync text
+                        // Draw sync status text.
                         let status_color_rgba = Rgba::from(Colors::TEXT) * color_factor;
                         let status_color = Color32::from(status_color_rgba);
                         View::ellipsize_text(ui, Node::get_sync_status_text(), 15.0, status_color);
 
-                        // Repaint based on sync status
+                        // Repaint delay based on sync status.
                         if idle {
-                            ui.ctx().request_repaint_after(Duration::from_millis(250));
+                            ui.ctx().request_repaint_after(Node::STATS_UPDATE_DELAY);
                         } else {
                             ui.ctx().request_repaint();
                         }
@@ -274,7 +280,7 @@ impl NetworkContainer {
                 .color(Colors::INACTIVE_TEXT)
             );
             ui.add_space(10.0);
-            View::button(ui, t!("network.enable_node"), Colors::GOLD, || {
+            View::button(ui, format!("{} {}", POWER, t!("network.enable_node")), Colors::GOLD, || {
                 Node::start();
             });
             ui.add_space(2.0);

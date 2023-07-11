@@ -164,8 +164,7 @@ impl NetworkTab for NetworkNode {
                 // Show peer stats when available.
                 if stats.peer_count > 0 {
                     View::sub_title(ui, format!("{} {}", HANDSHAKE, t!("network_node.peers")));
-                    for index in 0..stats.peer_stats.len() {
-                        let ps = stats.peer_stats.get(index).unwrap();
+                    for (index, ps) in stats.peer_stats.iter().enumerate() {
                         let rounding = if stats.peer_count == 1 {
                             [true, true]
                         } else if index == 0 {
@@ -188,9 +187,9 @@ impl NetworkTab for NetworkNode {
 
 fn draw_peer_stats(ui: &mut egui::Ui, peer: &PeerStats, rounding: [bool; 2]) {
     ui.vertical(|ui| {
+        // Draw round background.
         let mut rect = ui.available_rect_before_wrap();
         rect.set_height(78.3);
-
         ui.painter().rect(
             rect,
             Rounding {
@@ -204,39 +203,29 @@ fn draw_peer_stats(ui: &mut egui::Ui, peer: &PeerStats, rounding: [bool; 2]) {
         );
 
         ui.add_space(2.0);
+
+        // Draw peer address
         ui.horizontal(|ui| {
             ui.add_space(5.0);
-            // Draw peer address
-            ui.heading(RichText::new(format!("{} {}", PLUGS_CONNECTED, &peer.addr))
-                .color(Colors::BLACK)
-                .size(18.0));
+            let addr_text = format!("{} {}", PLUGS_CONNECTED, &peer.addr);
+            ui.label(RichText::new(addr_text).color(Colors::BLACK).size(18.0));
         });
+        // Draw peer difficulty and height
         ui.horizontal(|ui| {
             ui.add_space(6.0);
-            // Draw peer difficulty and height
-            ui.heading(RichText::new(format!("{} {}", PACKAGE, peer.total_difficulty))
-                .color(Colors::TITLE)
-                .size(16.0));
+            let diff_text = format!("{} {}", PACKAGE, peer.total_difficulty);
+            ui.label(RichText::new(diff_text).color(Colors::TITLE).size(16.0));
             ui.add_space(2.0);
-            ui.heading(RichText::new(AT).color(Colors::TITLE).size(16.0));
+            ui.label(RichText::new(AT).color(Colors::TITLE).size(16.0));
             ui.add_space(2.0);
-            ui.heading(RichText::new(peer.height.to_string())
-                .color(Colors::TITLE)
-                .size(16.0));
+            ui.label(RichText::new(peer.height.to_string()).color(Colors::TITLE).size(16.0));
         });
-
+        // Draw peer user-agent
         ui.horizontal(|ui| {
             ui.add_space(6.0);
-            // Draw peer user-agent
-            ui.heading(RichText::new(format!("{} {}", DEVICES, &peer.user_agent))
-                .color(Colors::GRAY)
-                .size(16.0));
+            let agent_text = format!("{} {}", DEVICES, &peer.user_agent);
+            ui.label(RichText::new(agent_text).color(Colors::GRAY).size(16.0));
         });
         ui.add_space(4.0);
     });
-
-    // Add space after last item
-    // if rounding[1] {
-    //     ui.add_space(2.0);
-    // }
 }

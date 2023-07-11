@@ -32,7 +32,7 @@ lazy_static! {
 
 const APP_CONFIG_FILE_NAME: &'static str = "app.toml";
 
-/// Application settings config.
+/// Common application settings.
 #[derive(Serialize, Deserialize)]
 pub struct AppConfig {
     /// Run node server on startup.
@@ -69,17 +69,19 @@ impl AppConfig {
         Settings::write_to_file(self, Settings::get_config_path(APP_CONFIG_FILE_NAME, None));
     }
 
-    /// Change chain type and load new [`NodeConfig`] accordingly.
+    /// Change chain type and load new [`NodeConfig`].
     pub fn change_chain_type(chain_type: &ChainTypes) {
         let current_chain_type = Self::chain_type();
         if current_chain_type != *chain_type {
             let mut w_app_config = Settings::app_config_to_update();
             w_app_config.chain_type = *chain_type;
             w_app_config.save();
-            // Load config for selected chain type.
+
+            // Load node config for selected chain type.
             let mut w_node_config = Settings::node_config_to_update();
-            w_node_config.members = NodeConfig::for_chain_type(chain_type);
-            w_node_config.save();
+            let node_config = NodeConfig::for_chain_type(chain_type);
+            w_node_config.node = node_config.node;
+            w_node_config.peers = node_config.peers;
         }
     }
 
@@ -117,7 +119,7 @@ impl Settings {
     fn init() -> Self {
         let app_config = AppConfig::init();
         Self {
-            node_config: Arc::new(RwLock::new(NodeConfig::init(&app_config.chain_type))),
+            node_config: Arc::new(RwLock::new(NodeConfig::for_chain_type(&app_config.chain_type))),
             app_config: Arc::new(RwLock::new(app_config))
         }
     }

@@ -111,6 +111,24 @@ network_settings:
   aggregation_period: Aggregation period (in seconds)
   stem_probability: Stem phase probability
   stem_txs: Stem transactions
+  p2p_server: P2P server
+  p2p_port: P2P port
+  add_seed: Add DNS Seed
+  add_peer: Add peer
+  peer_address_error: 'Enter IP address or DNS name (make sure specified host is available) in correct format, e.g.: 192.168.0.1:1234 or example.com:5678'
+  default: Default
+  allow_list: Allow list
+  allow_list_desc: Connect only to peers in this list.
+  deny_list: Deny list
+  deny_list_desc: Never connect to peers in this list.
+  favourites: Favourites
+  favourites_desc: A list of preferred peers to connect to.
+  ban_window: How long a banned peer should stay banned (in seconds)
+  ban_window_desc: The decision to ban is made by node, based on the correctness of the data received from the peer.
+  max_inbound_count: Maximum number of inbound peer connections
+  max_outbound_count: Maximum number of outbound peer connections
+  min_outbound_count: Minimum number of outbound peer connections
+  min_outbound_desc: Node server will actively keep trying to add peers until it will get to at least this number.
 modal:
   cancel: Cancel
   save: Save

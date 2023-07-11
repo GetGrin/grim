@@ -20,4 +20,4 @@ mod config;
 mod stratum;
 mod mine_block;
 
-pub use config::NodeConfig;
+pub use config::{NodeConfig, PeersConfig};
