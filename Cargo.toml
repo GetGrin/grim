@@ -7,6 +7,10 @@ version = "0.1.0"
 edition = "2021"
 build = "src/build/build.rs"
 
+[lib]
+name="grim"
+crate_type=["cdylib", "rlib"]
+
 [features]
 #static_ssl = ['openssl/vendored']
 
@@ -68,7 +72,3 @@ winit = { version = "0.28" }
 android_logger = "0.13.1"
 jni = "0.21.1"
 winit = { version = "0.28", features = [ "android-game-activity" ] }
-
-[lib]
-name="grim"
-crate_type=["cdylib"]

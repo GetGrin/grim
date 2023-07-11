@@ -12,19 +12,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub use self::platform::*;
+pub fn main() {
+    #[allow(dead_code)]
+    #[cfg(not(target_os = "android"))]
+    real_main();
+}
 
-#[cfg(target_os = "android")]
-#[path = "android/mod.rs"]
-pub mod platform;
+#[allow(dead_code)]
 #[cfg(not(target_os = "android"))]
-#[path = "desktop/mod.rs"]
-pub mod platform;
+fn real_main() {
+    #[cfg(debug_assertions)]
+    env_logger::builder()
+        .filter_level(log::LevelFilter::Info)
+        .parse_default_env()
+        .init();
 
-pub trait PlatformCallbacks {
-    fn show_keyboard(&self);
-    fn hide_keyboard(&self);
-    fn copy_string_to_buffer(&self, data: String);
-    fn get_string_from_buffer(&self) -> String;
-    fn exit(&self);
+    use grim::gui::platform::Desktop;
+    use grim::gui::PlatformApp;
+
+    let platform = Desktop::default();
+    let options = eframe::NativeOptions::default();
+    grim::start(options, grim::app_creator(PlatformApp::new(platform)));
 }

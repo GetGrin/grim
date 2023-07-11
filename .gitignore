@@ -11,5 +11,5 @@ local.properties
 *.so
 
 # Added by cargo
-
 /target
+/.cargo/

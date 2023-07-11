@@ -12,13 +12,37 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::gui::PlatformApp;
+use crate::gui::{App, PlatformApp};
+use crate::gui::platform::PlatformCallbacks;
 
 #[derive(Default)]
 pub struct Desktop;
 
+impl PlatformCallbacks for Desktop {
+    fn show_keyboard(&self) {}
+
+    fn hide_keyboard(&self) {}
+
+    fn copy_string_to_buffer(&self, data: String) {}
+
+    fn get_string_from_buffer(&self) -> String {
+        "".to_string()
+    }
+
+    fn exit(&self) {}
+}
+
 impl PlatformApp<Desktop> {
-    pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
-        Self::default()
+    pub fn new(platform: Desktop) -> Self {
+        Self {
+            app: App::default(),
+            platform,
+        }
+    }
+}
+
+impl eframe::App for PlatformApp<Desktop> {
+    fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
+        self.app.ui(ctx, frame, &self.platform);
     }
 }

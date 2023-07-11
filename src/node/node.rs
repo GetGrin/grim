@@ -24,7 +24,6 @@ use grin_core::global;
 use grin_core::global::ChainTypes;
 use grin_servers::{Server, ServerStats, StratumServerConfig, StratumStats};
 use grin_servers::common::types::Error;
-use jni::sys::{jboolean, jstring};
 use lazy_static::lazy_static;
 use crate::node::NodeConfig;
 use crate::node::stratum::{StratumStopState, StratumServer};
@@ -612,7 +611,7 @@ pub extern "C" fn Java_mw_gri_android_BackgroundService_getSyncStatusText(
     _env: jni::JNIEnv,
     _class: jni::objects::JObject,
     _activity: jni::objects::JObject,
-) -> jstring {
+) -> jni::sys::jstring {
     let status_text = Node::get_sync_status_text();
     let j_text = _env.new_string(status_text);
     return j_text.unwrap().into_raw();
@@ -627,7 +626,7 @@ pub extern "C" fn Java_mw_gri_android_BackgroundService_getSyncTitle(
     _env: jni::JNIEnv,
     _class: jni::objects::JObject,
     _activity: jni::objects::JObject,
-) -> jstring {
+) -> jni::sys::jstring {
     let j_text = _env.new_string(t!("network.node"));
     return j_text.unwrap().into_raw();
 }
@@ -641,7 +640,7 @@ pub extern "C" fn Java_mw_gri_android_BackgroundService_exitAppAfterNodeStop(
     _env: jni::JNIEnv,
     _class: jni::objects::JObject,
     _activity: jni::objects::JObject,
-) -> jboolean {
+) -> jni::sys::jboolean {
     let exit_needed = !Node::is_running() && NODE_STATE.exit_after_stop.load(Ordering::Relaxed);
-    return exit_needed as jboolean;
+    return exit_needed as jni::sys::jboolean;
 }
