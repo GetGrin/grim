@@ -15,7 +15,6 @@
 #[macro_use]
 extern crate rust_i18n;
 
-use eframe::{AppCreator, Renderer, Theme};
 #[cfg(target_os = "android")]
 use winit::platform::android::activity::AndroidApp;
 
@@ -26,7 +25,7 @@ use crate::node::Node;
 
 i18n!("locales");
 
-pub mod node;
+mod node;
 mod wallet;
 pub mod gui;
 
@@ -59,7 +58,8 @@ fn android_main(app: AndroidApp) {
     start(options, app_creator(PlatformApp::new(platform)));
 }
 
-pub fn app_creator<T: 'static>(app: PlatformApp<T>) -> AppCreator where PlatformApp<T>: eframe::App {
+pub fn app_creator<T: 'static>(app: PlatformApp<T>) -> eframe::AppCreator
+    where PlatformApp<T>: eframe::App {
     Box::new(|cc| {
         App::setup_visuals(&cc.egui_ctx);
         App::setup_fonts(&cc.egui_ctx);
@@ -68,9 +68,9 @@ pub fn app_creator<T: 'static>(app: PlatformApp<T>) -> AppCreator where Platform
     })
 }
 
-pub fn start(mut options: eframe::NativeOptions, app_creator: AppCreator) {
-    options.default_theme = Theme::Light;
-    options.renderer = Renderer::Wgpu;
+pub fn start(mut options: eframe::NativeOptions, app_creator: eframe::AppCreator) {
+    options.default_theme = eframe::Theme::Light;
+    options.renderer = eframe::Renderer::Wgpu;
 
     setup_i18n();
 
