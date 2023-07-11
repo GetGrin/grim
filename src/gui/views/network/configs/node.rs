@@ -151,8 +151,10 @@ impl NodeSetup {
                 self.api_port_setup_ui(ui, cb);
                 // Show API secret setup.
                 self.secret_ui(Self::API_SECRET_MODAL, ui, cb);
+                ui.add_space(12.0);
                 // Show Foreign API secret setup.
                 self.secret_ui(Self::FOREIGN_API_SECRET_MODAL, ui, cb);
+                ui.add_space(6.0);
             });
         }
 
@@ -339,7 +341,6 @@ impl NodeSetup {
             Navigator::show_modal(port_modal);
             cb.show_keyboard();
         });
-        ui.add_space(12.0);
     }
 
     /// Draw API port [`Modal`] content.
@@ -462,7 +463,6 @@ impl NodeSetup {
             .size(16.0)
             .color(Colors::INACTIVE_TEXT)
         );
-        ui.add_space(6.0);
     }
 
     /// Draw FTL [`Modal`] content.

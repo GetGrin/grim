@@ -137,7 +137,7 @@ impl PoolSetup {
             let text_edit_resp = egui::TextEdit::singleline(&mut self.fee_base_edit)
                 .id(Id::from(modal.id))
                 .font(TextStyle::Heading)
-                .desired_width(76.0)
+                .desired_width(84.0)
                 .cursor_at_end(true)
                 .ui(ui);
             text_edit_resp.request_focus();
@@ -307,7 +307,7 @@ impl PoolSetup {
             let text_edit_resp = egui::TextEdit::singleline(&mut self.pool_size_edit)
                 .id(Id::from(modal.id))
                 .font(TextStyle::Heading)
-                .desired_width(64.0)
+                .desired_width(72.0)
                 .cursor_at_end(true)
                 .ui(ui);
             text_edit_resp.request_focus();
@@ -392,7 +392,7 @@ impl PoolSetup {
             let text_edit_resp = egui::TextEdit::singleline(&mut self.stempool_size_edit)
                 .id(Id::from(modal.id))
                 .font(TextStyle::Heading)
-                .desired_width(64.0)
+                .desired_width(72.0)
                 .cursor_at_end(true)
                 .ui(ui);
             text_edit_resp.request_focus();
@@ -477,7 +477,7 @@ impl PoolSetup {
             let text_edit_resp = egui::TextEdit::singleline(&mut self.max_weight_edit)
                 .id(Id::from(modal.id))
                 .font(TextStyle::Heading)
-                .desired_width(64.0)
+                .desired_width(72.0)
                 .cursor_at_end(true)
                 .ui(ui);
             text_edit_resp.request_focus();

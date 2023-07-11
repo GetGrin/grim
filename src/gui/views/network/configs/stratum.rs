@@ -358,7 +358,7 @@ impl StratumSetup {
             Navigator::show_modal(diff_modal);
             cb.show_keyboard();
         });
-        ui.add_space(12.0);
+        ui.add_space(6.0);
     }
 
     /// Draw minimum acceptable share difficulty [`Modal`] content.

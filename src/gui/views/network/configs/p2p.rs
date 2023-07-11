@@ -219,7 +219,7 @@ impl P2PSetup {
             Navigator::show_modal(port_modal);
             cb.show_keyboard();
         });
-        ui.add_space(12.0);
+        ui.add_space(6.0);
 
         // Show error when stratum server port is unavailable.
         if !self.is_port_available {
@@ -244,7 +244,7 @@ impl P2PSetup {
             let text_edit_resp = egui::TextEdit::singleline(&mut self.port_edit)
                 .id(Id::from(modal.id))
                 .font(TextStyle::Heading)
-                .desired_width(58.0)
+                .desired_width(64.0)
                 .cursor_at_end(true)
                 .ui(ui);
             text_edit_resp.request_focus();
@@ -742,7 +742,7 @@ impl P2PSetup {
             Navigator::show_modal(max_outbound);
             cb.show_keyboard();
         });
-        ui.add_space(2.0);
+        ui.add_space(6.0);
     }
 
     /// Draw maximum number of outbound peers [`Modal`] content.
