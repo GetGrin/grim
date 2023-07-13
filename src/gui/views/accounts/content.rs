@@ -12,26 +12,30 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::Frame;
-
-use crate::gui::icons::{ARROW_CIRCLE_LEFT, GLOBE, PLUS};
-use crate::gui::{Colors, Navigator};
+use crate::gui::Colors;
+use crate::gui::icons::{GLOBE, PLUS};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::screens::{Screen, ScreenId};
-use crate::gui::views::{TitlePanel, TitleAction, View};
+use crate::gui::views::{Root, TitleAction, TitlePanel, View};
 
-#[derive(Default)]
-pub struct Accounts;
+/// Accounts central panel content.
+pub struct AccountsContent {
+    /// List of accounts.
+    list: Vec<String>
+}
 
-impl Screen for Accounts {
-    fn id(&self) -> ScreenId {
-        ScreenId::Accounts
+impl Default for AccountsContent {
+    fn default() -> Self {
+        Self {
+            list: vec![],
+        }
     }
+}
 
-    fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame, cb: &dyn PlatformCallbacks) {
-        TitlePanel::ui(t!("screen_accounts.title"), if !View::is_dual_panel_mode(frame) {
+impl AccountsContent {
+    pub fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame, cb: &dyn PlatformCallbacks) {
+        TitlePanel::ui(t!("accounts.title"), if !Root::is_dual_panel_mode(frame) {
             TitleAction::new(GLOBE, || {
-                Navigator::toggle_side_panel();
+                Root::toggle_network_panel();
             })
         } else {
             None
@@ -40,19 +44,13 @@ impl Screen for Accounts {
         }), ui);
 
         egui::CentralPanel::default()
-            .frame(Frame {
+            .frame(egui::Frame {
                 stroke: View::DEFAULT_STROKE,
                 fill: Colors::FILL_DARK,
                 ..Default::default()
             })
             .show_inside(ui, |ui| {
-                ui.label(format!("{}Here we go 10000 ツ", ARROW_CIRCLE_LEFT));
-                if ui.button("TEST").clicked() {
-                    Navigator::to(ScreenId::Account)
-                };
-                if ui.button(format!("{}BACK ", ARROW_CIRCLE_LEFT)).clicked() {
-                    Navigator::back()
-                };
+               //TODO: accounts list
             });
     }
 }

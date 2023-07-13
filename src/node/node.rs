@@ -260,7 +260,7 @@ impl Node {
                             }
                         }
 
-                        if stratum_start_requested {
+                        if stratum_start_requested && NODE_STATE.stratum_stats.read().is_running {
                             NODE_STATE.start_stratum_needed.store(false, Ordering::Relaxed);
                         }
 
@@ -643,4 +643,17 @@ pub extern "C" fn Java_mw_gri_android_BackgroundService_exitAppAfterNodeStop(
 ) -> jni::sys::jboolean {
     let exit_needed = !Node::is_running() && NODE_STATE.exit_after_stop.load(Ordering::Relaxed);
     return exit_needed as jni::sys::jboolean;
+}
+
+#[allow(dead_code)]
+#[cfg(target_os = "android")]
+#[allow(non_snake_case)]
+#[no_mangle]
+/// Handle unexpected application termination on Android (removal from recent apps).
+pub extern "C" fn Java_mw_gri_android_MainActivity_onTermination(
+    _env: jni::JNIEnv,
+    _class: jni::objects::JObject,
+    _activity: jni::objects::JObject,
+) {
+    Node::stop(false);
 }

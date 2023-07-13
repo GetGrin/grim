@@ -14,7 +14,7 @@
 
 use egui::{Id, RichText, TextStyle, Ui, Widget};
 
-use crate::gui::{Colors, Navigator};
+use crate::gui::Colors;
 use crate::gui::icons::{BARBELL, HARD_DRIVES, PLUG, TIMER};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, ModalPosition, View};
@@ -98,13 +98,15 @@ impl StratumSetup {
             View::checkbox(ui, stratum_enabled, t!("network.autorun"), || {
                 NodeConfig::toggle_stratum_autorun();
             });
-            ui.add_space(4.0);
 
-            // Show message to restart node after changing of stratum settings
-            ui.label(RichText::new(t!("network_mining.info_settings"))
-                .size(16.0)
-                .color(Colors::INACTIVE_TEXT)
-            );
+            // Show reminder to restart running server.
+            if Node::get_stratum_stats().is_running {
+                ui.add_space(2.0);
+                ui.label(RichText::new(t!("network_mining.restart_server_required"))
+                    .size(16.0)
+                    .color(Colors::INACTIVE_TEXT)
+                );
+            }
             ui.add_space(8.0);
         });
 
@@ -164,7 +166,7 @@ impl StratumSetup {
             let port_modal = Modal::new(Self::STRATUM_PORT_MODAL)
                 .position(ModalPosition::CenterTop)
                 .title(t!("network_settings.change_value"));
-            Navigator::show_modal(port_modal);
+            Modal::show(port_modal);
             cb.show_keyboard();
         });
         ui.add_space(12.0);
@@ -206,6 +208,8 @@ impl StratumSetup {
                 ui.label(RichText::new(t!("network_settings.port_unavailable"))
                     .size(18.0)
                     .color(Colors::RED));
+            } else {
+                server_restart_required_ui(ui);
             }
 
             ui.add_space(12.0);
@@ -269,7 +273,7 @@ impl StratumSetup {
             let time_modal = Modal::new(Self::ATTEMPT_TIME_MODAL)
                 .position(ModalPosition::CenterTop)
                 .title(t!("network_settings.change_value"));
-            Navigator::show_modal(time_modal);
+            Modal::show(time_modal);
             cb.show_keyboard();
         });
         ui.add_space(12.0);
@@ -303,7 +307,7 @@ impl StratumSetup {
                     .size(18.0)
                     .color(Colors::RED));
             } else {
-                NetworkSettings::node_restart_required_ui(ui);
+                server_restart_required_ui(ui);
             }
             ui.add_space(12.0);
         });
@@ -355,7 +359,7 @@ impl StratumSetup {
             let diff_modal = Modal::new(Self::MIN_SHARE_DIFF_MODAL)
                 .position(ModalPosition::CenterTop)
                 .title(t!("network_settings.change_value"));
-            Navigator::show_modal(diff_modal);
+            Modal::show(diff_modal);
             cb.show_keyboard();
         });
         ui.add_space(6.0);
@@ -389,7 +393,7 @@ impl StratumSetup {
                     .size(18.0)
                     .color(Colors::RED));
             } else {
-                NetworkSettings::node_restart_required_ui(ui);
+                server_restart_required_ui(ui);
             }
             ui.add_space(12.0);
         });
@@ -422,5 +426,16 @@ impl StratumSetup {
             });
             ui.add_space(6.0);
         });
+    }
+}
+
+/// Reminder to restart enabled node to show on edit setting at [`Modal`].
+pub fn server_restart_required_ui(ui: &mut Ui) {
+    if Node::get_stratum_stats().is_running {
+        ui.add_space(12.0);
+        ui.label(RichText::new(t!("network_mining.restart_server_required"))
+            .size(16.0)
+            .color(Colors::GREEN)
+        );
     }
 }

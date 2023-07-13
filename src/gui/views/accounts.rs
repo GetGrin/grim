@@ -12,26 +12,5 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub use account::Account;
-pub use accounts::Accounts;
-pub use root::Root;
-
-use crate::gui::platform::PlatformCallbacks;
-
-mod root;
-mod accounts;
-mod account;
-
-#[derive(Ord, Eq, PartialOrd, PartialEq)]
-pub enum ScreenId {
-    Accounts,
-    Account,
-}
-
-pub trait Screen {
-    fn id(&self) -> ScreenId;
-    fn ui(&mut self,
-          ui: &mut egui::Ui,
-          frame: &mut eframe::Frame,
-          cb: &dyn PlatformCallbacks);
-}
+mod content;
+pub use content::*;

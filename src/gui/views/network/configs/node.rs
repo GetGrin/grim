@@ -14,13 +14,14 @@
 
 use eframe::emath::Align;
 use egui::{Id, Layout, RichText, TextStyle, Ui, Widget};
+use egui::os::OperatingSystem;
 use grin_core::global::ChainTypes;
 
 use crate::AppConfig;
-use crate::gui::{Colors, Navigator};
+use crate::gui::Colors;
 use crate::gui::icons::{CLIPBOARD_TEXT, CLOCK_CLOCKWISE, COMPUTER_TOWER, COPY, PLUG, POWER, SHIELD, SHIELD_SLASH};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Modal, ModalPosition, NetworkContainer, View};
+use crate::gui::views::{Modal, ModalPosition, NetworkContent, View};
 use crate::gui::views::network::settings::NetworkSettings;
 use crate::node::{Node, NodeConfig};
 
@@ -114,7 +115,7 @@ impl NodeSetup {
         // Autorun node setup.
         ui.vertical_centered(|ui| {
             ui.add_space(6.0);
-            NetworkContainer::autorun_node_ui(ui);
+            NetworkContent::autorun_node_ui(ui);
             if Node::is_running() {
                 ui.add_space(2.0);
                 ui.label(RichText::new(t!("network_settings.restart_node_required"))
@@ -224,7 +225,7 @@ impl NodeSetup {
             let port_modal = Modal::new(Self::API_PORT_MODAL)
                 .position(ModalPosition::CenterTop)
                 .title(t!("network_settings.change_value"));
-            Navigator::show_modal(port_modal);
+            Modal::show(port_modal);
             cb.show_keyboard();
         });
         ui.add_space(6.0);
@@ -338,7 +339,7 @@ impl NodeSetup {
             let port_modal = Modal::new(modal_id)
                 .position(ModalPosition::CenterTop)
                 .title(t!("network_settings.change_value"));
-            Navigator::show_modal(port_modal);
+            Modal::show(port_modal);
             cb.show_keyboard();
         });
     }
@@ -354,7 +355,7 @@ impl NodeSetup {
             ui.label(RichText::new(description)
                 .size(18.0)
                 .color(Colors::GRAY));
-            ui.add_space(8.0);
+            ui.add_space(6.0);
 
             // Draw API port text edit.
             let text_edit_resp = egui::TextEdit::singleline(&mut self.secret_edit)
@@ -367,36 +368,34 @@ impl NodeSetup {
                 cb.show_keyboard();
             }
 
-            ui.add_space(12.0);
+            // Show buttons to copy/paste text for Android.
+            if OperatingSystem::from_target_os() == OperatingSystem::Android {
+                ui.add_space(12.0);
+                ui.scope(|ui| {
+                    // Setup spacing between buttons.
+                    ui.spacing_mut().item_spacing = egui::Vec2::new(12.0, 0.0);
 
-            // Show buttons to copy/paste text.
-            ui.scope(|ui| {
-                // Setup spacing between buttons.
-                ui.spacing_mut().item_spacing = egui::Vec2::new(12.0, 0.0);
+                    let mut buttons_rect = ui.available_rect_before_wrap();
+                    buttons_rect.set_height(46.0);
+                    ui.allocate_ui_at_rect(buttons_rect, |ui| {
 
-                let mut buttons_rect = ui.available_rect_before_wrap();
-                buttons_rect.set_height(46.0);
-                ui.allocate_ui_at_rect(buttons_rect, |ui| {
-
-                ui.columns(2, |columns| {
-                    columns[0].with_layout(Layout::right_to_left(Align::Center), |ui| {
-                        let copy_title = format!("{} {}", COPY, t!("network_settings.copy"));
-                        View::button(ui, copy_title, Colors::WHITE, || {
-                            cb.copy_string_to_buffer(self.secret_edit.clone());
-                        });
-                    });
-                    columns[1].with_layout(Layout::left_to_right(Align::Center), |ui| {
-                        let paste_title = format!("{} {}",
-                                                  CLIPBOARD_TEXT,
-                                                  t!("network_settings.paste"));
-                        View::button(ui, paste_title, Colors::WHITE, || {
-                            self.secret_edit = cb.get_string_from_buffer();
+                        ui.columns(2, |columns| {
+                            columns[0].with_layout(Layout::right_to_left(Align::Center), |ui| {
+                                let copy_title = format!("{} {}", COPY, t!("copy"));
+                                View::button(ui, copy_title, Colors::WHITE, || {
+                                    cb.copy_string_to_buffer(self.secret_edit.clone());
+                                });
+                            });
+                            columns[1].with_layout(Layout::left_to_right(Align::Center), |ui| {
+                                let paste_title = format!("{} {}", CLIPBOARD_TEXT, t!("paste"));
+                                View::button(ui, paste_title, Colors::WHITE, || {
+                                    self.secret_edit = cb.get_string_from_buffer();
+                                });
+                            });
                         });
                     });
                 });
-                });
-
-            });
+            }
 
             // Show reminder to restart enabled node.
             NetworkSettings::node_restart_required_ui(ui);
@@ -455,7 +454,7 @@ impl NodeSetup {
             let ftl_modal = Modal::new(Self::FTL_MODAL)
                 .position(ModalPosition::CenterTop)
                 .title(t!("network_settings.change_value"));
-            Navigator::show_modal(ftl_modal);
+            Modal::show(ftl_modal);
             cb.show_keyboard();
         });
         ui.add_space(6.0);

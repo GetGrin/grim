@@ -18,10 +18,10 @@ use egui_extras::{Size, StripBuilder};
 use grin_chain::SyncStatus;
 
 use crate::AppConfig;
-use crate::gui::{Colors, Navigator};
+use crate::gui::Colors;
 use crate::gui::icons::{CARDHOLDER, DATABASE, DOTS_THREE_OUTLINE_VERTICAL, FACTORY, FADERS, GAUGE, POWER};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Modal, ModalContainer, TitlePanel, View};
+use crate::gui::views::{Modal, ModalContainer, Root, TitlePanel, View};
 use crate::gui::views::network::configs::dandelion::DandelionSetup;
 use crate::gui::views::network::configs::node::NodeSetup;
 use crate::gui::views::network::configs::p2p::P2PSetup;
@@ -39,6 +39,7 @@ pub trait NetworkTab {
     fn on_modal_ui(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks);
 }
 
+
 #[derive(PartialEq)]
 pub enum NetworkTabType {
     Node,
@@ -48,7 +49,7 @@ pub enum NetworkTabType {
 }
 
 impl NetworkTabType {
-    pub fn name(&self) -> String {
+    pub fn title(&self) -> String {
         match *self {
             NetworkTabType::Node => { t!("network.node") }
             NetworkTabType::Metrics => { t!("network.metrics") }
@@ -58,12 +59,15 @@ impl NetworkTabType {
     }
 }
 
-pub struct NetworkContainer {
+/// Network side panel content.
+pub struct NetworkContent {
+    /// Current tab view to show at ui.
     current_tab: Box<dyn NetworkTab>,
+    /// [`Modal`] ids allowed at this ui container.
     modal_ids: Vec<&'static str>,
 }
 
-impl Default for NetworkContainer {
+impl Default for NetworkContent {
     fn default() -> Self {
         Self {
             current_tab: Box::new(NetworkNode::default()),
@@ -106,18 +110,17 @@ impl Default for NetworkContainer {
     }
 }
 
-impl ModalContainer for NetworkContainer {
+impl ModalContainer for NetworkContent {
     fn modal_ids(&self) -> &Vec<&'static str> {
         self.modal_ids.as_ref()
     }
 }
 
-impl NetworkContainer {
+impl NetworkContent {
     pub fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame, cb: &dyn PlatformCallbacks) {
         // Show modal content if it's opened.
-        let modal_id = Navigator::is_modal_open();
-        if modal_id.is_some() && self.can_show_modal(modal_id.unwrap()) {
-            Navigator::modal_ui(ui, |ui, modal| {
+        if self.can_draw_modal() {
+            Modal::ui(ui, |ui, modal| {
                 self.current_tab.as_mut().on_modal_ui(ui, modal, cb);
             });
         }
@@ -169,34 +172,31 @@ impl NetworkContainer {
             // Setup vertical padding inside tab button.
             ui.style_mut().spacing.button_padding = egui::vec2(0.0, 8.0);
 
+            // Draw tab buttons.
+            let current_type = self.current_tab.get_type();
             ui.columns(4, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
-                    View::tab_button(ui, DATABASE, self.is_current_tab(NetworkTabType::Node), || {
+                    View::tab_button(ui, DATABASE, current_type == NetworkTabType::Node, || {
                             self.current_tab = Box::new(NetworkNode::default());
                         });
                 });
                 columns[1].vertical_centered_justified(|ui| {
-                    View::tab_button(ui, GAUGE, self.is_current_tab(NetworkTabType::Metrics), || {
+                    View::tab_button(ui, GAUGE, current_type == NetworkTabType::Metrics, || {
                             self.current_tab = Box::new(NetworkMetrics::default());
                         });
                 });
                 columns[2].vertical_centered_justified(|ui| {
-                    View::tab_button(ui, FACTORY, self.is_current_tab(NetworkTabType::Mining), || {
+                    View::tab_button(ui, FACTORY, current_type == NetworkTabType::Mining, || {
                             self.current_tab = Box::new(NetworkMining::default());
                         });
                 });
                 columns[3].vertical_centered_justified(|ui| {
-                    View::tab_button(ui, FADERS, self.is_current_tab(NetworkTabType::Settings), || {
+                    View::tab_button(ui, FADERS, current_type == NetworkTabType::Settings, || {
                             self.current_tab = Box::new(NetworkSettings::default());
                         });
                 });
             });
         });
-    }
-
-    /// Check if current tab equals providing [`NetworkTabType`].
-    fn is_current_tab(&self, tab_type: NetworkTabType) -> bool {
-        self.current_tab.get_type() == tab_type
     }
 
     /// Draw title content.
@@ -217,10 +217,10 @@ impl NetworkContainer {
                     self.title_text_ui(builder);
                 });
                 strip.cell(|ui| {
-                    if !View::is_dual_panel_mode(frame) {
+                    if !Root::is_dual_panel_mode(frame) {
                         ui.centered_and_justified(|ui| {
                             View::title_button(ui, CARDHOLDER, || {
-                                Navigator::toggle_side_panel();
+                                Root::toggle_network_panel();
                             });
                         });
                     }
@@ -237,7 +237,7 @@ impl NetworkContainer {
                 strip.cell(|ui| {
                     ui.add_space(4.0);
                     ui.vertical_centered(|ui| {
-                        ui.label(RichText::new(self.current_tab.get_type().name().to_uppercase())
+                        ui.label(RichText::new(self.current_tab.get_type().title().to_uppercase())
                             .size(19.0)
                             .color(Colors::TITLE));
                     });
@@ -291,7 +291,7 @@ impl NetworkContainer {
         });
     }
 
-    /// Draw checkbox with setting to run node on app launch.
+    /// Draw checkbox to run integrated node on application launch.
     pub fn autorun_node_ui(ui: &mut egui::Ui) {
         let autostart = AppConfig::autostart_node();
         View::checkbox(ui, autostart, t!("network.autorun"), || {

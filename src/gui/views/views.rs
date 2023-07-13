@@ -26,22 +26,8 @@ impl View {
     /// Default stroke around views.
     pub const DEFAULT_STROKE: Stroke = Stroke { width: 1.0, color: Colors::STROKE };
 
-    /// Default width of side panel at application UI.
-    pub const SIDE_PANEL_MIN_WIDTH: i64 = 400;
-
-    /// Check if ui can show side panel and screen at same time.
-    pub fn is_dual_panel_mode(frame: &mut eframe::Frame) -> bool {
-        let w = frame.info().window_info.size.x;
-        let h = frame.info().window_info.size.y;
-        // Screen is wide if width is greater than height or just 20% smaller.
-        let is_wide_screen = w > h || w + (w * 0.2) >= h;
-        // Dual panel mode is available when window is wide and its width is at least 2 times
-        // greater than minimal width of the side panel.
-        is_wide_screen && w >= Self::SIDE_PANEL_MIN_WIDTH as f32 * 2.0
-    }
-
-    /// Show and cut long text with ﹍ character.
-    pub fn ellipsize_text(ui: &mut egui::Ui, text: String, size: f32, color: Color32) {
+    /// Cut long text with ﹍ character.
+    fn ellipsize(text: String, size: f32, color: Color32) -> LayoutJob {
         let mut job = LayoutJob::single_section(text, TextFormat {
             font_id: FontId::proportional(size), color, ..Default::default()
         });
@@ -51,7 +37,12 @@ impl View {
             overflow_character: Option::from('﹍'),
             ..Default::default()
         };
-        ui.label(job);
+        job
+    }
+
+    /// Show ellipsized text.
+    pub fn ellipsize_text(ui: &mut egui::Ui, text: String, size: f32, color: Color32) {
+        ui.label(Self::ellipsize(text, size, color));
     }
 
     /// Draw horizontally centered sub-title with space below.
@@ -121,7 +112,7 @@ impl View {
 
     /// Draw [`Button`] with specified background fill color.
     pub fn button(ui: &mut egui::Ui, text: String, fill_color: Color32, action: impl FnOnce()) {
-        let button_text = RichText::new(text.to_uppercase()).size(18.0).color(Colors::TEXT_BUTTON);
+        let button_text = Self::ellipsize(text.to_uppercase(), 18.0, Colors::TEXT_BUTTON);
         let br = Button::new(button_text)
             .stroke(Self::DEFAULT_STROKE)
             .fill(fill_color)

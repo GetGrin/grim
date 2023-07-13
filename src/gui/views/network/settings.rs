@@ -14,7 +14,7 @@
 
 use egui::{RichText, ScrollArea};
 
-use crate::gui::{Colors, Navigator};
+use crate::gui::Colors;
 use crate::gui::icons::ARROW_COUNTER_CLOCKWISE;
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, ModalPosition, View};
@@ -141,7 +141,7 @@ impl NetworkSettings {
                 let reset_modal = Modal::new(Self::RESET_SETTINGS_MODAL)
                     .position(ModalPosition::Center)
                     .title(t!("modal.confirmation"));
-                Navigator::show_modal(reset_modal);
+                Modal::show(reset_modal);
             });
 
             // Show reminder to restart enabled node.
@@ -207,7 +207,7 @@ impl NetworkSettings {
             let port_modal = Modal::new(Self::NODE_RESTART_REQUIRED_MODAL)
                 .position(ModalPosition::Center)
                 .title(t!("network.settings"));
-            Navigator::show_modal(port_modal);
+            Modal::show(port_modal);
         }
     }
 

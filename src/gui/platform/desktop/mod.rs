@@ -47,7 +47,7 @@ impl eframe::App for PlatformApp<Desktop> {
     }
 
     fn on_close_event(&mut self) -> bool {
-        self.app.exit_requested = true;
+        App::show_exit_modal();
         self.app.exit_allowed
     }
 }

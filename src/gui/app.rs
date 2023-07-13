@@ -14,11 +14,10 @@
 
 use egui::{Context, RichText, Stroke};
 use egui::os::OperatingSystem;
+use crate::gui::Colors;
 
-use crate::gui::{Colors, Navigator};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::screens::Root;
-use crate::gui::views::{ModalContainer, View};
+use crate::gui::views::{Modal, ModalContainer, Root, View};
 use crate::node::Node;
 
 /// To be implemented at platform-specific module.
@@ -27,16 +26,12 @@ pub struct PlatformApp<Platform> {
     pub(crate) platform: Platform,
 }
 
-/// Contains main ui content, handles application exit and visual style setup.
+/// Contains main ui, handles exit and visual style setup.
 pub struct App {
-    /// Main ui container.
+    /// Main ui content.
     root: Root,
-
-    /// Check if app exit is allowed on close event callback.
+    /// Check if app exit is allowed on close event of [`eframe::App`] platform implementation.
     pub(crate) exit_allowed: bool,
-    /// Called from callback of [`eframe::App`] platform implementation on close event.
-    pub(crate) exit_requested: bool,
-
     /// Flag to show exit progress at modal.
     show_exit_progress: bool,
     /// List of allowed modal ids for this [`ModalContainer`].
@@ -47,14 +42,13 @@ impl Default for App {
     fn default() -> Self {
         let os = OperatingSystem::from_target_os();
         // Exit from eframe only for non-mobile platforms.
-        let allow_to_exit = os == OperatingSystem::Android || os == OperatingSystem::IOS;
+        let exit_allowed = os == OperatingSystem::Android || os == OperatingSystem::IOS;
         Self {
             root: Root::default(),
-            exit_allowed: allow_to_exit,
-            exit_requested: false,
+            exit_allowed,
             show_exit_progress: false,
             allowed_modal_ids: vec![
-                Navigator::EXIT_MODAL
+                Self::EXIT_MODAL
             ]
         }
     }
@@ -67,25 +61,22 @@ impl ModalContainer for App {
 }
 
 impl App {
+    /// Identifier for exit confirmation [`Modal`].
+    pub const EXIT_MODAL: &'static str = "exit_confirmation";
+
     /// Draw content on main screen panel.
     pub fn ui(&mut self, ctx: &Context, frame: &mut eframe::Frame, cb: &dyn PlatformCallbacks) {
-        // Show exit modal if window closing was requested.
-        if self.exit_requested {
-            Navigator::show_exit_modal();
-            self.exit_requested = false;
-        }
-        // Draw main content.
         egui::CentralPanel::default()
             .frame(egui::Frame {
                 fill: Colors::FILL,
                 ..Default::default()
             })
             .show(ctx, |ui| {
-                // Draw exit modal content if it's open or exit requested.
-                let modal_id = Navigator::is_modal_open();
-                if modal_id.is_some() && self.can_show_modal(modal_id.unwrap()) {
+                // Draw modal content if it's open.
+                if self.can_draw_modal() {
                     self.exit_modal_content(ui, frame, cb);
                 }
+                // Draw main content.
                 self.root.ui(ui, frame, cb);
             });
     }
@@ -95,7 +86,7 @@ impl App {
                           ui: &mut egui::Ui,
                           frame: &mut eframe::Frame,
                           cb: &dyn PlatformCallbacks) {
-        Navigator::modal_ui(ui, |ui, modal| {
+        Modal::ui(ui, |ui, modal| {
             if self.show_exit_progress {
                 if !Node::is_running() {
                     self.exit(frame, cb);
@@ -156,13 +147,12 @@ impl App {
                 cb.exit();
             }
             OperatingSystem::IOS => {
-                //TODO: exit on iOS
+                //TODO: exit on iOS.
             }
             OperatingSystem::Nix | OperatingSystem::Mac | OperatingSystem::Windows => {
                 self.exit_allowed = true;
                 frame.close();
             }
-            // Web
             OperatingSystem::Unknown => {}
         }
     }
@@ -249,31 +239,10 @@ impl App {
 
         ctx.set_style(style);
     }
-}
 
-#[allow(dead_code)]
-#[cfg(target_os = "android")]
-#[allow(non_snake_case)]
-#[no_mangle]
-/// Calling when back button is pressed on Android.
-pub extern "C" fn Java_mw_gri_android_MainActivity_onBackButtonPress(
-    _env: jni::JNIEnv,
-    _class: jni::objects::JObject,
-    _activity: jni::objects::JObject,
-) {
-    Navigator::back();
+    /// Show exit confirmation modal.
+    pub fn show_exit_modal() {
+        let exit_modal = Modal::new(Self::EXIT_MODAL).title(t!("modal_exit.exit"));
+        Modal::show(exit_modal);
+    }
 }
-
-#[allow(dead_code)]
-#[cfg(target_os = "android")]
-#[allow(non_snake_case)]
-#[no_mangle]
-/// Calling on unexpected Android application termination (removal from recent apps).
-pub extern "C" fn Java_mw_gri_android_MainActivity_onTermination(
-    _env: jni::JNIEnv,
-    _class: jni::objects::JObject,
-    _activity: jni::objects::JObject,
-) {
-    Node::stop(false);
-}
-

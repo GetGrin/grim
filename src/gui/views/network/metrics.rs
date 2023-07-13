@@ -20,9 +20,10 @@ use crate::gui::Colors;
 use crate::gui::icons::{AT, COINS, CUBE_TRANSPARENT, HASH, HOURGLASS_LOW, HOURGLASS_MEDIUM, TIMER};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::network::{NetworkTab, NetworkTabType};
-use crate::gui::views::{Modal, NetworkContainer, View};
+use crate::gui::views::{Modal, NetworkContent, View};
 use crate::node::Node;
 
+/// Chain metrics tab content.
 #[derive(Default)]
 pub struct NetworkMetrics;
 
@@ -39,7 +40,7 @@ impl NetworkTab for NetworkMetrics {
         let server_stats = Node::get_stats();
         // Show message to enable node when it's not running.
         if !Node::is_running() {
-            NetworkContainer::disabled_node_ui(ui);
+            NetworkContent::disabled_node_ui(ui);
             return;
         }
 
@@ -94,7 +95,7 @@ impl NetworkTab for NetworkMetrics {
         });
         ui.add_space(4.0);
 
-        // Show difficulty adjustment window info
+        // Show difficulty adjustment window info.
         let difficulty_title = t!(
                 "network_metrics.difficulty_window",
                 "size" => stats.diff_stats.window_size
@@ -122,7 +123,7 @@ impl NetworkTab for NetworkMetrics {
         });
         ui.add_space(4.0);
 
-        // Show difficulty adjustment window blocks
+        // Show difficulty adjustment window blocks.
         let blocks_size = stats.diff_stats.last_blocks.len();
         ScrollArea::vertical()
             .id_source("difficulty_scroll")
@@ -130,7 +131,7 @@ impl NetworkTab for NetworkMetrics {
             .stick_to_bottom(true)
             .show_rows(
                 ui,
-                DIFF_BLOCK_UI_HEIGHT,
+                BLOCK_ITEM_HEIGHT,
                 blocks_size,
                 |ui, row_range| {
                     for index in row_range {
@@ -144,7 +145,7 @@ impl NetworkTab for NetworkMetrics {
                         } else {
                             [false, false]
                         };
-                        draw_diff_block(ui, db, rounding)
+                        block_item_ui(ui, db, rounding)
                     }
                 },
             );
@@ -153,9 +154,10 @@ impl NetworkTab for NetworkMetrics {
     fn on_modal_ui(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {}
 }
 
-const DIFF_BLOCK_UI_HEIGHT: f32 = 78.30;
+const BLOCK_ITEM_HEIGHT: f32 = 78.30;
 
-fn draw_diff_block(ui: &mut egui::Ui, db: &DiffBlock, rounding: [bool; 2]) {
+/// Draw block difficulty item.
+fn block_item_ui(ui: &mut egui::Ui, db: &DiffBlock, rounding: [bool; 2]) {
     // Add space before the first item.
     if rounding[0] {
         ui.add_space(4.0);
@@ -164,8 +166,9 @@ fn draw_diff_block(ui: &mut egui::Ui, db: &DiffBlock, rounding: [bool; 2]) {
     ui.horizontal(|ui| {
         ui.add_space(6.0);
         ui.vertical(|ui| {
+            // Draw round background.
             let mut rect = ui.available_rect_before_wrap();
-            rect.set_height(DIFF_BLOCK_UI_HEIGHT);
+            rect.set_height(BLOCK_ITEM_HEIGHT);
             ui.painter().rect(
                 rect,
                 Rounding {

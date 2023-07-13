@@ -1,4 +1,6 @@
-screen_accounts:
+copy: Copy
+paste: Paste
+accounts:
   title: Accounts
 network:
   self: Network
@@ -59,7 +61,7 @@ network_mining:
   enable_server: Enable server
   disable_server: Disable server
   info: 'Mining server is enabled, you can change its settings by selecting %{settings} at the bottom of the screen. Data is updating when devices are connected.'
-  info_settings: To change the settings of enabled server, you will need to restart the node.
+  restart_server_required: Server restart is required to apply changes.
   rewards_wallet: Wallet for rewards
   server: Stratum server
   address: Address
@@ -85,8 +87,6 @@ network_settings:
   foreign_api_secret: Foreign API token
   disabled: Disabled
   enabled: Enabled
-  copy: Copy
-  paste: Paste
   ftl: The Future Time Limit (FTL)
   ftl_description: Limit on how far into the future, relative to a node's local time in seconds, the timestamp on a new block can be, in order for the block to be accepted.
   not_valid_value: Entered value is not valid

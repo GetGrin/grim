@@ -20,9 +20,10 @@ use crate::gui::Colors;
 use crate::gui::icons::{AT, CUBE, DEVICES, FLOW_ARROW, HANDSHAKE, PACKAGE, PLUGS_CONNECTED, SHARE_NETWORK};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, View};
-use crate::gui::views::network::{NetworkContainer, NetworkTab, NetworkTabType};
+use crate::gui::views::network::{NetworkContent, NetworkTab, NetworkTabType};
 use crate::node::Node;
 
+/// Integrated node tab content.
 #[derive(Default)]
 pub struct NetworkNode;
 
@@ -35,7 +36,7 @@ impl NetworkTab for NetworkNode {
         let server_stats = Node::get_stats();
         // Show message to enable node when it's not running.
         if !Node::is_running() {
-            NetworkContainer::disabled_node_ui(ui);
+            NetworkContent::disabled_node_ui(ui);
             return;
         }
 
@@ -175,7 +176,7 @@ impl NetworkTab for NetworkNode {
                             [false, false]
                         };
                         ui.vertical_centered(|ui| {
-                            draw_peer_stats(ui, ps, rounding);
+                            peer_item_ui(ui, ps, rounding);
                         });
                     }
                 }
@@ -185,7 +186,8 @@ impl NetworkTab for NetworkNode {
     fn on_modal_ui(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {}
 }
 
-fn draw_peer_stats(ui: &mut egui::Ui, peer: &PeerStats, rounding: [bool; 2]) {
+/// Draw connected peer info item.
+fn peer_item_ui(ui: &mut egui::Ui, peer: &PeerStats, rounding: [bool; 2]) {
     ui.vertical(|ui| {
         // Draw round background.
         let mut rect = ui.available_rect_before_wrap();

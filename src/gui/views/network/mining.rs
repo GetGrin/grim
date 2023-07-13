@@ -20,11 +20,12 @@ use grin_servers::WorkerStats;
 use crate::gui::Colors;
 use crate::gui::icons::{BARBELL, CLOCK_AFTERNOON, CPU, CUBE, FADERS, FOLDER_DASHED, FOLDER_NOTCH_MINUS, FOLDER_NOTCH_PLUS, HARD_DRIVES, PLUGS, PLUGS_CONNECTED, POLYGON};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Modal, NetworkContainer, View};
+use crate::gui::views::{Modal, NetworkContent, View};
 use crate::gui::views::network::{NetworkTab, NetworkTabType};
 use crate::gui::views::network::configs::stratum::StratumSetup;
 use crate::node::{Node, NodeConfig};
 
+/// Mining tab content.
 #[derive(Default)]
 pub struct NetworkMining {
     stratum_server_setup: StratumSetup
@@ -40,7 +41,7 @@ impl NetworkTab for NetworkMining {
 
         // Show message to enable node when it's not running.
         if !Node::is_running() {
-            NetworkContainer::disabled_node_ui(ui);
+            NetworkContent::disabled_node_ui(ui);
             return;
         }
 
@@ -169,7 +170,7 @@ impl NetworkTab for NetworkMining {
                 .id_source("stratum_workers_scroll")
                 .show_rows(
                     ui,
-                    WORKER_UI_HEIGHT,
+                    WORKER_ITEM_HEIGHT,
                     workers_size,
                     |ui, row_range| {
                         for index in row_range {
@@ -183,7 +184,7 @@ impl NetworkTab for NetworkMining {
                             } else {
                                 [false, false]
                             };
-                            draw_workers_stats(ui, worker, rounding)
+                            worker_item_ui(ui, worker, rounding)
                         }
                     },
                 );
@@ -207,9 +208,10 @@ impl NetworkTab for NetworkMining {
     }
 }
 
-const WORKER_UI_HEIGHT: f32 = 77.0;
+const WORKER_ITEM_HEIGHT: f32 = 77.0;
 
-fn draw_workers_stats(ui: &mut egui::Ui, ws: &WorkerStats, rounding: [bool; 2]) {
+/// Draw worker statistics item.
+fn worker_item_ui(ui: &mut egui::Ui, ws: &WorkerStats, rounding: [bool; 2]) {
     // Add space before the first item.
     if rounding[0] {
         ui.add_space(4.0);
@@ -217,8 +219,9 @@ fn draw_workers_stats(ui: &mut egui::Ui, ws: &WorkerStats, rounding: [bool; 2]) 
 
     ui.horizontal_wrapped(|ui| {
         ui.vertical_centered_justified(|ui| {
+            // Draw round background.
             let mut rect = ui.available_rect_before_wrap();
-            rect.set_height(WORKER_UI_HEIGHT);
+            rect.set_height(WORKER_ITEM_HEIGHT);
             ui.painter().rect(
                 rect,
                 Rounding {
@@ -232,94 +235,68 @@ fn draw_workers_stats(ui: &mut egui::Ui, ws: &WorkerStats, rounding: [bool; 2]) 
             );
 
             ui.add_space(2.0);
-            ui.horizontal_top(|ui| {
+            ui.horizontal(|ui| {
+                ui.add_space(5.0);
+
+                // Draw worker connection status.
                 let (status_text, status_icon, status_color) = match ws.is_connected {
                     true => (t!("network_mining.connected"), PLUGS_CONNECTED, Colors::BLACK),
                     false => (t!("network_mining.disconnected"), PLUGS, Colors::INACTIVE_TEXT)
                 };
-                ui.add_space(5.0);
-                ui.heading(RichText::new(status_icon)
+                let status_line_text = format!("{} {} {}", status_icon, ws.id, status_text);
+                ui.heading(RichText::new(status_line_text)
                     .color(status_color)
                     .size(18.0));
                 ui.add_space(2.0);
-
-                // Draw worker ID.
-                ui.heading(RichText::new(&ws.id)
-                    .color(status_color)
-                    .size(18.0));
-                ui.add_space(3.0);
-
-                // Draw worker status.
-                ui.heading(RichText::new(status_text)
-                    .color(status_color)
-                    .size(18.0));
             });
-            ui.horizontal_top(|ui| {
+            ui.horizontal(|ui| {
                 ui.add_space(6.0);
-                ui.heading(RichText::new(BARBELL)
-                    .color(Colors::TITLE)
-                    .size(16.0));
-                ui.add_space(4.0);
+
                 // Draw difficulty.
-                ui.heading(RichText::new(ws.pow_difficulty.to_string())
+                let diff_text = format!("{} {}", BARBELL, ws.pow_difficulty);
+                ui.heading(RichText::new(diff_text)
                     .color(Colors::TITLE)
                     .size(16.0));
                 ui.add_space(6.0);
 
-                ui.heading(RichText::new(FOLDER_NOTCH_PLUS)
-                    .color(Colors::GREEN)
-                    .size(16.0));
-                ui.add_space(3.0);
                 // Draw accepted shares.
-                ui.heading(RichText::new(ws.num_accepted.to_string())
+                let accepted_text = format!("{} {}", FOLDER_NOTCH_PLUS, ws.num_accepted);
+                ui.heading(RichText::new(accepted_text)
                     .color(Colors::GREEN)
                     .size(16.0));
                 ui.add_space(6.0);
 
-                ui.heading(RichText::new(FOLDER_NOTCH_MINUS)
-                    .color(Colors::RED)
-                    .size(16.0));
-                ui.add_space(3.0);
                 // Draw rejected shares.
-                ui.heading(RichText::new(ws.num_rejected.to_string())
+                let rejected_text = format!("{} {}", FOLDER_NOTCH_MINUS, ws.num_rejected);
+                ui.heading(RichText::new(rejected_text)
                     .color(Colors::RED)
                     .size(16.0));
                 ui.add_space(6.0);
 
-                ui.heading(RichText::new(FOLDER_DASHED)
-                    .color(Colors::GRAY)
-                    .size(16.0));
-                ui.add_space(3.0);
                 // Draw stale shares.
-                ui.heading(RichText::new(ws.num_stale.to_string())
+                let stale_text = format!("{} {}", FOLDER_DASHED, ws.num_stale);
+                ui.heading(RichText::new(stale_text)
                     .color(Colors::GRAY)
                     .size(16.0));
                 ui.add_space(6.0);
 
-                ui.heading(RichText::new(CUBE)
-                    .color(Colors::TITLE)
-                    .size(16.0));
-                ui.add_space(3.0);
                 // Draw blocks found.
-                ui.heading(RichText::new(ws.num_blocks_found.to_string())
+                let blocks_found_text = format!("{} {}", CUBE, ws.num_blocks_found);
+                ui.heading(RichText::new(blocks_found_text)
                     .color(Colors::TITLE)
                     .size(16.0));
             });
-            ui.horizontal_top(|ui| {
+            ui.horizontal(|ui| {
                 ui.add_space(6.0);
-                ui.heading(RichText::new(CLOCK_AFTERNOON)
-                    .color(Colors::TITLE)
-                    .size(16.0));
-                ui.add_space(4.0);
 
                 // Draw block time
                 let seen = ws.last_seen.duration_since(std::time::UNIX_EPOCH).unwrap().as_secs();
                 let naive_datetime = NaiveDateTime::from_timestamp_opt(seen as i64, 0).unwrap();
                 let datetime: DateTime<Utc> = DateTime::from_utc(naive_datetime, Utc);
-                ui.heading(RichText::new(datetime.to_string())
+                let date_text = format!("{} {}", CLOCK_AFTERNOON, datetime);
+                ui.heading(RichText::new(date_text)
                     .color(Colors::GRAY)
                     .size(16.0));
-
             });
         });
     });

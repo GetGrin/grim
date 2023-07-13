@@ -14,7 +14,7 @@
 
 use egui::{Id, RichText, TextStyle, Ui, Widget};
 
-use crate::gui::{Colors, Navigator};
+use crate::gui::Colors;
 use crate::gui::icons::{BEZIER_CURVE, BOUNDING_BOX, CHART_SCATTER, CIRCLES_THREE, CLOCK_COUNTDOWN, HAND_COINS};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, ModalPosition, View};
@@ -118,7 +118,7 @@ impl PoolSetup {
             let fee_modal = Modal::new(Self::FEE_BASE_MODAL)
                 .position(ModalPosition::CenterTop)
                 .title(t!("network_settings.change_value"));
-            Navigator::show_modal(fee_modal);
+            Modal::show(fee_modal);
             cb.show_keyboard();
         });
         ui.add_space(6.0);
@@ -203,7 +203,7 @@ impl PoolSetup {
             let reorg_modal = Modal::new(Self::REORG_PERIOD_MODAL)
                 .position(ModalPosition::CenterTop)
                 .title(t!("network_settings.change_value"));
-            Navigator::show_modal(reorg_modal);
+            Modal::show(reorg_modal);
             cb.show_keyboard();
         });
         ui.add_space(6.0);
@@ -288,7 +288,7 @@ impl PoolSetup {
             let size_modal = Modal::new(Self::POOL_SIZE_MODAL)
                 .position(ModalPosition::CenterTop)
                 .title(t!("network_settings.change_value"));
-            Navigator::show_modal(size_modal);
+            Modal::show(size_modal);
             cb.show_keyboard();
         });
         ui.add_space(6.0);
@@ -373,7 +373,7 @@ impl PoolSetup {
             let stem_modal = Modal::new(Self::STEMPOOL_SIZE_MODAL)
                 .position(ModalPosition::CenterTop)
                 .title(t!("network_settings.change_value"));
-            Navigator::show_modal(stem_modal);
+            Modal::show(stem_modal);
             cb.show_keyboard();
         });
         ui.add_space(6.0);
@@ -458,7 +458,7 @@ impl PoolSetup {
             let weight_modal = Modal::new(Self::MAX_WEIGHT_MODAL)
                 .position(ModalPosition::CenterTop)
                 .title(t!("network_settings.change_value"));
-            Navigator::show_modal(weight_modal);
+            Modal::show(weight_modal);
             cb.show_keyboard();
         });
         ui.add_space(6.0);

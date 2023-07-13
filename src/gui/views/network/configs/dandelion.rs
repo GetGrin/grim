@@ -14,7 +14,7 @@
 
 use egui::{Id, RichText, TextStyle, Ui, Widget};
 
-use crate::gui::{Colors, Navigator};
+use crate::gui::Colors;
 use crate::gui::icons::{CLOCK_COUNTDOWN, GRAPH, TIMER, WATCH};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, ModalPosition, View};
@@ -116,7 +116,7 @@ impl DandelionSetup {
             let epoch_modal = Modal::new(Self::EPOCH_MODAL)
                 .position(ModalPosition::CenterTop)
                 .title(t!("network_settings.change_value"));
-            Navigator::show_modal(epoch_modal);
+            Modal::show(epoch_modal);
             cb.show_keyboard();
         });
         ui.add_space(6.0);
@@ -201,7 +201,7 @@ impl DandelionSetup {
             let embargo_modal = Modal::new(Self::EMBARGO_MODAL)
                 .position(ModalPosition::CenterTop)
                 .title(t!("network_settings.change_value"));
-            Navigator::show_modal(embargo_modal);
+            Modal::show(embargo_modal);
             cb.show_keyboard();
         });
         ui.add_space(6.0);
@@ -286,7 +286,7 @@ impl DandelionSetup {
             let aggregation_modal = Modal::new(Self::AGGREGATION_MODAL)
                 .position(ModalPosition::CenterTop)
                 .title(t!("network_settings.change_value"));
-            Navigator::show_modal(aggregation_modal);
+            Modal::show(aggregation_modal);
             cb.show_keyboard();
         });
         ui.add_space(6.0);
@@ -371,7 +371,7 @@ impl DandelionSetup {
             let embargo_modal = Modal::new(Self::STEM_PROBABILITY_MODAL)
                 .position(ModalPosition::CenterTop)
                 .title(t!("network_settings.change_value"));
-            Navigator::show_modal(embargo_modal);
+            Modal::show(embargo_modal);
             cb.show_keyboard();
         });
         ui.add_space(6.0);

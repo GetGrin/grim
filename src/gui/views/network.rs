@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-mod container;
+mod content;
 mod metrics;
 mod mining;
 mod settings;
 mod node;
 mod configs;
 
-pub use container::*;
+pub use content::*;

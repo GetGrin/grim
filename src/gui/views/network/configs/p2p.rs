@@ -17,7 +17,7 @@ use egui_extras::{Size, StripBuilder};
 use grin_core::global::ChainTypes;
 
 use crate::AppConfig;
-use crate::gui::{Colors, Navigator};
+use crate::gui::Colors;
 use crate::gui::icons::{HANDSHAKE, PLUG, TRASH, GLOBE_SIMPLE, PLUS_CIRCLE, ARROW_FAT_LINES_UP, ARROW_FAT_LINES_DOWN, ARROW_FAT_LINE_UP, PROHIBIT_INSET};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, ModalPosition, View};
@@ -215,7 +215,7 @@ impl P2PSetup {
             let port_modal = Modal::new(Self::PORT_MODAL)
                 .position(ModalPosition::CenterTop)
                 .title(t!("network_settings.change_value"));
-            Navigator::show_modal(port_modal);
+            Modal::show(port_modal);
             cb.show_keyboard();
         });
         ui.add_space(6.0);
@@ -374,7 +374,7 @@ impl P2PSetup {
                 let peer_modal = Modal::new(modal_id)
                     .position(ModalPosition::CenterTop)
                     .title(modal_title);
-                Navigator::show_modal(peer_modal);
+                Modal::show(peer_modal);
                 cb.show_keyboard();
             });
         }
@@ -561,7 +561,7 @@ impl P2PSetup {
             let ban_modal = Modal::new(Self::BAN_WINDOW_MODAL)
                 .position(ModalPosition::CenterTop)
                 .title(t!("network_settings.change_value"));
-            Navigator::show_modal(ban_modal);
+            Modal::show(ban_modal);
             cb.show_keyboard();
         });
         ui.add_space(6.0);
@@ -652,7 +652,7 @@ impl P2PSetup {
             let max_inbound_modal = Modal::new(Self::MAX_INBOUND_MODAL)
                 .position(ModalPosition::CenterTop)
                 .title(t!("network_settings.change_value"));
-            Navigator::show_modal(max_inbound_modal);
+            Modal::show(max_inbound_modal);
             cb.show_keyboard();
         });
         ui.add_space(6.0);
@@ -738,7 +738,7 @@ impl P2PSetup {
             let max_outbound = Modal::new(Self::MAX_OUTBOUND_MODAL)
                 .position(ModalPosition::CenterTop)
                 .title(t!("network_settings.change_value"));
-            Navigator::show_modal(max_outbound);
+            Modal::show(max_outbound);
             cb.show_keyboard();
         });
         ui.add_space(6.0);
@@ -824,7 +824,7 @@ impl P2PSetup {
             let min_outbound = Modal::new(Self::MIN_OUTBOUND_MODAL)
                 .position(ModalPosition::CenterTop)
                 .title(t!("network_settings.change_value"));
-            Navigator::show_modal(min_outbound);
+            Modal::show(min_outbound);
             cb.show_keyboard();
         });
         ui.add_space(6.0);
