@@ -19,11 +19,11 @@ use crate::gui::icons::ARROW_COUNTER_CLOCKWISE;
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, ModalPosition, View};
 use crate::gui::views::network::{NetworkTab, NetworkTabType};
-use crate::gui::views::network::configs::dandelion::DandelionSetup;
-use crate::gui::views::network::configs::node::NodeSetup;
-use crate::gui::views::network::configs::p2p::P2PSetup;
-use crate::gui::views::network::configs::pool::PoolSetup;
-use crate::gui::views::network::configs::stratum::StratumSetup;
+use crate::gui::views::network::setup::dandelion::DandelionSetup;
+use crate::gui::views::network::setup::node::NodeSetup;
+use crate::gui::views::network::setup::p2p::P2PSetup;
+use crate::gui::views::network::setup::pool::PoolSetup;
+use crate::gui::views::network::setup::stratum::StratumSetup;
 use crate::node::{Node, NodeConfig};
 
 /// Integrated node settings tab content.

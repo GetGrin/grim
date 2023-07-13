@@ -22,7 +22,7 @@ use crate::gui::icons::{BARBELL, CLOCK_AFTERNOON, CPU, CUBE, FADERS, FOLDER_DASH
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, NetworkContent, View};
 use crate::gui::views::network::{NetworkTab, NetworkTabType};
-use crate::gui::views::network::configs::stratum::StratumSetup;
+use crate::gui::views::network::setup::stratum::StratumSetup;
 use crate::node::{Node, NodeConfig};
 
 /// Mining tab content.

@@ -17,6 +17,6 @@ mod metrics;
 mod mining;
 mod settings;
 mod node;
-mod configs;
+mod setup;
 
 pub use content::*;
