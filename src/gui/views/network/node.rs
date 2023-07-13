@@ -20,7 +20,7 @@ use crate::gui::Colors;
 use crate::gui::icons::{AT, CUBE, DEVICES, FLOW_ARROW, HANDSHAKE, PACKAGE, PLUGS_CONNECTED, SHARE_NETWORK};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, View};
-use crate::gui::views::network::{NetworkContent, NetworkTab, NetworkTabType};
+use crate::gui::views::network::{Network, NetworkTab, NetworkTabType};
 use crate::node::Node;
 
 /// Integrated node tab content.
@@ -36,7 +36,7 @@ impl NetworkTab for NetworkNode {
         let server_stats = Node::get_stats();
         // Show message to enable node when it's not running.
         if !Node::is_running() {
-            NetworkContent::disabled_node_ui(ui);
+            Network::disabled_node_ui(ui);
             return;
         }
 

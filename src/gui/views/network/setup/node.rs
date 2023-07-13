@@ -21,7 +21,7 @@ use crate::AppConfig;
 use crate::gui::Colors;
 use crate::gui::icons::{CLIPBOARD_TEXT, CLOCK_CLOCKWISE, COMPUTER_TOWER, COPY, PLUG, POWER, SHIELD, SHIELD_SLASH};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Modal, ModalPosition, NetworkContent, View};
+use crate::gui::views::{Modal, ModalPosition, Network, View};
 use crate::gui::views::network::settings::NetworkSettings;
 use crate::node::{Node, NodeConfig};
 
@@ -115,7 +115,7 @@ impl NodeSetup {
         // Autorun node setup.
         ui.vertical_centered(|ui| {
             ui.add_space(6.0);
-            NetworkContent::autorun_node_ui(ui);
+            Network::autorun_node_ui(ui);
             if Node::is_running() {
                 ui.add_space(2.0);
                 ui.label(RichText::new(t!("network_settings.restart_node_required"))

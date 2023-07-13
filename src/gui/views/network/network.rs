@@ -21,16 +21,8 @@ use crate::AppConfig;
 use crate::gui::Colors;
 use crate::gui::icons::{CARDHOLDER, DATABASE, DOTS_THREE_OUTLINE_VERTICAL, FACTORY, FADERS, GAUGE, POWER};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Modal, ModalContainer, Root, TitlePanel, View};
-use crate::gui::views::network::setup::dandelion::DandelionSetup;
-use crate::gui::views::network::setup::node::NodeSetup;
-use crate::gui::views::network::setup::p2p::P2PSetup;
-use crate::gui::views::network::setup::pool::PoolSetup;
-use crate::gui::views::network::setup::stratum::StratumSetup;
-use crate::gui::views::network::metrics::NetworkMetrics;
-use crate::gui::views::network::mining::NetworkMining;
-use crate::gui::views::network::node::NetworkNode;
-use crate::gui::views::network::settings::NetworkSettings;
+use crate::gui::views::{Modal, ModalContainer, NetworkMetrics, NetworkMining, NetworkNode, NetworkSettings, Root, TitleAction, TitleContent, TitlePanel, View};
+use crate::gui::views::network::setup::{DandelionSetup, NodeSetup, P2PSetup, PoolSetup, StratumSetup};
 use crate::node::Node;
 
 pub trait NetworkTab {
@@ -59,15 +51,15 @@ impl NetworkTabType {
     }
 }
 
-/// Network side panel content.
-pub struct NetworkContent {
+/// Network content.
+pub struct Network {
     /// Current tab view to show at ui.
     current_tab: Box<dyn NetworkTab>,
     /// [`Modal`] ids allowed at this ui container.
     modal_ids: Vec<&'static str>,
 }
 
-impl Default for NetworkContent {
+impl Default for Network {
     fn default() -> Self {
         Self {
             current_tab: Box::new(NetworkNode::default()),
@@ -110,13 +102,13 @@ impl Default for NetworkContent {
     }
 }
 
-impl ModalContainer for NetworkContent {
+impl ModalContainer for Network {
     fn modal_ids(&self) -> &Vec<&'static str> {
         self.modal_ids.as_ref()
     }
 }
 
-impl NetworkContent {
+impl Network {
     pub fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame, cb: &dyn PlatformCallbacks) {
         // Show modal content if it's opened.
         if self.can_draw_modal() {
@@ -140,7 +132,8 @@ impl NetworkContent {
 
         egui::TopBottomPanel::bottom("network_tabs")
             .frame(egui::Frame {
-                outer_margin: Margin::same(4.0),
+                fill: Colors::FILL,
+                inner_margin: Margin::same(4.0),
                 ..Default::default()
             })
             .show_inside(ui, |ui| {
@@ -201,31 +194,43 @@ impl NetworkContent {
 
     /// Draw title content.
     fn title_ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame) {
-        StripBuilder::new(ui)
-            .size(Size::exact(52.0))
-            .size(Size::remainder())
-            .size(Size::exact(52.0))
-            .horizontal(|mut strip| {
-                strip.cell(|ui| {
-                    ui.centered_and_justified(|ui| {
-                        View::title_button(ui, DOTS_THREE_OUTLINE_VERTICAL, || {
-                            //TODO: Show connections
-                        });
-                    });
-                });
-                strip.strip(|builder| {
-                    self.title_text_ui(builder);
-                });
-                strip.cell(|ui| {
-                    if !Root::is_dual_panel_mode(frame) {
-                        ui.centered_and_justified(|ui| {
-                            View::title_button(ui, CARDHOLDER, || {
-                                Root::toggle_network_panel();
-                            });
-                        });
-                    }
-                });
-            });
+        let title_content = TitleContent::Custom("network_title".to_string(), Box::new(|ui| {
+        }));
+        TitlePanel::test_ui(title_content, TitleAction::new(DOTS_THREE_OUTLINE_VERTICAL, || {
+            //TODO: Show connections
+        }), if !Root::is_dual_panel_mode(frame) {
+            TitleAction::new(CARDHOLDER, || {
+                Root::toggle_side_panel();
+            })
+        } else {
+            None
+        }, ui);
+
+        // StripBuilder::new(ui)
+        //     .size(Size::exact(52.0))
+        //     .size(Size::remainder())
+        //     .size(Size::exact(52.0))
+        //     .horizontal(|mut strip| {
+        //         strip.cell(|ui| {
+        //             ui.centered_and_justified(|ui| {
+        //                 View::title_button(ui, DOTS_THREE_OUTLINE_VERTICAL, || {
+        //                     //TODO: Show connections
+        //                 });
+        //             });
+        //         });
+        //         strip.strip(|builder| {
+        //             self.title_text_ui(builder);
+        //         });
+        //         strip.cell(|ui| {
+        //             if !Root::is_dual_panel_mode(frame) {
+        //                 ui.centered_and_justified(|ui| {
+        //                     View::title_button(ui, CARDHOLDER, || {
+        //                         Root::toggle_side_panel();
+        //                     });
+        //                 });
+        //             }
+        //         });
+        //     });
     }
 
     /// Draw title text.

@@ -17,12 +17,13 @@ extern crate rust_i18n;
 
 use std::sync::Arc;
 
+use egui::{Context, Stroke};
 #[cfg(target_os = "android")]
 use winit::platform::android::activity::AndroidApp;
 
 pub use settings::{AppConfig, Settings};
 
-use crate::gui::{App, PlatformApp};
+use crate::gui::{Colors, PlatformApp};
 use crate::gui::platform::PlatformCallbacks;
 use crate::node::Node;
 
@@ -37,6 +38,7 @@ mod settings;
 #[allow(dead_code)]
 #[cfg(target_os = "android")]
 #[no_mangle]
+/// Android platform entry point.
 fn android_main(app: AndroidApp) {
     #[cfg(debug_assertions)]
     {
@@ -54,7 +56,7 @@ fn android_main(app: AndroidApp) {
 
     use winit::platform::android::EventLoopBuilderExtAndroid;
     let mut options = eframe::NativeOptions::default();
-    // Use limits are guaranteed to be compatible with Android devices.
+    // Setup limits that are guaranteed to be compatible with Android devices.
     options.wgpu_options.device_descriptor = Arc::new(|adapter| {
         let base_limits = wgpu::Limits::downlevel_webgl2_defaults();
         wgpu::DeviceDescriptor {
@@ -73,16 +75,17 @@ fn android_main(app: AndroidApp) {
     start(options, app_creator(PlatformApp::new(platform)));
 }
 
+/// [`PlatformApp`] setup for [`eframe`].
 pub fn app_creator<T: 'static>(app: PlatformApp<T>) -> eframe::AppCreator
     where PlatformApp<T>: eframe::App, T: PlatformCallbacks {
     Box::new(|cc| {
-        App::setup_visuals(&cc.egui_ctx);
-        App::setup_fonts(&cc.egui_ctx);
-        //TODO: Setup storage
+        setup_visuals(&cc.egui_ctx);
+        setup_fonts(&cc.egui_ctx);
         Box::new(app)
     })
 }
 
+/// Entry point to start ui with [`eframe`].
 pub fn start(mut options: eframe::NativeOptions, app_creator: eframe::AppCreator) {
     options.default_theme = eframe::Theme::Light;
     options.renderer = eframe::Renderer::Wgpu;
@@ -97,13 +100,97 @@ pub fn start(mut options: eframe::NativeOptions, app_creator: eframe::AppCreator
     let _ = eframe::run_native("Grim", options, app_creator);
 }
 
+/// Setup application [`egui::Style`] and [`egui::Visuals`].
+pub fn setup_visuals(ctx: &Context) {
+    let mut style = (*ctx.style()).clone();
+    // Setup spacing for buttons.
+    style.spacing.button_padding = egui::vec2(12.0, 8.0);
+    // Make scroll-bar thinner.
+    style.spacing.scroll_bar_width = 4.0;
+    // Disable spacing between items.
+    style.spacing.item_spacing = egui::vec2(0.0, 0.0);
+    // Setup radio button/checkbox size and spacing.
+    style.spacing.icon_width = 24.0;
+    style.spacing.icon_width_inner = 14.0;
+    style.spacing.icon_spacing = 10.0;
+    // Setup style
+    ctx.set_style(style);
+
+    let mut visuals = egui::Visuals::light();
+    // Setup selection color.
+    visuals.selection.stroke = Stroke { width: 1.0, color: Colors::TEXT };
+    visuals.selection.bg_fill = Colors::GOLD;
+    // Disable stroke around panels by default
+    visuals.widgets.noninteractive.bg_stroke = Stroke::NONE;
+    // Setup visuals
+    ctx.set_visuals(visuals);
+}
+
+/// Setup application fonts.
+pub fn setup_fonts(ctx: &Context) {
+    use egui::FontFamily::Proportional;
+
+    let mut fonts = egui::FontDefinitions::default();
+
+    fonts.font_data.insert(
+        "phosphor".to_owned(),
+        egui::FontData::from_static(include_bytes!(
+            "../fonts/phosphor.ttf"
+        )).tweak(egui::FontTweak {
+            scale: 1.0,
+            y_offset_factor: -0.30,
+            y_offset: 0.0,
+            baseline_offset_factor: 0.30,
+        }),
+    );
+    fonts
+        .families
+        .entry(Proportional)
+        .or_default()
+        .insert(0, "phosphor".to_owned());
+
+    fonts.font_data.insert(
+        "noto".to_owned(),
+        egui::FontData::from_static(include_bytes!(
+            "../fonts/noto_sc_reg.otf"
+        )).tweak(egui::FontTweak {
+            scale: 1.0,
+            y_offset_factor: -0.25,
+            y_offset: 0.0,
+            baseline_offset_factor: 0.17,
+        }),
+    );
+    fonts
+        .families
+        .entry(Proportional)
+        .or_default()
+        .insert(0, "noto".to_owned());
+
+    ctx.set_fonts(fonts);
+
+    use egui::FontId;
+    use egui::TextStyle::*;
+
+    let mut style = (*ctx.style()).clone();
+    style.text_styles = [
+        (Heading, FontId::new(20.0, Proportional)),
+        (Body, FontId::new(16.0, Proportional)),
+        (Button, FontId::new(18.0, Proportional)),
+        (Small, FontId::new(12.0, Proportional)),
+        (Monospace, FontId::new(16.0, Proportional)),
+    ].into();
+
+    ctx.set_style(style);
+}
+
+/// Setup translations.
 fn setup_i18n() {
     const DEFAULT_LOCALE: &str = "en";
     let locale = sys_locale::get_locale().unwrap_or(String::from(DEFAULT_LOCALE));
     let locale_str = if locale.contains("-") {
         locale.split("-").next().unwrap_or(DEFAULT_LOCALE)
     } else {
-        DEFAULT_LOCALE
+        locale.as_str()
     };
     if _rust_i18n_available_locales().contains(&locale_str) {
         rust_i18n::set_locale(locale_str);

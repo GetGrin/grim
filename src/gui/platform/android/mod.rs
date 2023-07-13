@@ -12,11 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::sync::atomic::{AtomicI32, Ordering};
-use lazy_static::lazy_static;
 use winit::platform::android::activity::AndroidApp;
-
-use crate::gui::{App, PlatformApp};
 use crate::gui::platform::PlatformCallbacks;
 
 #[derive(Clone)]
@@ -89,95 +85,4 @@ impl PlatformCallbacks for Android {
         };
         env.call_method(activity, "onExit", "()V", &[]).unwrap();
     }
-}
-
-impl PlatformApp<Android> {
-    pub fn new(platform: Android) -> Self {
-        Self {
-            app: App::default(),
-            platform,
-        }
-    }
-}
-
-impl eframe::App for PlatformApp<Android> {
-    fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
-        padding_panels(ctx);
-        self.app.ui(ctx, frame, &self.platform);
-    }
-}
-
-fn padding_panels(ctx: &egui::Context) {
-    egui::TopBottomPanel::top("top_padding_panel")
-        .frame(egui::Frame {
-            inner_margin: egui::style::Margin::same(0.0),
-            fill: ctx.style().visuals.panel_fill,
-            ..Default::default()
-        })
-        .show_separator_line(false)
-        .resizable(false)
-        .exact_height(DISPLAY_CUTOUT_TOP.load(Ordering::Relaxed) as f32)
-        .show(ctx, |_ui| {});
-
-    egui::TopBottomPanel::bottom("bottom_padding_panel")
-        .frame(egui::Frame {
-            inner_margin: egui::style::Margin::same(0.0),
-            fill: ctx.style().visuals.panel_fill,
-            ..Default::default()
-        })
-        .show_separator_line(false)
-        .resizable(false)
-        .exact_height(DISPLAY_CUTOUT_BOTTOM.load(Ordering::Relaxed) as f32)
-        .show(ctx, |_ui| {});
-
-    egui::SidePanel::right("right_padding_panel")
-        .frame(egui::Frame {
-            inner_margin: egui::style::Margin::same(0.0),
-            fill: ctx.style().visuals.panel_fill,
-            ..Default::default()
-        })
-        .show_separator_line(false)
-        .resizable(false)
-        .max_width(DISPLAY_CUTOUT_RIGHT.load(Ordering::Relaxed) as f32)
-        .show(ctx, |_ui| {});
-
-    egui::SidePanel::left("left_padding_panel")
-        .frame(egui::Frame {
-            inner_margin: egui::style::Margin::same(0.0),
-            fill: ctx.style().visuals.panel_fill,
-            ..Default::default()
-        })
-        .show_separator_line(false)
-        .resizable(false)
-        .max_width(DISPLAY_CUTOUT_LEFT.load(Ordering::Relaxed) as f32)
-        .show(ctx, |_ui| {});
-}
-
-lazy_static! {
-    static ref DISPLAY_CUTOUT_TOP: AtomicI32 = AtomicI32::new(0);
-    static ref DISPLAY_CUTOUT_RIGHT: AtomicI32 = AtomicI32::new(0);
-    static ref DISPLAY_CUTOUT_BOTTOM: AtomicI32 = AtomicI32::new(0);
-    static ref DISPLAY_CUTOUT_LEFT: AtomicI32 = AtomicI32::new(0);
-}
-
-#[allow(non_snake_case)]
-#[no_mangle]
-/// Callback from Java code to update display cutouts.
-pub extern "C" fn Java_mw_gri_android_MainActivity_onDisplayCutoutsChanged(
-    _env: jni::JNIEnv,
-    _class: jni::objects::JObject,
-    cutouts: jni::sys::jarray
-) {
-    use jni::objects::{JObject, JPrimitiveArray};
-
-    let mut array: [i32; 4] = [0; 4];
-    unsafe {
-        let j_obj = JObject::from_raw(cutouts);
-        let j_arr = JPrimitiveArray::from(j_obj);
-        _env.get_int_array_region(j_arr, 0, array.as_mut()).unwrap();
-    }
-    DISPLAY_CUTOUT_TOP.store(array[0], Ordering::Relaxed);
-    DISPLAY_CUTOUT_RIGHT.store(array[1], Ordering::Relaxed);
-    DISPLAY_CUTOUT_BOTTOM.store(array[2], Ordering::Relaxed);
-    DISPLAY_CUTOUT_LEFT.store(array[3], Ordering::Relaxed);
 }

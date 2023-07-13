@@ -31,23 +31,3 @@ impl PlatformCallbacks for Desktop {
 
     fn exit(&self) {}
 }
-
-impl PlatformApp<Desktop> {
-    pub fn new(platform: Desktop) -> Self {
-        Self {
-            app: App::default(),
-            platform,
-        }
-    }
-}
-
-impl eframe::App for PlatformApp<Desktop> {
-    fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
-        self.app.ui(ctx, frame, &self.platform);
-    }
-
-    fn on_close_event(&mut self) -> bool {
-        App::show_exit_modal();
-        self.app.exit_allowed
-    }
-}

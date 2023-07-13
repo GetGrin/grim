@@ -17,13 +17,13 @@ use crate::gui::icons::{GLOBE, PLUS};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Root, TitleAction, TitlePanel, View};
 
-/// Accounts central panel content.
-pub struct AccountsContent {
+/// Accounts content.
+pub struct Accounts {
     /// List of accounts.
     list: Vec<String>
 }
 
-impl Default for AccountsContent {
+impl Default for Accounts {
     fn default() -> Self {
         Self {
             list: vec![],
@@ -31,11 +31,11 @@ impl Default for AccountsContent {
     }
 }
 
-impl AccountsContent {
+impl Accounts {
     pub fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame, cb: &dyn PlatformCallbacks) {
         TitlePanel::ui(t!("accounts.title"), if !Root::is_dual_panel_mode(frame) {
             TitleAction::new(GLOBE, || {
-                Root::toggle_network_panel();
+                Root::toggle_side_panel();
             })
         } else {
             None

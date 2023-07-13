@@ -12,11 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-mod content;
-mod metrics;
-mod mining;
-mod settings;
 mod node;
-mod setup;
+pub use node::NodeSetup;
 
-pub use content::*;
+mod p2p;
+pub use p2p::P2PSetup;
+
+mod pool;
+pub use pool::PoolSetup;
+
+mod dandelion;
+pub use dandelion::DandelionSetup;
+
+mod stratum;
+pub use stratum::StratumSetup;

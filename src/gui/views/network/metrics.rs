@@ -20,7 +20,7 @@ use crate::gui::Colors;
 use crate::gui::icons::{AT, COINS, CUBE_TRANSPARENT, HASH, HOURGLASS_LOW, HOURGLASS_MEDIUM, TIMER};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::network::{NetworkTab, NetworkTabType};
-use crate::gui::views::{Modal, NetworkContent, View};
+use crate::gui::views::{Modal, Network, View};
 use crate::node::Node;
 
 /// Chain metrics tab content.
@@ -40,7 +40,7 @@ impl NetworkTab for NetworkMetrics {
         let server_stats = Node::get_stats();
         // Show message to enable node when it's not running.
         if !Node::is_running() {
-            NetworkContent::disabled_node_ui(ui);
+            Network::disabled_node_ui(ui);
             return;
         }
 

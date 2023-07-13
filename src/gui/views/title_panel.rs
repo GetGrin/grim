@@ -30,20 +30,64 @@ impl TitleAction {
     }
 }
 
+/// Represents title content, can be text or callback to draw custom title.
+pub enum TitleContent {
+    Text(String),
+    /// First argument is identifier for panel.
+    Custom(String, Box<dyn Fn(&mut egui::Ui)>)
+}
+
 pub struct TitlePanel;
 
 impl TitlePanel {
     pub const DEFAULT_HEIGHT: f32 = 52.0;
+
+    pub fn test_ui(title: TitleContent, l: Option<TitleAction>, r: Option<TitleAction>, ui: &mut egui::Ui) {
+        let id = match &title {
+            TitleContent::Text(text) => Id::from(text.clone()),
+            TitleContent::Custom(text, _) => Id::from(text.clone())
+        };
+        egui::TopBottomPanel::top(id)
+            .resizable(false)
+            .exact_height(Self::DEFAULT_HEIGHT)
+            .frame(egui::Frame {
+                outer_margin: Margin::same(-1.0),
+                fill: Colors::YELLOW,
+                ..Default::default()
+            })
+            .show_inside(ui, |ui| {
+                StripBuilder::new(ui)
+                    .size(Size::exact(Self::DEFAULT_HEIGHT))
+                    .size(Size::remainder())
+                    .size(Size::exact(Self::DEFAULT_HEIGHT))
+                    .horizontal(|mut strip| {
+                        strip.cell(|ui| {
+                            Self::draw_action(ui, l);
+                        });
+                        strip.cell(|ui| {
+                            match title {
+                                TitleContent::Text(text) => {
+                                    Self::draw_title(ui, text);
+                                }
+                                TitleContent::Custom(_, cb) => {
+                                    (cb)(ui);
+                                }
+                            }
+                        });
+                        strip.cell(|ui| {
+                            Self::draw_action(ui, r);
+                        });
+                    });
+            });
+    }
 
     pub fn ui(title: String, l: Option<TitleAction>, r: Option<TitleAction>, ui: &mut egui::Ui) {
         egui::TopBottomPanel::top(Id::from(title.clone()))
             .resizable(false)
             .exact_height(Self::DEFAULT_HEIGHT)
             .frame(egui::Frame {
+                outer_margin: Margin::same(-1.0),
                 fill: Colors::YELLOW,
-                inner_margin: Margin::same(0.0),
-                outer_margin: Margin::same(0.0),
-                stroke: egui::Stroke::NONE,
                 ..Default::default()
             })
             .show_inside(ui, |ui| {

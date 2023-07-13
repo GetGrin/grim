@@ -1,15 +1,15 @@
 package mw.gri.android;
 
 import android.content.*;
-import android.content.pm.PackageManager;
-import android.hardware.SensorManager;
 import android.os.Bundle;
 import android.os.Process;
 import android.system.ErrnoException;
 import android.system.Os;
-import android.util.Log;
 import android.view.KeyEvent;
-import android.view.OrientationEventListener;
+import android.view.View;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 import com.google.androidgamesdk.GameActivity;
 
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -45,46 +45,40 @@ public class MainActivity extends GameActivity {
         }
         super.onCreate(null);
 
-        // Callback to update display cutouts at native code.
-        OrientationEventListener orientationEventListener = new OrientationEventListener(this,
-                SensorManager.SENSOR_DELAY_NORMAL) {
-            @Override
-            public void onOrientationChanged(int orientation) {
-                onDisplayCutoutsChanged(Utils.getDisplayCutouts(MainActivity.this));
-            }
-        };
-        if (orientationEventListener.canDetectOrientation()) {
-            orientationEventListener.enable();
-        }
-
         // Register receiver to finish activity from the BackgroundService.
         registerReceiver(mBroadcastReceiver, new IntentFilter(FINISH_ACTIVITY_ACTION));
 
         // Start notification service.
         BackgroundService.start(this);
+
+        // Listener for display cutouts to pass values into native code.
+        View content = getWindow().getDecorView().findViewById(android.R.id.content);
+        ViewCompat.setOnApplyWindowInsetsListener(content, (v, insets) -> {
+            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+            int[] cutouts = new int[]{0, 0, 0, 0};
+            cutouts[0] = Utils.pxToDp(systemBars.top, this);
+            cutouts[1] = Utils.pxToDp(systemBars.right, this);
+            cutouts[2] = Utils.pxToDp(systemBars.bottom, this);
+            cutouts[3] = Utils.pxToDp(systemBars.left, this);
+            onDisplayCutouts(cutouts);
+            return insets;
+        });
     }
 
     // Implemented into native code to handle display cutouts change.
-    native void onDisplayCutoutsChanged(int[] cutouts);
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        // Update display cutouts.
-        onDisplayCutoutsChanged(Utils.getDisplayCutouts(this));
-    }
+    native void onDisplayCutouts(int[] cutouts);
 
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         if (keyCode == KeyEvent.KEYCODE_BACK)   {
-            onBackButtonPress();
+            onBack();
             return true;
         }
         return super.onKeyDown(keyCode, event);
     }
 
-    // Implemented into native code to handle back button press.
-    public native void onBackButtonPress();
+    // Implemented into native code to handle key code BACK event.
+    public native void onBack();
 
     private boolean mManualExit;
     private final AtomicBoolean mActivityDestroyed = new AtomicBoolean(false);
