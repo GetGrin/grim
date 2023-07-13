@@ -15,6 +15,8 @@
 #[macro_use]
 extern crate rust_i18n;
 
+use std::sync::Arc;
+
 #[cfg(target_os = "android")]
 use winit::platform::android::activity::AndroidApp;
 
@@ -52,6 +54,18 @@ fn android_main(app: AndroidApp) {
 
     use winit::platform::android::EventLoopBuilderExtAndroid;
     let mut options = eframe::NativeOptions::default();
+    // Use limits are guaranteed to be compatible with Android devices.
+    options.wgpu_options.device_descriptor = Arc::new(|adapter| {
+        let base_limits = wgpu::Limits::downlevel_webgl2_defaults();
+        wgpu::DeviceDescriptor {
+            label: Some("egui wgpu device"),
+            features: wgpu::Features::default(),
+            limits: wgpu::Limits {
+                max_texture_dimension_2d: 8192,
+                ..base_limits
+            },
+        }
+    });
     options.event_loop_builder = Some(Box::new(move |builder| {
         builder.with_android_app(app);
     }));

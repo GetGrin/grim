@@ -35,10 +35,10 @@ openssl-sys = { version = "0.9.82", features = ["vendored"] }
 
 ## ui
 pollster = "0.3.0"
-wgpu = "0.16.0"
+wgpu = "0.16.1"
+wgpu-core = { version = "0.16.1", features = ["gles"] }
 egui = { version = "0.22.0", default-features = false }
 egui_extras = { version = "0.22.0" }
-eframe = { version = "0.22.0", features = [ "wgpu", "android-game-activity" ] }
 
 ## grin_servers
 futures = "0.3"
@@ -67,8 +67,10 @@ built = { version = "0.6.0", features = ["git2"]}
 [target.'cfg(not(target_os = "android"))'.dependencies]
 env_logger = "0.10.0"
 winit = { version = "0.28" }
+eframe = { version = "0.22.0", features = [ "wgpu" ] }
 
 [target.'cfg(target_os = "android")'.dependencies]
 android_logger = "0.13.1"
 jni = "0.21.1"
 winit = { version = "0.28", features = [ "android-game-activity" ] }
+eframe = { version = "0.22.0", features = [ "wgpu", "android-game-activity" ] }
