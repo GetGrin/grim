@@ -22,19 +22,19 @@ type=$1
 [[ ${type} == "release" ]] && release_param+=(--release)
 
 # Setup platform argument
-[[ $2 == "v7" ]] && platform_param+=(armeabi-v7a)
-[[ $2 == "v8" ]] && platform_param+=(arm64-v8a)
+[[ $2 == "v7" ]] && arch+=(armeabi-v7a)
+[[ $2 == "v8" ]] && arch+=(arm64-v8a)
 
 # Setup platform path
-[[ $2 == "v7" ]] && platform_path+=(armv7-linux-androideabi)
-[[ $2 == "v8" ]] && platform_path+=(aarch64-linux-android)
+[[ $2 == "v7" ]] && platform+=(armv7-linux-androideabi)
+[[ $2 == "v8" ]] && platform+=(aarch64-linux-android)
 
 export CPPFLAGS="-DMDB_USE_ROBUST=0" && export CFLAGS="-DMDB_USE_ROBUST=0" \
-&& cargo ndk -t ${platform_param} build ${release_param[@]}
+&& cargo ndk -t ${arch} build ${release_param[@]}
 
 if [ $? -eq 0 ]
 then
-  yes | cp -f target/${platform_path}/${type}/libgrim.so app/src/main/jniLibs/${platform_param}
+  yes | mkdir app/src/mail/jniLibs && cp -f target/${platform}/${type}/libgrim.so app/src/main/jniLibs/${arch}
   ./gradlew clean
   ./gradlew build
   # Install on several devices
