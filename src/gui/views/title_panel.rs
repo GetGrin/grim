@@ -99,11 +99,6 @@ impl TitlePanel {
         }
     }
 
-    /// Draw title text for [`TitleType::Single`] type.
-    fn single(ui: &mut egui::Ui, title: String) {
-
-    }
-
     /// Draw title text for [`TitleType::WithSubTitle`] type.
     fn with_sub_title(builder: StripBuilder, title: String, subtitle: String, animate_sub: bool) {
         builder
