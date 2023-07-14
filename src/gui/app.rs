@@ -43,7 +43,7 @@ impl<Platform: PlatformCallbacks> eframe::App for PlatformApp<Platform> {
         // Show main content.
         egui::CentralPanel::default()
             .frame(egui::Frame {
-                fill: Colors::FILL,
+                fill: Colors::YELLOW,
                 ..Default::default()
             })
             .show(ctx, |ui| {

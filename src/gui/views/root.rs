@@ -140,7 +140,7 @@ impl Root {
 
     /// Show exit confirmation modal.
     pub fn show_exit_modal() {
-        let exit_modal = Modal::new(Self::EXIT_MODAL_ID).title(t!("modal_exit.exit"));
+        let exit_modal = Modal::new(Self::EXIT_MODAL_ID).title(t!("modal.confirmation"));
         Modal::show(exit_modal);
     }
 
@@ -160,7 +160,7 @@ impl Root {
                     View::small_loading_spinner(ui);
                     ui.add_space(12.0);
                     ui.label(RichText::new(t!("sync_status.shutdown"))
-                        .size(18.0)
+                        .size(17.0)
                         .color(Colors::TEXT));
                 });
                 ui.add_space(10.0);
@@ -168,7 +168,7 @@ impl Root {
                 ui.add_space(8.0);
                 ui.vertical_centered(|ui| {
                     ui.label(RichText::new(t!("modal_exit.description"))
-                        .size(18.0)
+                        .size(17.0)
                         .color(Colors::TEXT));
                 });
                 ui.add_space(10.0);

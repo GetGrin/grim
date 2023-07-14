@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::gui::{App, PlatformApp};
+use crate::gui::PlatformApp;
 use crate::gui::platform::PlatformCallbacks;
 
 #[derive(Default)]

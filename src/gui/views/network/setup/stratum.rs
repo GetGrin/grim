@@ -186,7 +186,7 @@ impl StratumSetup {
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.stratum_port"))
-                .size(18.0)
+                .size(17.0)
                 .color(Colors::GRAY));
             ui.add_space(8.0);
 
@@ -206,7 +206,7 @@ impl StratumSetup {
             if !self.stratum_port_available_edit {
                 ui.add_space(12.0);
                 ui.label(RichText::new(t!("network_settings.port_unavailable"))
-                    .size(18.0)
+                    .size(17.0)
                     .color(Colors::RED));
             } else {
                 server_restart_required_ui(ui);
@@ -284,7 +284,7 @@ impl StratumSetup {
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.attempt_time"))
-                .size(18.0)
+                .size(17.0)
                 .color(Colors::GRAY));
             ui.add_space(8.0);
 
@@ -304,7 +304,7 @@ impl StratumSetup {
             if self.attempt_time_edit.parse::<u32>().is_err() {
                 ui.add_space(12.0);
                 ui.label(RichText::new(t!("network_settings.not_valid_value"))
-                    .size(18.0)
+                    .size(17.0)
                     .color(Colors::RED));
             } else {
                 server_restart_required_ui(ui);
@@ -370,7 +370,7 @@ impl StratumSetup {
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.min_share_diff"))
-                .size(18.0)
+                .size(17.0)
                 .color(Colors::GRAY));
             ui.add_space(8.0);
 
@@ -390,7 +390,7 @@ impl StratumSetup {
             if self.min_share_diff_edit.parse::<u64>().is_err() {
                 ui.add_space(12.0);
                 ui.label(RichText::new(t!("network_settings.not_valid_value"))
-                    .size(18.0)
+                    .size(17.0)
                     .color(Colors::RED));
             } else {
                 server_restart_required_ui(ui);

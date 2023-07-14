@@ -187,7 +187,7 @@ fn block_item_ui(ui: &mut egui::Ui, db: &DiffBlock, rounding: [bool; 2]) {
                 // Draw block hash.
                 ui.heading(RichText::new(format!("{} {}", HASH, db.block_hash))
                     .color(Colors::BLACK)
-                    .size(18.0));
+                    .size(17.0));
             });
             ui.horizontal(|ui| {
                 ui.add_space(6.0);

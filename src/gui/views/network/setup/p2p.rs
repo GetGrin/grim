@@ -235,7 +235,7 @@ impl P2PSetup {
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.p2p_port"))
-                .size(18.0)
+                .size(17.0)
                 .color(Colors::GRAY));
             ui.add_space(8.0);
 
@@ -255,7 +255,7 @@ impl P2PSetup {
             if !self.port_available_edit {
                 ui.add_space(12.0);
                 ui.label(RichText::new(t!("network_settings.port_unavailable"))
-                    .size(18.0)
+                    .size(17.0)
                     .color(Colors::RED));
             }
 
@@ -389,7 +389,7 @@ impl P2PSetup {
                 Self::CUSTOM_SEED_MODAL => t!("network_settings.add_seed"),
                 &_ => t!("network_settings.add_peer")
             };
-            ui.label(RichText::new(label_text).size(18.0).color(Colors::GRAY));
+            ui.label(RichText::new(label_text).size(17.0).color(Colors::GRAY));
             ui.add_space(8.0);
 
             // Draw peer address text edit.
@@ -577,7 +577,7 @@ impl P2PSetup {
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.ban_window"))
-                .size(18.0)
+                .size(17.0)
                 .color(Colors::GRAY));
             ui.add_space(8.0);
 
@@ -597,7 +597,7 @@ impl P2PSetup {
             if self.ban_window_edit.parse::<i64>().is_err() {
                 ui.add_space(12.0);
                 ui.label(RichText::new(t!("network_settings.not_valid_value"))
-                    .size(18.0)
+                    .size(17.0)
                     .color(Colors::RED));
             } else {
                 NetworkSettings::node_restart_required_ui(ui);
@@ -663,7 +663,7 @@ impl P2PSetup {
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.max_inbound_count"))
-                .size(18.0)
+                .size(17.0)
                 .color(Colors::GRAY));
             ui.add_space(8.0);
 
@@ -683,7 +683,7 @@ impl P2PSetup {
             if self.max_inbound_count.parse::<u32>().is_err() {
                 ui.add_space(12.0);
                 ui.label(RichText::new(t!("network_settings.not_valid_value"))
-                    .size(18.0)
+                    .size(17.0)
                     .color(Colors::RED));
             } else {
                 NetworkSettings::node_restart_required_ui(ui);
@@ -749,7 +749,7 @@ impl P2PSetup {
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.max_outbound_count"))
-                .size(18.0)
+                .size(17.0)
                 .color(Colors::GRAY));
             ui.add_space(8.0);
 
@@ -769,7 +769,7 @@ impl P2PSetup {
             if self.max_outbound_count.parse::<u32>().is_err() {
                 ui.add_space(12.0);
                 ui.label(RichText::new(t!("network_settings.not_valid_value"))
-                    .size(18.0)
+                    .size(17.0)
                     .color(Colors::RED));
             } else {
                 NetworkSettings::node_restart_required_ui(ui);
@@ -840,7 +840,7 @@ impl P2PSetup {
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.min_outbound_count"))
-                .size(18.0)
+                .size(17.0)
                 .color(Colors::GRAY));
             ui.add_space(8.0);
 
@@ -860,7 +860,7 @@ impl P2PSetup {
             if self.min_outbound_count.parse::<u32>().is_err() {
                 ui.add_space(12.0);
                 ui.label(RichText::new(t!("network_settings.not_valid_value"))
-                    .size(18.0)
+                    .size(17.0)
                     .color(Colors::RED));
             } else {
                 NetworkSettings::node_restart_required_ui(ui);

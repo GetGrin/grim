@@ -127,7 +127,7 @@ impl DandelionSetup {
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.epoch_duration"))
-                .size(18.0)
+                .size(17.0)
                 .color(Colors::GRAY));
             ui.add_space(8.0);
 
@@ -147,7 +147,7 @@ impl DandelionSetup {
             if self.epoch_edit.parse::<u16>().is_err() {
                 ui.add_space(12.0);
                 ui.label(RichText::new(t!("network_settings.not_valid_value"))
-                    .size(18.0)
+                    .size(17.0)
                     .color(Colors::RED));
             } else {
                 NetworkSettings::node_restart_required_ui(ui);
@@ -212,7 +212,7 @@ impl DandelionSetup {
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.embargo_timer"))
-                .size(18.0)
+                .size(17.0)
                 .color(Colors::GRAY));
             ui.add_space(8.0);
 
@@ -232,7 +232,7 @@ impl DandelionSetup {
             if self.embargo_edit.parse::<u16>().is_err() {
                 ui.add_space(12.0);
                 ui.label(RichText::new(t!("network_settings.not_valid_value"))
-                    .size(18.0)
+                    .size(17.0)
                     .color(Colors::RED));
             } else {
                 NetworkSettings::node_restart_required_ui(ui);
@@ -297,7 +297,7 @@ impl DandelionSetup {
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.aggregation_period"))
-                .size(18.0)
+                .size(17.0)
                 .color(Colors::GRAY));
             ui.add_space(8.0);
 
@@ -317,7 +317,7 @@ impl DandelionSetup {
             if self.aggregation_edit.parse::<u16>().is_err() {
                 ui.add_space(12.0);
                 ui.label(RichText::new(t!("network_settings.not_valid_value"))
-                    .size(18.0)
+                    .size(17.0)
                     .color(Colors::RED));
             } else {
                 NetworkSettings::node_restart_required_ui(ui);
@@ -382,7 +382,7 @@ impl DandelionSetup {
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.stem_probability"))
-                .size(18.0)
+                .size(17.0)
                 .color(Colors::GRAY));
             ui.add_space(8.0);
 
@@ -402,7 +402,7 @@ impl DandelionSetup {
             if self.stem_prob_edit.parse::<u8>().is_err() {
                 ui.add_space(12.0);
                 ui.label(RichText::new(t!("network_settings.not_valid_value"))
-                    .size(18.0)
+                    .size(17.0)
                     .color(Colors::RED));
             } else {
                 NetworkSettings::node_restart_required_ui(ui);

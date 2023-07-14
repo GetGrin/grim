@@ -21,7 +21,7 @@ use crate::AppConfig;
 use crate::gui::Colors;
 use crate::gui::icons::{CARDHOLDER, DATABASE, DOTS_THREE_OUTLINE_VERTICAL, FACTORY, FADERS, GAUGE, POWER};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Modal, ModalContainer, NetworkMetrics, NetworkMining, NetworkNode, NetworkSettings, Root, TitleAction, TitleContent, TitlePanel, View};
+use crate::gui::views::{Modal, ModalContainer, NetworkMetrics, NetworkMining, NetworkNode, NetworkSettings, Root, TitleAction, TitleType, TitlePanel, View};
 use crate::gui::views::network::setup::{DandelionSetup, NodeSetup, P2PSetup, PoolSetup, StratumSetup};
 use crate::node::Node;
 
@@ -155,6 +155,11 @@ impl Network {
             .show_inside(ui, |ui| {
                 self.current_tab.ui(ui, cb);
             });
+
+        // Redraw content after delay if node is not syncing to update stats.
+        if Node::not_syncing() {
+            ui.ctx().request_repaint_after(Node::STATS_UPDATE_DELAY);
+        }
     }
 
     /// Draw tab buttons in the bottom of the screen.
@@ -194,9 +199,13 @@ impl Network {
 
     /// Draw title content.
     fn title_ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame) {
-        let title_content = TitleContent::Custom("network_title".to_string(), Box::new(|ui| {
-        }));
-        TitlePanel::test_ui(title_content, TitleAction::new(DOTS_THREE_OUTLINE_VERTICAL, || {
+        // Setup values for title panel.
+        let title_text = self.current_tab.get_type().title().to_uppercase();
+        let subtitle_text = Node::get_sync_status_text();
+        let not_syncing = Node::not_syncing();
+        let title_content = TitleType::WithSubTitle(title_text, subtitle_text, !not_syncing);
+        // Draw title panel.
+        TitlePanel::ui(title_content, TitleAction::new(DOTS_THREE_OUTLINE_VERTICAL, || {
             //TODO: Show connections
         }), if !Root::is_dual_panel_mode(frame) {
             TitleAction::new(CARDHOLDER, || {
@@ -205,78 +214,6 @@ impl Network {
         } else {
             None
         }, ui);
-
-        // StripBuilder::new(ui)
-        //     .size(Size::exact(52.0))
-        //     .size(Size::remainder())
-        //     .size(Size::exact(52.0))
-        //     .horizontal(|mut strip| {
-        //         strip.cell(|ui| {
-        //             ui.centered_and_justified(|ui| {
-        //                 View::title_button(ui, DOTS_THREE_OUTLINE_VERTICAL, || {
-        //                     //TODO: Show connections
-        //                 });
-        //             });
-        //         });
-        //         strip.strip(|builder| {
-        //             self.title_text_ui(builder);
-        //         });
-        //         strip.cell(|ui| {
-        //             if !Root::is_dual_panel_mode(frame) {
-        //                 ui.centered_and_justified(|ui| {
-        //                     View::title_button(ui, CARDHOLDER, || {
-        //                         Root::toggle_side_panel();
-        //                     });
-        //                 });
-        //             }
-        //         });
-        //     });
-    }
-
-    /// Draw title text.
-    fn title_text_ui(&self, builder: StripBuilder) {
-        builder
-            .size(Size::remainder())
-            .size(Size::exact(28.0))
-            .vertical(|mut strip| {
-                strip.cell(|ui| {
-                    ui.add_space(4.0);
-                    ui.vertical_centered(|ui| {
-                        ui.label(RichText::new(self.current_tab.get_type().title().to_uppercase())
-                            .size(19.0)
-                            .color(Colors::TITLE));
-                    });
-                });
-                strip.cell(|ui| {
-                    ui.centered_and_justified(|ui| {
-                        let sync_status = Node::get_sync_status();
-
-                        // Setup text color animation based on sync status
-                        let idle = match sync_status {
-                            None => !Node::is_starting(),
-                            Some(ss) => ss == SyncStatus::NoSync
-                        };
-                        let (dark, bright) = (0.3, 1.0);
-                        let color_factor = if !idle {
-                            lerp(dark..=bright, ui.input(|i| i.time).cos().abs()) as f32
-                        } else {
-                            bright as f32
-                        };
-
-                        // Draw sync status text.
-                        let status_color_rgba = Rgba::from(Colors::TEXT) * color_factor;
-                        let status_color = Color32::from(status_color_rgba);
-                        View::ellipsize_text(ui, Node::get_sync_status_text(), 15.0, status_color);
-
-                        // Repaint delay based on sync status.
-                        if idle {
-                            ui.ctx().request_repaint_after(Node::STATS_UPDATE_DELAY);
-                        } else {
-                            ui.ctx().request_repaint();
-                        }
-                    });
-                });
-            });
     }
 
     /// Content to draw when node is disabled.

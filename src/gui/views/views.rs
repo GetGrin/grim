@@ -76,7 +76,7 @@ impl View {
             // Disable stroke color on hover.
             ui.style_mut().visuals.widgets.hovered.bg_stroke = Self::DEFAULT_STROKE;
             // Setup text.
-            let wt = RichText::new(icon.to_string()).size(24.0).color(Colors::TITLE);
+            let wt = RichText::new(icon.to_string()).size(22.0).color(Colors::TITLE);
             // Draw button.
             let br = Button::new(wt)
                 .fill(Colors::TRANSPARENT)
@@ -101,7 +101,7 @@ impl View {
             true => Colors::FILL,
             false => Colors::WHITE
         };
-        let br = Button::new(RichText::new(icon.to_string()).size(24.0).color(text_color))
+        let br = Button::new(RichText::new(icon.to_string()).size(22.0).color(text_color))
             .stroke(stroke)
             .fill(color)
             .ui(ui);
@@ -112,7 +112,7 @@ impl View {
 
     /// Draw [`Button`] with specified background fill color.
     pub fn button(ui: &mut egui::Ui, text: String, fill_color: Color32, action: impl FnOnce()) {
-        let button_text = Self::ellipsize(text.to_uppercase(), 18.0, Colors::TEXT_BUTTON);
+        let button_text = Self::ellipsize(text.to_uppercase(), 17.0, Colors::TEXT_BUTTON);
         let br = Button::new(button_text)
             .stroke(Self::DEFAULT_STROKE)
             .fill(fill_color)
@@ -154,7 +154,7 @@ impl View {
 
                     // Draw box value.
                     let mut job = LayoutJob::single_section(value, TextFormat {
-                        font_id: FontId::proportional(18.0),
+                        font_id: FontId::proportional(17.0),
                         color: Colors::BLACK,
                         ..Default::default()
                     });
@@ -209,7 +209,7 @@ impl View {
             false => (format!("{} {}", SQUARE, text), Colors::CHECKBOX)
         };
 
-        let br = Button::new(RichText::new(text_value).size(18.0).color(color))
+        let br = Button::new(RichText::new(text_value).size(17.0).color(color))
             .frame(false)
             .stroke(Stroke::NONE)
             .fill(Colors::TRANSPARENT)

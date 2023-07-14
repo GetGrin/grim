@@ -158,7 +158,7 @@ impl NetworkSettings {
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.reset_settings_desc"))
-                .size(18.0)
+                .size(17.0)
                 .color(Colors::TEXT));
             ui.add_space(8.0);
         });
@@ -212,7 +212,7 @@ impl NetworkSettings {
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.restart_node_required"))
-                .size(18.0)
+                .size(17.0)
                 .color(Colors::GRAY));
             ui.add_space(8.0);
         });

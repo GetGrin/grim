@@ -245,7 +245,7 @@ impl NodeSetup {
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.api_port"))
-                .size(18.0)
+                .size(17.0)
                 .color(Colors::GRAY));
             ui.add_space(6.0);
 
@@ -353,7 +353,7 @@ impl NodeSetup {
                 _ => t!("network_settings.foreign_api_secret")
             };
             ui.label(RichText::new(description)
-                .size(18.0)
+                .size(17.0)
                 .color(Colors::GRAY));
             ui.add_space(6.0);
 
@@ -376,19 +376,17 @@ impl NodeSetup {
                     ui.spacing_mut().item_spacing = egui::Vec2::new(12.0, 0.0);
 
                     let mut buttons_rect = ui.available_rect_before_wrap();
-                    buttons_rect.set_height(46.0);
+                    buttons_rect.set_height(42.0);
                     ui.allocate_ui_at_rect(buttons_rect, |ui| {
 
                         ui.columns(2, |columns| {
                             columns[0].with_layout(Layout::right_to_left(Align::Center), |ui| {
-                                let copy_title = format!("{} {}", COPY, t!("copy"));
-                                View::button(ui, copy_title, Colors::WHITE, || {
+                                View::button(ui, COPY.to_string(), Colors::WHITE, || {
                                     cb.copy_string_to_buffer(self.secret_edit.clone());
                                 });
                             });
                             columns[1].with_layout(Layout::left_to_right(Align::Center), |ui| {
-                                let paste_title = format!("{} {}", CLIPBOARD_TEXT, t!("paste"));
-                                View::button(ui, paste_title, Colors::WHITE, || {
+                                View::button(ui, CLIPBOARD_TEXT.to_string(), Colors::WHITE, || {
                                     self.secret_edit = cb.get_string_from_buffer();
                                 });
                             });
@@ -469,7 +467,7 @@ impl NodeSetup {
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.ftl"))
-                .size(18.0)
+                .size(17.0)
                 .color(Colors::GRAY));
             ui.add_space(8.0);
 
@@ -489,7 +487,7 @@ impl NodeSetup {
             if self.ftl_edit.parse::<u64>().is_err() {
                 ui.add_space(12.0);
                 ui.label(RichText::new(t!("network_settings.not_valid_value"))
-                    .size(18.0)
+                    .size(17.0)
                     .color(Colors::RED));
             } else {
                 NetworkSettings::node_restart_required_ui(ui);

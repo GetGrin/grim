@@ -29,31 +29,31 @@ use crate::node::NodeConfig;
 use crate::node::stratum::{StratumStopState, StratumServer};
 
 lazy_static! {
-    /// Static thread-aware state of [`Node`] to be updated from another thread.
+    /// Static thread-aware state of [`Node`] to be updated from separate thread.
     static ref NODE_STATE: Arc<Node> = Arc::new(Node::default());
 }
 
 /// Provides [`Server`] control, holds current status and statistics.
 pub struct Node {
-    /// The node [`Server`] statistics for UI.
+    /// Node [`Server`] statistics for UI.
     stats: Arc<RwLock<Option<ServerStats>>>,
-    /// Stratum server statistics.
+    /// [`StratumServer`] statistics.
     stratum_stats: Arc<grin_util::RwLock<StratumStats>>,
-    /// Stratum server statistics.
+    /// State to stop [`StratumServer`] from outside.
     stratum_stop_state: Arc<StratumStopState>,
-    /// Running API server address.
+    /// Running API [`Server`] address.
     api_addr: Arc<RwLock<Option<String>>>,
-    /// Running P2P server port.
+    /// Running P2P [`grin_p2p::Server`] port.
     p2p_port: Arc<RwLock<Option<u16>>>,
-    /// Indicator if server is starting.
+    /// Indicator if node [`Server`] is starting.
     starting: AtomicBool,
-    /// Thread flag to stop the server and start it again.
+    /// Thread flag to stop the [`Server`] and start it again.
     restart_needed: AtomicBool,
-    /// Thread flag to stop the server.
+    /// Thread flag to stop the [`Server`].
     stop_needed: AtomicBool,
-    /// Flag to check if app exit is needed after server stop.
+    /// Flag to check if app exit is needed after [`Server`] stop.
     exit_after_stop: AtomicBool,
-    /// Thread flag to start stratum server.
+    /// Thread flag to start [`StratumServer`].
     start_stratum_needed: AtomicBool,
     /// Error on [`Server`] start.
     init_error: Option<Error>
@@ -78,7 +78,7 @@ impl Default for Node {
 }
 
 impl Node {
-    /// Delay for server thread to update the stats.
+    /// Delay for thread to update the stats.
     pub const STATS_UPDATE_DELAY: Duration = Duration::from_millis(250);
 
     /// Stop the [`Server`] and setup exit flag after if needed.
@@ -87,14 +87,14 @@ impl Node {
         NODE_STATE.exit_after_stop.store(exit_after_stop, Ordering::Relaxed);
     }
 
-    /// Start the node.
+    /// Request to start the [`Node`].
     pub fn start() {
         if !Self::is_running() {
             Self::start_server_thread();
         }
     }
 
-    /// Restart the node.
+    /// Request to restart the [`Node`].
     pub fn restart() {
         if Self::is_running() {
             NODE_STATE.restart_needed.store(true, Ordering::Relaxed);
@@ -103,7 +103,7 @@ impl Node {
         }
     }
 
-    /// Get API server address if node is running.
+    /// Get API [`Server`] address if [`Node`] is running.
     pub fn get_api_addr() -> Option<String> {
         let r_api_addr = NODE_STATE.api_addr.read().unwrap();
         if r_api_addr.is_some() {
@@ -113,7 +113,7 @@ impl Node {
         }
     }
 
-    /// Get P2P server port if node is running.
+    /// Get P2P [`grin_p2p::Server`] port if node is running.
     pub fn get_p2p_port() -> Option<u16> {
         let r_p2p_port = NODE_STATE.p2p_port.read().unwrap();
         if r_p2p_port.is_some() {
@@ -123,47 +123,47 @@ impl Node {
         }
     }
 
-    /// Request to start stratum server.
+    /// Request to start [`StratumServer`].
     pub fn start_stratum() {
         NODE_STATE.start_stratum_needed.store(true, Ordering::Relaxed);
     }
 
-    /// Check if stratum server is starting.
+    /// Check if [`StratumServer`] is starting.
     pub fn is_stratum_starting() -> bool {
         NODE_STATE.start_stratum_needed.load(Ordering::Relaxed)
     }
 
-    /// Get stratum server statistics.
+    /// Get [`StratumServer`] statistics.
     pub fn get_stratum_stats() -> grin_util::RwLockReadGuard<'static, StratumStats> {
         NODE_STATE.stratum_stats.read()
     }
 
-    /// Stop stratum server.
+    /// Stop [`StratumServer`].
     pub fn stop_stratum() {
         NODE_STATE.stratum_stop_state.stop()
     }
 
-    /// Check if stratum server is stopping.
+    /// Check if [`StratumServer`] is stopping.
     pub fn is_stratum_stopping() -> bool {
         NODE_STATE.stratum_stop_state.is_stopped()
     }
 
-    /// Check if node is starting.
+    /// Check if [`Node`] is starting.
     pub fn is_starting() -> bool {
         NODE_STATE.starting.load(Ordering::Relaxed)
     }
 
-    /// Check if node is running.
+    /// Check if [`Node`] is running.
     pub fn is_running() -> bool {
         Self::get_sync_status().is_some()
     }
 
-    /// Check if node is stopping.
+    /// Check if [`Node`] is stopping.
     pub fn is_stopping() -> bool {
         NODE_STATE.stop_needed.load(Ordering::Relaxed)
     }
 
-    /// Check if node is restarting.
+    /// Check if [`Node`] is restarting.
     pub fn is_restarting() -> bool {
         NODE_STATE.restart_needed.load(Ordering::Relaxed)
     }
@@ -171,6 +171,14 @@ impl Node {
     /// Get node [`Server`] statistics.
     pub fn get_stats() -> RwLockReadGuard<'static, Option<ServerStats>> {
         NODE_STATE.stats.read().unwrap()
+    }
+
+    /// Check if [`Server`] is not syncing (disabled or just running after synchronization).
+    pub fn not_syncing() -> bool {
+        return match Node::get_sync_status() {
+            None => true,
+            Some(ss) => ss == SyncStatus::NoSync
+        };
     }
 
     /// Get synchronization status, empty when [`Server`] is not running.

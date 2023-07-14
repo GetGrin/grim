@@ -129,7 +129,7 @@ impl PoolSetup {
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.pool_fee"))
-                .size(18.0)
+                .size(17.0)
                 .color(Colors::GRAY));
             ui.add_space(8.0);
 
@@ -149,7 +149,7 @@ impl PoolSetup {
             if self.fee_base_edit.parse::<u64>().is_err() {
                 ui.add_space(12.0);
                 ui.label(RichText::new(t!("network_settings.not_valid_value"))
-                    .size(18.0)
+                    .size(17.0)
                     .color(Colors::RED));
             } else {
                 NetworkSettings::node_restart_required_ui(ui);
@@ -214,7 +214,7 @@ impl PoolSetup {
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.reorg_period"))
-                .size(18.0)
+                .size(17.0)
                 .color(Colors::GRAY));
             ui.add_space(8.0);
 
@@ -233,8 +233,8 @@ impl PoolSetup {
             // Show error when specified value is not valid or reminder to restart enabled node.
             if self.reorg_period_edit.parse::<u32>().is_err() {
                 ui.add_space(12.0);
-                ui.label(RichText::new(t!("network_settings.reorg_period"))
-                    .size(18.0)
+                ui.label(RichText::new(t!("network_settings.not_valid_value"))
+                    .size(17.0)
                     .color(Colors::RED));
             } else {
                 NetworkSettings::node_restart_required_ui(ui);
@@ -299,7 +299,7 @@ impl PoolSetup {
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.max_tx_pool"))
-                .size(18.0)
+                .size(17.0)
                 .color(Colors::GRAY));
             ui.add_space(8.0);
 
@@ -319,7 +319,7 @@ impl PoolSetup {
             if self.pool_size_edit.parse::<usize>().is_err() {
                 ui.add_space(12.0);
                 ui.label(RichText::new(t!("network_settings.not_valid_value"))
-                    .size(18.0)
+                    .size(17.0)
                     .color(Colors::RED));
             } else {
                 NetworkSettings::node_restart_required_ui(ui);
@@ -384,7 +384,7 @@ impl PoolSetup {
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.max_tx_stempool"))
-                .size(18.0)
+                .size(17.0)
                 .color(Colors::GRAY));
             ui.add_space(8.0);
 
@@ -404,7 +404,7 @@ impl PoolSetup {
             if self.stempool_size_edit.parse::<usize>().is_err() {
                 ui.add_space(12.0);
                 ui.label(RichText::new(t!("network_settings.not_valid_value"))
-                    .size(18.0)
+                    .size(17.0)
                     .color(Colors::RED));
             } else {
                 NetworkSettings::node_restart_required_ui(ui);
@@ -469,7 +469,7 @@ impl PoolSetup {
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.max_tx_weight"))
-                .size(18.0)
+                .size(17.0)
                 .color(Colors::GRAY));
             ui.add_space(8.0);
 
@@ -489,7 +489,7 @@ impl PoolSetup {
             if self.max_weight_edit.parse::<u64>().is_err() {
                 ui.add_space(12.0);
                 ui.label(RichText::new(t!("network_settings.not_valid_value"))
-                    .size(18.0)
+                    .size(17.0)
                     .color(Colors::RED));
             } else {
                 NetworkSettings::node_restart_required_ui(ui);

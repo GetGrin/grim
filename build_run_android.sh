@@ -37,8 +37,11 @@ then
   yes | cp -f target/${platform_path}/${type}/libgrim.so app/src/main/jniLibs/${platform_param}
   ./gradlew clean
   ./gradlew build
-  #./gradlew installDebug
-  adb install app/build/outputs/apk/debug/app-debug.apk
-  sleep 1s
-  adb shell am start -n mw.gri.android/.MainActivity
+  # Install on several devices
+  for SERIAL in $(adb devices | grep -v List | cut -f 1);
+    do
+      adb -s $SERIAL install app/build/outputs/apk/debug/app-debug.apk
+      sleep 1s
+      adb -s $SERIAL shell am start -n mw.gri.android/.MainActivity;
+  done
 fi

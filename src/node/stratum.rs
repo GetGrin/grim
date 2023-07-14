@@ -205,7 +205,7 @@ impl State {
     }
 }
 
-/// Stratum server stop state shared between to stop stratum from node thread.
+/// Stratum server stop state to stop it from node thread.
 pub struct StratumStopState {
     stopping: AtomicBool,
 }

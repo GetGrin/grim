@@ -15,7 +15,7 @@
 use crate::gui::Colors;
 use crate::gui::icons::{GLOBE, PLUS};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Root, TitleAction, TitlePanel, View};
+use crate::gui::views::{Root, TitleAction, TitleType, TitlePanel, View};
 
 /// Accounts content.
 pub struct Accounts {
@@ -33,7 +33,8 @@ impl Default for Accounts {
 
 impl Accounts {
     pub fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame, cb: &dyn PlatformCallbacks) {
-        TitlePanel::ui(t!("accounts.title"), if !Root::is_dual_panel_mode(frame) {
+        let title_content = TitleType::Single(t!("accounts.title").to_uppercase());
+        TitlePanel::ui(title_content, if !Root::is_dual_panel_mode(frame) {
             TitleAction::new(GLOBE, || {
                 Root::toggle_side_panel();
             })

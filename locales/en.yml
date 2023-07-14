@@ -9,8 +9,6 @@ network:
   mining: Mining
   settings: Node settings
   enable_node: Enable node
-  disable: Disable
-  restart: Restart
   autorun: Autorun
   disabled_server: 'Enable integrated node or add another connection method by pressing %{dots} in the top-left corner of the screen.'
   no_ips: There are no available IP addresses on your system, server cannot be started, check your network connectivity.

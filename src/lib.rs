@@ -173,10 +173,10 @@ pub fn setup_fonts(ctx: &Context) {
 
     let mut style = (*ctx.style()).clone();
     style.text_styles = [
-        (Heading, FontId::new(20.0, Proportional)),
+        (Heading, FontId::new(19.0, Proportional)),
         (Body, FontId::new(16.0, Proportional)),
-        (Button, FontId::new(18.0, Proportional)),
-        (Small, FontId::new(12.0, Proportional)),
+        (Button, FontId::new(17.0, Proportional)),
+        (Small, FontId::new(15.0, Proportional)),
         (Monospace, FontId::new(16.0, Proportional)),
     ].into();
 

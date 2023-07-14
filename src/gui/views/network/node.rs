@@ -210,7 +210,7 @@ fn peer_item_ui(ui: &mut egui::Ui, peer: &PeerStats, rounding: [bool; 2]) {
         ui.horizontal(|ui| {
             ui.add_space(5.0);
             let addr_text = format!("{} {}", PLUGS_CONNECTED, &peer.addr);
-            ui.label(RichText::new(addr_text).color(Colors::BLACK).size(18.0));
+            ui.label(RichText::new(addr_text).color(Colors::BLACK).size(17.0));
         });
         // Draw peer difficulty and height
         ui.horizontal(|ui| {

@@ -246,7 +246,7 @@ fn worker_item_ui(ui: &mut egui::Ui, ws: &WorkerStats, rounding: [bool; 2]) {
                 let status_line_text = format!("{} {} {}", status_icon, ws.id, status_text);
                 ui.heading(RichText::new(status_line_text)
                     .color(status_color)
-                    .size(18.0));
+                    .size(17.0));
                 ui.add_space(2.0);
             });
             ui.horizontal(|ui| {

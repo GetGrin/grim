@@ -291,7 +291,7 @@ impl Modal {
             ui.vertical_centered_justified(|ui| {
                 ui.add_space(8.0);
                 ui.label(RichText::new(self.title.as_ref().unwrap())
-                    .size(20.0)
+                    .size(19.0)
                     .color(Colors::TITLE)
                 );
                 ui.add_space(8.0);
