@@ -117,18 +117,7 @@ impl Network {
             });
         }
 
-        egui::TopBottomPanel::top("network_title")
-            .exact_height(TitlePanel::DEFAULT_HEIGHT)
-            .resizable(false)
-            .frame(egui::Frame {
-                fill: Colors::YELLOW,
-                inner_margin: Margin::same(0.0),
-                outer_margin: Margin::same(0.0),
-                ..Default::default()
-            })
-            .show_inside(ui, |ui| {
-                self.title_ui(ui, frame);
-            });
+        self.title_ui(ui, frame);
 
         egui::TopBottomPanel::bottom("network_tabs")
             .frame(egui::Frame {

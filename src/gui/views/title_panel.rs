@@ -41,7 +41,7 @@ pub enum TitleType {
 pub struct TitlePanel;
 
 impl TitlePanel {
-    pub const DEFAULT_HEIGHT: f32 = 52.0;
+    pub const DEFAULT_HEIGHT: f32 = 54.0;
 
     pub fn ui(title: TitleType, l: Option<TitleAction>, r: Option<TitleAction>, ui: &mut egui::Ui) {
         let id = match &title {
@@ -104,6 +104,7 @@ impl TitlePanel {
         builder
             .size(Size::remainder())
             .size(Size::exact(30.0))
+            .size(Size::exact(2.0))
             .vertical(|mut strip| {
                 strip.cell(|ui| {
                     ui.add_space(4.0);
@@ -131,8 +132,8 @@ impl TitlePanel {
                             ui.ctx().request_repaint();
                         }
                     });
-                    ui.add_space(2.0);
                 });
+                strip.empty();
             });
     }
 }
