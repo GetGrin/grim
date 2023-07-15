@@ -18,7 +18,7 @@ use grin_core::global::ChainTypes;
 
 use crate::AppConfig;
 use crate::gui::Colors;
-use crate::gui::icons::{HANDSHAKE, PLUG, TRASH, GLOBE_SIMPLE, PLUS_CIRCLE, ARROW_FAT_LINES_UP, ARROW_FAT_LINES_DOWN, ARROW_FAT_LINE_UP, PROHIBIT_INSET};
+use crate::gui::icons::{HANDSHAKE, PLUG, TRASH, GLOBE_SIMPLE, PLUS_CIRCLE, ARROW_FAT_LINES_UP, ARROW_FAT_LINES_DOWN, ARROW_FAT_LINE_UP, PROHIBIT_INSET, CLIPBOARD_TEXT};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, ModalPosition, View};
 use crate::gui::views::network::settings::NetworkSettings;
@@ -46,9 +46,9 @@ pub struct P2PSetup {
 
     /// Flag to check if entered peer address is correct and/or available.
     is_correct_address_edit: bool,
-
     /// Peer edit value for modal.
     peer_edit: String,
+
     /// Default main network seeds.
     default_main_seeds: Vec<String>,
     /// Default test network seeds.
@@ -391,28 +391,50 @@ impl P2PSetup {
             };
             ui.label(RichText::new(label_text).size(17.0).color(Colors::GRAY));
             ui.add_space(8.0);
-
-            // Draw peer address text edit.
-            let text_edit_resp = egui::TextEdit::singleline(&mut self.peer_edit)
-                .id(Id::from(modal.id))
-                .font(TextStyle::Heading)
-                .desired_width(ui.available_width())
-                .cursor_at_end(true)
-                .ui(ui);
-            text_edit_resp.request_focus();
-            if text_edit_resp.clicked() {
-                cb.show_keyboard();
-            }
+            StripBuilder::new(ui)
+                .size(Size::exact(42.0))
+                .vertical(|mut strip| {
+                    strip.strip(|builder| {
+                        builder
+                            .size(Size::remainder())
+                            .size(Size::exact(48.0))
+                            .horizontal(|mut strip| {
+                                strip.cell(|ui| {
+                                    ui.add_space(2.0);
+                                    // Draw peer address text edit.
+                                    let text_edit = egui::TextEdit::singleline(&mut self.peer_edit)
+                                        .id(Id::from(modal.id))
+                                        .font(TextStyle::Button)
+                                        .desired_width(ui.available_width())
+                                        .cursor_at_end(true)
+                                        .ui(ui);
+                                    text_edit.request_focus();
+                                    if text_edit.clicked() {
+                                        cb.show_keyboard();
+                                    }
+                                });
+                                strip.cell(|ui| {
+                                    ui.vertical_centered(|ui| {
+                                        // Draw paste button.
+                                        let paste_icon = CLIPBOARD_TEXT.to_string();
+                                        View::button(ui, paste_icon, Colors::WHITE, || {
+                                            self.peer_edit = cb.get_string_from_buffer();
+                                        });
+                                    });
+                                });
+                            });
+                    })
+                });
 
             // Show error when specified address is incorrect.
             if !self.is_correct_address_edit {
-                ui.add_space(12.0);
                 ui.label(RichText::new(t!("network_settings.peer_address_error"))
                     .size(16.0)
                     .color(Colors::RED));
+                ui.add_space(6.0);
             }
 
-            ui.add_space(12.0);
+            ui.add_space(4.0);
 
             // Show modal buttons.
             ui.scope(|ui| {

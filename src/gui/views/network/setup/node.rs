@@ -353,11 +353,8 @@ impl NodeSetup {
                 Self::API_SECRET_MODAL => t!("network_settings.api_secret"),
                 _ => t!("network_settings.foreign_api_secret")
             };
-            ui.label(RichText::new(description)
-                .size(17.0)
-                .color(Colors::GRAY));
-            ui.add_space(6.0);
-
+            ui.label(RichText::new(description).size(17.0).color(Colors::GRAY));
+            ui.add_space(8.0);
             StripBuilder::new(ui)
                 .size(Size::exact(42.0))
                 .vertical(|mut strip| {
@@ -368,10 +365,11 @@ impl NodeSetup {
                             .size(Size::exact(48.0))
                             .horizontal(|mut strip| {
                                 strip.cell(|ui| {
+                                    ui.add_space(2.0);
                                     // Draw API port text edit.
                                     let edit = egui::TextEdit::singleline(&mut self.secret_edit)
                                         .id(Id::from(modal.id))
-                                        .font(TextStyle::Heading)
+                                        .font(TextStyle::Button)
                                         .cursor_at_end(true)
                                         .ui(ui);
                                     edit.request_focus();
