@@ -258,7 +258,7 @@ impl StratumSetup {
 
     /// Draw attempt time value setup content.
     fn attempt_time_ui(&mut self, ui: &mut Ui, cb: &dyn PlatformCallbacks) {
-        ui.label(RichText::new(t!("network_settings.attempt_time_desc"))
+        ui.label(RichText::new(t!("network_settings.attempt_time"))
             .size(16.0)
             .color(Colors::GRAY)
         );
@@ -276,7 +276,12 @@ impl StratumSetup {
             Modal::show(time_modal);
             cb.show_keyboard();
         });
-        ui.add_space(12.0);
+        ui.add_space(6.0);
+        ui.label(RichText::new(t!("network_settings.attempt_time_desc"))
+            .size(16.0)
+            .color(Colors::INACTIVE_TEXT)
+        );
+        ui.add_space(6.0);
     }
 
     /// Draw attempt time [`Modal`] content.

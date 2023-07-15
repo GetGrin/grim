@@ -203,6 +203,12 @@ impl NetworkTab for NetworkMining {
             StratumSetup::STRATUM_PORT_MODAL => {
                 self.stratum_server_setup.port_modal(ui, modal, cb);
             },
+            StratumSetup::ATTEMPT_TIME_MODAL => {
+                self.stratum_server_setup.attempt_modal(ui, modal, cb);
+            },
+            StratumSetup::MIN_SHARE_DIFF_MODAL => {
+                self.stratum_server_setup.min_diff_modal(ui, modal, cb);
+            },
             _ => {}
         }
     }

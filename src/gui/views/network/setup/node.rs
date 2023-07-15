@@ -15,6 +15,7 @@
 use eframe::emath::Align;
 use egui::{Id, Layout, RichText, TextStyle, Ui, Widget};
 use egui::os::OperatingSystem;
+use egui_extras::{Size, StripBuilder};
 use grin_core::global::ChainTypes;
 
 use crate::AppConfig;
@@ -357,48 +358,58 @@ impl NodeSetup {
                 .color(Colors::GRAY));
             ui.add_space(6.0);
 
-            // Draw API port text edit.
-            let text_edit_resp = egui::TextEdit::singleline(&mut self.secret_edit)
-                .id(Id::from(modal.id))
-                .font(TextStyle::Heading)
-                .cursor_at_end(true)
-                .ui(ui);
-            text_edit_resp.request_focus();
-            if text_edit_resp.clicked() {
-                cb.show_keyboard();
-            }
-
-            // Show buttons to copy/paste text for Android.
-            if OperatingSystem::from_target_os() == OperatingSystem::Android {
-                ui.add_space(12.0);
-                ui.scope(|ui| {
-                    // Setup spacing between buttons.
-                    ui.spacing_mut().item_spacing = egui::Vec2::new(12.0, 0.0);
-
-                    let mut buttons_rect = ui.available_rect_before_wrap();
-                    buttons_rect.set_height(42.0);
-                    ui.allocate_ui_at_rect(buttons_rect, |ui| {
-
-                        ui.columns(2, |columns| {
-                            columns[0].with_layout(Layout::right_to_left(Align::Center), |ui| {
-                                View::button(ui, COPY.to_string(), Colors::WHITE, || {
-                                    cb.copy_string_to_buffer(self.secret_edit.clone());
+            StripBuilder::new(ui)
+                .size(Size::exact(42.0))
+                .vertical(|mut strip| {
+                    strip.strip(|builder| {
+                        builder
+                            .size(Size::remainder())
+                            .size(Size::exact(48.0))
+                            .size(Size::exact(48.0))
+                            .horizontal(|mut strip| {
+                                strip.cell(|ui| {
+                                    // Draw API port text edit.
+                                    let edit = egui::TextEdit::singleline(&mut self.secret_edit)
+                                        .id(Id::from(modal.id))
+                                        .font(TextStyle::Heading)
+                                        .cursor_at_end(true)
+                                        .ui(ui);
+                                    edit.request_focus();
+                                    if edit.clicked() {
+                                        cb.show_keyboard();
+                                    }
+                                });
+                                strip.cell(|ui| {
+                                    ui.vertical_centered(|ui| {
+                                        // Draw API port text edit.
+                                        let copy_icon = COPY.to_string();
+                                        View::button(ui, copy_icon, Colors::WHITE, || {
+                                            cb.copy_string_to_buffer(self.secret_edit.clone());
+                                        });
+                                    });
+                                });
+                                strip.cell(|ui| {
+                                    ui.vertical_centered(|ui| {
+                                        // Draw paste button.
+                                        let paste_icon = CLIPBOARD_TEXT.to_string();
+                                        View::button(ui, paste_icon, Colors::WHITE, || {
+                                            self.secret_edit = cb.get_string_from_buffer();
+                                        });
+                                    });
                                 });
                             });
-                            columns[1].with_layout(Layout::left_to_right(Align::Center), |ui| {
-                                View::button(ui, CLIPBOARD_TEXT.to_string(), Colors::WHITE, || {
-                                    self.secret_edit = cb.get_string_from_buffer();
-                                });
-                            });
-                        });
-                    });
+                    })
                 });
-            }
 
             // Show reminder to restart enabled node.
-            NetworkSettings::node_restart_required_ui(ui);
-
-            ui.add_space(12.0);
+            if Node::is_running() {
+                ui.label(RichText::new(t!("network_settings.restart_node_required"))
+                    .size(16.0)
+                    .color(Colors::GREEN)
+                );
+                ui.add_space(8.0);
+            }
+            ui.add_space(4.0);
         });
 
         // Show modal buttons.

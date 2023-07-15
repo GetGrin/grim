@@ -386,8 +386,8 @@ impl P2PSetup {
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             let label_text = match modal.id {
-                Self::CUSTOM_SEED_MODAL => t!("network_settings.add_seed"),
-                &_ => t!("network_settings.add_peer")
+                Self::CUSTOM_SEED_MODAL => t!("network_settings.seed_address"),
+                &_ => t!("network_settings.peer_address")
             };
             ui.label(RichText::new(label_text).size(17.0).color(Colors::GRAY));
             ui.add_space(8.0);
@@ -832,7 +832,6 @@ impl P2PSetup {
             .size(16.0)
             .color(Colors::INACTIVE_TEXT)
         );
-        ui.add_space(2.0);
     }
 
     /// Draw minimum number of outbound peers [`Modal`] content.
