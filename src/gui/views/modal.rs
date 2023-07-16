@@ -21,7 +21,7 @@ use egui::epaint::RectShape;
 use lazy_static::lazy_static;
 
 use crate::gui::Colors;
-use crate::gui::views::View;
+use crate::gui::views::{Root, View};
 
 lazy_static! {
     /// Showing [`Modal`] state to be accessible from different ui parts.
@@ -66,8 +66,10 @@ pub struct Modal {
 }
 
 impl Modal {
+    /// Margin from [`Modal`] window at top/left/right.
+    const DEFAULT_MARGIN: f32 = 10.0;
     /// Default width of the content.
-    const DEFAULT_WIDTH: i64 = 380;
+    const DEFAULT_WIDTH: f32 = Root::SIDE_PANEL_MIN_WIDTH - (2.0 * Self::DEFAULT_MARGIN);
 
     /// Create opened and closeable Modal with center position.
     pub fn new(id: &'static str) -> Self {
@@ -169,13 +171,13 @@ impl Modal {
     pub fn ui(ui: &mut egui::Ui, add_content: impl FnOnce(&mut egui::Ui, &Modal)) {
         if let Some(modal) = &MODAL_STATE.read().unwrap().modal {
             if modal.is_open() {
-                modal.draw(ui, add_content);
+                modal.window_ui(ui, add_content);
             }
         }
     }
 
-    /// Draw Modal with provided content.
-    fn draw(&self, ui: &mut egui::Ui, add_content: impl FnOnce(&mut egui::Ui, &Modal)) {
+    /// Draw [`egui::Window`] with provided content.
+    fn window_ui(&self, ui: &mut egui::Ui, add_content: impl FnOnce(&mut egui::Ui, &Modal)) {
         let mut rect = ui.ctx().screen_rect();
         egui::Window::new("modal_bg_window")
             .title_bar(false)
@@ -190,8 +192,10 @@ impl Modal {
                 ui.set_min_size(rect.size());
             });
 
-        // Choose width of modal content.
-        let width = min(ui.available_width() as i64 - 20, Self::DEFAULT_WIDTH) as f32;
+        // Setup width of modal content.
+        let side_insets = View::get_left_inset() + View::get_right_inset();
+        let available_width = (ui.available_width() - (side_insets + Self::DEFAULT_MARGIN)) as i64;
+        let width = min(available_width, Self::DEFAULT_WIDTH as i64) as f32;
 
         // Show main content Window at given position.
         let (content_align, content_offset) = self.modal_position();
@@ -208,9 +212,9 @@ impl Modal {
             })
             .show(ui.ctx(), |ui| {
                 if self.title.is_some() {
-                    self.draw_title(ui);
+                    self.title_ui(ui);
                 }
-                self.draw_content(ui, add_content);
+                self.content_ui(ui, add_content);
             }).unwrap().response.layer_id;
 
         // Always show main content Window above background Window.
@@ -224,15 +228,17 @@ impl Modal {
             ModalPosition::CenterTop => Align2::CENTER_TOP,
             ModalPosition::Center => Align2::CENTER_CENTER
         };
+        let x_align = View::get_left_inset() - View::get_right_inset();
+        let y_align = View::get_top_inset() + Self::DEFAULT_MARGIN;
         let offset = match self.position {
-            ModalPosition::CenterTop => Vec2::new(0.0, 20.0),
-            ModalPosition::Center => Vec2::new(0.0, 0.0)
+            ModalPosition::CenterTop => Vec2::new(x_align, y_align),
+            ModalPosition::Center => Vec2::new(x_align, 0.0)
         };
         (align, offset)
     }
 
     /// Draw provided content.
-    fn draw_content(&self, ui: &mut egui::Ui, add_content: impl FnOnce(&mut egui::Ui, &Modal)) {
+    fn content_ui(&self, ui: &mut egui::Ui, add_content: impl FnOnce(&mut egui::Ui, &Modal)) {
         let mut rect = ui.available_rect_before_wrap();
         rect.min += egui::emath::vec2(6.0, 0.0);
         rect.max -= egui::emath::vec2(6.0, 0.0);
@@ -269,7 +275,7 @@ impl Modal {
     }
 
     /// Draw the title.
-    fn draw_title(&self, ui: &mut egui::Ui) {
+    fn title_ui(&self, ui: &mut egui::Ui) {
         let rect = ui.available_rect_before_wrap();
 
         // Create background shape.
