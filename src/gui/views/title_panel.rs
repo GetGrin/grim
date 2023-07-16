@@ -119,7 +119,6 @@ impl TitlePanel {
         builder
             .size(Size::remainder())
             .size(Size::exact(30.0))
-            .size(Size::exact(2.0))
             .vertical(|mut strip| {
                 strip.cell(|ui| {
                     ui.add_space(4.0);
@@ -148,7 +147,6 @@ impl TitlePanel {
                         }
                     });
                 });
-                strip.empty();
             });
     }
 }
