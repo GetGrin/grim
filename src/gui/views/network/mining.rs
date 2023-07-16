@@ -214,7 +214,7 @@ impl NetworkTab for NetworkMining {
     }
 }
 
-const WORKER_ITEM_HEIGHT: f32 = 77.0;
+const WORKER_ITEM_HEIGHT: f32 = 76.0;
 
 /// Draw worker statistics item.
 fn worker_item_ui(ui: &mut egui::Ui, ws: &WorkerStats, rounding: [bool; 2]) {
@@ -299,7 +299,9 @@ fn worker_item_ui(ui: &mut egui::Ui, ws: &WorkerStats, rounding: [bool; 2]) {
                 let seen = ws.last_seen.duration_since(std::time::UNIX_EPOCH).unwrap().as_secs();
                 let naive_datetime = NaiveDateTime::from_timestamp_opt(seen as i64, 0).unwrap();
                 let datetime: DateTime<Utc> = DateTime::from_utc(naive_datetime, Utc);
-                let date_text = format!("{} {}", CLOCK_AFTERNOON, datetime);
+                let date_text = format!("{} {}",
+                                        CLOCK_AFTERNOON,
+                                        datetime.format("%d/%m/%Y %H:%M:%S UTC"));
                 ui.heading(RichText::new(date_text)
                     .color(Colors::GRAY)
                     .size(16.0));

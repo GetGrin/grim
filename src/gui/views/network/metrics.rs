@@ -154,7 +154,7 @@ impl NetworkTab for NetworkMetrics {
     fn on_modal_ui(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {}
 }
 
-const BLOCK_ITEM_HEIGHT: f32 = 78.30;
+const BLOCK_ITEM_HEIGHT: f32 = 74.90;
 
 /// Draw block difficulty item.
 fn block_item_ui(ui: &mut egui::Ui, db: &DiffBlock, rounding: [bool; 2]) {
@@ -215,11 +215,11 @@ fn block_item_ui(ui: &mut egui::Ui, db: &DiffBlock, rounding: [bool; 2]) {
                 // Draw block time.
                 let block_time = NaiveDateTime::from_timestamp_opt(db.time as i64, 0).unwrap();
                 let block_datetime: DateTime<Utc> = DateTime::from_utc(block_time, Utc);
-                ui.heading(RichText::new(block_datetime.to_string())
+                ui.heading(RichText::new(block_datetime.format("%d/%m/%Y %H:%M:%S UTC").to_string())
                     .color(Colors::GRAY)
                     .size(16.0));
             });
-            ui.add_space(4.0);
+            ui.add_space(2.0);
         });
     });
 }

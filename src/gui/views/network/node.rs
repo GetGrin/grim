@@ -80,7 +80,7 @@ impl NetworkTab for NetworkNode {
                     columns[1].vertical_centered(|ui| {
                         let h_ts = stats.header_stats.latest_timestamp;
                         View::rounded_box(ui,
-                                          format!("{}", h_ts.format("%d/%m/%Y %H:%M")),
+                                          h_ts.format("%d/%m/%Y %H:%M").to_string(),
                                           t!("network_node.time_utc"),
                                           [false, false, false, true]);
                     });
@@ -191,7 +191,7 @@ fn peer_item_ui(ui: &mut egui::Ui, peer: &PeerStats, rounding: [bool; 2]) {
     ui.vertical(|ui| {
         // Draw round background.
         let mut rect = ui.available_rect_before_wrap();
-        rect.set_height(78.3);
+        rect.set_height(74.9);
         ui.painter().rect(
             rect,
             Rounding {
@@ -228,6 +228,6 @@ fn peer_item_ui(ui: &mut egui::Ui, peer: &PeerStats, rounding: [bool; 2]) {
             let agent_text = format!("{} {}", DEVICES, &peer.user_agent);
             ui.label(RichText::new(agent_text).color(Colors::GRAY).size(16.0));
         });
-        ui.add_space(4.0);
+        ui.add_space(2.0);
     });
 }
