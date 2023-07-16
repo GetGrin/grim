@@ -73,19 +73,19 @@ public class MainActivity extends GameActivity {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
 
             // Setup values to pass into native code.
-            int[] cutouts = new int[]{0, 0, 0, 0};
-            cutouts[0] = Utils.pxToDp(Integer.max(cutoutTop, systemBars.top), this);
-            cutouts[1] = Utils.pxToDp(Integer.max(cutoutRight, systemBars.right), this);
-            cutouts[2] = Utils.pxToDp(Integer.max(cutoutBottom, systemBars.bottom), this);
-            cutouts[3] = Utils.pxToDp(Integer.max(cutoutLeft, systemBars.left), this);
-            onDisplayCutouts(cutouts);
+            int[] values = new int[]{0, 0, 0, 0};
+            values[0] = Utils.pxToDp(Integer.max(cutoutTop, systemBars.top), this);
+            values[1] = Utils.pxToDp(Integer.max(cutoutRight, systemBars.right), this);
+            values[2] = Utils.pxToDp(Integer.max(cutoutBottom, systemBars.bottom), this);
+            values[3] = Utils.pxToDp(Integer.max(cutoutLeft, systemBars.left), this);
+            onDisplayInsets(values);
 
             return insets;
         });
     }
 
-    // Implemented into native code to handle display cutouts change.
-    native void onDisplayCutouts(int[] cutouts);
+    // Implemented into native code to handle display insets change.
+    native void onDisplayInsets(int[] cutouts);
 
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {

@@ -11,14 +11,11 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
-use std::cmp::min;
 use std::sync::atomic::{AtomicBool, Ordering};
 use egui::os::OperatingSystem;
 use egui::RichText;
 
 use lazy_static::lazy_static;
-use crate::gui::app::{get_left_display_cutout, get_right_display_cutout};
 use crate::gui::Colors;
 
 use crate::gui::platform::PlatformCallbacks;
@@ -75,7 +72,7 @@ impl Root {
     pub const EXIT_MODAL_ID: &'static str = "exit_confirmation";
 
     /// Default width of side panel at application UI.
-    pub const SIDE_PANEL_MIN_WIDTH: i64 = 400;
+    pub const SIDE_PANEL_MIN_WIDTH: f32 = 400.0;
 
     pub fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame, cb: &dyn PlatformCallbacks) {
         // Show opened exit confirmation Modal content.
@@ -83,20 +80,20 @@ impl Root {
             self.exit_modal_content(ui, frame, cb);
         }
 
-        // Show network content on side panel.
         let (is_panel_open, panel_width) = Self::side_panel_state_width(frame);
         egui::SidePanel::left("network_panel")
             .resizable(false)
             .exact_width(panel_width)
             .frame(egui::Frame::none())
             .show_animated_inside(ui, is_panel_open, |ui| {
+                // Show network content on side panel.
                 self.side_panel.ui(ui, frame, cb);
             });
 
-        // Show accounts content on central panel.
         egui::CentralPanel::default()
             .frame(egui::Frame::none())
             .show_inside(ui, |ui| {
+                // Show accounts content on central panel.
                 self.central_content.ui(ui, frame, cb);
             });
     }
@@ -105,12 +102,10 @@ impl Root {
     fn side_panel_state_width(frame: &mut eframe::Frame) -> (bool, f32) {
         let dual_panel_mode = Self::is_dual_panel_mode(frame);
         let is_panel_open = dual_panel_mode || Self::is_side_panel_open();
-        let side_cutouts = get_left_display_cutout() + get_right_display_cutout();
         let panel_width = if dual_panel_mode {
-            let available_width = (frame.info().window_info.size.x - side_cutouts) as i64;
-            min(available_width, Self::SIDE_PANEL_MIN_WIDTH) as f32
+            Self::SIDE_PANEL_MIN_WIDTH + View::get_left_inset()
         } else {
-            frame.info().window_info.size.x - side_cutouts
+            frame.info().window_info.size.x
         };
         (is_panel_open, panel_width)
     }
@@ -122,9 +117,9 @@ impl Root {
         // Screen is wide if width is greater than height or just 20% smaller.
         let is_wide_screen = w > h || w + (w * 0.2) >= h;
         // Dual panel mode is available when window is wide and its width is at least 2 times
-        // greater than minimal width of the side panel plus display cutouts from both sides.
-        let side_cutouts = get_left_display_cutout() + get_right_display_cutout();
-        is_wide_screen && w >= (Self::SIDE_PANEL_MIN_WIDTH as f32 * 2.0) + side_cutouts
+        // greater than minimal width of the side panel plus display insets from both sides.
+        let side_insets = View::get_left_inset() + View::get_right_inset();
+        is_wide_screen && w >= (Self::SIDE_PANEL_MIN_WIDTH * 2.0) + side_insets
     }
 
     /// Toggle [`Network`] panel state.

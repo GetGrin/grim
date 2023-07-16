@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::{Color32, Id, lerp, Rgba, RichText};
+use egui::{Color32, Id, lerp, Rgba};
 use egui::style::Margin;
 use egui_extras::{Size, StripBuilder};
 
@@ -43,7 +43,12 @@ pub struct TitlePanel;
 impl TitlePanel {
     pub const DEFAULT_HEIGHT: f32 = 54.0;
 
-    pub fn ui(title: TitleType, l: Option<TitleAction>, r: Option<TitleAction>, ui: &mut egui::Ui) {
+    pub fn ui(title: TitleType,
+              left_action: Option<TitleAction>,
+              right_action: Option<TitleAction>,
+              ui: &mut egui::Ui,
+              frame: &mut eframe::Frame) {
+        // Setup identifier.
         let id = match &title {
             TitleType::Single(text) => Id::from(text.clone()),
             TitleType::WithSubTitle(text, _, _) => Id::from(text.clone())
@@ -52,7 +57,7 @@ impl TitlePanel {
             .resizable(false)
             .exact_height(Self::DEFAULT_HEIGHT)
             .frame(egui::Frame {
-                outer_margin: Margin::same(-1.0),
+                inner_margin: Self::inner_margin(ui, frame),
                 fill: Colors::YELLOW,
                 ..Default::default()
             })
@@ -63,7 +68,7 @@ impl TitlePanel {
                     .size(Size::exact(Self::DEFAULT_HEIGHT))
                     .horizontal(|mut strip| {
                         strip.cell(|ui| {
-                            Self::draw_action(ui, l);
+                            Self::action_ui(ui, left_action);
                         });
                         match title {
                             TitleType::Single(text) => {
@@ -81,14 +86,24 @@ impl TitlePanel {
                             }
                         }
                         strip.cell(|ui| {
-                            Self::draw_action(ui, r);
+                            Self::action_ui(ui, right_action);
                         });
                     });
             });
     }
 
+    /// Calculate inner margin based on display insets (cutouts).
+    fn inner_margin(ui: &mut egui::Ui, frame: &mut eframe::Frame) -> Margin {
+        Margin {
+            left: View::far_left_inset_margin(ui),
+            right: View::far_right_inset_margin(ui, frame),
+            top: View::get_top_inset(),
+            bottom: 0.0,
+        }
+    }
+
     /// Draw panel [`TitleAction`].
-    fn draw_action(ui: &mut egui::Ui, action: Option<TitleAction>) {
+    fn action_ui(ui: &mut egui::Ui, action: Option<TitleAction>) {
         if action.is_some() {
             let action = action.unwrap();
             ui.centered_and_justified(|ui| {

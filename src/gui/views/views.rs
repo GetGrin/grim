@@ -12,10 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::sync::atomic::{AtomicI32, Ordering};
+
 use egui::{Button, PointerState, Response, RichText, Sense, Spinner, Widget};
 use egui::epaint::{Color32, FontId, RectShape, Rounding, Stroke};
 use egui::epaint::text::TextWrapping;
 use egui::text::{LayoutJob, TextFormat};
+use lazy_static::lazy_static;
 
 use crate::gui::Colors;
 use crate::gui::icons::{CHECK_SQUARE, SQUARE};
@@ -25,6 +28,26 @@ pub struct View;
 impl View {
     /// Default stroke around views.
     pub const DEFAULT_STROKE: Stroke = Stroke { width: 1.0, color: Colors::STROKE };
+
+    /// Calculate margin for far left view based on display insets (cutouts).
+    pub fn far_left_inset_margin(ui: &mut egui::Ui) -> f32 {
+        if ui.available_rect_before_wrap().min.x == 0.0 {
+            Self::get_left_inset()
+        } else {
+            0.0
+        }
+    }
+
+    /// Calculate margin for far left view based on display insets (cutouts).
+    pub fn far_right_inset_margin(ui: &mut egui::Ui, frame: &mut eframe::Frame) -> f32 {
+        let container_width = ui.available_rect_before_wrap().max.x as i32;
+        let display_width = frame.info().window_info.size.x as i32;
+        if container_width == display_width {
+            Self::get_right_inset()
+        } else {
+            0.0
+        }
+    }
 
     /// Cut long text with ﹍ character.
     fn ellipsize(text: String, size: f32, color: Color32) -> LayoutJob {
@@ -238,4 +261,57 @@ impl View {
                       painter.round_to_pixel(line_rect.center().y),
                       Stroke { width: 1.0, color });
     }
+
+    /// Get top display inset (cutout) size.
+    pub fn get_top_inset() -> f32 {
+        TOP_DISPLAY_INSET.load(Ordering::Relaxed) as f32
+    }
+
+    /// Get right display inset (cutout) size.
+    pub fn get_right_inset() -> f32 {
+        RIGHT_DISPLAY_INSET.load(Ordering::Relaxed) as f32
+    }
+
+    /// Get bottom display inset (cutout) size.
+    pub fn get_bottom_inset() -> f32 {
+        BOTTOM_DISPLAY_INSET.load(Ordering::Relaxed) as f32
+    }
+
+    /// Get left display inset (cutout) size.
+    pub fn get_left_inset() -> f32 {
+        LEFT_DISPLAY_INSET.load(Ordering::Relaxed) as f32
+    }
+
+}
+
+/// Fields to handle platform-specific display insets (cutouts).
+lazy_static! {
+    static ref TOP_DISPLAY_INSET: AtomicI32 = AtomicI32::new(0);
+    static ref RIGHT_DISPLAY_INSET: AtomicI32 = AtomicI32::new(0);
+    static ref BOTTOM_DISPLAY_INSET: AtomicI32 = AtomicI32::new(0);
+    static ref LEFT_DISPLAY_INSET: AtomicI32 = AtomicI32::new(0);
+}
+
+#[allow(dead_code)]
+#[cfg(target_os = "android")]
+#[allow(non_snake_case)]
+#[no_mangle]
+/// Callback from Java code to update display insets (cutouts).
+pub extern "C" fn Java_mw_gri_android_MainActivity_onDisplayInsets(
+    _env: jni::JNIEnv,
+    _class: jni::objects::JObject,
+    cutouts: jni::sys::jarray
+) {
+    use jni::objects::{JObject, JPrimitiveArray};
+
+    let mut array: [i32; 4] = [0; 4];
+    unsafe {
+        let j_obj = JObject::from_raw(cutouts);
+        let j_arr = JPrimitiveArray::from(j_obj);
+        _env.get_int_array_region(j_arr, 0, array.as_mut()).unwrap();
+    }
+    TOP_DISPLAY_INSET.store(array[0], Ordering::Relaxed);
+    RIGHT_DISPLAY_INSET.store(array[1], Ordering::Relaxed);
+    BOTTOM_DISPLAY_INSET.store(array[2], Ordering::Relaxed);
+    LEFT_DISPLAY_INSET.store(array[3], Ordering::Relaxed);
 }

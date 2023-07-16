@@ -12,16 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::{Color32, lerp, Rgba, RichText};
+use egui::RichText;
 use egui::style::Margin;
-use egui_extras::{Size, StripBuilder};
-use grin_chain::SyncStatus;
 
 use crate::AppConfig;
 use crate::gui::Colors;
 use crate::gui::icons::{CARDHOLDER, DATABASE, DOTS_THREE_OUTLINE_VERTICAL, FACTORY, FADERS, GAUGE, POWER};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Modal, ModalContainer, NetworkMetrics, NetworkMining, NetworkNode, NetworkSettings, Root, TitleAction, TitleType, TitlePanel, View};
+use crate::gui::views::{Modal, ModalContainer, NetworkMetrics, NetworkMining, NetworkNode, NetworkSettings, Root, TitleAction, TitlePanel, TitleType, View};
 use crate::gui::views::network::setup::{DandelionSetup, NodeSetup, P2PSetup, PoolSetup, StratumSetup};
 use crate::node::Node;
 
@@ -122,7 +120,7 @@ impl Network {
         egui::TopBottomPanel::bottom("network_tabs")
             .frame(egui::Frame {
                 fill: Colors::FILL,
-                inner_margin: Margin::same(4.0),
+                inner_margin: Self::tabs_inner_margin(ui, frame),
                 ..Default::default()
             })
             .show_inside(ui, |ui| {
@@ -132,12 +130,7 @@ impl Network {
         egui::CentralPanel::default()
             .frame(egui::Frame {
                 stroke: View::DEFAULT_STROKE,
-                inner_margin: Margin {
-                    left: 4.0,
-                    right: 4.0,
-                    top: 3.0,
-                    bottom: 4.0,
-                },
+                inner_margin: Self::content_inner_margin(ui, frame),
                 fill: Colors::WHITE,
                 ..Default::default()
             })
@@ -148,6 +141,26 @@ impl Network {
         // Redraw content after delay if node is not syncing to update stats.
         if Node::not_syncing() {
             ui.ctx().request_repaint_after(Node::STATS_UPDATE_DELAY);
+        }
+    }
+
+    /// Calculate tabs inner margin based on display insets (cutouts).
+    fn tabs_inner_margin(ui: &mut egui::Ui, frame: &mut eframe::Frame) -> Margin {
+        Margin {
+            left: View::far_left_inset_margin(ui) + 4.0,
+            right: View::far_right_inset_margin(ui, frame) + 4.0,
+            top: 4.0,
+            bottom: View::get_bottom_inset() + 4.0,
+        }
+    }
+
+    /// Calculate content inner margin based on display insets (cutouts).
+    fn content_inner_margin(ui: &mut egui::Ui, frame: &mut eframe::Frame) -> Margin {
+        Margin {
+            left: View::far_left_inset_margin(ui) + 4.0,
+            right: View::far_right_inset_margin(ui, frame) + 4.0,
+            top: 3.0,
+            bottom: 4.0,
         }
     }
 
@@ -202,7 +215,7 @@ impl Network {
             })
         } else {
             None
-        }, ui);
+        }, ui, frame);
     }
 
     /// Content to draw when node is disabled.

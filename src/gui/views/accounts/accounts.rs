@@ -42,7 +42,7 @@ impl Accounts {
             None
         }, TitleAction::new(PLUS, || {
             //TODO: add account
-        }), ui);
+        }), ui, frame);
 
         egui::CentralPanel::default()
             .frame(egui::Frame {
