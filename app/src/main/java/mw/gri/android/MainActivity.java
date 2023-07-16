@@ -5,9 +5,11 @@ import android.os.Bundle;
 import android.os.Process;
 import android.system.ErrnoException;
 import android.system.Os;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
 import androidx.core.graphics.Insets;
+import androidx.core.view.DisplayCutoutCompat;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import com.google.androidgamesdk.GameActivity;
@@ -51,16 +53,33 @@ public class MainActivity extends GameActivity {
         // Start notification service.
         BackgroundService.start(this);
 
-        // Listener for display cutouts to pass values into native code.
+        // Listener for display insets (cutouts) to pass values into native code.
         View content = getWindow().getDecorView().findViewById(android.R.id.content);
         ViewCompat.setOnApplyWindowInsetsListener(content, (v, insets) -> {
+            // Setup cutouts values.
+            DisplayCutoutCompat dc = insets.getDisplayCutout();
+            int cutoutTop = 0;
+            int cutoutRight = 0;
+            int cutoutBottom = 0;
+            int cutoutLeft = 0;
+            if (dc != null) {
+                cutoutTop = dc.getSafeInsetTop();
+                cutoutRight = dc.getSafeInsetRight();
+                cutoutBottom = dc.getSafeInsetBottom();
+                cutoutLeft = dc.getSafeInsetLeft();
+            }
+
+            // Get display insets.
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+
+            // Setup values to pass into native code.
             int[] cutouts = new int[]{0, 0, 0, 0};
-            cutouts[0] = Utils.pxToDp(systemBars.top, this);
-            cutouts[1] = Utils.pxToDp(systemBars.right, this);
-            cutouts[2] = Utils.pxToDp(systemBars.bottom, this);
-            cutouts[3] = Utils.pxToDp(systemBars.left, this);
+            cutouts[0] = Utils.pxToDp(Integer.max(cutoutTop, systemBars.top), this);
+            cutouts[1] = Utils.pxToDp(Integer.max(cutoutRight, systemBars.right), this);
+            cutouts[2] = Utils.pxToDp(Integer.max(cutoutBottom, systemBars.bottom), this);
+            cutouts[3] = Utils.pxToDp(Integer.max(cutoutLeft, systemBars.left), this);
             onDisplayCutouts(cutouts);
+
             return insets;
         });
     }
