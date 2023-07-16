@@ -188,46 +188,54 @@ impl NetworkTab for NetworkNode {
 
 /// Draw connected peer info item.
 fn peer_item_ui(ui: &mut egui::Ui, peer: &PeerStats, rounding: [bool; 2]) {
-    ui.vertical(|ui| {
-        // Draw round background.
-        let mut rect = ui.available_rect_before_wrap();
-        rect.set_height(74.9);
-        ui.painter().rect(
-            rect,
-            Rounding {
-                nw: if rounding[0] { 8.0 } else { 0.0 },
-                ne: if rounding[0] { 8.0 } else { 0.0 },
-                sw: if rounding[1] { 8.0 } else { 0.0 },
-                se: if rounding[1] { 8.0 } else { 0.0 },
-            },
-            Colors::WHITE,
-            Stroke { width: 1.0, color: Colors::ITEM_STROKE }
-        );
+    let mut rect = ui.available_rect_before_wrap();
+    rect.set_height(77.0);
+    ui.allocate_ui_at_rect(rect, |ui| {
+        ui.vertical(|ui| {
+            // Draw round background.
+            ui.painter().rect(
+                rect,
+                Rounding {
+                    nw: if rounding[0] { 8.0 } else { 0.0 },
+                    ne: if rounding[0] { 8.0 } else { 0.0 },
+                    sw: if rounding[1] { 8.0 } else { 0.0 },
+                    se: if rounding[1] { 8.0 } else { 0.0 },
+                },
+                Colors::WHITE,
+                Stroke { width: 1.0, color: Colors::ITEM_STROKE }
+            );
 
-        ui.add_space(2.0);
+            ui.add_space(2.0);
 
-        // Draw peer address
-        ui.horizontal(|ui| {
-            ui.add_space(5.0);
-            let addr_text = format!("{} {}", PLUGS_CONNECTED, &peer.addr);
-            ui.label(RichText::new(addr_text).color(Colors::BLACK).size(17.0));
-        });
-        // Draw peer difficulty and height
-        ui.horizontal(|ui| {
-            ui.add_space(6.0);
-            let diff_text = format!("{} {}", PACKAGE, peer.total_difficulty);
-            ui.label(RichText::new(diff_text).color(Colors::TITLE).size(16.0));
+            // Draw peer address
+            ui.horizontal(|ui| {
+                ui.add_space(5.0);
+                let addr_text = format!("{} {}", PLUGS_CONNECTED, &peer.addr);
+                ui.label(RichText::new(addr_text).color(Colors::BLACK).size(17.0));
+            });
+            // Draw peer difficulty and height
+            ui.horizontal(|ui| {
+                ui.add_space(6.0);
+                let diff_text = format!("{} {} {} {}",
+                                        PACKAGE,
+                                        peer.total_difficulty,
+                                        AT,
+                                        peer.height);
+                ui.label(RichText::new(diff_text).color(Colors::TITLE).size(16.0));
+            });
+            // Draw peer user-agent
+            ui.horizontal(|ui| {
+                ui.add_space(6.0);
+                let agent_text = format!("{} {}", DEVICES, &peer.user_agent);
+                ui.label(RichText::new(agent_text).color(Colors::GRAY).size(16.0));
+            });
+
             ui.add_space(2.0);
-            ui.label(RichText::new(AT).color(Colors::TITLE).size(16.0));
-            ui.add_space(2.0);
-            ui.label(RichText::new(peer.height.to_string()).color(Colors::TITLE).size(16.0));
         });
-        // Draw peer user-agent
-        ui.horizontal(|ui| {
-            ui.add_space(6.0);
-            let agent_text = format!("{} {}", DEVICES, &peer.user_agent);
-            ui.label(RichText::new(agent_text).color(Colors::GRAY).size(16.0));
-        });
-        ui.add_space(2.0);
     });
+
+    // Add space after the last item.
+    if rounding[1] {
+        ui.add_space(5.0);
+    }
 }

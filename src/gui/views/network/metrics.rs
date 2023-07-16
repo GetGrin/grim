@@ -13,14 +13,14 @@
 // limitations under the License.
 
 use chrono::{DateTime, NaiveDateTime, Utc};
-use egui::{RichText, Rounding, ScrollArea, Stroke};
+use egui::{RichText, Rounding, ScrollArea, Stroke, vec2};
 use grin_servers::DiffBlock;
 
 use crate::gui::Colors;
 use crate::gui::icons::{AT, COINS, CUBE_TRANSPARENT, HASH, HOURGLASS_LOW, HOURGLASS_MEDIUM, TIMER};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::network::{NetworkTab, NetworkTabType};
 use crate::gui::views::{Modal, Network, View};
+use crate::gui::views::network::{NetworkTab, NetworkTabType};
 use crate::node::Node;
 
 /// Chain metrics tab content.
@@ -131,7 +131,7 @@ impl NetworkTab for NetworkMetrics {
             .stick_to_bottom(true)
             .show_rows(
                 ui,
-                BLOCK_ITEM_HEIGHT,
+                BLOCK_ITEM_HEIGHT - 1.0,
                 blocks_size,
                 |ui, row_range| {
                     for index in row_range {
@@ -154,7 +154,7 @@ impl NetworkTab for NetworkMetrics {
     fn on_modal_ui(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {}
 }
 
-const BLOCK_ITEM_HEIGHT: f32 = 74.90;
+const BLOCK_ITEM_HEIGHT: f32 = 77.0;
 
 /// Draw block difficulty item.
 fn block_item_ui(ui: &mut egui::Ui, db: &DiffBlock, rounding: [bool; 2]) {
@@ -163,63 +163,62 @@ fn block_item_ui(ui: &mut egui::Ui, db: &DiffBlock, rounding: [bool; 2]) {
         ui.add_space(4.0);
     }
 
-    ui.horizontal(|ui| {
-        ui.add_space(6.0);
-        ui.vertical(|ui| {
-            // Draw round background.
-            let mut rect = ui.available_rect_before_wrap();
-            rect.set_height(BLOCK_ITEM_HEIGHT);
-            ui.painter().rect(
-                rect,
-                Rounding {
-                    nw: if rounding[0] { 8.0 } else { 0.0 },
-                    ne: if rounding[0] { 8.0 } else { 0.0 },
-                    sw: if rounding[1] { 8.0 } else { 0.0 },
-                    se: if rounding[1] { 8.0 } else { 0.0 },
-                },
-                Colors::WHITE,
-                Stroke { width: 1.0, color: Colors::ITEM_STROKE }
-            );
+    let mut rect = ui.available_rect_before_wrap();
+    rect.set_height(BLOCK_ITEM_HEIGHT);
+    ui.allocate_ui_at_rect(rect, |ui| {
+        ui.horizontal(|ui| {
+            ui.add_space(6.0);
+            ui.vertical(|ui| {
+                // Draw round background.
+                rect.min += vec2(8.0, 0.0);
+                ui.painter().rect(
+                    rect,
+                    Rounding {
+                        nw: if rounding[0] { 8.0 } else { 0.0 },
+                        ne: if rounding[0] { 8.0 } else { 0.0 },
+                        sw: if rounding[1] { 8.0 } else { 0.0 },
+                        se: if rounding[1] { 8.0 } else { 0.0 },
+                    },
+                    Colors::WHITE,
+                    Stroke { width: 1.0, color: Colors::ITEM_STROKE }
+                );
 
-            ui.add_space(2.0);
-            ui.horizontal(|ui| {
-                ui.add_space(5.0);
+                ui.add_space(2.0);
+
                 // Draw block hash.
-                ui.heading(RichText::new(format!("{} {}", HASH, db.block_hash))
-                    .color(Colors::BLACK)
-                    .size(17.0));
-            });
-            ui.horizontal(|ui| {
-                ui.add_space(6.0);
+                ui.horizontal(|ui| {
+                    ui.add_space(5.0);
+                    ui.label(RichText::new(format!("{} {}", HASH, db.block_hash))
+                        .color(Colors::BLACK)
+                        .size(17.0));
+                });
                 // Draw block difficulty and height.
-                ui.heading(RichText::new(format!("{} {}", CUBE_TRANSPARENT, db.difficulty))
-                    .color(Colors::TITLE)
-                    .size(16.0));
-                ui.add_space(2.0);
-                ui.heading(RichText::new(AT).color(Colors::TITLE).size(16.0));
-                ui.add_space(2.0);
-                ui.heading(RichText::new(db.block_height.to_string())
-                    .color(Colors::TITLE)
-                    .size(16.0));
-            });
-            ui.horizontal(|ui| {
-                ui.add_space(6.0);
+                ui.horizontal(|ui| {
+                    ui.add_space(6.0);
+                    let diff_text = format!("{} {} {} {}",
+                                            CUBE_TRANSPARENT,
+                                            db.difficulty,
+                                            AT,
+                                            db.block_height);
+                    ui.label(RichText::new(diff_text).color(Colors::TITLE).size(16.0));
+                });
                 // Draw block date.
-                ui.heading(RichText::new(format!("{} {}s", TIMER, db.duration))
-                    .color(Colors::GRAY)
-                    .size(16.0));
-                ui.add_space(4.0);
+                ui.horizontal(|ui| {
+                    ui.add_space(6.0);
+                    let block_time = NaiveDateTime::from_timestamp_opt(db.time as i64, 0).unwrap();
+                    let block_date: DateTime<Utc> = DateTime::from_utc(block_time, Utc);
+                    let block_time_text = block_date.format("%d/%m/%Y %H:%M:%S UTC").to_string();
+                    ui.label(RichText::new(format!("{} {}s {} {}",
+                                                   TIMER,
+                                                   db.duration,
+                                                   HOURGLASS_LOW,
+                                                   block_time_text))
+                        .color(Colors::GRAY)
+                        .size(16.0));
+                });
 
-                ui.heading(RichText::new(HOURGLASS_LOW).color(Colors::GRAY).size(16.0));
                 ui.add_space(2.0);
-                // Draw block time.
-                let block_time = NaiveDateTime::from_timestamp_opt(db.time as i64, 0).unwrap();
-                let block_datetime: DateTime<Utc> = DateTime::from_utc(block_time, Utc);
-                ui.heading(RichText::new(block_datetime.format("%d/%m/%Y %H:%M:%S UTC").to_string())
-                    .color(Colors::GRAY)
-                    .size(16.0));
             });
-            ui.add_space(2.0);
         });
     });
 }
