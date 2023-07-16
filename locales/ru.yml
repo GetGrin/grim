@@ -22,8 +22,8 @@ sync_status:
   header_sync_percent: 'Загрузка заголовков: %{percent}%'
   tx_hashset_pibd: Загрузка состояния (PIBD)
   tx_hashset_pibd_percent: 'Загрузка состояния (PIBD): %{percent}%'
-  tx_hashset_download: Загрузка состояния цепи
-  tx_hashset_download_percent: 'Загрузка состояния цепи: %{percent}%'
+  tx_hashset_download: Загрузка состояния
+  tx_hashset_download_percent: 'Загрузка состояния: %{percent}%'
   tx_hashset_setup_history: 'Подготовка состояния (история): %{percent}%'
   tx_hashset_setup_position: 'Подготовка состояния (позиция): %{percent}%'
   tx_hashset_setup: Подготовка состояния для проверки

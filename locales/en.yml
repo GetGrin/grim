@@ -22,8 +22,8 @@ sync_status:
   header_sync_percent: 'Downloading headers: %{percent}%'
   tx_hashset_pibd: Downloading state (PIBD)
   tx_hashset_pibd_percent: 'Downloading state (PIBD): %{percent}%'
-  tx_hashset_download: Downloading chain state
-  tx_hashset_download_percent: 'Downloading chain state: %{percent}%'
+  tx_hashset_download: Downloading state
+  tx_hashset_download_percent: 'Downloading state: %{percent}%'
   tx_hashset_setup_history: 'Preparing state (history): %{percent}%'
   tx_hashset_setup_position: 'Preparing state (position): %{percent}%'
   tx_hashset_setup: Preparing state for validation
