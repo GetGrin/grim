@@ -34,6 +34,11 @@ impl<Platform> PlatformApp<Platform> {
 
 impl<Platform: PlatformCallbacks> eframe::App for PlatformApp<Platform> {
     fn update(&mut self, ctx: &Context, frame: &mut eframe::Frame) {
+        // Handle Esc keyboard key event.
+        if ctx.input(|i| i.key_pressed(egui::Key::Escape)) {
+            Root::on_back();
+        }
+
         // Show main content.
         egui::CentralPanel::default()
             .frame(egui::Frame {
@@ -49,6 +54,19 @@ impl<Platform: PlatformCallbacks> eframe::App for PlatformApp<Platform> {
         Root::show_exit_modal();
         self.root.exit_allowed
     }
+}
+
+#[allow(dead_code)]
+#[cfg(target_os = "android")]
+#[allow(non_snake_case)]
+#[no_mangle]
+/// Handle Back key code event from Android.
+pub extern "C" fn Java_mw_gri_android_MainActivity_onBack(
+    _env: jni::JNIEnv,
+    _class: jni::objects::JObject,
+    _activity: jni::objects::JObject,
+) {
+    Root::on_back();
 }
 
 
