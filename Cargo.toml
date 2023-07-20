@@ -11,12 +11,11 @@ build = "src/build/build.rs"
 name="grim"
 crate_type=["cdylib", "rlib"]
 
-[features]
-#static_ssl = ['openssl/vendored']
-
 [dependencies]
 log = "0.4"
-#android-activity = { version = "0.4", features = ["game-activity"] }
+
+## node
+openssl-sys = { version = "0.9.82", features = ["vendored"] }
 grin_api = { path = "../grin/node/api" }
 grin_chain = { path = "../grin/node/chain" }
 grin_config = { path = "../grin/node/config" }
@@ -24,9 +23,10 @@ grin_core = { path = "../grin/node/core" }
 grin_keychain = { path = "../grin/node/keychain" }
 grin_p2p = { path = "../grin/node/p2p" }
 grin_servers = { path = "../grin/node/servers" }
-#grin_store = "5.1.2"
 grin_util = { path = "../grin/node/util" }
-openssl-sys = { version = "0.9.82", features = ["vendored"] }
+
+## wallet
+grin_wallet_impls = { path = "../grin/wallet/impls" }
 #grin_wallet_api = "5.1.0"
 #grin_wallet_libwallet = "5.1.0"
 #grin_wallet_controller = "5.1.0"
@@ -36,15 +36,12 @@ openssl-sys = { version = "0.9.82", features = ["vendored"] }
 ## ui
 pollster = "0.3.0"
 wgpu = "0.16.1"
-wgpu-core = { version = "0.16.1", features = ["gles"] }
 egui = { version = "0.22.0", default-features = false }
-egui_extras = { version = "0.22.0" }
-
-## grin_servers
-futures = "0.3"
-dirs = "5.0.1"
+egui_extras = "0.22.0"
 
 ## other
+futures = "0.3"
+dirs = "5.0.1"
 once_cell = "1.10.0"
 rust-i18n = "2.0.0"
 sys-locale = "0.3.0"
