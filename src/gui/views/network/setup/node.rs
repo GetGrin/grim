@@ -345,7 +345,7 @@ impl NodeSetup {
         });
     }
 
-    /// Draw API port [`Modal`] content.
+    /// Draw API secret token [`Modal`] content.
     pub fn secret_modal(&mut self, ui: &mut Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
@@ -366,7 +366,7 @@ impl NodeSetup {
                             .horizontal(|mut strip| {
                                 strip.cell(|ui| {
                                     ui.add_space(2.0);
-                                    // Draw API port text edit.
+                                    // Draw API secret token value text edit.
                                     let edit = egui::TextEdit::singleline(&mut self.secret_edit)
                                         .id(Id::from(modal.id))
                                         .font(TextStyle::Button)
@@ -379,7 +379,7 @@ impl NodeSetup {
                                 });
                                 strip.cell(|ui| {
                                     ui.vertical_centered(|ui| {
-                                        // Draw API port text edit.
+                                        // Draw copy button.
                                         let copy_icon = COPY.to_string();
                                         View::button(ui, copy_icon, Colors::WHITE, || {
                                             cb.copy_string_to_buffer(self.secret_edit.clone());
