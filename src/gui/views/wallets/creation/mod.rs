@@ -18,13 +18,7 @@ pub use mnemonic::MnemonicSetup;
 mod connection;
 pub use connection::ConnectionSetup;
 
-mod content;
-pub use content::WalletCreation;
+mod creation;
+pub use creation::WalletCreation;
 
-/// Interface to provide moving between wallet creation steps.
-pub trait StepControl {
-    /// Go to next wallet creation step.
-    fn next_step(&mut self);
-    /// Go to previous wallet creation Step.
-    fn prev_step(&mut self);
-}
+pub mod types;

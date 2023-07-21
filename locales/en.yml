@@ -11,13 +11,16 @@ wallets:
   pass: 'Password:'
   name_empty: Enter name of wallet
   pass_empty: Enter password for wallet
-  word_number: 'Word #%{number}'
-  word_empty: 'Enter word #%{number} from recovery phrase'
-  not_valid_word: Entered word is not valid
   create: Create
-  import: Import
-  mnemonic_desc: 'Safely write down and save your %{}-word recovery phrase below. If you lose your device, you will need them to restore access to your funds.'
-  mnemonic_conf: Select words in the same order as they are displayed in your recovery phrase.
+  recover: Restore
+  words_count: 'Words count:'
+  word_number: 'Word #%{number}'
+  word_empty: 'Enter word #%{number} from your recovery phrase'
+  not_valid_word: Entered word is not valid
+  create_phrase_desc: Safely write down and save your recovery phrase.
+  restore_phrase_desc: Enter words from your saved recovery phrase.
+  conf_phrase_desc: Select words in the same order as they are displayed in your recovery phrase.
+  setup_conn_desc: Choose wallet connection method.
 network:
   self: Network
   node: Integrated node

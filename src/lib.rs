@@ -27,6 +27,11 @@ use crate::node::Node;
 
 i18n!("locales");
 
+// Include build information.
+pub mod built_info {
+    include!(concat!(env!("OUT_DIR"), "/built.rs"));
+}
+
 mod node;
 mod wallet;
 pub mod gui;

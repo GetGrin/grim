@@ -49,6 +49,8 @@ impl<Platform: PlatformCallbacks> eframe::App for PlatformApp<Platform> {
                 BACK_BUTTON_PRESSED.store(false, Ordering::Relaxed);
             }
             self.root.on_back();
+            // Request repaint to update previous content.
+            ctx.request_repaint();
         }
 
         // Show main content.

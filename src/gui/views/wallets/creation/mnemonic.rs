@@ -12,89 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use grin_keychain::mnemonic::from_entropy;
-use rand::{Rng, thread_rng};
+use egui::{RichText, ScrollArea};
+
+use crate::gui::Colors;
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::wallets::creation::StepControl;
-
-/// Mnemonic phrase setup mode.
-#[derive(PartialEq)]
-pub enum PhraseMode {
-    /// Generate new mnemonic phrase.
-    Generate,
-    /// Import existing mnemonic phrase.
-    Import
-}
-
-/// Mnemonic phrase type based on words count.
-pub enum PhraseType { Words12, Words15, Words18, Words21, Words24 }
-
-impl PhraseType {
-    pub fn value(&self) -> usize {
-        match *self {
-            PhraseType::Words12 => 12,
-            PhraseType::Words15 => 15,
-            PhraseType::Words18 => 18,
-            PhraseType::Words21 => 21,
-            PhraseType::Words24 => 24
-        }
-    }
-}
-
-/// Mnemonic phrase container.
-pub struct Mnemonic {
-    /// Phrase setup mode.
-    pub(crate) mode: PhraseMode,
-    /// Type of phrase based on words count.
-    size: PhraseType,
-    /// Words for phrase.
-    words: Vec<String>
-}
-
-impl Default for Mnemonic {
-    fn default() -> Self {
-        let size = PhraseType::Words12;
-        let size_value = size.value();
-        Self { mode: PhraseMode::Generate, size, words: Vec::with_capacity(size_value) }
-    }
-}
-
-impl Mnemonic {
-    /// Change mnemonic phrase setup [`PhraseMode`].
-    fn set_mode(&mut self, mode: PhraseMode) {
-        self.mode = mode;
-        self.setup_words();
-    }
-
-    /// Change mnemonic phrase words [`PhraseType`].
-    fn set_size(&mut self, size: PhraseType) {
-        self.size = size;
-        self.setup_words();
-    }
-
-    /// Setup words based on current [`PhraseMode`] and [`PhraseType`].
-    fn setup_words(&mut self) {
-        self.words = match self.mode {
-            PhraseMode::Generate => {
-                let mut rng = thread_rng();
-                let mut entropy: Vec<u8> = Vec::with_capacity(self.size.value());
-                for _ in 0..self.size.value() {
-                    entropy.push(rng.gen());
-                }
-                from_entropy(&entropy).unwrap()
-                    .split(" ")
-                    .map(|s| s.to_string())
-                    .collect::<Vec<String>>()
-            },
-            PhraseMode::Import => Vec::with_capacity(self.size.value())
-        };
-    }
-}
+use crate::gui::views::{Root, View};
+use crate::gui::views::wallets::creation::types::{Mnemonic, PhraseMode, PhraseSize};
 
 /// Mnemonic phrase setup content.
 pub struct MnemonicSetup {
     /// Current mnemonic phrase.
-    mnemonic: Mnemonic,
+    pub(crate) mnemonic: Mnemonic,
     /// Word value for [`Modal`].
     word_edit: String,
 }
@@ -109,12 +37,172 @@ impl Default for MnemonicSetup {
 }
 
 impl MnemonicSetup {
-    pub fn ui(&self, ui: &mut egui::Ui, step: &dyn StepControl, cb: &dyn PlatformCallbacks) {
+    pub fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
+        ScrollArea::vertical()
+            .id_source("mnemonic_words_list")
+            .auto_shrink([false; 2])
+            .show(ui, |ui| {
+                ui.add_space(10.0);
 
+                // Show mode and type setup.
+                self.mode_type_ui(ui);
+
+                ui.add_space(12.0);
+                View::horizontal_line(ui, Colors::ITEM_STROKE);
+                ui.add_space(12.0);
+
+                // Show words setup.
+                self.words_ui(ui);
+            });
     }
 
-    pub fn get_mnemonic_mode(&self) -> &PhraseMode {
-        &self.mnemonic.mode
+    /// Draw mode and size setup.
+    fn mode_type_ui(&mut self, ui: &mut egui::Ui) {
+        // Show mode setup.
+        let mut mode = self.mnemonic.mode.clone();
+        ui.columns(2, |columns| {
+            columns[0].vertical_centered(|ui| {
+                let create_mode = PhraseMode::Generate;
+                let create_text = t!("wallets.create");
+                View::radio_value(ui, &mut mode, create_mode, create_text);
+            });
+            columns[1].vertical_centered(|ui| {
+                let import_mode = PhraseMode::Import;
+                let import_text = t!("wallets.recover");
+                View::radio_value(ui, &mut mode, import_mode, import_text);
+            });
+        });
+        if mode != self.mnemonic.mode {
+            self.mnemonic.set_mode(mode)
+        }
+
+        ui.add_space(10.0);
+        ui.vertical_centered(|ui| {
+            ui.label(RichText::new(t!("wallets.words_count"))
+                .size(16.0)
+                .color(Colors::GRAY)
+            );
+        });
+        ui.add_space(6.0);
+
+        // Show mnemonic phrase size setup.
+        let mut size = self.mnemonic.size.clone();
+        ui.columns(5, |columns| {
+            columns[0].vertical_centered(|ui| {
+                let words12 = PhraseSize::Words12;
+                let text = words12.value().to_string();
+                View::radio_value(ui, &mut size, words12, text);
+            });
+            columns[1].vertical_centered(|ui| {
+                let words15 = PhraseSize::Words15;
+                let text = words15.value().to_string();
+                View::radio_value(ui, &mut size, words15, text);
+            });
+            columns[2].vertical_centered(|ui| {
+                let words18 = PhraseSize::Words18;
+                let text = words18.value().to_string();
+                View::radio_value(ui, &mut size, words18, text);
+            });
+            columns[3].vertical_centered(|ui| {
+                let words21 = PhraseSize::Words21;
+                let text = words21.value().to_string();
+                View::radio_value(ui, &mut size, words21, text);
+            });
+            columns[4].vertical_centered(|ui| {
+                let words24 = PhraseSize::Words24;
+                let text = words24.value().to_string();
+                View::radio_value(ui, &mut size, words24, text);
+            });
+        });
+        if size != self.mnemonic.size {
+            self.mnemonic.set_size(size);
+        }
+    }
+
+    /// Draw words setup based on selected [`PhraseMode`].
+    fn words_ui(&mut self, ui: &mut egui::Ui) {
+        ui.vertical_centered(|ui| {
+            // Show word list based on setup mode.
+            match self.mnemonic.mode {
+                PhraseMode::Generate => self.word_list_generate_ui(ui),
+                PhraseMode::Import => self.word_list_import_ui(ui)
+            }
+        });
+    }
+
+    /// Draw word list for [`PhraseMode::Generate`] mode.
+    fn word_list_generate_ui(&mut self, ui: &mut egui::Ui) {
+        // Calculate rows count based on available ui width.
+        const PADDING: f32 = 24.0;
+        let w = ui.available_width();
+        let min_panel_w = Root::SIDE_PANEL_MIN_WIDTH;
+        let double_min_panel_w = (min_panel_w * 2.0) - PADDING;
+        let cols = if w >= (min_panel_w * 1.5) - PADDING && w < double_min_panel_w {
+            3
+        } else if w >= double_min_panel_w {
+            4
+        } else {
+            2
+        };
+
+        // Show words amount.
+        let mut word_number = 0;
+        let _ = self.mnemonic.words.chunks(cols).map(|chunk| {
+            let size = chunk.len();
+            word_number += 1;
+            if size > 1 {
+                ui.columns(cols, |columns| {
+                    columns[0].horizontal(|ui| {
+                        ui.add_space(PADDING);
+                        Self::generated_word_ui(ui, word_number, chunk, 0);
+                    });
+                    columns[1].horizontal(|ui| {
+                        ui.add_space(PADDING);
+                        word_number += 1;
+                        Self::generated_word_ui(ui, word_number, chunk, 1);
+                    });
+                    if size > 2 {
+                        columns[2].horizontal(|ui| {
+                            ui.add_space(PADDING);
+                            word_number += 1;
+                            Self::generated_word_ui(ui, word_number, chunk, 2);
+                        });
+                    }
+                    if size > 3 {
+                        columns[3].horizontal(|ui| {
+                            ui.add_space(PADDING);
+                            word_number += 1;
+                            Self::generated_word_ui(ui, word_number, chunk, 3);
+                        });
+                    }
+                });
+            } else {
+                ui.columns(cols, |columns| {
+                    columns[0].horizontal(|ui| {
+                        ui.add_space(PADDING);
+                        Self::generated_word_ui(ui, word_number, chunk, 0);
+                    });
+                });
+                ui.add_space(12.0);
+            }
+            ui.add_space(8.0);
+        }).collect::<Vec<_>>();
+    }
+
+    /// Draw generated word at given index from provided chunk.
+    fn generated_word_ui(ui: &mut egui::Ui,
+                                  word_number: usize,
+                                  chunk: &[String],
+                                  index: usize) {
+        let word = chunk.get(index).unwrap();
+        let text = format!("#{} {}", word_number, word);
+        ui.label(RichText::new(text).size(16.0).color(Colors::BLACK));
+    }
+
+
+    /// Draw word list for [`PhraseMode::Import`] mode.
+    fn word_list_import_ui(&mut self, ui: &mut egui::Ui) {
+
     }
 
     /// Reset mnemonic phrase to default values.

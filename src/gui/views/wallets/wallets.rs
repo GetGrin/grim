@@ -113,17 +113,22 @@ impl Wallets {
     /// Draw title content.
     fn title_ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame) {
         // Setup title text.
-        let title_content = TitleType::Single(t!("wallets.title").to_uppercase());
+        let title_text = if self.creation_content.can_go_back() {
+            t!("wallets.new")
+        } else {
+            t!("wallets.title")
+        };
+        let title_content = TitleType::Single(title_text.to_uppercase());
 
         // Draw title panel.
         TitlePanel::ui(title_content, |ui, frame| {
-            if !Root::is_dual_panel_mode(frame) {
+             if self.creation_content.can_go_back() {
+                View::title_button(ui, ARROW_LEFT, || {
+                    self.creation_content.back();
+                });
+            } else if !Root::is_dual_panel_mode(frame) {
                 View::title_button(ui, GLOBE, || {
                     Root::toggle_network_panel();
-                });
-            } else if self.creation_content.can_go_back() {
-                View::title_button(ui, ARROW_LEFT, || {
-                    self.creation_content.go_back();
                 });
             };
         }, |ui, frame| {
@@ -192,7 +197,7 @@ impl Wallets {
     pub fn on_back(&mut self) -> bool {
         let can_go_back = self.creation_content.can_go_back();
         if can_go_back {
-            self.creation_content.go_back();
+            self.creation_content.back();
         }
         !can_go_back
     }

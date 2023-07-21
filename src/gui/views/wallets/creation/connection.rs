@@ -13,7 +13,6 @@
 // limitations under the License.
 
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::wallets::creation::StepControl;
 
 #[derive(Default)]
 pub struct ConnectionSetup {
@@ -21,7 +20,7 @@ pub struct ConnectionSetup {
 }
 
 impl ConnectionSetup {
-    pub fn ui(&mut self, ui: &mut egui::Ui, step: &dyn StepControl, cb: &dyn PlatformCallbacks) {
+    pub fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
 
     }
 }
