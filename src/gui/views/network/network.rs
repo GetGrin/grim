@@ -21,34 +21,8 @@ use crate::gui::icons::{CARDHOLDER, DATABASE, DOTS_THREE_OUTLINE_VERTICAL, FACTO
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, ModalContainer, NetworkMetrics, NetworkMining, NetworkNode, NetworkSettings, Root, TitlePanel, TitleType, View};
 use crate::gui::views::network::setup::{DandelionSetup, NodeSetup, P2PSetup, PoolSetup, StratumSetup};
+use crate::gui::views::types::{NetworkTab, NetworkTabType};
 use crate::node::Node;
-
-/// Network tab content interface.
-pub trait NetworkTab {
-    fn get_type(&self) -> NetworkTabType;
-    fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks);
-    fn on_modal_ui(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks);
-}
-
-/// Type of [`NetworkTab`] content.
-#[derive(PartialEq)]
-pub enum NetworkTabType {
-    Node,
-    Metrics,
-    Mining,
-    Settings
-}
-
-impl NetworkTabType {
-    pub fn title(&self) -> String {
-        match *self {
-            NetworkTabType::Node => { t!("network.node") }
-            NetworkTabType::Metrics => { t!("network.metrics") }
-            NetworkTabType::Mining => { t!("network.mining") }
-            NetworkTabType::Settings => { t!("network.settings") }
-        }
-    }
-}
 
 /// Network content.
 pub struct Network {

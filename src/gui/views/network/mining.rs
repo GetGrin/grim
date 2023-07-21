@@ -21,8 +21,8 @@ use crate::gui::Colors;
 use crate::gui::icons::{BARBELL, CLOCK_AFTERNOON, CPU, CUBE, FADERS, FOLDER_DASHED, FOLDER_NOTCH_MINUS, FOLDER_NOTCH_PLUS, HARD_DRIVES, PLUGS, PLUGS_CONNECTED, POLYGON};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, Network, View};
-use crate::gui::views::network::{NetworkTab, NetworkTabType};
 use crate::gui::views::network::setup::StratumSetup;
+use crate::gui::views::types::{NetworkTab, NetworkTabType};
 use crate::node::{Node, NodeConfig};
 
 /// Mining tab content.

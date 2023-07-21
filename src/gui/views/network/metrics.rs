@@ -20,7 +20,7 @@ use crate::gui::Colors;
 use crate::gui::icons::{AT, COINS, CUBE_TRANSPARENT, HASH, HOURGLASS_LOW, HOURGLASS_MEDIUM, TIMER};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, Network, View};
-use crate::gui::views::network::{NetworkTab, NetworkTabType};
+use crate::gui::views::types::{NetworkTab, NetworkTabType};
 use crate::node::Node;
 
 /// Chain metrics tab content.

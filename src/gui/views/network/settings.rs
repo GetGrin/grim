@@ -18,8 +18,8 @@ use crate::gui::Colors;
 use crate::gui::icons::ARROW_COUNTER_CLOCKWISE;
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, ModalPosition, View};
-use crate::gui::views::network::{NetworkTab, NetworkTabType};
 use crate::gui::views::network::setup::{DandelionSetup, NodeSetup, P2PSetup, PoolSetup, StratumSetup};
+use crate::gui::views::types::{NetworkTab, NetworkTabType};
 use crate::node::{Node, NodeConfig};
 
 /// Integrated node settings tab content.
