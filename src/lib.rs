@@ -15,8 +15,6 @@
 #[macro_use]
 extern crate rust_i18n;
 
-use std::sync::Arc;
-
 use egui::{Context, Stroke};
 #[cfg(target_os = "android")]
 use winit::platform::android::activity::AndroidApp;

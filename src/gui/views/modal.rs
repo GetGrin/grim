@@ -13,8 +13,8 @@
 // limitations under the License.
 
 use std::cmp::min;
+use std::sync::RwLock;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{RwLock, RwLockWriteGuard};
 
 use egui::{Align2, RichText, Rounding, Stroke, Vec2};
 use egui::epaint::RectShape;
@@ -178,7 +178,7 @@ impl Modal {
 
     /// Draw [`egui::Window`] with provided content.
     fn window_ui(&self, ui: &mut egui::Ui, add_content: impl FnOnce(&mut egui::Ui, &Modal)) {
-        let mut rect = ui.ctx().screen_rect();
+        let rect = ui.ctx().screen_rect();
         egui::Window::new("modal_bg_window")
             .title_bar(false)
             .resizable(false)

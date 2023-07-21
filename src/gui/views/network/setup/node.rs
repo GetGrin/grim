@@ -12,9 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use eframe::emath::Align;
-use egui::{Id, Layout, RichText, TextStyle, Ui, Widget};
-use egui::os::OperatingSystem;
+use egui::{Id, RichText, TextStyle, Ui, Widget};
 use egui_extras::{Size, StripBuilder};
 use grin_core::global::ChainTypes;
 
