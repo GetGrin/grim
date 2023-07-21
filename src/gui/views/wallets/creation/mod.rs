@@ -12,6 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-mod wallet;
+mod mnemonic;
+pub use mnemonic::MnemonicSetup;
 
-// pub use self::wallet::{init, init_from_seed};
+mod connection;
+pub use connection::ConnectionSetup;
+
+mod content;
+pub use content::WalletCreation;
+
+/// Interface to provide moving between wallet creation steps.
+pub trait StepControl {
+    /// Go to next wallet creation step.
+    fn next_step(&mut self);
+    /// Go to previous wallet creation Step.
+    fn prev_step(&mut self);
+}

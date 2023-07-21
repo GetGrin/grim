@@ -12,11 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::sync::atomic::{AtomicBool, Ordering};
+
 use egui::Context;
+use lazy_static::lazy_static;
 
 use crate::gui::Colors;
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::Root;
+
+lazy_static! {
+    /// State to check if platform Back button was pressed.
+    static ref BACK_BUTTON_PRESSED: AtomicBool = AtomicBool::new(false);
+}
 
 /// Implements ui entry point and contains platform-specific callbacks.
 pub struct PlatformApp<Platform> {
@@ -34,9 +42,13 @@ impl<Platform> PlatformApp<Platform> {
 
 impl<Platform: PlatformCallbacks> eframe::App for PlatformApp<Platform> {
     fn update(&mut self, ctx: &Context, frame: &mut eframe::Frame) {
-        // Handle Esc keyboard key event.
-        if ctx.input(|i| i.key_pressed(egui::Key::Escape)) {
-            Root::on_back();
+        // Handle Esc keyboard key event and platform Back button key event.
+        let back_button_pressed = back_button_pressed();
+        if ctx.input(|i| i.key_pressed(egui::Key::Escape) || back_button_pressed) {
+            if back_button_pressed {
+                BACK_BUTTON_PRESSED.store(false, Ordering::Relaxed);
+            }
+            self.root.on_back();
         }
 
         // Show main content.
@@ -56,6 +68,13 @@ impl<Platform: PlatformCallbacks> eframe::App for PlatformApp<Platform> {
     }
 }
 
+
+
+/// Check if platform Back button was pressed.
+fn back_button_pressed() -> bool {
+    BACK_BUTTON_PRESSED.load(Ordering::Relaxed)
+}
+
 #[allow(dead_code)]
 #[cfg(target_os = "android")]
 #[allow(non_snake_case)]
@@ -66,8 +85,5 @@ pub extern "C" fn Java_mw_gri_android_MainActivity_onBack(
     _class: jni::objects::JObject,
     _activity: jni::objects::JObject,
 ) {
-    Root::on_back();
+    BACK_BUTTON_PRESSED.store(true, Ordering::Relaxed);
 }
-
-
-

@@ -1,7 +1,23 @@
 copy: Copy
 paste: Paste
-accounts:
-  title: Accounts
+continue: Continue
+complete: Complete
+wallets:
+  title: Wallets
+  new: New wallet
+  create_desc: Create or import existing wallet from saved recovery phrase.
+  add: Add wallet
+  name: 'Name:'
+  pass: 'Password:'
+  name_empty: Enter name of wallet
+  pass_empty: Enter password for wallet
+  word_number: 'Word #%{number}'
+  word_empty: 'Enter word #%{number} from recovery phrase'
+  not_valid_word: Entered word is not valid
+  create: Create
+  import: Import
+  mnemonic_desc: 'Safely write down and save your %{}-word recovery phrase below. If you lose your device, you will need them to restore access to your funds.'
+  mnemonic_conf: Select words in the same order as they are displayed in your recovery phrase.
 network:
   self: Network
   node: Integrated node

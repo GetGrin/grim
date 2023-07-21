@@ -19,17 +19,18 @@ use crate::AppConfig;
 use crate::gui::Colors;
 use crate::gui::icons::{CARDHOLDER, DATABASE, DOTS_THREE_OUTLINE_VERTICAL, FACTORY, FADERS, GAUGE, POWER};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Modal, ModalContainer, NetworkMetrics, NetworkMining, NetworkNode, NetworkSettings, Root, TitleAction, TitlePanel, TitleType, View};
+use crate::gui::views::{Modal, ModalContainer, NetworkMetrics, NetworkMining, NetworkNode, NetworkSettings, Root, TitlePanel, TitleType, View};
 use crate::gui::views::network::setup::{DandelionSetup, NodeSetup, P2PSetup, PoolSetup, StratumSetup};
 use crate::node::Node;
 
+/// Network tab content interface.
 pub trait NetworkTab {
     fn get_type(&self) -> NetworkTabType;
     fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks);
     fn on_modal_ui(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks);
 }
 
-
+/// Type of [`NetworkTab`] content.
 #[derive(PartialEq)]
 pub enum NetworkTabType {
     Node,
@@ -108,15 +109,17 @@ impl ModalContainer for Network {
 
 impl Network {
     pub fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame, cb: &dyn PlatformCallbacks) {
-        // Show modal content if it's opened.
+        // Show modal content for current ui container.
         if self.can_draw_modal() {
             Modal::ui(ui, |ui, modal| {
                 self.current_tab.as_mut().on_modal_ui(ui, modal, cb);
             });
         }
 
+        // Show title panel.
         self.title_ui(ui, frame);
 
+        // Show bottom tabs.
         egui::TopBottomPanel::bottom("network_tabs")
             .frame(egui::Frame {
                 fill: Colors::FILL,
@@ -127,6 +130,7 @@ impl Network {
                 self.tabs_ui(ui);
             });
 
+        // Show tab content.
         egui::CentralPanel::default()
             .frame(egui::Frame {
                 stroke: View::DEFAULT_STROKE,
@@ -147,7 +151,7 @@ impl Network {
     /// Calculate tabs inner margin based on display insets (cutouts).
     fn tabs_inner_margin(ui: &mut egui::Ui, frame: &mut eframe::Frame) -> Margin {
         Margin {
-            left: View::far_left_inset_margin(ui) + 4.0,
+            left: View::get_left_inset() + 4.0,
             right: View::far_right_inset_margin(ui, frame) + 4.0,
             top: 4.0,
             bottom: View::get_bottom_inset() + 4.0,
@@ -157,7 +161,7 @@ impl Network {
     /// Calculate content inner margin based on display insets (cutouts).
     fn content_inner_margin(ui: &mut egui::Ui, frame: &mut eframe::Frame) -> Margin {
         Margin {
-            left: View::far_left_inset_margin(ui) + 4.0,
+            left: View::get_left_inset() + 4.0,
             right: View::far_right_inset_margin(ui, frame) + 4.0,
             top: 3.0,
             bottom: 4.0,
@@ -206,27 +210,30 @@ impl Network {
         let subtitle_text = Node::get_sync_status_text();
         let not_syncing = Node::not_syncing();
         let title_content = TitleType::WithSubTitle(title_text, subtitle_text, !not_syncing);
+
         // Draw title panel.
-        TitlePanel::ui(title_content, TitleAction::new(DOTS_THREE_OUTLINE_VERTICAL, || {
-            //TODO: Show connections
-        }), if !Root::is_dual_panel_mode(frame) {
-            TitleAction::new(CARDHOLDER, || {
-                Root::toggle_side_panel();
-            })
-        } else {
-            None
+        TitlePanel::ui(title_content, |ui, frame| {
+            View::title_button(ui, DOTS_THREE_OUTLINE_VERTICAL, || {
+                //TODO: Show connections
+            });
+        }, |ui, frame| {
+            if !Root::is_dual_panel_mode(frame) {
+                View::title_button(ui, CARDHOLDER, || {
+                    Root::toggle_network_panel();
+                });
+            }
         }, ui, frame);
     }
 
     /// Content to draw when node is disabled.
     pub fn disabled_node_ui(ui: &mut egui::Ui) {
-        View::center_content(ui, 162.0, |ui| {
+        View::center_content(ui, 156.0, |ui| {
             let text = t!("network.disabled_server", "dots" => DOTS_THREE_OUTLINE_VERTICAL);
             ui.label(RichText::new(text)
                 .size(16.0)
                 .color(Colors::INACTIVE_TEXT)
             );
-            ui.add_space(10.0);
+            ui.add_space(8.0);
             View::button(ui, format!("{} {}", POWER, t!("network.enable_node")), Colors::GOLD, || {
                 Node::start();
             });

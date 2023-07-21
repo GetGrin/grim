@@ -27,5 +27,5 @@ pub use root::*;
 mod network;
 pub use network::*;
 
-mod accounts;
-pub use accounts::*;
+mod wallets;
+pub use wallets::*;

@@ -11,30 +11,31 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 use std::sync::atomic::{AtomicBool, Ordering};
+
 use egui::os::OperatingSystem;
 use egui::RichText;
-
 use lazy_static::lazy_static;
-use crate::gui::Colors;
 
+use crate::gui::Colors;
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Accounts, Modal, ModalContainer, Network, View};
+use crate::gui::views::{Wallets, Modal, ModalContainer, Network, View};
 use crate::node::Node;
 
 lazy_static! {
-    /// To check if side panel is open from any part of ui.
-    static ref SIDE_PANEL_OPEN: AtomicBool = AtomicBool::new(false);
+    /// Global state to check if [`Network`] panel is open.
+    static ref NETWORK_PANEL_OPEN: AtomicBool = AtomicBool::new(false);
 }
 
 /// Contains main ui content, handles side panel state.
 pub struct Root {
-    /// Side panel content.
-    side_panel: Network,
-    /// Central panel content.
-    central_content: Accounts,
+    /// Side panel [`Network`] content.
+    network: Network,
+    /// Central panel [`Wallets`] content.
+    wallets: Wallets,
 
-    /// Check if app exit is allowed on close event of [`eframe::App`] platform implementation.
+    /// Check if app exit is allowed on close event of [`eframe::App`] implementation.
     pub(crate) exit_allowed: bool,
 
     /// Flag to show exit progress at [`Modal`].
@@ -50,8 +51,8 @@ impl Default for Root {
         let os = OperatingSystem::from_target_os();
         let exit_allowed = os == OperatingSystem::Android || os == OperatingSystem::IOS;
         Self {
-            side_panel: Network::default(),
-            central_content: Accounts::default(),
+            network: Network::default(),
+            wallets: Wallets::default(),
             exit_allowed,
             show_exit_progress: false,
             allowed_modal_ids: vec![
@@ -75,33 +76,39 @@ impl Root {
     pub const SIDE_PANEL_MIN_WIDTH: f32 = 400.0;
 
     pub fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame, cb: &dyn PlatformCallbacks) {
-        // Show opened exit confirmation Modal content.
+        // Show opened exit confirmation modal content.
         if self.can_draw_modal() {
             self.exit_modal_content(ui, frame, cb);
         }
 
-        let (is_panel_open, panel_width) = Self::side_panel_state_width(frame);
+        let (is_panel_open, panel_width) = Self::network_panel_state_width(frame);
+        // Show network content.
         egui::SidePanel::left("network_panel")
             .resizable(false)
             .exact_width(panel_width)
-            .frame(egui::Frame::none())
+            .frame(egui::Frame {
+                fill: Colors::WHITE,
+                ..Default::default()
+            })
             .show_animated_inside(ui, is_panel_open, |ui| {
-                // Show network content on side panel.
-                self.side_panel.ui(ui, frame, cb);
+                self.network.ui(ui, frame, cb);
             });
 
+        // Show wallets content.
         egui::CentralPanel::default()
-            .frame(egui::Frame::none())
+            .frame(egui::Frame {
+                fill: Colors::FILL_DARK,
+                ..Default::default()
+            })
             .show_inside(ui, |ui| {
-                // Show accounts content on central panel.
-                self.central_content.ui(ui, frame, cb);
+                self.wallets.ui(ui, frame, cb);
             });
     }
 
-    /// Get side panel state and width.
-    fn side_panel_state_width(frame: &mut eframe::Frame) -> (bool, f32) {
+    /// Get [`Network`] panel state and width.
+    fn network_panel_state_width(frame: &mut eframe::Frame) -> (bool, f32) {
         let dual_panel_mode = Self::is_dual_panel_mode(frame);
-        let is_panel_open = dual_panel_mode || Self::is_side_panel_open();
+        let is_panel_open = dual_panel_mode || Self::is_network_panel_open();
         let panel_width = if dual_panel_mode {
             Self::SIDE_PANEL_MIN_WIDTH + View::get_left_inset()
         } else {
@@ -110,7 +117,7 @@ impl Root {
         (is_panel_open, panel_width)
     }
 
-    /// Check if ui can show [`Network`] and [`Accounts`] at same time.
+    /// Check if ui can show [`Network`] and [`Wallets`] at same time.
     pub fn is_dual_panel_mode(frame: &mut eframe::Frame) -> bool {
         let w = frame.info().window_info.size.x;
         let h = frame.info().window_info.size.y;
@@ -123,14 +130,14 @@ impl Root {
     }
 
     /// Toggle [`Network`] panel state.
-    pub fn toggle_side_panel() {
-        let is_open = SIDE_PANEL_OPEN.load(Ordering::Relaxed);
-        SIDE_PANEL_OPEN.store(!is_open, Ordering::Relaxed);
+    pub fn toggle_network_panel() {
+        let is_open = NETWORK_PANEL_OPEN.load(Ordering::Relaxed);
+        NETWORK_PANEL_OPEN.store(!is_open, Ordering::Relaxed);
     }
 
-    /// Check if side panel is open.
-    pub fn is_side_panel_open() -> bool {
-        SIDE_PANEL_OPEN.load(Ordering::Relaxed)
+    /// Check if [`Network`] panel is open.
+    pub fn is_network_panel_open() -> bool {
+        NETWORK_PANEL_OPEN.load(Ordering::Relaxed)
     }
 
     /// Show exit confirmation modal.
@@ -215,26 +222,12 @@ impl Root {
         }
     }
 
-    /// Handle platform-specific Back key code event.
-    pub fn on_back() {
+    /// Handle Back key event.
+    pub fn on_back(&mut self) {
         if Modal::on_back() {
-            Self::show_exit_modal()
+            if self.wallets.on_back() {
+                Self::show_exit_modal()
+            }
         }
     }
 }
-
-#[allow(dead_code)]
-#[cfg(target_os = "android")]
-#[allow(non_snake_case)]
-#[no_mangle]
-/// Handle Back key code event from Android.
-pub extern "C" fn Java_mw_gri_android_MainActivity_onBack(
-    _env: jni::JNIEnv,
-    _class: jni::objects::JObject,
-    _activity: jni::objects::JObject,
-) {
-    Root::on_back();
-}
-
-
-

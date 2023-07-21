@@ -12,46 +12,41 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::gui::Colors;
-use crate::gui::icons::{GLOBE, PLUS};
-use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Root, TitleAction, TitleType, TitlePanel, View};
+use egui::Margin;
 
-/// Accounts content.
-pub struct Accounts {
-    /// List of accounts.
-    list: Vec<String>
+use crate::gui::Colors;
+use crate::gui::platform::PlatformCallbacks;
+use crate::gui::views::View;
+
+/// Selected wallet list item content.
+pub struct WalletContent {
+    /// Current wallet instance.
+    item: String
 }
 
-impl Default for Accounts {
-    fn default() -> Self {
-        Self {
-            list: vec![],
-        }
+impl WalletContent {
+    fn new(item: String) -> Self {
+        Self { item }
     }
 }
 
-impl Accounts {
+impl WalletContent {
     pub fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame, cb: &dyn PlatformCallbacks) {
-        let title_content = TitleType::Single(t!("accounts.title").to_uppercase());
-        TitlePanel::ui(title_content, if !Root::is_dual_panel_mode(frame) {
-            TitleAction::new(GLOBE, || {
-                Root::toggle_side_panel();
-            })
-        } else {
-            None
-        }, TitleAction::new(PLUS, || {
-            //TODO: add account
-        }), ui, frame);
-
+        // Show wallet content.
         egui::CentralPanel::default()
             .frame(egui::Frame {
                 stroke: View::DEFAULT_STROKE,
-                fill: Colors::FILL_DARK,
+                fill: Colors::WHITE,
+                inner_margin: Margin {
+                    left: View::far_left_inset_margin(ui) + 4.0,
+                    right: View::far_right_inset_margin(ui, frame) + 4.0,
+                    top: 3.0,
+                    bottom: 4.0,
+                },
                 ..Default::default()
             })
             .show_inside(ui, |ui| {
-               //TODO: accounts list
+                //TODO: wallet content
             });
     }
 }

@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+mod wallets;
+mod creation;
 mod wallet;
 
-// pub use self::wallet::{init, init_from_seed};
+pub use wallets::*;

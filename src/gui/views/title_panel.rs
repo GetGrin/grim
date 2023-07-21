@@ -19,18 +19,6 @@ use egui_extras::{Size, StripBuilder};
 use crate::gui::Colors;
 use crate::gui::views::View;
 
-/// Title action button.
-pub struct TitleAction {
-    pub(crate) icon: Box<&'static str>,
-    pub(crate) on_click: Box<dyn Fn()>,
-}
-
-impl TitleAction {
-    pub fn new(icon: &'static str, on_click: fn()) -> Option<Self> {
-        Option::from(Self { icon: Box::new(icon), on_click: Box::new(on_click) })
-    }
-}
-
 /// Represents title content, can be single title or with animated sub-title.
 pub enum TitleType {
     Single(String),
@@ -44,8 +32,8 @@ impl TitlePanel {
     pub const DEFAULT_HEIGHT: f32 = 54.0;
 
     pub fn ui(title: TitleType,
-              left_action: Option<TitleAction>,
-              right_action: Option<TitleAction>,
+              mut left_content: impl FnMut(&mut egui::Ui, &mut eframe::Frame),
+              mut right_content: impl FnMut(&mut egui::Ui, &mut eframe::Frame),
               ui: &mut egui::Ui,
               frame: &mut eframe::Frame) {
         // Setup identifier.
@@ -68,7 +56,9 @@ impl TitlePanel {
                     .size(Size::exact(Self::DEFAULT_HEIGHT))
                     .horizontal(|mut strip| {
                         strip.cell(|ui| {
-                            Self::action_ui(ui, left_action);
+                            ui.centered_and_justified(|ui| {
+                                (left_content)(ui, frame);
+                            });
                         });
                         match title {
                             TitleType::Single(text) => {
@@ -86,7 +76,9 @@ impl TitlePanel {
                             }
                         }
                         strip.cell(|ui| {
-                            Self::action_ui(ui, right_action);
+                            ui.centered_and_justified(|ui| {
+                                (right_content)(ui, frame);
+                            });
                         });
                     });
             });
@@ -99,18 +91,6 @@ impl TitlePanel {
             right: View::far_right_inset_margin(ui, frame),
             top: View::get_top_inset(),
             bottom: 0.0,
-        }
-    }
-
-    /// Draw panel [`TitleAction`].
-    fn action_ui(ui: &mut egui::Ui, action: Option<TitleAction>) {
-        if action.is_some() {
-            let action = action.unwrap();
-            ui.centered_and_justified(|ui| {
-                View::title_button(ui, &action.icon, || {
-                    (action.on_click)();
-                });
-            });
         }
     }
 

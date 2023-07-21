@@ -12,6 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-mod wallet;
+use crate::gui::platform::PlatformCallbacks;
+use crate::gui::views::wallets::creation::StepControl;
 
-// pub use self::wallet::{init, init_from_seed};
+#[derive(Default)]
+pub struct ConnectionSetup {
+
+}
+
+impl ConnectionSetup {
+    pub fn ui(&mut self, ui: &mut egui::Ui, step: &dyn StepControl, cb: &dyn PlatformCallbacks) {
+
+    }
+}
