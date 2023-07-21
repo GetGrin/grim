@@ -55,7 +55,7 @@ fn android_main(app: AndroidApp) {
     use winit::platform::android::EventLoopBuilderExtAndroid;
     let mut options = eframe::NativeOptions::default();
     // Setup limits that are guaranteed to be compatible with Android devices.
-    options.wgpu_options.device_descriptor = Arc::new(|adapter| {
+    options.wgpu_options.device_descriptor = std::sync::Arc::new(|adapter| {
         let base_limits = wgpu::Limits::downlevel_webgl2_defaults();
         wgpu::DeviceDescriptor {
             label: Some("egui wgpu device"),
