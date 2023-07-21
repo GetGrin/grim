@@ -14,8 +14,8 @@
 
 use std::sync::atomic::{AtomicI32, Ordering};
 
-use egui::{Button, PointerState, Response, RichText, Sense, Spinner, Widget};
-use egui::epaint::{Color32, FontId, RectShape, Rounding, Stroke};
+use egui::{Button, PointerState, Response, RichText, Sense, Spinner, Vec2, Widget};
+use egui::epaint::{CircleShape, Color32, FontId, RectShape, Rounding, Stroke};
 use egui::epaint::text::TextWrapping;
 use egui::text::{LayoutJob, TextFormat};
 use lazy_static::lazy_static;
@@ -42,6 +42,7 @@ impl View {
     pub fn far_right_inset_margin(ui: &mut egui::Ui, frame: &mut eframe::Frame) -> f32 {
         let container_width = ui.available_rect_before_wrap().max.x as i32;
         let display_width = frame.info().window_info.size.x as i32;
+        // Means end of the screen.
         if container_width == display_width {
             Self::get_right_inset()
         } else {
@@ -134,15 +135,58 @@ impl View {
     }
 
     /// Draw [`Button`] with specified background fill color.
-    pub fn button(ui: &mut egui::Ui, text: String, fill_color: Color32, action: impl FnOnce()) {
+    pub fn button(ui: &mut egui::Ui, text: String, fill: Color32, action: impl FnOnce()) {
         let button_text = Self::ellipsize(text.to_uppercase(), 17.0, Colors::TEXT_BUTTON);
         let br = Button::new(button_text)
             .stroke(Self::DEFAULT_STROKE)
-            .fill(fill_color)
+            .fill(fill)
             .ui(ui);
         if Self::touched(ui, br) {
             (action)();
         }
+    }
+
+    /// Draw round [`Button`] with icon.
+    pub fn round_button(ui: &mut egui::Ui,
+                        icon: &'static str,
+                        action: impl FnOnce()) {
+        ui.scope(|ui| {
+            // Setup colors.
+            ui.visuals_mut().widgets.inactive.bg_fill = Colors::GOLD;
+            ui.visuals_mut().widgets.hovered.bg_fill = Colors::GOLD;
+            ui.visuals_mut().widgets.active.bg_fill = Colors::YELLOW;
+
+            // Setup radius.
+            let mut r = 42.0 * 0.5;
+            let size = Vec2::splat(2.0 * r + 5.0);
+            let (rect, br) = ui.allocate_at_least(size, Sense::click_and_drag());
+
+            let mut icon_size = 22.0;
+            let mut icon_color = Colors::TEXT_BUTTON;
+
+            // Increase radius and change icon size and color on-hover.
+            if br.hovered() {
+                r = r * 1.05;
+                icon_size = icon_size * 1.07;
+                icon_color = Colors::BLACK;
+            }
+
+            let visuals = ui.style().interact(&br);
+            ui.painter().add(CircleShape {
+                center: rect.center(),
+                radius: r,
+                fill: visuals.bg_fill,
+                stroke: Self::DEFAULT_STROKE,
+            });
+            ui.allocate_ui_at_rect(rect, |ui| {
+                ui.centered_and_justified(|ui| {
+                    ui.label(RichText::new(icon).color(icon_color).size(icon_size));
+                });
+            });
+            if Self::touched(ui, br) {
+                (action)();
+            }
+        });
     }
 
     /// Draw rounded box with some value and label in the middle,
