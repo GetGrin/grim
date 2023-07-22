@@ -172,7 +172,7 @@ impl WalletCreation {
             Some(step) => {
                 match step {
                     Step::EnterMnemonic => {
-                        self.mnemonic_setup.ui(ui, cb);
+                        self.mnemonic_setup.enter_ui(ui, cb);
                     }
                     Step::ConfirmMnemonic => {}
                     Step::SetupConnection => {}

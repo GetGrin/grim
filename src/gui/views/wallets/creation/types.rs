@@ -109,7 +109,13 @@ impl Mnemonic {
                     .map(|s| s.to_string())
                     .collect::<Vec<String>>()
             },
-            PhraseMode::Import => Vec::with_capacity(size.value())
+            PhraseMode::Import => {
+                let mut words = Vec::with_capacity(size.value());
+                for _ in 0..size.value() {
+                    words.push("".to_string())
+                }
+                words
+            }
         }
     }
 }

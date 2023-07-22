@@ -15,6 +15,7 @@
 use egui::{RichText, ScrollArea};
 
 use crate::gui::Colors;
+use crate::gui::icons::PENCIL;
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Root, View};
 use crate::gui::views::wallets::creation::types::{Mnemonic, PhraseMode, PhraseSize};
@@ -37,7 +38,7 @@ impl Default for MnemonicSetup {
 }
 
 impl MnemonicSetup {
-    pub fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
+    pub fn enter_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         ScrollArea::vertical()
             .id_source("mnemonic_words_list")
             .auto_shrink([false; 2])
@@ -49,10 +50,10 @@ impl MnemonicSetup {
 
                 ui.add_space(12.0);
                 View::horizontal_line(ui, Colors::ITEM_STROKE);
-                ui.add_space(12.0);
+                ui.add_space(6.0);
 
                 // Show words setup.
-                self.words_ui(ui);
+                self.word_list_ui(ui);
             });
     }
 
@@ -119,90 +120,95 @@ impl MnemonicSetup {
         }
     }
 
-    /// Draw words setup based on selected [`PhraseMode`].
-    fn words_ui(&mut self, ui: &mut egui::Ui) {
-        ui.vertical_centered(|ui| {
-            // Show word list based on setup mode.
-            match self.mnemonic.mode {
-                PhraseMode::Generate => self.word_list_generate_ui(ui),
-                PhraseMode::Import => self.word_list_import_ui(ui)
-            }
-        });
-    }
-
-    /// Draw word list for [`PhraseMode::Generate`] mode.
-    fn word_list_generate_ui(&mut self, ui: &mut egui::Ui) {
-        // Calculate rows count based on available ui width.
-        const PADDING: f32 = 24.0;
+    /// Calculate word list columns count based on available ui width.
+    fn calc_columns_count(ui: &mut egui::Ui) -> usize {
         let w = ui.available_width();
-        let min_panel_w = Root::SIDE_PANEL_MIN_WIDTH;
-        let double_min_panel_w = (min_panel_w * 2.0) - PADDING;
-        let cols = if w >= (min_panel_w * 1.5) - PADDING && w < double_min_panel_w {
+        let min_panel_w = Root::SIDE_PANEL_MIN_WIDTH - 12.0;
+        let double_min_panel_w = min_panel_w * 2.0;
+        if w >= min_panel_w * 1.5 && w < double_min_panel_w {
             3
         } else if w >= double_min_panel_w {
             4
         } else {
             2
-        };
+        }
+    }
 
-        // Show words amount.
-        let mut word_number = 0;
-        let _ = self.mnemonic.words.chunks(cols).map(|chunk| {
-            let size = chunk.len();
-            word_number += 1;
-            if size > 1 {
-                ui.columns(cols, |columns| {
-                    columns[0].horizontal(|ui| {
-                        ui.add_space(PADDING);
-                        Self::generated_word_ui(ui, word_number, chunk, 0);
-                    });
-                    columns[1].horizontal(|ui| {
-                        ui.add_space(PADDING);
-                        word_number += 1;
-                        Self::generated_word_ui(ui, word_number, chunk, 1);
-                    });
-                    if size > 2 {
-                        columns[2].horizontal(|ui| {
-                            ui.add_space(PADDING);
-                            word_number += 1;
-                            Self::generated_word_ui(ui, word_number, chunk, 2);
-                        });
-                    }
-                    if size > 3 {
-                        columns[3].horizontal(|ui| {
-                            ui.add_space(PADDING);
-                            word_number += 1;
-                            Self::generated_word_ui(ui, word_number, chunk, 3);
-                        });
-                    }
-                });
-            } else {
-                ui.columns(cols, |columns| {
-                    columns[0].horizontal(|ui| {
-                        ui.add_space(PADDING);
-                        Self::generated_word_ui(ui, word_number, chunk, 0);
-                    });
-                });
-                ui.add_space(12.0);
+    /// Draw word list for mnemonic phrase.
+    fn word_list_ui(&self, ui: &mut egui::Ui) {
+        ui.scope(|ui| {
+            // Setup spacing between columns.
+            ui.spacing_mut().item_spacing = egui::Vec2::new(6.0, 6.0);
+
+            if self.mnemonic.mode == PhraseMode::Generate {
+                ui.add_space(6.0)
             }
-            ui.add_space(8.0);
-        }).collect::<Vec<_>>();
+
+            let mut word_number = 0;
+            let cols = Self::calc_columns_count(ui);
+            let _ = self.mnemonic.words.chunks(cols).map(|chunk| {
+                let size = chunk.len();
+                word_number += 1;
+                if size > 1 {
+                    ui.columns(cols, |columns| {
+                        columns[0].horizontal(|ui| {
+                            self.word_item_ui(ui, word_number, chunk, 0);
+                        });
+                        columns[1].horizontal(|ui| {
+                            word_number += 1;
+                            self.word_item_ui(ui, word_number, chunk, 1);
+                        });
+                        if size > 2 {
+                            columns[2].horizontal(|ui| {
+                                word_number += 1;
+                                self.word_item_ui(ui, word_number, chunk, 2);
+                            });
+                        }
+                        if size > 3 {
+                            columns[3].horizontal(|ui| {
+                                word_number += 1;
+                                self.word_item_ui(ui, word_number, chunk, 3);
+                            });
+                        }
+                    });
+                } else {
+                    ui.columns(cols, |columns| {
+                        columns[0].horizontal(|ui| {
+                            self.word_item_ui(ui, word_number, chunk, 0);
+                        });
+                    });
+                    ui.add_space(12.0);
+                }
+            }).collect::<Vec<_>>();
+        });
     }
 
-    /// Draw generated word at given index from provided chunk.
-    fn generated_word_ui(ui: &mut egui::Ui,
-                                  word_number: usize,
-                                  chunk: &[String],
-                                  index: usize) {
-        let word = chunk.get(index).unwrap();
-        let text = format!("#{} {}", word_number, word);
-        ui.label(RichText::new(text).size(16.0).color(Colors::BLACK));
-    }
-
-
-    /// Draw word list for [`PhraseMode::Import`] mode.
-    fn word_list_import_ui(&mut self, ui: &mut egui::Ui) {
-
+    /// Draw word item at given index from provided chunk.
+    fn word_item_ui(&self,
+                    ui: &mut egui::Ui,
+                    word_number: usize,
+                    chunk: &[String],
+                    index: usize) {
+        match self.mnemonic.mode {
+            PhraseMode::Generate => {
+                ui.add_space(12.0);
+                let word = chunk.get(index).unwrap();
+                let text = format!("#{} {}", word_number, word);
+                ui.label(RichText::new(text).size(17.0).color(Colors::BLACK));
+            }
+            PhraseMode::Import => {
+                let mut size = ui.available_size();
+                size.x = 90.0;
+                ui.allocate_ui(size, |ui| {
+                    View::button(ui, PENCIL.to_string(), Colors::BUTTON, || {
+                        //TODO: open modal
+                    });
+                });
+                ui.label(RichText::new(format!("#{}", word_number))
+                    .size(17.0)
+                    .color(Colors::BLACK));
+            }
+        }
     }
 
     /// Reset mnemonic phrase to default values.
