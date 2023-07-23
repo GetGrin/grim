@@ -46,7 +46,7 @@ pub struct NodeSetup {
 
 impl Default for NodeSetup {
     fn default() -> Self {
-        let (api_ip, api_port) = NodeConfig::get_api_address();
+        let (api_ip, api_port) = NodeConfig::get_api_ip_port();
         let is_api_port_available = NodeConfig::is_api_port_available(&api_ip, &api_port);
         Self {
             available_ips: NodeConfig::get_ip_addrs(),
@@ -141,7 +141,7 @@ impl NodeSetup {
                 ui.add_space(6.0);
 
                 // Show API IP addresses to select.
-                let (api_ip, api_port) = NodeConfig::get_api_address();
+                let (api_ip, api_port) = NodeConfig::get_api_ip_port();
                 NetworkSettings::ip_addrs_ui(ui, &api_ip, &self.available_ips, |selected_ip| {
                     let api_available = NodeConfig::is_api_port_available(selected_ip, &api_port);
                     self.is_api_port_available = api_available;
@@ -214,7 +214,7 @@ impl NodeSetup {
         );
         ui.add_space(6.0);
 
-        let (_, port) = NodeConfig::get_api_address();
+        let (_, port) = NodeConfig::get_api_ip_port();
         View::button(ui, format!("{} {}", PLUG, port.clone()), Colors::BUTTON, || {
             // Setup values for modal.
             self.api_port_edit = port;
@@ -279,7 +279,7 @@ impl NodeSetup {
             // Save button callback.
             let on_save = || {
                 // Check if port is available.
-                let (api_ip, _) = NodeConfig::get_api_address();
+                let (api_ip, _) = NodeConfig::get_api_ip_port();
                 let available = NodeConfig::is_api_port_available(&api_ip, &self.api_port_edit);
                 self.api_port_available_edit = available;
 

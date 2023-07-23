@@ -346,7 +346,7 @@ impl NodeConfig {
     fn is_not_running_stratum_port_available(ip: &String, port: &String) -> bool {
         if Self::is_host_port_available(&ip, &port) {
             if &Self::get_p2p_port() != port {
-                let (api_ip, api_port) = Self::get_api_address();
+                let (api_ip, api_port) = Self::get_api_ip_port();
                 return if &api_ip == ip {
                     &api_port != port
                 } else {
@@ -438,15 +438,16 @@ impl NodeConfig {
         w_node_config.save();
     }
 
-    /// Get API server IP address and port.
-    pub fn get_api_address() -> (String, String) {
+    /// Get API server address.
+    pub fn get_api_address() -> String {
         let r_config = Settings::node_config_to_read();
-        let saved_api_addr = r_config
-            .node
-            .server
-            .api_http_addr
-            .as_str();
-        let (addr, port) = saved_api_addr.split_once(":").unwrap();
+        r_config.node.server.api_http_addr.clone()
+    }
+
+    /// Get API server IP and port.
+    pub fn get_api_ip_port() -> (String, String) {
+        let saved_addr = Self::get_api_address().as_str();
+        let (addr, port) = saved_addr.split_once(":").unwrap();
         (addr.into(), port.into())
     }
 
@@ -628,7 +629,7 @@ impl NodeConfig {
         if port.parse::<u16>().is_err() {
             return false;
         }
-        let (_, api_port) = Self::get_api_address();
+        let (_, api_port) = Self::get_api_ip_port();
         if Node::is_running() {
             // Check if P2P server with same port is running.
             let same_running = if let Some(running_port) = Node::get_p2p_port() {
