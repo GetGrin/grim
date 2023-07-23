@@ -2251,6 +2251,7 @@ dependencies = [
  "toml 0.7.6",
  "wgpu",
  "winit",
+ "zeroize",
 ]
 
 [[package]]
