@@ -43,7 +43,7 @@ impl<Platform> PlatformApp<Platform> {
 impl<Platform: PlatformCallbacks> eframe::App for PlatformApp<Platform> {
     fn update(&mut self, ctx: &Context, frame: &mut eframe::Frame) {
         // Handle Esc keyboard key event and platform Back button key event.
-        let back_button_pressed = back_button_pressed();
+        let back_button_pressed = BACK_BUTTON_PRESSED.load(Ordering::Relaxed);
         if ctx.input(|i| i.key_pressed(egui::Key::Escape) || back_button_pressed) {
             if back_button_pressed {
                 BACK_BUTTON_PRESSED.store(false, Ordering::Relaxed);
@@ -68,13 +68,6 @@ impl<Platform: PlatformCallbacks> eframe::App for PlatformApp<Platform> {
         Root::show_exit_modal();
         self.root.exit_allowed
     }
-}
-
-
-
-/// Check if platform Back button was pressed.
-fn back_button_pressed() -> bool {
-    BACK_BUTTON_PRESSED.load(Ordering::Relaxed)
 }
 
 #[allow(dead_code)]

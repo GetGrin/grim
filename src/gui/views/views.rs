@@ -29,6 +29,13 @@ impl View {
     /// Default stroke around views.
     pub const DEFAULT_STROKE: Stroke = Stroke { width: 1.0, color: Colors::STROKE };
 
+    /// Callback on Enter key press event.
+    pub fn on_enter_key(ui: &mut egui::Ui, cb: impl FnOnce()) {
+        if ui.ctx().input(|i| i.key_pressed(egui::Key::Enter)) {
+            (cb)();
+        }
+    }
+
     /// Calculate margin for far left view based on display insets (cutouts).
     pub fn far_left_inset_margin(ui: &mut egui::Ui) -> f32 {
         if ui.available_rect_before_wrap().min.x == 0.0 {

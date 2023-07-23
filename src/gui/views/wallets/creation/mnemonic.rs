@@ -74,7 +74,7 @@ impl MnemonicSetup {
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("wallets.saved_phrase")).size(16.0).color(Colors::GRAY));
         });
-        ui.add_space(6.0);
+        ui.add_space(4.0);
         ScrollArea::vertical()
             .id_source("confirm_mnemonic_words_list")
             .auto_shrink([false; 2])
@@ -266,7 +266,8 @@ impl MnemonicSetup {
                     });
                 });
                 columns[1].vertical_centered_justified(|ui| {
-                    View::button(ui, t!("continue"), Colors::WHITE, || {
+                    // Callback to save the word.
+                    let mut save = || {
                         // Check if word is valid.
                         let word_index = self.word_num_edit - 1;
                         if !self.mnemonic.is_valid_word(&self.word_edit, word_index) {
@@ -291,7 +292,13 @@ impl MnemonicSetup {
                             self.word_num_edit += 1;
                             self.word_edit = "".to_string();
                         }
+                    };
+                    // Call save on Enter key press.
+                    View::on_enter_key(ui, || {
+                        (save)();
                     });
+                    // Show save button.
+                    View::button(ui, t!("continue"), Colors::WHITE, save);
                 });
             });
             ui.add_space(6.0);
