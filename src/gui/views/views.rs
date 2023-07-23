@@ -14,7 +14,7 @@
 
 use std::sync::atomic::{AtomicI32, Ordering};
 
-use egui::{Button, PointerState, Response, RichText, Sense, Spinner, Vec2, Widget};
+use egui::{Button, PointerState, Response, RichText, Sense, Spinner, Widget};
 use egui::epaint::{CircleShape, Color32, FontId, RectShape, Rounding, Stroke};
 use egui::epaint::text::TextWrapping;
 use egui::text::{LayoutJob, TextFormat};
@@ -165,7 +165,7 @@ impl View {
 
             // Setup radius.
             let mut r = 42.0 * 0.5;
-            let size = Vec2::splat(2.0 * r + 5.0);
+            let size = egui::Vec2::splat(2.0 * r + 5.0);
             let (rect, br) = ui.allocate_at_least(size, Sense::click_and_drag());
 
             let mut icon_size = 22.0;
@@ -335,7 +335,6 @@ impl View {
 
 }
 
-/// Fields to handle platform-specific display insets (cutouts).
 lazy_static! {
     static ref TOP_DISPLAY_INSET: AtomicI32 = AtomicI32::new(0);
     static ref RIGHT_DISPLAY_INSET: AtomicI32 = AtomicI32::new(0);
