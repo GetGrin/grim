@@ -163,10 +163,10 @@ impl StratumSetup {
             self.stratum_port_edit = port;
             self.stratum_port_available_edit = self.is_port_available;
             // Show stratum port modal.
-            let port_modal = Modal::new(Self::STRATUM_PORT_MODAL)
+            Modal::new(Self::STRATUM_PORT_MODAL)
                 .position(ModalPosition::CenterTop)
-                .title(t!("network_settings.change_value"));
-            Modal::show(port_modal);
+                .title(t!("network_settings.change_value"))
+                .show();
             cb.show_keyboard();
         });
         ui.add_space(12.0);
@@ -270,10 +270,10 @@ impl StratumSetup {
             self.attempt_time_edit = time;
 
             // Show attempt time modal.
-            let time_modal = Modal::new(Self::ATTEMPT_TIME_MODAL)
+            Modal::new(Self::ATTEMPT_TIME_MODAL)
                 .position(ModalPosition::CenterTop)
-                .title(t!("network_settings.change_value"));
-            Modal::show(time_modal);
+                .title(t!("network_settings.change_value"))
+                .show();
             cb.show_keyboard();
         });
         ui.add_space(6.0);
@@ -293,7 +293,7 @@ impl StratumSetup {
                 .color(Colors::GRAY));
             ui.add_space(8.0);
 
-            // Draw stratum port text edit.
+            // Draw attempt time text edit.
             let text_edit_resp = egui::TextEdit::singleline(&mut self.attempt_time_edit)
                 .id(Id::from(modal.id))
                 .font(TextStyle::Heading)
@@ -360,11 +360,11 @@ impl StratumSetup {
             // Setup values for modal.
             self.min_share_diff_edit = diff;
 
-            // Show attempt time modal.
-            let diff_modal = Modal::new(Self::MIN_SHARE_DIFF_MODAL)
+            // Show share difficulty setup modal.
+            Modal::new(Self::MIN_SHARE_DIFF_MODAL)
                 .position(ModalPosition::CenterTop)
-                .title(t!("network_settings.change_value"));
-            Modal::show(diff_modal);
+                .title(t!("network_settings.change_value"))
+                .show();
             cb.show_keyboard();
         });
         ui.add_space(6.0);
@@ -379,7 +379,7 @@ impl StratumSetup {
                 .color(Colors::GRAY));
             ui.add_space(8.0);
 
-            // Draw stratum port text edit.
+            // Draw share difficulty text edit.
             let text_edit_resp = egui::TextEdit::singleline(&mut self.min_share_diff_edit)
                 .id(Id::from(modal.id))
                 .font(TextStyle::Heading)

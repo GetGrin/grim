@@ -113,10 +113,10 @@ impl DandelionSetup {
             // Setup values for modal.
             self.epoch_edit = epoch;
             // Show epoch setup modal.
-            let epoch_modal = Modal::new(Self::EPOCH_MODAL)
+            Modal::new(Self::EPOCH_MODAL)
                 .position(ModalPosition::CenterTop)
-                .title(t!("network_settings.change_value"));
-            Modal::show(epoch_modal);
+                .title(t!("network_settings.change_value"))
+                .show();
             cb.show_keyboard();
         });
         ui.add_space(6.0);
@@ -198,11 +198,10 @@ impl DandelionSetup {
             // Setup values for modal.
             self.embargo_edit = embargo;
             // Show embargo setup modal.
-            let embargo_modal = Modal::new(Self::EMBARGO_MODAL)
+            Modal::new(Self::EMBARGO_MODAL)
                 .position(ModalPosition::CenterTop)
-                .title(t!("network_settings.change_value"));
-            Modal::show(embargo_modal);
-            cb.show_keyboard();
+                .title(t!("network_settings.change_value"))
+                .show();
         });
         ui.add_space(6.0);
     }
@@ -283,10 +282,10 @@ impl DandelionSetup {
             // Setup values for modal.
             self.aggregation_edit = agg;
             // Show aggregation setup modal.
-            let aggregation_modal = Modal::new(Self::AGGREGATION_MODAL)
+            Modal::new(Self::AGGREGATION_MODAL)
                 .position(ModalPosition::CenterTop)
-                .title(t!("network_settings.change_value"));
-            Modal::show(aggregation_modal);
+                .title(t!("network_settings.change_value"))
+                .show();
             cb.show_keyboard();
         });
         ui.add_space(6.0);
@@ -368,10 +367,10 @@ impl DandelionSetup {
             // Setup values for modal.
             self.stem_prob_edit = stem_prob;
             // Show stem probability setup modal.
-            let embargo_modal = Modal::new(Self::STEM_PROBABILITY_MODAL)
+            Modal::new(Self::STEM_PROBABILITY_MODAL)
                 .position(ModalPosition::CenterTop)
-                .title(t!("network_settings.change_value"));
-            Modal::show(embargo_modal);
+                .title(t!("network_settings.change_value"))
+                .show();
             cb.show_keyboard();
         });
         ui.add_space(6.0);

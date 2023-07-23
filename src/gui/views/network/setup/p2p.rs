@@ -212,15 +212,15 @@ impl P2PSetup {
             self.port_edit = port;
             self.port_available_edit = self.is_port_available;
             // Show p2p port modal.
-            let port_modal = Modal::new(Self::PORT_MODAL)
+            Modal::new(Self::PORT_MODAL)
                 .position(ModalPosition::CenterTop)
-                .title(t!("network_settings.change_value"));
-            Modal::show(port_modal);
+                .title(t!("network_settings.change_value"))
+                .show();
             cb.show_keyboard();
         });
         ui.add_space(6.0);
 
-        // Show error when stratum server port is unavailable.
+        // Show error when p2p port is unavailable.
         if !self.is_port_available {
             ui.add_space(6.0);
             ui.label(RichText::new(t!("network_settings.port_unavailable"))
@@ -371,10 +371,10 @@ impl P2PSetup {
                     _ => Self::DNS_SEEDS_TITLE.to_string()
                 };
                 // Show modal to add peer.
-                let peer_modal = Modal::new(modal_id)
+                Modal::new(modal_id)
                     .position(ModalPosition::CenterTop)
-                    .title(modal_title);
-                Modal::show(peer_modal);
+                    .title(modal_title)
+                    .show();
                 cb.show_keyboard();
             });
         }
@@ -580,10 +580,10 @@ impl P2PSetup {
             // Setup values for modal.
             self.ban_window_edit = ban_window;
             // Show ban window period setup modal.
-            let ban_modal = Modal::new(Self::BAN_WINDOW_MODAL)
+            Modal::new(Self::BAN_WINDOW_MODAL)
                 .position(ModalPosition::CenterTop)
-                .title(t!("network_settings.change_value"));
-            Modal::show(ban_modal);
+                .title(t!("network_settings.change_value"))
+                .show();
             cb.show_keyboard();
         });
         ui.add_space(6.0);
@@ -671,10 +671,10 @@ impl P2PSetup {
             // Setup values for modal.
             self.max_inbound_count = max_inbound;
             // Show maximum number of inbound peers setup modal.
-            let max_inbound_modal = Modal::new(Self::MAX_INBOUND_MODAL)
+            Modal::new(Self::MAX_INBOUND_MODAL)
                 .position(ModalPosition::CenterTop)
-                .title(t!("network_settings.change_value"));
-            Modal::show(max_inbound_modal);
+                .title(t!("network_settings.change_value"))
+                .show();
             cb.show_keyboard();
         });
         ui.add_space(6.0);
@@ -757,10 +757,10 @@ impl P2PSetup {
             // Setup values for modal.
             self.max_outbound_count = max_outbound;
             // Show maximum number of outbound peers setup modal.
-            let max_outbound = Modal::new(Self::MAX_OUTBOUND_MODAL)
+            Modal::new(Self::MAX_OUTBOUND_MODAL)
                 .position(ModalPosition::CenterTop)
-                .title(t!("network_settings.change_value"));
-            Modal::show(max_outbound);
+                .title(t!("network_settings.change_value"))
+                .show();
             cb.show_keyboard();
         });
         ui.add_space(6.0);
@@ -843,10 +843,10 @@ impl P2PSetup {
             // Setup values for modal.
             self.min_outbound_count = min_outbound;
             // Show maximum number of outbound peers setup modal.
-            let min_outbound = Modal::new(Self::MIN_OUTBOUND_MODAL)
+            Modal::new(Self::MIN_OUTBOUND_MODAL)
                 .position(ModalPosition::CenterTop)
-                .title(t!("network_settings.change_value"));
-            Modal::show(min_outbound);
+                .title(t!("network_settings.change_value"))
+                .show();
             cb.show_keyboard();
         });
         ui.add_space(6.0);

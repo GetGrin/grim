@@ -221,10 +221,10 @@ impl NodeSetup {
             self.api_port_available_edit = self.is_api_port_available;
 
             // Show API port modal.
-            let port_modal = Modal::new(Self::API_PORT_MODAL)
+            Modal::new(Self::API_PORT_MODAL)
                 .position(ModalPosition::CenterTop)
-                .title(t!("network_settings.change_value"));
-            Modal::show(port_modal);
+                .title(t!("network_settings.change_value"))
+                .show();
             cb.show_keyboard();
         });
         ui.add_space(6.0);
@@ -335,10 +335,10 @@ impl NodeSetup {
             // Setup values for modal.
             self.secret_edit = secret_value.unwrap_or("".to_string());
             // Show secret edit modal.
-            let port_modal = Modal::new(modal_id)
+            Modal::new(modal_id)
                 .position(ModalPosition::CenterTop)
-                .title(t!("network_settings.change_value"));
-            Modal::show(port_modal);
+                .title(t!("network_settings.change_value"))
+                .show();
             cb.show_keyboard();
         });
     }
@@ -455,11 +455,11 @@ impl NodeSetup {
         View::button(ui, format!("{} {}", CLOCK_CLOCKWISE, ftl.clone()), Colors::BUTTON, || {
             // Setup values for modal.
             self.ftl_edit = ftl;
-            // Show stratum port modal.
-            let ftl_modal = Modal::new(Self::FTL_MODAL)
+            // Show ftl value setup modal.
+            Modal::new(Self::FTL_MODAL)
                 .position(ModalPosition::CenterTop)
-                .title(t!("network_settings.change_value"));
-            Modal::show(ftl_modal);
+                .title(t!("network_settings.change_value"))
+                .show();
             cb.show_keyboard();
         });
         ui.add_space(6.0);
@@ -478,7 +478,7 @@ impl NodeSetup {
                 .color(Colors::GRAY));
             ui.add_space(8.0);
 
-            // Draw stratum port text edit.
+            // Draw ftl value text edit.
             let text_edit_resp = egui::TextEdit::singleline(&mut self.ftl_edit)
                 .id(Id::from(modal.id))
                 .font(TextStyle::Heading)

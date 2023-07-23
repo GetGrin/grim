@@ -115,10 +115,10 @@ impl PoolSetup {
             // Setup values for modal.
             self.fee_base_edit = fee;
             // Show fee setup modal.
-            let fee_modal = Modal::new(Self::FEE_BASE_MODAL)
+            Modal::new(Self::FEE_BASE_MODAL)
                 .position(ModalPosition::CenterTop)
-                .title(t!("network_settings.change_value"));
-            Modal::show(fee_modal);
+                .title(t!("network_settings.change_value"))
+                .show();
             cb.show_keyboard();
         });
         ui.add_space(6.0);
@@ -200,10 +200,10 @@ impl PoolSetup {
             // Setup values for modal.
             self.reorg_period_edit = period;
             // Show reorg period setup modal.
-            let reorg_modal = Modal::new(Self::REORG_PERIOD_MODAL)
+            Modal::new(Self::REORG_PERIOD_MODAL)
                 .position(ModalPosition::CenterTop)
-                .title(t!("network_settings.change_value"));
-            Modal::show(reorg_modal);
+                .title(t!("network_settings.change_value"))
+                .show();
             cb.show_keyboard();
         });
         ui.add_space(6.0);
@@ -285,10 +285,10 @@ impl PoolSetup {
             // Setup values for modal.
             self.pool_size_edit = size;
             // Show pool size setup modal.
-            let size_modal = Modal::new(Self::POOL_SIZE_MODAL)
+            Modal::new(Self::POOL_SIZE_MODAL)
                 .position(ModalPosition::CenterTop)
-                .title(t!("network_settings.change_value"));
-            Modal::show(size_modal);
+                .title(t!("network_settings.change_value"))
+                .show();
             cb.show_keyboard();
         });
         ui.add_space(6.0);
@@ -370,10 +370,10 @@ impl PoolSetup {
             // Setup values for modal.
             self.stempool_size_edit = size;
             // Show stempool size setup modal.
-            let stem_modal = Modal::new(Self::STEMPOOL_SIZE_MODAL)
+            Modal::new(Self::STEMPOOL_SIZE_MODAL)
                 .position(ModalPosition::CenterTop)
-                .title(t!("network_settings.change_value"));
-            Modal::show(stem_modal);
+                .title(t!("network_settings.change_value"))
+                .show();
             cb.show_keyboard();
         });
         ui.add_space(6.0);
@@ -455,10 +455,10 @@ impl PoolSetup {
             // Setup values for modal.
             self.max_weight_edit = weight;
             // Show total tx weight setup modal.
-            let weight_modal = Modal::new(Self::MAX_WEIGHT_MODAL)
+            Modal::new(Self::MAX_WEIGHT_MODAL)
                 .position(ModalPosition::CenterTop)
-                .title(t!("network_settings.change_value"));
-            Modal::show(weight_modal);
+                .title(t!("network_settings.change_value"))
+                .show();
             cb.show_keyboard();
         });
         ui.add_space(6.0);

@@ -4,7 +4,6 @@ continue: Continue
 complete: Complete
 wallets:
   title: Wallets
-  new: New wallet
   create_desc: Create or import existing wallet from saved recovery phrase.
   add: Add wallet
   name: 'Name:'
@@ -13,13 +12,12 @@ wallets:
   pass_empty: Enter password for wallet
   create: Create
   recover: Restore
+  saved_phrase: Saved phrase
   words_count: 'Words count:'
-  word_number: 'Word #%{number}'
-  word_empty: 'Enter word #%{number} from your recovery phrase'
+  enter_word: 'Enter word #%{number}:'
   not_valid_word: Entered word is not valid
   create_phrase_desc: Safely write down and save your recovery phrase.
   restore_phrase_desc: Enter words from your saved recovery phrase.
-  conf_phrase_desc: Select words in the same order as they are displayed in your recovery phrase.
   setup_conn_desc: Choose wallet connection method.
 network:
   self: Network

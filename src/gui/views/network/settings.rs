@@ -134,10 +134,10 @@ impl NetworkSettings {
                                       t!("network_settings.reset_settings"));
             View::button(ui, button_text, Colors::GOLD, || {
                 // Show modal to confirm settings reset.
-                let reset_modal = Modal::new(Self::RESET_SETTINGS_MODAL)
+                Modal::new(Self::RESET_SETTINGS_MODAL)
                     .position(ModalPosition::Center)
-                    .title(t!("modal.confirmation"));
-                Modal::show(reset_modal);
+                    .title(t!("modal.confirmation"))
+                    .show();
             });
 
             // Show reminder to restart enabled node.
@@ -200,10 +200,10 @@ impl NetworkSettings {
     pub fn show_node_restart_required_modal() {
         if Node::is_running() {
             // Show modal to apply changes by node restart.
-            let port_modal = Modal::new(Self::NODE_RESTART_REQUIRED_MODAL)
+            Modal::new(Self::NODE_RESTART_REQUIRED_MODAL)
                 .position(ModalPosition::Center)
-                .title(t!("network.settings"));
-            Modal::show(port_modal);
+                .title(t!("network.settings"))
+                .show();
         }
     }
 

@@ -12,35 +12,46 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::{RichText, ScrollArea};
+use egui::{Id, RichText, ScrollArea, TextStyle, Widget};
 
 use crate::gui::Colors;
 use crate::gui::icons::PENCIL;
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Root, View};
+use crate::gui::views::{Modal, ModalPosition, Root, View};
 use crate::gui::views::wallets::creation::types::{Mnemonic, PhraseMode, PhraseSize};
 
 /// Mnemonic phrase setup content.
 pub struct MnemonicSetup {
     /// Current mnemonic phrase.
     pub(crate) mnemonic: Mnemonic,
-    /// Word value for [`Modal`].
+
+    /// Current word number to edit at [`Modal`].
+    word_num_edit: usize,
+    /// Entered word value for [`Modal`].
     word_edit: String,
+    /// Flag to check if entered word is valid.
+    valid_word_edit: bool
 }
 
 impl Default for MnemonicSetup {
     fn default() -> Self {
         Self {
             mnemonic: Mnemonic::default(),
+            word_num_edit: 0,
             word_edit: "".to_string(),
+            valid_word_edit: true
         }
     }
 }
 
 impl MnemonicSetup {
-    pub fn enter_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
+    /// Identifier for word input [`Modal`].
+    pub const WORD_INPUT_MODAL: &'static str = "word_input_modal";
+
+    /// Draw content for input step.
+    pub fn ui(&mut self, ui: &mut egui::Ui) {
         ScrollArea::vertical()
-            .id_source("mnemonic_words_list")
+            .id_source("input_mnemonic_words_list")
             .auto_shrink([false; 2])
             .show(ui, |ui| {
                 ui.add_space(10.0);
@@ -53,7 +64,23 @@ impl MnemonicSetup {
                 ui.add_space(6.0);
 
                 // Show words setup.
-                self.word_list_ui(ui);
+                self.word_list_ui(ui, self.mnemonic.mode == PhraseMode::Import);
+            });
+    }
+
+    /// Draw content for confirmation step.
+    pub fn confirm_ui(&mut self, ui: &mut egui::Ui) {
+        ui.add_space(4.0);
+        ui.vertical_centered(|ui| {
+            ui.label(RichText::new(t!("wallets.saved_phrase")).size(16.0).color(Colors::GRAY));
+        });
+        ui.add_space(6.0);
+        ScrollArea::vertical()
+            .id_source("confirm_mnemonic_words_list")
+            .auto_shrink([false; 2])
+            .show(ui, |ui| {
+                // Show words setup.
+                self.word_list_ui(ui, true);
             });
     }
 
@@ -89,130 +116,199 @@ impl MnemonicSetup {
         // Show mnemonic phrase size setup.
         let mut size = self.mnemonic.size.clone();
         ui.columns(5, |columns| {
-            columns[0].vertical_centered(|ui| {
-                let words12 = PhraseSize::Words12;
-                let text = words12.value().to_string();
-                View::radio_value(ui, &mut size, words12, text);
-            });
-            columns[1].vertical_centered(|ui| {
-                let words15 = PhraseSize::Words15;
-                let text = words15.value().to_string();
-                View::radio_value(ui, &mut size, words15, text);
-            });
-            columns[2].vertical_centered(|ui| {
-                let words18 = PhraseSize::Words18;
-                let text = words18.value().to_string();
-                View::radio_value(ui, &mut size, words18, text);
-            });
-            columns[3].vertical_centered(|ui| {
-                let words21 = PhraseSize::Words21;
-                let text = words21.value().to_string();
-                View::radio_value(ui, &mut size, words21, text);
-            });
-            columns[4].vertical_centered(|ui| {
-                let words24 = PhraseSize::Words24;
-                let text = words24.value().to_string();
-                View::radio_value(ui, &mut size, words24, text);
-            });
+            for (index, word) in PhraseSize::VALUES.iter().enumerate() {
+                columns[index].vertical_centered(|ui| {
+                    let text = word.value().to_string();
+                    View::radio_value(ui, &mut size, word.clone(), text);
+                });
+            }
         });
         if size != self.mnemonic.size {
             self.mnemonic.set_size(size);
         }
     }
 
-    /// Calculate word list columns count based on available ui width.
-    fn calc_columns_count(ui: &mut egui::Ui) -> usize {
-        let w = ui.available_width();
-        let min_panel_w = Root::SIDE_PANEL_MIN_WIDTH - 12.0;
-        let double_min_panel_w = min_panel_w * 2.0;
-        if w >= min_panel_w * 1.5 && w < double_min_panel_w {
-            3
-        } else if w >= double_min_panel_w {
-            4
-        } else {
-            2
-        }
-    }
-
-    /// Draw word list for mnemonic phrase.
-    fn word_list_ui(&self, ui: &mut egui::Ui) {
+    /// Draw list of words for mnemonic phrase.
+    fn word_list_ui(&mut self, ui: &mut egui::Ui, edit_words: bool) {
+        ui.add_space(6.0);
         ui.scope(|ui| {
             // Setup spacing between columns.
             ui.spacing_mut().item_spacing = egui::Vec2::new(6.0, 6.0);
 
-            if self.mnemonic.mode == PhraseMode::Generate {
-                ui.add_space(6.0)
-            }
+            // Select list of words based on current mode and edit flag.
+            let words = match self.mnemonic.mode {
+                PhraseMode::Generate => {
+                    if edit_words {
+                        self.mnemonic.confirm_words.clone()
+                    } else {
+                        self.mnemonic.words.clone()
+                    }
+                }
+                PhraseMode::Import => self.mnemonic.words.clone()
+            };
 
             let mut word_number = 0;
-            let cols = Self::calc_columns_count(ui);
-            let _ = self.mnemonic.words.chunks(cols).map(|chunk| {
+            let cols = list_columns_count(ui);
+            let _ = words.chunks(cols).map(|chunk| {
                 let size = chunk.len();
                 word_number += 1;
                 if size > 1 {
                     ui.columns(cols, |columns| {
                         columns[0].horizontal(|ui| {
-                            self.word_item_ui(ui, word_number, chunk, 0);
+                            let word = chunk.get(0).unwrap();
+                            self.word_item_ui(ui, word_number, word, edit_words);
                         });
                         columns[1].horizontal(|ui| {
                             word_number += 1;
-                            self.word_item_ui(ui, word_number, chunk, 1);
+                            let word = chunk.get(1).unwrap();
+                            self.word_item_ui(ui, word_number, word, edit_words);
                         });
                         if size > 2 {
                             columns[2].horizontal(|ui| {
                                 word_number += 1;
-                                self.word_item_ui(ui, word_number, chunk, 2);
+                                let word = chunk.get(2).unwrap();
+                                self.word_item_ui(ui, word_number, word, edit_words);
                             });
                         }
                         if size > 3 {
                             columns[3].horizontal(|ui| {
                                 word_number += 1;
-                                self.word_item_ui(ui, word_number, chunk, 3);
+                                let word = chunk.get(3).unwrap();
+                                self.word_item_ui(ui, word_number, word, edit_words);
                             });
                         }
                     });
                 } else {
                     ui.columns(cols, |columns| {
                         columns[0].horizontal(|ui| {
-                            self.word_item_ui(ui, word_number, chunk, 0);
+                            let word = chunk.get(0).unwrap();
+                            self.word_item_ui(ui, word_number, word, edit_words);
                         });
                     });
-                    ui.add_space(12.0);
                 }
             }).collect::<Vec<_>>();
         });
+        ui.add_space(6.0);
     }
 
-    /// Draw word item at given index from provided chunk.
-    fn word_item_ui(&self,
-                    ui: &mut egui::Ui,
-                    word_number: usize,
-                    chunk: &[String],
-                    index: usize) {
-        match self.mnemonic.mode {
-            PhraseMode::Generate => {
-                ui.add_space(12.0);
-                let word = chunk.get(index).unwrap();
-                let text = format!("#{} {}", word_number, word);
-                ui.label(RichText::new(text).size(17.0).color(Colors::BLACK));
-            }
-            PhraseMode::Import => {
-                let mut size = ui.available_size();
-                size.x = 90.0;
-                ui.allocate_ui(size, |ui| {
-                    View::button(ui, PENCIL.to_string(), Colors::BUTTON, || {
-                        //TODO: open modal
-                    });
-                });
-                ui.label(RichText::new(format!("#{}", word_number))
-                    .size(17.0)
-                    .color(Colors::BLACK));
-            }
+    /// Draw word list item for current mode.
+    fn word_item_ui(&mut self, ui: &mut egui::Ui, word_number: usize, word: &String, edit: bool) {
+        if edit {
+            ui.add_space(6.0);
+            View::button(ui, PENCIL.to_string(), Colors::BUTTON, || {
+                // Setup modal values.
+                self.word_num_edit = word_number;
+                self.word_edit = word.clone();
+                self.valid_word_edit = true;
+                // Show word edit modal.
+                Modal::new(MnemonicSetup::WORD_INPUT_MODAL)
+                    .position(ModalPosition::CenterTop)
+                    .title(t!("wallets.saved_phrase"))
+                    .show();
+            });
+            ui.label(RichText::new(format!("#{} {}", word_number, word))
+                .size(17.0)
+                .color(Colors::BLACK));
+        } else {
+            ui.add_space(12.0);
+            let text = format!("#{} {}", word_number, word);
+            ui.label(RichText::new(text).size(17.0).color(Colors::BLACK));
         }
     }
 
     /// Reset mnemonic phrase to default values.
     pub fn reset(&mut self) {
         self.mnemonic = Mnemonic::default();
+    }
+
+    /// Show word input [`Modal`] content.
+    pub fn modal_ui(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
+        ui.add_space(6.0);
+        ui.vertical_centered(|ui| {
+            ui.label(RichText::new(t!("wallets.enter_word", "number" => self.word_num_edit))
+                .size(17.0)
+                .color(Colors::GRAY));
+            ui.add_space(8.0);
+
+            // Draw word value text edit.
+            let text_edit_resp = egui::TextEdit::singleline(&mut self.word_edit)
+                .id(Id::from(format!("{}{}", modal.id, self.word_num_edit)))
+                .font(TextStyle::Heading)
+                .desired_width(ui.available_width())
+                .cursor_at_end(true)
+                .ui(ui);
+            text_edit_resp.request_focus();
+            if text_edit_resp.clicked() {
+                cb.show_keyboard();
+            }
+
+            // Show error when specified word is not valid.
+            if !self.valid_word_edit {
+                ui.add_space(12.0);
+                ui.label(RichText::new(t!("wallets.not_valid_word"))
+                    .size(17.0)
+                    .color(Colors::RED));
+            }
+            ui.add_space(12.0);
+        });
+
+        // Show modal buttons.
+        ui.scope(|ui| {
+            // Setup spacing between buttons.
+            ui.spacing_mut().item_spacing = egui::Vec2::new(8.0, 0.0);
+
+            ui.columns(2, |columns| {
+                columns[0].vertical_centered_justified(|ui| {
+                    View::button(ui, t!("modal.cancel"), Colors::WHITE, || {
+                        // Close modal.
+                        cb.hide_keyboard();
+                        modal.close();
+                    });
+                });
+                columns[1].vertical_centered_justified(|ui| {
+                    View::button(ui, t!("continue"), Colors::WHITE, || {
+                        // Check if word is valid.
+                        let word_index = self.word_num_edit - 1;
+                        if !self.mnemonic.is_valid_word(&self.word_edit, word_index) {
+                            self.valid_word_edit = false;
+                            return;
+                        }
+                        // Select list where to save word.
+                        let words = match self.mnemonic.mode {
+                            PhraseMode::Generate => &mut self.mnemonic.confirm_words,
+                            PhraseMode::Import => &mut self.mnemonic.words
+                        };
+                        // Save word at list.
+                        words.remove(word_index);
+                        words.insert(word_index, self.word_edit.clone());
+                        // Close modal or go to next word to edit.
+                        let close_modal = words.len() == self.word_num_edit
+                            || !words.get(self.word_num_edit).unwrap().is_empty();
+                        if close_modal {
+                            cb.hide_keyboard();
+                            modal.close();
+                        } else {
+                            self.word_num_edit += 1;
+                            self.word_edit = "".to_string();
+                        }
+                    });
+                });
+            });
+            ui.add_space(6.0);
+        });
+    }
+}
+
+/// Calculate word list columns count based on available ui width.
+fn list_columns_count(ui: &mut egui::Ui) -> usize {
+    let w = ui.available_width();
+    let min_panel_w = Root::SIDE_PANEL_MIN_WIDTH - 12.0;
+    let double_min_panel_w = min_panel_w * 2.0;
+    if w >= min_panel_w * 1.5 && w < double_min_panel_w {
+        3
+    } else if w >= double_min_panel_w {
+        4
+    } else {
+        2
     }
 }

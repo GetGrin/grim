@@ -114,16 +114,16 @@ impl Modal {
         self.closeable.load(Ordering::Relaxed)
     }
 
-    /// Set title text on Modal creation.
+    /// Set title text on [`Modal`] creation.
     pub fn title(mut self, title: String) -> Self {
         self.title = Some(title.to_uppercase());
         self
     }
 
-    /// Set [`Modal`] instance to show at ui.
-    pub fn show(modal: Modal) {
+    /// Set [`Modal`] instance into state to show at ui.
+    pub fn show(self) {
         let mut w_nav = MODAL_STATE.write().unwrap();
-        w_nav.modal = Some(modal);
+        w_nav.modal = Some(self);
     }
 
     /// Remove [`Modal`] from [`MODAL_STATE`] if it's showing and can be closed.

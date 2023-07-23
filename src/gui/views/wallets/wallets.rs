@@ -20,7 +20,7 @@ use crate::gui::Colors;
 use crate::gui::icons::{ARROW_LEFT, GEAR, GLOBE, PLUS};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, ModalContainer, Root, TitlePanel, TitleType, View};
-use crate::gui::views::wallets::creation::WalletCreation;
+use crate::gui::views::wallets::creation::{MnemonicSetup, WalletCreation};
 use crate::gui::views::wallets::wallet::WalletContent;
 
 /// Wallets content.
@@ -45,7 +45,8 @@ impl Default for Wallets {
             item_content: None,
             creation_content: WalletCreation::default(),
             modal_ids: vec![
-                WalletCreation::MODAL_ID
+                WalletCreation::NAME_PASS_MODAL,
+                MnemonicSetup::WORD_INPUT_MODAL
             ]
         }
     }
@@ -63,7 +64,12 @@ impl Wallets {
         if self.can_draw_modal() {
             Modal::ui(ui, |ui, modal| {
                 match modal.id {
-                    WalletCreation::MODAL_ID => self.creation_content.modal_ui(ui, modal, cb),
+                    WalletCreation::NAME_PASS_MODAL => {
+                        self.creation_content.modal_ui(ui, modal, cb);
+                    },
+                    MnemonicSetup::WORD_INPUT_MODAL => {
+                        self.creation_content.mnemonic_setup.modal_ui(ui, modal, cb);
+                    }
                     _ => {}
                 }
             });
@@ -72,9 +78,9 @@ impl Wallets {
         // Show title panel.
         self.title_ui(ui, frame);
 
-        // Show wallet content.
         let is_wallet_panel_open = Self::is_dual_panel_mode(ui, frame) || self.list.is_empty();
         let wallet_panel_width = self.wallet_panel_width(ui, frame);
+        // Show wallet content.
         egui::SidePanel::right("wallet_panel")
             .resizable(false)
             .min_width(wallet_panel_width)
@@ -105,7 +111,7 @@ impl Wallets {
                 });
             // Show wallet creation button if wallet panel is not open.
             if !is_wallet_panel_open {
-                self.add_wallet_btn_ui(ui);
+                self.create_wallet_btn_ui(ui);
             }
         }
     }
@@ -114,7 +120,7 @@ impl Wallets {
     fn title_ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame) {
         // Setup title text.
         let title_text = if self.creation_content.can_go_back() {
-            t!("wallets.new")
+            t!("wallets.add")
         } else {
             t!("wallets.title")
         };
@@ -178,7 +184,7 @@ impl Wallets {
     }
 
     /// Draw floating button to create the wallet.
-    fn add_wallet_btn_ui(&self, ui: &mut egui::Ui) {
+    fn create_wallet_btn_ui(&mut self, ui: &mut egui::Ui) {
         egui::Window::new("create_wallet_button")
             .title_bar(false)
             .resizable(false)
@@ -187,7 +193,7 @@ impl Wallets {
             .frame(egui::Frame::default())
             .show(ui.ctx(), |ui| {
                 View::round_button(ui, PLUS, || {
-                    WalletCreation::show_modal();
+                    self.creation_content.show_name_pass_modal();
                 });
             });
     }

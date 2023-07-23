@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use grin_keychain::mnemonic::from_entropy;
+use grin_keychain::mnemonic::{from_entropy, search};
 use rand::{Rng, thread_rng};
 
 /// Wallet creation step.
@@ -20,7 +20,7 @@ use rand::{Rng, thread_rng};
 pub enum Step {
     /// Mnemonic phrase input.
     EnterMnemonic,
-    /// Mnemonic phrase confirmation for [`Mnemonic`].
+    /// Mnemonic phrase confirmation.
     ConfirmMnemonic,
     /// Wallet connection setup.
     SetupConnection
@@ -40,6 +40,14 @@ pub enum PhraseMode {
 pub enum PhraseSize { Words12, Words15, Words18, Words21, Words24 }
 
 impl PhraseSize {
+    pub const VALUES: [PhraseSize; 5] = [
+        PhraseSize::Words12,
+        PhraseSize::Words15,
+        PhraseSize::Words18,
+        PhraseSize::Words21,
+        PhraseSize::Words24
+    ];
+
     /// Gen words count number.
     pub fn value(&self) -> usize {
         match *self {
@@ -69,8 +77,10 @@ pub struct Mnemonic {
     pub(crate) mode: PhraseMode,
     /// Size of phrase based on words count.
     pub(crate) size: PhraseSize,
-    /// Words for phrase.
-    pub(crate) words: Vec<String>
+    /// Generated words.
+    pub(crate) words: Vec<String>,
+    /// Words to confirm the phrase.
+    pub(crate) confirm_words: Vec<String>
 }
 
 impl Default for Mnemonic {
@@ -78,7 +88,8 @@ impl Default for Mnemonic {
         let size = PhraseSize::Words24;
         let mode = PhraseMode::Generate;
         let words = Self::generate_words(&mode, &size);
-        Self { mode, size, words }
+        let confirm_words = Self::empty_words(&size);
+        Self { mode, size, words, confirm_words }
     }
 }
 
@@ -87,15 +98,28 @@ impl Mnemonic {
     pub fn set_mode(&mut self, mode: PhraseMode) {
         self.mode = mode;
         self.words = Self::generate_words(&self.mode, &self.size);
+        self.confirm_words = Self::empty_words(&self.size);
     }
 
     /// Change mnemonic phrase words [`PhraseSize`].
     pub fn set_size(&mut self, size: PhraseSize) {
         self.size = size;
         self.words = Self::generate_words(&self.mode, &self.size);
+        self.confirm_words = Self::empty_words(&self.size);
     }
 
-    /// Setup words based on provided [`PhraseMode`] and [`PhraseSize`].
+    /// Check if provided word is in BIP39 format and equal to non-empty generated word at index.
+    pub fn is_valid_word(&self, word: &String, index: usize) -> bool {
+        let valid = search(word).is_ok();
+        let equal = if let Some(gen_word) = self.words.get(index) {
+            gen_word.is_empty() || gen_word == word
+        } else {
+            false
+        };
+        valid && equal
+    }
+
+    /// Generate list of words based on provided [`PhraseMode`] and [`PhraseSize`].
     fn generate_words(mode: &PhraseMode, size: &PhraseSize) -> Vec<String> {
         match mode {
             PhraseMode::Generate => {
@@ -110,12 +134,17 @@ impl Mnemonic {
                     .collect::<Vec<String>>()
             },
             PhraseMode::Import => {
-                let mut words = Vec::with_capacity(size.value());
-                for _ in 0..size.value() {
-                    words.push("".to_string())
-                }
-                words
+                Self::empty_words(size)
             }
         }
+    }
+
+    /// Generate empty list of words based on provided [`PhraseSize`].
+    fn empty_words(size: &PhraseSize) -> Vec<String> {
+        let mut words = Vec::with_capacity(size.value());
+        for _ in 0..size.value() {
+            words.push("".to_string())
+        }
+        words
     }
 }

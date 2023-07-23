@@ -142,8 +142,9 @@ impl Root {
 
     /// Show exit confirmation modal.
     pub fn show_exit_modal() {
-        let exit_modal = Modal::new(Self::EXIT_MODAL_ID).title(t!("modal.confirmation"));
-        Modal::show(exit_modal);
+        Modal::new(Self::EXIT_MODAL_ID)
+            .title(t!("modal.confirmation"))
+            .show();
     }
 
     /// Draw exit confirmation modal content.
