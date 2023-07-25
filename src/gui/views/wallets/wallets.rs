@@ -21,12 +21,14 @@ use crate::gui::icons::{ARROW_LEFT, GEAR, GLOBE, PLUS};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, ModalContainer, Root, TitlePanel, TitleType, View};
 use crate::gui::views::wallets::creation::{MnemonicSetup, WalletCreation};
+use crate::gui::views::wallets::setup::ConnectionSetup;
 use crate::gui::views::wallets::wallet::WalletContent;
+use crate::wallet::{Wallet, WalletList};
 
 /// Wallets content.
-pub struct Wallets {
+pub struct WalletsContent {
     /// List of wallets.
-    list: Vec<String>,
+    list: Vec<Wallet>,
 
     /// Selected list item content.
     item_content: Option<WalletContent>,
@@ -37,28 +39,28 @@ pub struct Wallets {
     modal_ids: Vec<&'static str>
 }
 
-impl Default for Wallets {
+impl Default for WalletsContent {
     fn default() -> Self {
-        //TODO load list.
         Self {
-            list: vec![],
+            list: WalletList::list(),
             item_content: None,
             creation_content: WalletCreation::default(),
             modal_ids: vec![
                 WalletCreation::NAME_PASS_MODAL,
-                MnemonicSetup::WORD_INPUT_MODAL
+                MnemonicSetup::WORD_INPUT_MODAL,
+                ConnectionSetup::ADD_CONNECTION_URL_MODAL
             ]
         }
     }
 }
 
-impl ModalContainer for Wallets {
+impl ModalContainer for WalletsContent {
     fn modal_ids(&self) -> &Vec<&'static str> {
         &self.modal_ids
     }
 }
 
-impl Wallets {
+impl WalletsContent {
     pub fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame, cb: &dyn PlatformCallbacks) {
         // Show modal content for current ui container.
         if self.can_draw_modal() {
@@ -69,6 +71,9 @@ impl Wallets {
                     },
                     MnemonicSetup::WORD_INPUT_MODAL => {
                         self.creation_content.mnemonic_setup.modal_ui(ui, modal, cb);
+                    }
+                    ConnectionSetup::ADD_CONNECTION_URL_MODAL => {
+                        self.creation_content.network_setup.modal_ui(ui, modal, cb);
                     }
                     _ => {}
                 }
@@ -176,7 +181,7 @@ impl Wallets {
         }
     }
 
-    /// Check if ui can show [`Wallets`] list and [`WalletContent`] content at same time.
+    /// Check if ui can show [`WalletsContent`] list and [`WalletContent`] content at same time.
     fn is_dual_panel_mode(ui: &mut egui::Ui, frame: &mut eframe::Frame) -> bool {
         let dual_panel_root = Root::is_dual_panel_mode(frame);
         let max_width = ui.available_width();

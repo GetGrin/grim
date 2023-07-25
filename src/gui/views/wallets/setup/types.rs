@@ -12,10 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-mod mnemonic;
-pub use mnemonic::MnemonicSetup;
-
-mod creation;
-pub use creation::WalletCreation;
-
-pub mod types;
+/// Wallet node connection method type.
+#[derive(PartialEq)]
+pub enum ConnectionMethod {
+    /// Integrated node connection.
+    Integrated,
+    /// External node connection.
+    External(String)
+}

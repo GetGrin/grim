@@ -17,16 +17,17 @@ use egui::Margin;
 use crate::gui::Colors;
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::View;
+use crate::wallet::Wallet;
 
 /// Selected wallet list item content.
 pub struct WalletContent {
     /// Current wallet instance.
-    item: String
+    wallet: Wallet
 }
 
 impl WalletContent {
-    fn new(item: String) -> Self {
-        Self { item }
+    fn new(wallet: Wallet) -> Self {
+        Self { wallet }
     }
 }
 

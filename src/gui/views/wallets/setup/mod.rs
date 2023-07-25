@@ -12,15 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::gui::platform::PlatformCallbacks;
+mod connection;
+pub use connection::ConnectionSetup;
 
-#[derive(Default)]
-pub struct ConnectionSetup {
-
-}
-
-impl ConnectionSetup {
-    pub fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
-
-    }
-}
+mod types;
+pub use types::*;

@@ -20,7 +20,7 @@ use lazy_static::lazy_static;
 
 use crate::gui::Colors;
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Wallets, Modal, ModalContainer, Network, View};
+use crate::gui::views::{WalletsContent, Modal, ModalContainer, Network, View};
 use crate::node::Node;
 
 lazy_static! {
@@ -32,8 +32,8 @@ lazy_static! {
 pub struct Root {
     /// Side panel [`Network`] content.
     network: Network,
-    /// Central panel [`Wallets`] content.
-    wallets: Wallets,
+    /// Central panel [`WalletsContent`] content.
+    wallets: WalletsContent,
 
     /// Check if app exit is allowed on close event of [`eframe::App`] implementation.
     pub(crate) exit_allowed: bool,
@@ -52,7 +52,7 @@ impl Default for Root {
         let exit_allowed = os == OperatingSystem::Android || os == OperatingSystem::IOS;
         Self {
             network: Network::default(),
-            wallets: Wallets::default(),
+            wallets: WalletsContent::default(),
             exit_allowed,
             show_exit_progress: false,
             allowed_modal_ids: vec![
@@ -117,7 +117,7 @@ impl Root {
         (is_panel_open, panel_width)
     }
 
-    /// Check if ui can show [`Network`] and [`Wallets`] at same time.
+    /// Check if ui can show [`Network`] and [`WalletsContent`] at same time.
     pub fn is_dual_panel_mode(frame: &mut eframe::Frame) -> bool {
         let w = frame.info().window_info.size.x;
         let h = frame.info().window_info.size.y;

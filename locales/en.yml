@@ -18,7 +18,11 @@ wallets:
   not_valid_word: Entered word is not valid
   create_phrase_desc: Safely write down and save your recovery phrase.
   restore_phrase_desc: Enter words from your saved recovery phrase.
-  setup_conn_desc: Choose wallet connection method.
+  setup_conn_desc: Choose how your wallet connects to the network.
+  conn_method: Connection method
+  ext_conn: 'External connections:'
+  add_node_url: Add node URL
+  invalid_url: Entered URL is invalid
 network:
   self: Network
   node: Integrated node
@@ -150,6 +154,7 @@ modal:
   cancel: Cancel
   save: Save
   confirmation: Confirmation
+  add: Add
 modal_exit:
   description: Are you sure you want to quit the application?
   exit: Exit

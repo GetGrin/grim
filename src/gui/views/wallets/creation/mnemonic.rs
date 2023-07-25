@@ -38,7 +38,7 @@ impl Default for MnemonicSetup {
         Self {
             mnemonic: Mnemonic::default(),
             word_num_edit: 0,
-            word_edit: "".to_string(),
+            word_edit: String::from(""),
             valid_word_edit: true
         }
     }
@@ -192,12 +192,12 @@ impl MnemonicSetup {
     }
 
     /// Draw word list item for current mode.
-    fn word_item_ui(&mut self, ui: &mut egui::Ui, word_number: usize, word: &String, edit: bool) {
+    fn word_item_ui(&mut self, ui: &mut egui::Ui, num: usize, word: &String, edit: bool) {
         if edit {
             ui.add_space(6.0);
             View::button(ui, PENCIL.to_string(), Colors::BUTTON, || {
                 // Setup modal values.
-                self.word_num_edit = word_number;
+                self.word_num_edit = num;
                 self.word_edit = word.clone();
                 self.valid_word_edit = true;
                 // Show word edit modal.
@@ -206,12 +206,12 @@ impl MnemonicSetup {
                     .title(t!("wallets.saved_phrase"))
                     .show();
             });
-            ui.label(RichText::new(format!("#{} {}", word_number, word))
+            ui.label(RichText::new(format!("#{} {}", num, word))
                 .size(17.0)
                 .color(Colors::BLACK));
         } else {
             ui.add_space(12.0);
-            let text = format!("#{} {}", word_number, word);
+            let text = format!("#{} {}", num, word);
             ui.label(RichText::new(text).size(17.0).color(Colors::BLACK));
         }
     }
@@ -274,14 +274,18 @@ impl MnemonicSetup {
                             self.valid_word_edit = false;
                             return;
                         }
+                        self.valid_word_edit = true;
+
                         // Select list where to save word.
                         let words = match self.mnemonic.mode {
                             PhraseMode::Generate => &mut self.mnemonic.confirm_words,
                             PhraseMode::Import => &mut self.mnemonic.words
                         };
+
                         // Save word at list.
                         words.remove(word_index);
                         words.insert(word_index, self.word_edit.clone());
+
                         // Close modal or go to next word to edit.
                         let close_modal = words.len() == self.word_num_edit
                             || !words.get(self.word_num_edit).unwrap().is_empty();
@@ -290,7 +294,7 @@ impl MnemonicSetup {
                             modal.close();
                         } else {
                             self.word_num_edit += 1;
-                            self.word_edit = "".to_string();
+                            self.word_edit = String::from("");
                         }
                     };
                     // Call save on Enter key press.

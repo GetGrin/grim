@@ -14,6 +14,7 @@
 
 use grin_keychain::mnemonic::{from_entropy, search};
 use rand::{Rng, thread_rng};
+use zeroize::{Zeroize, ZeroizeOnDrop};
 
 /// Wallet creation step.
 #[derive(PartialEq)]
@@ -27,7 +28,8 @@ pub enum Step {
 }
 
 /// Mnemonic phrase setup mode.
-#[derive(PartialEq, Clone)]
+/// Will be completely cleaned from memory on drop.
+#[derive(PartialEq, Clone, Zeroize, ZeroizeOnDrop)]
 pub enum PhraseMode {
     /// Generate new mnemonic phrase.
     Generate,
@@ -36,7 +38,8 @@ pub enum PhraseMode {
 }
 
 /// Mnemonic phrase size based on words count.
-#[derive(PartialEq, Clone)]
+/// Will be completely cleaned from memory on drop.
+#[derive(PartialEq, Clone, Zeroize, ZeroizeOnDrop)]
 pub enum PhraseSize { Words12, Words15, Words18, Words21, Words24 }
 
 impl PhraseSize {
@@ -72,6 +75,8 @@ impl PhraseSize {
 }
 
 /// Mnemonic phrase container.
+/// Will be completely cleaned from memory on drop.
+#[derive(Zeroize, ZeroizeOnDrop)]
 pub struct Mnemonic {
     /// Phrase setup mode.
     pub(crate) mode: PhraseMode,
@@ -130,7 +135,7 @@ impl Mnemonic {
                 }
                 from_entropy(&entropy).unwrap()
                     .split(" ")
-                    .map(|s| s.to_string())
+                    .map(|s| String::from(s))
                     .collect::<Vec<String>>()
             },
             PhraseMode::Import => {
@@ -143,7 +148,7 @@ impl Mnemonic {
     fn empty_words(size: &PhraseSize) -> Vec<String> {
         let mut words = Vec::with_capacity(size.value());
         for _ in 0..size.value() {
-            words.push("".to_string())
+            words.push(String::from(""))
         }
         words
     }

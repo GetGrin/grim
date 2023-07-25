@@ -13,5 +13,10 @@
 // limitations under the License.
 
 mod wallet;
+pub use wallet::Wallet;
 
-// pub use self::wallet::{init, init_from_seed};
+mod config;
+pub use config::*;
+
+mod list;
+pub use list::WalletList;

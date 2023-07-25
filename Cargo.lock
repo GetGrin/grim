@@ -2249,6 +2249,7 @@ dependencies = [
  "tokio 1.29.1",
  "tokio-util 0.7.8",
  "toml 0.7.6",
+ "url",
  "wgpu",
  "winit",
  "zeroize",

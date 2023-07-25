@@ -45,32 +45,9 @@ impl PeersConfig {
     /// Save peers config to the file.
     pub fn save(&self) {
         let chain_type = AppConfig::chain_type();
-        let config_path = Settings::get_config_path(Self::FILE_NAME, Some(&chain_type));
+        let chain_name = Some(chain_type.shortname());
+        let config_path = Settings::get_config_path(Self::FILE_NAME, chain_name);
         Settings::write_to_file(self, config_path);
-    }
-
-    /// Save seed peer.
-    pub fn save_seed(&mut self, peer: String) {
-        self.seeds.insert(self.seeds.len(), peer);
-        self.save();
-    }
-
-    /// Save allowed peer.
-    pub fn save_allowed(&mut self, peer: String) {
-        self.allowed.insert(self.allowed.len(), peer);
-        self.save();
-    }
-
-    /// Save denied peer.
-    pub fn save_denied(&mut self, peer: String) {
-        self.denied.insert(self.denied.len(), peer);
-        self.save();
-    }
-
-    /// Save preferred peer.
-    pub fn save_preferred(&mut self, peer: String) {
-        self.preferred.insert(self.preferred.len(), peer);
-        self.save();
     }
 
     /// Convert string to [`PeerAddr`] if address is in correct format (`host:port`) and available.
@@ -169,7 +146,8 @@ impl NodeConfig {
 
         // Initialize peers config.
         let peers_config = {
-            let path = Settings::get_config_path(PeersConfig::FILE_NAME, Some(chain_type));
+            let chain_name = Some(chain_type.shortname());
+            let path = Settings::get_config_path(PeersConfig::FILE_NAME, chain_name);
             let config = Settings::read_from_file::<PeersConfig>(path.clone());
             if !path.exists() || config.is_err() {
                 Self::save_default_peers_config(chain_type)
@@ -180,7 +158,8 @@ impl NodeConfig {
 
         // Initialize node config.
         let node_config = {
-            let path = Settings::get_config_path(SERVER_CONFIG_FILE_NAME, Some(chain_type));
+            let chain_name = Some(chain_type.shortname());
+            let path = Settings::get_config_path(SERVER_CONFIG_FILE_NAME, chain_name);
             let config = Settings::read_from_file::<ConfigMembers>(path.clone());
             if !path.exists() || config.is_err() {
                 Self::save_default_node_server_config(chain_type)
@@ -194,9 +173,10 @@ impl NodeConfig {
 
     /// Save default node config for specified [`ChainTypes`].
     fn save_default_node_server_config(chain_type: &ChainTypes) -> ConfigMembers {
-        let path = Settings::get_config_path(SERVER_CONFIG_FILE_NAME, Some(chain_type));
+        let chain_name = Some(chain_type.shortname());
+        let path = Settings::get_config_path(SERVER_CONFIG_FILE_NAME, chain_name.clone());
         let mut default_config = GlobalConfig::for_chain(chain_type);
-        default_config.update_paths(&Settings::get_working_path(Some(chain_type)));
+        default_config.update_paths(&Settings::get_base_path(chain_name));
         let config = default_config.members.unwrap();
         Settings::write_to_file(&config, path);
         config
@@ -204,7 +184,8 @@ impl NodeConfig {
 
     /// Save default peers config for specified [`ChainTypes`].
     fn save_default_peers_config(chain_type: &ChainTypes) -> PeersConfig {
-        let path = Settings::get_config_path(PeersConfig::FILE_NAME, Some(chain_type));
+        let chain_name = Some(chain_type.shortname());
+        let path = Settings::get_config_path(PeersConfig::FILE_NAME, chain_name);
         let config = PeersConfig::default();
         Settings::write_to_file(&config, path);
         config
@@ -212,10 +193,8 @@ impl NodeConfig {
 
     /// Save node config to the file.
     pub fn save(&self) {
-        let config_path = Settings::get_config_path(
-            SERVER_CONFIG_FILE_NAME,
-            Some(&self.node.server.chain_type)
-        );
+        let chain_name = Some(self.node.server.chain_type.shortname());
+        let config_path = Settings::get_config_path(SERVER_CONFIG_FILE_NAME, chain_name);
         Settings::write_to_file(&self.node, config_path);
     }
 
@@ -256,7 +235,7 @@ impl NodeConfig {
 
     /// Get path for secret file.
     fn get_secret_path(chain_type: &ChainTypes, secret_file_name: &str) -> PathBuf {
-        let grin_path = Settings::get_working_path(Some(chain_type));
+        let grin_path = Settings::get_base_path(Some(chain_type.shortname()));
         let mut api_secret_path = grin_path;
         api_secret_path.push(secret_file_name);
         api_secret_path
@@ -446,7 +425,7 @@ impl NodeConfig {
 
     /// Get API server IP and port.
     pub fn get_api_ip_port() -> (String, String) {
-        let saved_addr = Self::get_api_address().as_str();
+        let saved_addr = Self::get_api_address();
         let (addr, port) = saved_addr.split_once(":").unwrap();
         (addr.into(), port.into())
     }

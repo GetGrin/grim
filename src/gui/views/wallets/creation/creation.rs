@@ -14,14 +14,15 @@
 
 use egui::{Margin, RichText, TextStyle, vec2, Widget};
 use egui_extras::{RetainedImage, Size, StripBuilder};
-use crate::built_info;
 
+use crate::built_info;
 use crate::gui::Colors;
 use crate::gui::icons::{CHECK, EYE, EYE_SLASH, PLUS_CIRCLE, SHARE_FAT};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, ModalPosition, View};
-use crate::gui::views::wallets::creation::{ConnectionSetup, MnemonicSetup};
+use crate::gui::views::wallets::creation::MnemonicSetup;
 use crate::gui::views::wallets::creation::types::{PhraseMode, Step};
+use crate::gui::views::wallets::setup::ConnectionSetup;
 
 /// Wallet creation content.
 pub struct WalletCreation {
@@ -51,8 +52,8 @@ impl Default for WalletCreation {
         Self {
             step: None,
             modal_just_opened: true,
-            name_edit: "".to_string(),
-            pass_edit: "".to_string(),
+            name_edit: String::from(""),
+            pass_edit: String::from(""),
             hide_pass: true,
             mnemonic_setup: MnemonicSetup::default(),
             network_setup: ConnectionSetup::default(),
@@ -89,17 +90,16 @@ impl WalletCreation {
                             let (step_text, step_available) = match step {
                                 Step::EnterMnemonic => {
                                     let mode = &self.mnemonic_setup.mnemonic.mode;
-                                    let size_value = self.mnemonic_setup.mnemonic.size.value();
                                     let text = if mode == &PhraseMode::Generate {
-                                        t!("wallets.create_phrase_desc", "number" => size_value)
+                                        t!("wallets.create_phrase_desc")
                                     } else {
-                                        t!("wallets.restore_phrase_desc", "number" => size_value)
+                                        t!("wallets.restore_phrase_desc")
                                     };
                                     let available = !self
                                         .mnemonic_setup
                                         .mnemonic
                                         .words
-                                        .contains(&"".to_string());
+                                        .contains(&String::from(""));
                                     (text, available)
                                 }
                                 Step::ConfirmMnemonic => {
@@ -108,7 +108,7 @@ impl WalletCreation {
                                         .mnemonic_setup
                                         .mnemonic
                                         .confirm_words
-                                        .contains(&"".to_string());
+                                        .contains(&String::from(""));
                                     (text, available)
                                 },
                                 Step::SetupConnection => (t!("wallets.setup_conn_desc"), true)
@@ -190,13 +190,9 @@ impl WalletCreation {
             }
             Some(step) => {
                 match step {
-                    Step::EnterMnemonic => {
-                        self.mnemonic_setup.ui(ui);
-                    }
-                    Step::ConfirmMnemonic => {
-                        self.mnemonic_setup.confirm_ui(ui);
-                    }
-                    Step::SetupConnection => {}
+                    Step::EnterMnemonic => self.mnemonic_setup.ui(ui),
+                    Step::ConfirmMnemonic => self.mnemonic_setup.confirm_ui(ui),
+                    Step::SetupConnection => self.network_setup.ui(ui, cb)
                 }
             }
         }
@@ -216,8 +212,8 @@ impl WalletCreation {
                     Step::EnterMnemonic => {
                         // Clear values if it needs to go back on first step.
                         self.step = None;
-                        self.name_edit = "".to_string();
-                        self.pass_edit = "".to_string();
+                        self.name_edit = String::from("");
+                        self.pass_edit = String::from("");
                         self.mnemonic_setup.reset();
                     }
                     Step::ConfirmMnemonic => self.step = Some(Step::EnterMnemonic),
@@ -255,8 +251,8 @@ impl WalletCreation {
         // Reset modal values.
         self.hide_pass = false;
         self.modal_just_opened = true;
-        self.name_edit = "".to_string();
-        self.pass_edit = "".to_string();
+        self.name_edit = String::from("");
+        self.pass_edit = String::from("");
         // Show modal.
         Modal::new(Self::NAME_PASS_MODAL)
             .position(ModalPosition::CenterTop)

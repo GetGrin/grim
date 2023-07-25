@@ -93,13 +93,13 @@ pub fn start(mut options: eframe::NativeOptions, app_creator: eframe::AppCreator
     options.default_theme = eframe::Theme::Light;
     options.renderer = eframe::Renderer::Wgpu;
     options.initial_window_size = Some(egui::Vec2::new(1200.0, 720.0));
-
+    // Setup translations.
     setup_i18n();
-
+    // Start integrated node if needed.
     if Settings::app_config_to_read().auto_start_node {
         Node::start();
     }
-
+    // Launch graphical interface.
     let _ = eframe::run_native("Grim", options, app_creator);
 }
 
