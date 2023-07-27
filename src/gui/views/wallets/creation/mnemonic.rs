@@ -25,6 +25,9 @@ pub struct MnemonicSetup {
     /// Current mnemonic phrase.
     pub(crate) mnemonic: Mnemonic,
 
+    /// Flag to check if entered phrase was valid.
+    pub(crate) valid_phrase: bool,
+
     /// Current word number to edit at [`Modal`].
     word_num_edit: usize,
     /// Entered word value for [`Modal`].
@@ -37,6 +40,7 @@ impl Default for MnemonicSetup {
     fn default() -> Self {
         Self {
             mnemonic: Mnemonic::default(),
+            valid_phrase: true,
             word_num_edit: 0,
             word_edit: String::from(""),
             valid_word_edit: true
@@ -290,6 +294,10 @@ impl MnemonicSetup {
                         let close_modal = words.len() == self.word_num_edit
                             || !words.get(self.word_num_edit).unwrap().is_empty();
                         if close_modal {
+                            // Check if entered phrase was valid when all words were entered.
+                            if !self.mnemonic.words.contains(&String::from("")) {
+                                self.valid_phrase = self.mnemonic.is_valid_phrase();
+                            }
                             cb.hide_keyboard();
                             modal.close();
                         } else {

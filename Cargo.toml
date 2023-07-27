@@ -16,42 +16,47 @@ log = "0.4"
 
 ## node
 openssl-sys = { version = "0.9.82", features = ["vendored"] }
-grin_api = { path = "../grin/node/api" }
-grin_chain = { path = "../grin/node/chain" }
-grin_config = { path = "../grin/node/config" }
-grin_core = { path = "../grin/node/core" }
-grin_keychain = { path = "../grin/node/keychain" }
-grin_p2p = { path = "../grin/node/p2p" }
-grin_servers = { path = "../grin/node/servers" }
-grin_util = { path = "../grin/node/util" }
+grin_api = { git = "https://github.com/mimblewimble/grin", branch = "master" }
+grin_chain = { git = "https://github.com/mimblewimble/grin", branch = "master" }
+grin_config = { git = "https://github.com/mimblewimble/grin", branch = "master" }
+grin_core = { git = "https://github.com/mimblewimble/grin", branch = "master" }
+grin_p2p = { git = "https://github.com/mimblewimble/grin", branch = "master" }
+grin_servers = { git = "https://github.com/mimblewimble/grin", branch = "master" }
+grin_keychain = { git = "https://github.com/mimblewimble/grin", branch = "master" }
+grin_util = { git = "https://github.com/mimblewimble/grin", branch = "master" }
 
 ## wallet
-grin_wallet_impls = { path = "../grin/wallet/impls" }
-#grin_wallet_api = "5.1.0"
-#grin_wallet_libwallet = "5.1.0"
+grin_wallet_impls = { git = "https://github.com/mimblewimble/grin-wallet", branch = "master" }
+grin_wallet_api = { git = "https://github.com/mimblewimble/grin-wallet", branch = "master" }
+grin_wallet_libwallet = { git = "https://github.com/mimblewimble/grin-wallet", branch = "master" }
+grin_wallet_util = { git = "https://github.com/mimblewimble/grin-wallet", branch = "master" }
 #grin_wallet_controller = "5.1.0"
 #grin_wallet_config = "5.1.0"
-#grin_wallet_util = "5.1.0"
 
 ## ui
 pollster = "0.3.0"
 wgpu = "0.16.1"
 egui = { version = "0.22.0", default-features = false }
 egui_extras = { version = "0.22.0", features = ["image"] }
+rust-i18n = "2.1.0"
 
 ## other
 futures = "0.3"
 dirs = "5.0.1"
 once_cell = "1.10.0"
-rust-i18n = "2.0.0"
 sys-locale = "0.3.0"
 chrono = "0.4.23"
 lazy_static = "1.4.0"
 toml = "0.7.4"
 serde = "1"
-pnet = "0.33.0"
+pnet = "0.34.0"
 zeroize = "1.6.0"
 url = "2.4.0"
+parking_lot = "0.10.2"
+uuid = { version = "0.8.2", features = ["serde", "v4"] }
+num-bigint = "0.4.3"
+byteorder = "1.3"
+ed25519-dalek = "1.0.0-pre.4"
 
 # stratum server
 serde_derive = "1"

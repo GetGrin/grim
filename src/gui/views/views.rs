@@ -168,7 +168,7 @@ impl View {
             let size = egui::Vec2::splat(2.0 * r + 5.0);
             let (rect, br) = ui.allocate_at_least(size, Sense::click_and_drag());
 
-            let mut icon_size = 22.0;
+            let mut icon_size = 24.0;
             let mut icon_color = Colors::TEXT_BUTTON;
 
             // Increase radius and change icon size and color on-hover.

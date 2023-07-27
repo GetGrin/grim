@@ -27,16 +27,16 @@ use crate::node::Node;
 
 i18n!("locales");
 
+mod node;
+mod wallet;
+mod settings;
+
+pub mod gui;
+
 // Include build information.
 pub mod built_info {
     include!(concat!(env!("OUT_DIR"), "/built.rs"));
 }
-
-mod node;
-mod wallet;
-pub mod gui;
-
-mod settings;
 
 #[allow(dead_code)]
 #[cfg(target_os = "android")]
@@ -100,7 +100,7 @@ pub fn start(mut options: eframe::NativeOptions, app_creator: eframe::AppCreator
         Node::start();
     }
     // Launch graphical interface.
-    let _ = eframe::run_native("Grim", options, app_creator);
+    eframe::run_native("Grim", options, app_creator).unwrap();
 }
 
 /// Setup application [`egui::Style`] and [`egui::Visuals`].

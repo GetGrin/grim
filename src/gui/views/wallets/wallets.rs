@@ -23,13 +23,10 @@ use crate::gui::views::{Modal, ModalContainer, Root, TitlePanel, TitleType, View
 use crate::gui::views::wallets::creation::{MnemonicSetup, WalletCreation};
 use crate::gui::views::wallets::setup::ConnectionSetup;
 use crate::gui::views::wallets::wallet::WalletContent;
-use crate::wallet::{Wallet, WalletList};
+use crate::wallet::WalletList;
 
 /// Wallets content.
 pub struct WalletsContent {
-    /// List of wallets.
-    list: Vec<Wallet>,
-
     /// Selected list item content.
     item_content: Option<WalletContent>,
     /// Wallet creation content.
@@ -42,7 +39,6 @@ pub struct WalletsContent {
 impl Default for WalletsContent {
     fn default() -> Self {
         Self {
-            list: WalletList::list(),
             item_content: None,
             creation_content: WalletCreation::default(),
             modal_ids: vec![
@@ -83,14 +79,22 @@ impl WalletsContent {
         // Show title panel.
         self.title_ui(ui, frame);
 
-        let is_wallet_panel_open = Self::is_dual_panel_mode(ui, frame) || self.list.is_empty();
+        let wallets = WalletList::list();
+
+        let is_dual_panel = Self::is_dual_panel_mode(ui, frame);
+        let is_wallet_creation = self.creation_content.can_go_back();
+        let is_wallet_panel_open = is_dual_panel || is_wallet_creation || wallets.is_empty();
         let wallet_panel_width = self.wallet_panel_width(ui, frame);
         // Show wallet content.
         egui::SidePanel::right("wallet_panel")
             .resizable(false)
             .min_width(wallet_panel_width)
             .frame(egui::Frame {
-                fill: if self.list.is_empty() { Colors::FILL_DARK } else { Colors::WHITE },
+                fill: if !wallets.is_empty() || is_wallet_creation {
+                    Colors::WHITE
+                } else {
+                    Colors::FILL_DARK
+                },
                 ..Default::default()
             })
             .show_animated_inside(ui, is_wallet_panel_open, |ui| {
@@ -98,7 +102,7 @@ impl WalletsContent {
             });
 
         // Show list of wallets.
-        if !self.list.is_empty() {
+        if !is_wallet_creation && !wallets.is_empty() {
             egui::CentralPanel::default()
                 .frame(egui::Frame {
                     stroke: View::DEFAULT_STROKE,
@@ -113,6 +117,12 @@ impl WalletsContent {
                 })
                 .show_inside(ui, |ui| {
                     //TODO: wallets list
+                    for w in WalletList::list() {
+                        ui.label(w.config.get_name());
+                        View::button(ui, "get info".to_string(), Colors::GOLD, || {
+                            println!("12345 amount {}", w.get_txs_info(10).unwrap().2.total);
+                        });
+                    }
                 });
             // Show wallet creation button if wallet panel is not open.
             if !is_wallet_panel_open {
@@ -154,7 +164,7 @@ impl WalletsContent {
                           ui: &mut egui::Ui,
                           frame: &mut eframe::Frame,
                           cb: &dyn PlatformCallbacks) {
-        if self.list.is_empty() || self.item_content.is_none() {
+        if WalletList::list().is_empty() || self.item_content.is_none() {
             self.creation_content.ui(ui, cb)
         } else {
             self.item_content.as_mut().unwrap().ui(ui, frame, cb);
@@ -163,18 +173,19 @@ impl WalletsContent {
 
     /// Get [`WalletContent`] panel width.
     fn wallet_panel_width(&self, ui: &mut egui::Ui, frame: &mut eframe::Frame) -> f32 {
+        let is_wallet_creation = self.creation_content.can_go_back();
+        let available_width = if WalletList::list().is_empty() || is_wallet_creation {
+            ui.available_width()
+        } else {
+            ui.available_width() - Root::SIDE_PANEL_MIN_WIDTH
+        };
         if Self::is_dual_panel_mode(ui, frame) {
             let min_width = (Root::SIDE_PANEL_MIN_WIDTH + View::get_right_inset()) as i64;
-            let available_width = if self.list.is_empty() {
-                ui.available_width()
-            } else {
-                ui.available_width() - Root::SIDE_PANEL_MIN_WIDTH
-            } as i64;
-            max(min_width, available_width) as f32
+            max(min_width, available_width as i64) as f32
         } else {
             let dual_panel_root = Root::is_dual_panel_mode(frame);
             if dual_panel_root {
-                ui.available_width()
+                available_width
             } else {
                 frame.info().window_info.size.x
             }

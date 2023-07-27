@@ -52,6 +52,14 @@ impl ConnectionSetup {
     //     Self { method: ConnectionMethod::Integrated }
     // }
 
+    /// Get external node connection URL.
+    pub fn get_ext_conn_url(&self) -> Option<String> {
+        match &self.method {
+            ConnectionMethod::Integrated => None,
+            ConnectionMethod::External(url) => Some(url.clone())
+        }
+    }
+
     pub fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         ScrollArea::vertical()
             .id_source("wallet_connection_setup")
@@ -97,11 +105,6 @@ impl ConnectionSetup {
                     }
                 });
             });
-    }
-
-    /// Draw external connections setup.
-    fn external_conn_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
-
     }
 
     /// Draw modal content.

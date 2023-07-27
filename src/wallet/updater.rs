@@ -1,0 +1,837 @@
+// Copyright 2023 The Grim Developers
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+use std::collections::{HashMap, HashSet};
+
+use grin_keychain::{Identifier, Keychain, SwitchCommitmentType};
+use grin_util as util;
+use grin_util::secp::key::SecretKey;
+use grin_util::secp::pedersen;
+use grin_util::static_secp_instance;
+use grin_wallet_libwallet::{
+	NodeClient, OutputData, OutputStatus, TxLogEntry, TxLogEntryType, WalletBackend, WalletInfo,
+};
+use grin_wallet_libwallet::{
+	OutputCommitMapping, RetrieveTxQueryArgs, RetrieveTxQuerySortField,
+	RetrieveTxQuerySortOrder,
+};
+use grin_wallet_libwallet::Error;
+use log::{debug, warn};
+use num_bigint::BigInt;
+use uuid::Uuid;
+
+/// Retrieve all of the outputs (doesn't attempt to update from node)
+pub fn retrieve_outputs<'a, T: ?Sized, C, K>(
+	wallet: &mut T,
+	keychain_mask: Option<&SecretKey>,
+	show_spent: bool,
+	tx_id: Option<u32>,
+	parent_key_id: Option<&Identifier>,
+) -> Result<Vec<OutputCommitMapping>, Error>
+where
+	T: WalletBackend<'a, C, K>,
+	C: NodeClient + 'a,
+	K: Keychain + 'a,
+{
+	// just read the wallet here, no need for a write lock
+	let mut outputs = wallet
+		.iter()
+		.filter(|out| show_spent || out.status != OutputStatus::Spent)
+		.collect::<Vec<_>>();
+
+	// only include outputs with a given tx_id if provided
+	if let Some(id) = tx_id {
+		outputs = outputs
+			.into_iter()
+			.filter(|out| out.tx_log_entry == Some(id))
+			.collect::<Vec<_>>();
+	}
+
+	if let Some(k) = parent_key_id {
+		outputs = outputs
+			.iter()
+			.filter(|o| o.root_key_id == *k)
+			.cloned()
+			.collect()
+	}
+
+	outputs.sort_by_key(|out| out.n_child);
+	let keychain = wallet.keychain(keychain_mask)?;
+
+	let res = outputs
+		.into_iter()
+		.map(|output| {
+			let commit = match output.commit.clone() {
+				Some(c) => pedersen::Commitment::from_vec(util::from_hex(&c).unwrap()),
+				None => keychain
+					.commit(output.value, &output.key_id, SwitchCommitmentType::Regular)
+					.unwrap(), // TODO: proper support for different switch commitment schemes
+			};
+			OutputCommitMapping { output, commit }
+		})
+		.collect();
+	Ok(res)
+}
+
+/// Apply advanced filtering to resultset from retrieve_txs below
+pub fn apply_advanced_tx_list_filtering<'a, T: ?Sized, C, K>(
+	wallet: &mut T,
+	query_args: &RetrieveTxQueryArgs,
+) -> Vec<TxLogEntry>
+where
+	T: WalletBackend<'a, C, K>,
+	C: NodeClient + 'a,
+	K: Keychain + 'a,
+{
+	// Apply simple bool, GTE or LTE fields
+	let txs_iter: Box<dyn Iterator<Item = TxLogEntry>> = Box::new(
+		wallet
+			.tx_log_iter()
+			.filter(|tx_entry| {
+				if let Some(v) = query_args.exclude_cancelled {
+					if v {
+						tx_entry.tx_type != TxLogEntryType::TxReceivedCancelled
+							&& tx_entry.tx_type != TxLogEntryType::TxSentCancelled
+					} else {
+						true
+					}
+				} else {
+					true
+				}
+			})
+			.filter(|tx_entry| {
+				if let Some(v) = query_args.include_outstanding_only {
+					if v {
+						!tx_entry.confirmed
+					} else {
+						true
+					}
+				} else {
+					true
+				}
+			})
+			.filter(|tx_entry| {
+				if let Some(v) = query_args.include_confirmed_only {
+					if v {
+						tx_entry.confirmed
+					} else {
+						true
+					}
+				} else {
+					true
+				}
+			})
+			.filter(|tx_entry| {
+				if let Some(v) = query_args.include_sent_only {
+					if v {
+						tx_entry.tx_type == TxLogEntryType::TxSent
+							|| tx_entry.tx_type == TxLogEntryType::TxSentCancelled
+					} else {
+						true
+					}
+				} else {
+					true
+				}
+			})
+			.filter(|tx_entry| {
+				if let Some(v) = query_args.include_received_only {
+					if v {
+						tx_entry.tx_type == TxLogEntryType::TxReceived
+							|| tx_entry.tx_type == TxLogEntryType::TxReceivedCancelled
+					} else {
+						true
+					}
+				} else {
+					true
+				}
+			})
+			.filter(|tx_entry| {
+				if let Some(v) = query_args.include_coinbase_only {
+					if v {
+						tx_entry.tx_type == TxLogEntryType::ConfirmedCoinbase
+					} else {
+						true
+					}
+				} else {
+					true
+				}
+			})
+			.filter(|tx_entry| {
+				if let Some(v) = query_args.include_reverted_only {
+					if v {
+						tx_entry.tx_type == TxLogEntryType::TxReverted
+					} else {
+						true
+					}
+				} else {
+					true
+				}
+			})
+			.filter(|tx_entry| {
+				if let Some(v) = query_args.min_id {
+					tx_entry.id >= v
+				} else {
+					true
+				}
+			})
+			.filter(|tx_entry| {
+				if let Some(v) = query_args.max_id {
+					tx_entry.id <= v
+				} else {
+					true
+				}
+			})
+			.filter(|tx_entry| {
+				if let Some(v) = query_args.min_amount {
+					if tx_entry.tx_type == TxLogEntryType::TxSent
+						|| tx_entry.tx_type == TxLogEntryType::TxSentCancelled
+					{
+						BigInt::from(tx_entry.amount_debited)
+							- BigInt::from(tx_entry.amount_credited)
+							>= BigInt::from(v)
+					} else {
+						BigInt::from(tx_entry.amount_credited)
+							- BigInt::from(tx_entry.amount_debited)
+							>= BigInt::from(v)
+					}
+				} else {
+					true
+				}
+			})
+			.filter(|tx_entry| {
+				if let Some(v) = query_args.max_amount {
+					if tx_entry.tx_type == TxLogEntryType::TxSent
+						|| tx_entry.tx_type == TxLogEntryType::TxSentCancelled
+					{
+						BigInt::from(tx_entry.amount_debited)
+							- BigInt::from(tx_entry.amount_credited)
+							<= BigInt::from(v)
+					} else {
+						BigInt::from(tx_entry.amount_credited)
+							- BigInt::from(tx_entry.amount_debited)
+							<= BigInt::from(v)
+					}
+				} else {
+					true
+				}
+			})
+			.filter(|tx_entry| {
+				if let Some(v) = query_args.min_creation_timestamp {
+					tx_entry.creation_ts >= v
+				} else {
+					true
+				}
+			})
+			.filter(|tx_entry| {
+				if let Some(v) = query_args.min_confirmed_timestamp {
+					tx_entry.creation_ts <= v
+				} else {
+					true
+				}
+			})
+			.filter(|tx_entry| {
+				if let Some(v) = query_args.min_confirmed_timestamp {
+					if let Some(t) = tx_entry.confirmation_ts {
+						t >= v
+					} else {
+						true
+					}
+				} else {
+					true
+				}
+			})
+			.filter(|tx_entry| {
+				if let Some(v) = query_args.max_confirmed_timestamp {
+					if let Some(t) = tx_entry.confirmation_ts {
+						t <= v
+					} else {
+						true
+					}
+				} else {
+					true
+				}
+			}),
+	);
+
+	let mut return_txs: Vec<TxLogEntry> = txs_iter.collect();
+
+	// Now apply requested sorting
+	if let Some(ref s) = query_args.sort_field {
+		match s {
+			RetrieveTxQuerySortField::Id => {
+				return_txs.sort_by_key(|tx| tx.id);
+			}
+			RetrieveTxQuerySortField::CreationTimestamp => {
+				return_txs.sort_by_key(|tx| tx.creation_ts);
+			}
+			RetrieveTxQuerySortField::ConfirmationTimestamp => {
+				return_txs.sort_by_key(|tx| tx.confirmation_ts);
+			}
+			RetrieveTxQuerySortField::TotalAmount => {
+				return_txs.sort_by_key(|tx| {
+					if tx.tx_type == TxLogEntryType::TxSent
+						|| tx.tx_type == TxLogEntryType::TxSentCancelled
+					{
+						BigInt::from(tx.amount_debited) - BigInt::from(tx.amount_credited)
+					} else {
+						BigInt::from(tx.amount_credited) - BigInt::from(tx.amount_debited)
+					}
+				});
+			}
+			RetrieveTxQuerySortField::AmountCredited => {
+				return_txs.sort_by_key(|tx| tx.amount_credited);
+			}
+			RetrieveTxQuerySortField::AmountDebited => {
+				return_txs.sort_by_key(|tx| tx.amount_debited);
+			}
+		}
+	} else {
+		return_txs.sort_by_key(|tx| tx.id);
+	}
+
+	if let Some(ref s) = query_args.sort_order {
+		match s {
+			RetrieveTxQuerySortOrder::Desc => return_txs.reverse(),
+			_ => {}
+		}
+	}
+
+	// Apply limit if requested
+	if let Some(l) = query_args.limit {
+		return_txs = return_txs.into_iter().take(l as usize).collect()
+	}
+
+	return_txs
+}
+
+/// Retrieve all of the transaction entries, or a particular entry
+/// if `parent_key_id` is set, only return entries from that key
+pub fn retrieve_txs<'a, T: ?Sized, C, K>(
+	wallet: &mut T,
+	tx_id: Option<u32>,
+	tx_slate_id: Option<Uuid>,
+	query_args: Option<RetrieveTxQueryArgs>,
+	parent_key_id: Option<&Identifier>,
+	outstanding_only: bool,
+) -> Result<Vec<TxLogEntry>, Error>
+where
+	T: WalletBackend<'a, C, K>,
+	C: NodeClient + 'a,
+	K: Keychain + 'a,
+{
+	let mut txs;
+	// Adding in new transaction list query logic. If `tx_id` or `tx_slate_id`
+	// is provided, then `query_args` is ignored and old logic is followed.
+	if query_args.is_some() && tx_id.is_none() && tx_slate_id.is_none() {
+		txs = apply_advanced_tx_list_filtering(wallet, &query_args.unwrap())
+	} else {
+		txs = wallet
+			.tx_log_iter()
+			.filter(|tx_entry| {
+				let f_pk = match parent_key_id {
+					Some(k) => tx_entry.parent_key_id == *k,
+					None => true,
+				};
+				let f_tx_id = match tx_id {
+					Some(i) => tx_entry.id == i,
+					None => true,
+				};
+				let f_txs = match tx_slate_id {
+					Some(t) => tx_entry.tx_slate_id == Some(t),
+					None => true,
+				};
+				let f_outstanding = match outstanding_only {
+					true => {
+						!tx_entry.confirmed
+							&& (tx_entry.tx_type == TxLogEntryType::TxReceived
+								|| tx_entry.tx_type == TxLogEntryType::TxSent
+								|| tx_entry.tx_type == TxLogEntryType::TxReverted)
+					}
+					false => true,
+				};
+				f_pk && f_tx_id && f_txs && f_outstanding
+			})
+			.collect();
+		txs.sort_by_key(|tx| tx.creation_ts);
+	}
+	Ok(txs)
+}
+
+/// Refreshes the outputs in a wallet with the latest information
+/// from a node
+pub fn refresh_outputs<'a, T: ?Sized, C, K>(
+	wallet: &mut T,
+	keychain_mask: Option<&SecretKey>,
+	parent_key_id: &Identifier,
+	update_all: bool,
+) -> Result<(), Error>
+where
+	T: WalletBackend<'a, C, K>,
+	C: NodeClient + 'a,
+	K: Keychain + 'a,
+{
+	let height = wallet.w2n_client().get_chain_tip()?.0;
+	refresh_output_state(wallet, keychain_mask, height, parent_key_id, update_all)?;
+	Ok(())
+}
+
+/// build a local map of wallet outputs keyed by commit
+/// and a list of outputs we want to query the node for
+pub fn map_wallet_outputs<'a, T: ?Sized, C, K>(
+	wallet: &mut T,
+	keychain_mask: Option<&SecretKey>,
+	parent_key_id: &Identifier,
+	update_all: bool,
+) -> Result<HashMap<pedersen::Commitment, (Identifier, Option<u64>, Option<u32>, bool)>, Error>
+where
+	T: WalletBackend<'a, C, K>,
+	C: NodeClient + 'a,
+	K: Keychain + 'a,
+{
+	let mut wallet_outputs = HashMap::new();
+	let keychain = wallet.keychain(keychain_mask)?;
+	let unspents: Vec<OutputData> = wallet
+		.iter()
+		.filter(|x| x.root_key_id == *parent_key_id && x.status != OutputStatus::Spent)
+		.collect();
+
+	let tx_entries = retrieve_txs(wallet, None, None, None, Some(&parent_key_id), true)?;
+
+	// Only select outputs that are actually involved in an outstanding transaction
+	let unspents = match update_all {
+		false => unspents
+			.into_iter()
+			.filter(|x| match x.tx_log_entry.as_ref() {
+				Some(t) => tx_entries.iter().any(|te| te.id == *t),
+				None => true,
+			})
+			.collect(),
+		true => unspents,
+	};
+
+	for out in unspents {
+		let commit = match out.commit.clone() {
+			Some(c) => pedersen::Commitment::from_vec(util::from_hex(&c).unwrap()),
+			None => keychain
+				.commit(out.value, &out.key_id, SwitchCommitmentType::Regular)
+				.unwrap(), // TODO: proper support for different switch commitment schemes
+		};
+		let val = (
+			out.key_id.clone(),
+			out.mmr_index,
+			out.tx_log_entry,
+			out.status == OutputStatus::Unspent,
+		);
+		wallet_outputs.insert(commit, val);
+	}
+	Ok(wallet_outputs)
+}
+
+/// Cancel transaction and associated outputs
+pub fn cancel_tx_and_outputs<'a, T: ?Sized, C, K>(
+	wallet: &mut T,
+	keychain_mask: Option<&SecretKey>,
+	mut tx: TxLogEntry,
+	outputs: Vec<OutputData>,
+	parent_key_id: &Identifier,
+) -> Result<(), Error>
+where
+	T: WalletBackend<'a, C, K>,
+	C: NodeClient + 'a,
+	K: Keychain + 'a,
+{
+	let mut batch = wallet.batch(keychain_mask)?;
+
+	for mut o in outputs {
+		// unlock locked outputs
+		if o.status == OutputStatus::Unconfirmed || o.status == OutputStatus::Reverted {
+			batch.delete(&o.key_id, &o.mmr_index)?;
+		}
+		if o.status == OutputStatus::Locked {
+			o.status = OutputStatus::Unspent;
+			batch.save(o)?;
+		}
+	}
+	match tx.tx_type {
+		TxLogEntryType::TxSent => tx.tx_type = TxLogEntryType::TxSentCancelled,
+		TxLogEntryType::TxReceived | TxLogEntryType::TxReverted => {
+			tx.tx_type = TxLogEntryType::TxReceivedCancelled
+		}
+		_ => {}
+	}
+	batch.save_tx_log_entry(tx, parent_key_id)?;
+	batch.commit()?;
+	Ok(())
+}
+
+/// Apply refreshed API output data to the wallet
+pub fn apply_api_outputs<'a, T: ?Sized, C, K>(
+	wallet: &mut T,
+	keychain_mask: Option<&SecretKey>,
+	wallet_outputs: &HashMap<pedersen::Commitment, (Identifier, Option<u64>, Option<u32>, bool)>,
+	api_outputs: &HashMap<pedersen::Commitment, (String, u64, u64)>,
+	reverted_kernels: HashSet<u32>,
+	height: u64,
+	parent_key_id: &Identifier,
+) -> Result<(), Error>
+where
+	T: WalletBackend<'a, C, K>,
+	C: NodeClient + 'a,
+	K: Keychain + 'a,
+{
+	// now for each commit, find the output in the wallet and the corresponding
+	// api output (if it exists) and refresh it in-place in the wallet.
+	// Note: minimizing the time we spend holding the wallet lock.
+	{
+		let last_confirmed_height = wallet.last_confirmed_height()?;
+		// If the server height is less than our confirmed height, don't apply
+		// these changes as the chain is syncing, incorrect or forking
+		if height < last_confirmed_height {
+			warn!(
+				"Not updating outputs as the height of the node's chain \
+				 is less than the last reported wallet update height."
+			);
+			warn!("Please wait for sync on node to complete or fork to resolve and try again.");
+			return Ok(());
+		}
+		let mut batch = wallet.batch(keychain_mask)?;
+		for (commit, (id, mmr_index, _, _)) in wallet_outputs.iter() {
+			if let Ok(mut output) = batch.get(id, mmr_index) {
+				match api_outputs.get(&commit) {
+					Some(o) => {
+						// if this is a coinbase tx being confirmed, it's recordable in tx log
+						if output.is_coinbase && output.status == OutputStatus::Unconfirmed {
+							let log_id = batch.next_tx_log_id(parent_key_id)?;
+							let mut t = TxLogEntry::new(
+								parent_key_id.clone(),
+								TxLogEntryType::ConfirmedCoinbase,
+								log_id,
+							);
+							t.confirmed = true;
+							t.amount_credited = output.value;
+							t.amount_debited = 0;
+							t.num_outputs = 1;
+							// calculate kernel excess for coinbase
+							{
+								let secp = static_secp_instance();
+								let secp = secp.lock();
+								let over_commit = secp.commit_value(output.value)?;
+								let excess = secp.commit_sum(vec![*commit], vec![over_commit])?;
+								t.kernel_excess = Some(excess);
+								t.kernel_lookup_min_height = Some(height);
+							}
+							t.update_confirmation_ts();
+							output.tx_log_entry = Some(log_id);
+							batch.save_tx_log_entry(t, &parent_key_id)?;
+						}
+						// also mark the transaction in which this output is involved as confirmed
+						// note that one involved input/output confirmation SHOULD be enough
+						// to reliably confirm the tx
+						if !output.is_coinbase
+							&& (output.status == OutputStatus::Unconfirmed
+								|| output.status == OutputStatus::Reverted)
+						{
+							let tx = batch.tx_log_iter().find(|t| {
+								Some(t.id) == output.tx_log_entry
+									&& t.parent_key_id == *parent_key_id
+							});
+							if let Some(mut t) = tx {
+								if t.tx_type == TxLogEntryType::TxReverted {
+									t.tx_type = TxLogEntryType::TxReceived;
+									t.reverted_after = None;
+								}
+								t.update_confirmation_ts();
+								t.confirmed = true;
+								batch.save_tx_log_entry(t, &parent_key_id)?;
+							}
+						}
+						output.height = o.1;
+						output.mark_unspent();
+					}
+					None => {
+						if !output.is_coinbase
+							&& output
+								.tx_log_entry
+								.map(|i| reverted_kernels.contains(&i))
+								.unwrap_or(false)
+						{
+							output.mark_reverted();
+						} else {
+							output.mark_spent();
+						}
+					}
+				}
+				batch.save(output)?;
+			}
+		}
+
+		for mut tx in batch.tx_log_iter() {
+			if reverted_kernels.contains(&tx.id) && tx.parent_key_id == *parent_key_id {
+				tx.tx_type = TxLogEntryType::TxReverted;
+				tx.reverted_after = tx.confirmation_ts.clone().and_then(|t| {
+					let now = chrono::Utc::now();
+					(now - t).to_std().ok()
+				});
+				tx.confirmed = false;
+				batch.save_tx_log_entry(tx, &parent_key_id)?;
+			}
+		}
+
+		{
+			batch.save_last_confirmed_height(parent_key_id, height)?;
+		}
+		batch.commit()?;
+	}
+	Ok(())
+}
+
+/// Builds a single api query to retrieve the latest output data from the node.
+/// So we can refresh the local wallet outputs.
+pub fn refresh_output_state<'a, T: ?Sized, C, K>(
+	wallet: &mut T,
+	keychain_mask: Option<&SecretKey>,
+	height: u64,
+	parent_key_id: &Identifier,
+	update_all: bool,
+) -> Result<(), Error>
+where
+	T: WalletBackend<'a, C, K>,
+	C: NodeClient + 'a,
+	K: Keychain + 'a,
+{
+	debug!("Refreshing wallet outputs");
+
+	// build a local map of wallet outputs keyed by commit
+	// and a list of outputs we want to query the node for
+	let wallet_outputs = map_wallet_outputs(wallet, keychain_mask, parent_key_id, update_all)?;
+
+	let wallet_output_keys = wallet_outputs.keys().copied().collect();
+
+	let api_outputs = wallet
+		.w2n_client()
+		.get_outputs_from_node(wallet_output_keys)?;
+
+	// For any disappeared output, check the on-chain status of the corresponding transaction kernel
+	// If it is no longer present, the transaction was reverted due to a re-org
+	let reverted_kernels =
+		find_reverted_kernels(wallet, &wallet_outputs, &api_outputs, parent_key_id)?;
+
+	apply_api_outputs(
+		wallet,
+		keychain_mask,
+		&wallet_outputs,
+		&api_outputs,
+		reverted_kernels,
+		height,
+		parent_key_id,
+	)?;
+	clean_old_unconfirmed(wallet, keychain_mask, height)?;
+	Ok(())
+}
+
+fn find_reverted_kernels<'a, T: ?Sized, C, K>(
+	wallet: &mut T,
+	wallet_outputs: &HashMap<pedersen::Commitment, (Identifier, Option<u64>, Option<u32>, bool)>,
+	api_outputs: &HashMap<pedersen::Commitment, (String, u64, u64)>,
+	parent_key_id: &Identifier,
+) -> Result<HashSet<u32>, Error>
+where
+	T: WalletBackend<'a, C, K>,
+	C: NodeClient + 'a,
+	K: Keychain + 'a,
+{
+	let mut client = wallet.w2n_client().clone();
+	let mut ids = HashSet::new();
+
+	// Get transaction IDs for outputs that are no longer unspent
+	for (commit, (_, _, tx_id, was_unspent)) in wallet_outputs {
+		if let Some(tx_id) = *tx_id {
+			if *was_unspent && !api_outputs.contains_key(commit) {
+				ids.insert(tx_id);
+			}
+		}
+	}
+
+	// Get corresponding kernels
+	let kernels = wallet
+		.tx_log_iter()
+		.filter(|t| {
+			ids.contains(&t.id)
+				&& t.parent_key_id == *parent_key_id
+				&& t.tx_type == TxLogEntryType::TxReceived
+		})
+		.filter_map(|t| {
+			t.kernel_excess
+				.map(|e| (t.id, e, t.kernel_lookup_min_height))
+		});
+
+	// Check each of the kernels on-chain
+	let mut reverted = HashSet::new();
+	for (id, excess, min_height) in kernels {
+		if client.get_kernel(&excess, min_height, None)?.is_none() {
+			reverted.insert(id);
+		}
+	}
+
+	Ok(reverted)
+}
+
+fn clean_old_unconfirmed<'a, T: ?Sized, C, K>(
+	wallet: &mut T,
+	keychain_mask: Option<&SecretKey>,
+	height: u64,
+) -> Result<(), Error>
+where
+	T: WalletBackend<'a, C, K>,
+	C: NodeClient + 'a,
+	K: Keychain + 'a,
+{
+	if height < 50 {
+		return Ok(());
+	}
+	let mut ids_to_del = vec![];
+	for out in wallet.iter() {
+		if out.status == OutputStatus::Unconfirmed
+			&& out.height > 0
+			&& out.height < height - 50
+			&& out.is_coinbase
+		{
+			ids_to_del.push(out.key_id.clone())
+		}
+	}
+	let mut batch = wallet.batch(keychain_mask)?;
+	for id in ids_to_del {
+		batch.delete(&id, &None)?;
+	}
+	batch.commit()?;
+	Ok(())
+}
+
+/// Retrieve summary info about the wallet
+/// caller should refresh first if desired
+pub fn retrieve_info<'a, T: ?Sized, C, K>(
+	wallet: &mut T,
+	parent_key_id: &Identifier,
+	minimum_confirmations: u64,
+) -> Result<WalletInfo, Error>
+where
+	T: WalletBackend<'a, C, K>,
+	C: NodeClient + 'a,
+	K: Keychain + 'a,
+{
+	let current_height = wallet.last_confirmed_height()?;
+	let outputs = wallet
+		.iter()
+		.filter(|out| out.root_key_id == *parent_key_id);
+
+	let mut unspent_total = 0;
+	let mut immature_total = 0;
+	let mut awaiting_finalization_total = 0;
+	let mut unconfirmed_total = 0;
+	let mut locked_total = 0;
+	let mut reverted_total = 0;
+
+	for out in outputs {
+		match out.status {
+			OutputStatus::Unspent => {
+				if out.is_coinbase && out.lock_height > current_height {
+					immature_total += out.value;
+				} else if out.num_confirmations(current_height) < minimum_confirmations {
+					// Treat anything less than minimum confirmations as "unconfirmed".
+					unconfirmed_total += out.value;
+				} else {
+					unspent_total += out.value;
+				}
+			}
+			OutputStatus::Unconfirmed => {
+				// We ignore unconfirmed coinbase outputs completely.
+				if !out.is_coinbase {
+					if minimum_confirmations == 0 {
+						unconfirmed_total += out.value;
+					} else {
+						awaiting_finalization_total += out.value;
+					}
+				}
+			}
+			OutputStatus::Locked => {
+				locked_total += out.value;
+			}
+			OutputStatus::Reverted => reverted_total += out.value,
+			OutputStatus::Spent => {}
+		}
+	}
+
+	Ok(WalletInfo {
+		last_confirmed_height: current_height,
+		minimum_confirmations,
+		total: unspent_total + unconfirmed_total + immature_total,
+		amount_awaiting_finalization: awaiting_finalization_total,
+		amount_awaiting_confirmation: unconfirmed_total,
+		amount_immature: immature_total,
+		amount_locked: locked_total,
+		amount_currently_spendable: unspent_total,
+		amount_reverted: reverted_total,
+	})
+}
+
+/// Rollback outputs associated with a transaction in the wallet
+pub fn cancel_tx<'a, T: ?Sized, C, K>(
+	wallet: &mut T,
+	keychain_mask: Option<&SecretKey>,
+	parent_key_id: &Identifier,
+	tx_id: Option<u32>,
+	tx_slate_id: Option<Uuid>,
+) -> Result<(), Error>
+	where
+		T: WalletBackend<'a, C, K>,
+		C: NodeClient + 'a,
+		K: Keychain + 'a,
+{
+	let mut tx_id_string = String::new();
+	if let Some(tx_id) = tx_id {
+		tx_id_string = tx_id.to_string();
+	} else if let Some(tx_slate_id) = tx_slate_id {
+		tx_id_string = tx_slate_id.to_string();
+	}
+	let tx_vec = retrieve_txs(
+		wallet,
+		tx_id,
+		tx_slate_id,
+		None,
+		Some(&parent_key_id),
+		false,
+	)?;
+	if tx_vec.len() != 1 {
+		return Err(Error::TransactionDoesntExist(tx_id_string));
+	}
+	let tx = tx_vec[0].clone();
+	match tx.tx_type {
+		TxLogEntryType::TxSent | TxLogEntryType::TxReceived | TxLogEntryType::TxReverted => {}
+		_ => return Err(Error::TransactionNotCancellable(tx_id_string)),
+	}
+	if tx.confirmed {
+		return Err(Error::TransactionNotCancellable(tx_id_string));
+	}
+	// get outputs associated with tx
+	let res = retrieve_outputs(
+		wallet,
+		keychain_mask,
+		false,
+		Some(tx.id),
+		Some(&parent_key_id),
+	)?;
+	let outputs = res.iter().map(|m| m.output.clone()).collect();
+	cancel_tx_and_outputs(wallet, keychain_mask, tx, outputs, parent_key_id)?;
+	Ok(())
+}

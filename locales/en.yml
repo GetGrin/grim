@@ -16,6 +16,7 @@ wallets:
   words_count: 'Words count:'
   enter_word: 'Enter word #%{number}:'
   not_valid_word: Entered word is not valid
+  not_valid_phrase: Entered phrase is not valid
   create_phrase_desc: Safely write down and save your recovery phrase.
   restore_phrase_desc: Enter words from your saved recovery phrase.
   setup_conn_desc: Choose how your wallet connects to the network.

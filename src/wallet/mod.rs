@@ -12,6 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+pub mod updater;
+pub mod selection;
+pub mod tx;
+pub mod keys;
+
 mod wallet;
 pub use wallet::Wallet;
 

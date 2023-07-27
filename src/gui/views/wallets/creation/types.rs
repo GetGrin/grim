@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use grin_keychain::mnemonic::{from_entropy, search};
+use grin_keychain::mnemonic::{from_entropy, search, to_entropy};
 use rand::{Rng, thread_rng};
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
@@ -122,6 +122,16 @@ impl Mnemonic {
             false
         };
         valid && equal
+    }
+
+    /// Check if current phrase is valid.
+    pub fn is_valid_phrase(&self) -> bool {
+       to_entropy(self.get_phrase().as_str()).is_ok()
+    }
+
+    /// Get phrase from words.
+    pub fn get_phrase(&self) -> String {
+        self.words.iter().map(|x| x.to_string() + " ").collect::<String>()
     }
 
     /// Generate list of words based on provided [`PhraseMode`] and [`PhraseSize`].

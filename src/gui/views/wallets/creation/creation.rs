@@ -23,6 +23,7 @@ use crate::gui::views::{Modal, ModalPosition, View};
 use crate::gui::views::wallets::creation::MnemonicSetup;
 use crate::gui::views::wallets::creation::types::{PhraseMode, Step};
 use crate::gui::views::wallets::setup::ConnectionSetup;
+use crate::wallet::WalletList;
 
 /// Wallet creation content.
 pub struct WalletCreation {
@@ -70,11 +71,12 @@ impl WalletCreation {
     pub const NAME_PASS_MODAL: &'static str = "name_pass_modal";
 
     pub fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
-        // Show wallet creation step description and confirmation bottom panel.
+        // Show wallet creation step description and confirmation panel.
         if self.step.is_some() {
             egui::TopBottomPanel::bottom("wallet_creation_step_panel")
                 .frame(egui::Frame {
                     stroke: View::DEFAULT_STROKE,
+                    fill: Colors::FILL_DARK,
                     inner_margin: Margin {
                         left: View::far_left_inset_margin(ui) + 4.0,
                         right: View::get_right_inset() + 4.0,
@@ -85,65 +87,15 @@ impl WalletCreation {
                 })
                 .show_inside(ui, |ui| {
                     ui.vertical_centered(|ui| {
-                        if let Some(step) = &self.step {
-                            // Setup step description text and availability.
-                            let (step_text, step_available) = match step {
-                                Step::EnterMnemonic => {
-                                    let mode = &self.mnemonic_setup.mnemonic.mode;
-                                    let text = if mode == &PhraseMode::Generate {
-                                        t!("wallets.create_phrase_desc")
-                                    } else {
-                                        t!("wallets.restore_phrase_desc")
-                                    };
-                                    let available = !self
-                                        .mnemonic_setup
-                                        .mnemonic
-                                        .words
-                                        .contains(&String::from(""));
-                                    (text, available)
-                                }
-                                Step::ConfirmMnemonic => {
-                                    let text = t!("wallets.restore_phrase_desc");
-                                    let available = !self
-                                        .mnemonic_setup
-                                        .mnemonic
-                                        .confirm_words
-                                        .contains(&String::from(""));
-                                    (text, available)
-                                },
-                                Step::SetupConnection => (t!("wallets.setup_conn_desc"), true)
-                            };
-                            // Show step description.
-                            ui.label(RichText::new(step_text).size(16.0).color(Colors::GRAY));
-
-                            // Show next step button if there are no empty words.
-
-                            if step_available {
-                                // Setup button text.
-                                let (next_text, color) = if step == &Step::SetupConnection {
-                                    (format!("{} {}", CHECK, t!("complete")), Colors::GOLD)
-                                } else {
-                                    let text = format!("{} {}", SHARE_FAT, t!("continue"));
-                                    (text, Colors::WHITE)
-                                };
-
-                                ui.add_space(4.0);
-                                // Show button.
-                                View::button(ui, next_text.to_uppercase(), color, || {
-                                    self.forward();
-                                });
-                                ui.add_space(4.0);
-                            }
-                        }
+                        self.step_control_ui(ui);
                     });
                 });
         }
 
-        // Show wallet creation step content.
+        // Show wallet creation step content panel.
         egui::CentralPanel::default()
             .frame(egui::Frame {
                 stroke: View::DEFAULT_STROKE,
-                fill: if self.step.is_none() { Colors::FILL_DARK } else { Colors::WHITE },
                 inner_margin: Margin {
                     left: View::far_left_inset_margin(ui) + 4.0,
                     right: View::get_right_inset() + 4.0,
@@ -153,12 +105,74 @@ impl WalletCreation {
                 ..Default::default()
             })
             .show_inside(ui, |ui| {
-                self.step_ui(ui, cb);
+                self.step_content_ui(ui, cb);
             });
     }
 
+    /// Draw [`Step`] description and confirmation control.
+    fn step_control_ui(&mut self, ui: &mut egui::Ui) {
+        if let Some(step) = &self.step {
+            // Setup step description text and availability.
+            let (step_text, mut step_available) = match step {
+                Step::EnterMnemonic => {
+                    let mode = &self.mnemonic_setup.mnemonic.mode;
+                    let text = if mode == &PhraseMode::Generate {
+                        t!("wallets.create_phrase_desc")
+                    } else {
+                        t!("wallets.restore_phrase_desc")
+                    };
+                    let available = !self
+                        .mnemonic_setup
+                        .mnemonic
+                        .words
+                        .contains(&String::from(""));
+                    (text, available)
+                }
+                Step::ConfirmMnemonic => {
+                    let text = t!("wallets.restore_phrase_desc");
+                    let available = !self
+                        .mnemonic_setup
+                        .mnemonic
+                        .confirm_words
+                        .contains(&String::from(""));
+                    (text, available)
+                },
+                Step::SetupConnection => (t!("wallets.setup_conn_desc"), true)
+            };
+            // Show step description.
+            ui.label(RichText::new(step_text).size(16.0).color(Colors::GRAY));
+
+            // Show error if entered phrase is not valid.
+            if !self.mnemonic_setup.valid_phrase {
+                step_available = false;
+                ui.label(RichText::new(t!("wallets.not_valid_phrase"))
+                    .size(16.0)
+                    .color(Colors::RED));
+                ui.add_space(2.0);
+            }
+
+            // Show next step button if there are no empty words.
+            if step_available {
+                // Setup button text.
+                let (next_text, color) = if step == &Step::SetupConnection {
+                    (format!("{} {}", CHECK, t!("complete")), Colors::GOLD)
+                } else {
+                    let text = format!("{} {}", SHARE_FAT, t!("continue"));
+                    (text, Colors::WHITE)
+                };
+
+                ui.add_space(4.0);
+                // Show button.
+                View::button(ui, next_text.to_uppercase(), color, || {
+                    self.forward();
+                });
+                ui.add_space(4.0);
+            }
+        }
+    }
+
     /// Draw wallet creation [`Step`] content.
-    fn step_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
+    fn step_content_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         match &self.step {
             None => {
                 // Show wallet creation message if step is empty.
@@ -233,12 +247,23 @@ impl WalletCreation {
                         if self.mnemonic_setup.mnemonic.mode == PhraseMode::Generate {
                             Some(Step::ConfirmMnemonic)
                         } else {
-                            Some(Step::SetupConnection)
+                            // Check if entered phrase was valid.
+                            if self.mnemonic_setup.valid_phrase {
+                                Some(Step::SetupConnection)
+                            } else {
+                                Some(Step::EnterMnemonic)
+                            }
                         }
                     }
                     Step::ConfirmMnemonic => Some(Step::SetupConnection),
                     Step::SetupConnection => {
-                        //TODO: Confirm mnemonic
+                        // Create wallet at last step.
+                        WalletList::create_wallet(
+                            self.name_edit.clone(),
+                            self.pass_edit.clone(),
+                            self.mnemonic_setup.mnemonic.get_phrase(),
+                            self.network_setup.get_ext_conn_url()
+                        ).unwrap();
                         None
                     }
                 }
@@ -249,7 +274,7 @@ impl WalletCreation {
     /// Start wallet creation from showing [`Modal`] to enter name and password.
     pub fn show_name_pass_modal(&mut self) {
         // Reset modal values.
-        self.hide_pass = false;
+        self.hide_pass = true;
         self.modal_just_opened = true;
         self.name_edit = String::from("");
         self.pass_edit = String::from("");

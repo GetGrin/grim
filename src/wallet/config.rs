@@ -12,8 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::ffi::OsString;
+use std::fs;
 use std::path::PathBuf;
+use grin_core::global::ChainTypes;
 
 use serde_derive::{Deserialize, Serialize};
 use crate::{AppConfig, Settings};
@@ -22,8 +23,10 @@ use crate::wallet::WalletList;
 /// Wallet configuration.
 #[derive(Serialize, Deserialize, Clone)]
 pub struct WalletConfig {
+    /// Chain type for current wallet.
+    chain_type: ChainTypes,
     /// Identifier for a wallet.
-    id: OsString,
+    id: i64,
     /// Readable wallet name.
     name: String,
     /// External node connection URL.
@@ -35,13 +38,12 @@ const CONFIG_FILE_NAME: &'static str = "grim-wallet.toml";
 
 impl WalletConfig {
     /// Create wallet config.
-    pub fn create(id: OsString, name: String) -> WalletConfig {
-        let config_path = Self::get_config_path(&id);
-        let config = WalletConfig {
-            id,
-            name,
-            external_node_url: None,
-        };
+    pub fn create(name: String, external_node_url: Option<String>) -> WalletConfig {
+        let id = chrono::Utc::now().timestamp();
+        let chain_type = AppConfig::chain_type();
+        let config_path = Self::get_config_file_path(&chain_type, id);
+
+        let config = WalletConfig { chain_type, id, name, external_node_url };
         Settings::write_to_file(&config, config_path);
         config
     }
@@ -56,18 +58,29 @@ impl WalletConfig {
         None
     }
 
-    /// Get config file path for provided wallet identifier.
-    fn get_config_path(id: &OsString) -> PathBuf {
-        let chain_type = AppConfig::chain_type();
-        let mut config_path = WalletList::get_wallets_base_dir(&chain_type);
-        config_path.push(id);
+    /// Get config file path for provided [`ChainTypes`] and wallet identifier.
+    fn get_config_file_path(chain_type: &ChainTypes, id: i64) -> PathBuf {
+        let mut config_path = WalletList::get_base_path(chain_type);
+        config_path.push(id.to_string());
+        // Create if the config path doesn't exist.
+        if !config_path.exists() {
+            let _ = fs::create_dir_all(config_path.clone());
+        }
         config_path.push(CONFIG_FILE_NAME);
         config_path
     }
 
+    /// Get current wallet data path.
+    pub fn get_data_path(&self) -> String {
+        let chain_type = AppConfig::chain_type();
+        let mut config_path = WalletList::get_base_path(&chain_type);
+        config_path.push(self.id.to_string());
+        config_path.to_str().unwrap().to_string()
+    }
+
     /// Save wallet config.
     fn save(&self) {
-        let config_path = Self::get_config_path(&self.id);
+        let config_path = Self::get_config_file_path(&self.chain_type, self.id);
         Settings::write_to_file(self, config_path);
     }
 
