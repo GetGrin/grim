@@ -17,13 +17,13 @@ use egui_extras::{RetainedImage, Size, StripBuilder};
 
 use crate::built_info;
 use crate::gui::Colors;
-use crate::gui::icons::{CHECK, EYE, EYE_SLASH, PLUS_CIRCLE, SHARE_FAT};
+use crate::gui::icons::{CHECK, EYE, EYE_SLASH, FOLDER_PLUS, SHARE_FAT};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, ModalPosition, View};
 use crate::gui::views::wallets::creation::MnemonicSetup;
 use crate::gui::views::wallets::creation::types::{PhraseMode, Step};
 use crate::gui::views::wallets::setup::ConnectionSetup;
-use crate::wallet::WalletList;
+use crate::wallet::Wallets;
 
 /// Wallet creation content.
 pub struct WalletCreation {
@@ -196,7 +196,7 @@ impl WalletCreation {
                         .color(Colors::GRAY)
                     );
                     ui.add_space(8.0);
-                    let add_text = format!("{} {}", PLUS_CIRCLE, t!("wallets.add"));
+                    let add_text = format!("{} {}", FOLDER_PLUS, t!("wallets.add"));
                     View::button(ui, add_text, Colors::BUTTON, || {
                         self.show_name_pass_modal();
                     });
@@ -258,7 +258,7 @@ impl WalletCreation {
                     Step::ConfirmMnemonic => Some(Step::SetupConnection),
                     Step::SetupConnection => {
                         // Create wallet at last step.
-                        WalletList::create_wallet(
+                        Wallets::create_wallet(
                             self.name_edit.clone(),
                             self.pass_edit.clone(),
                             self.mnemonic_setup.mnemonic.get_phrase(),
@@ -357,19 +357,6 @@ impl WalletCreation {
                             });
                     })
                 });
-
-            // Show information when specified values are empty.
-            if self.name_edit.is_empty() {
-                ui.add_space(12.0);
-                ui.label(RichText::new(t!("wallets.name_empty"))
-                    .size(17.0)
-                    .color(Colors::INACTIVE_TEXT));
-            } else if self.pass_edit.is_empty() {
-                ui.add_space(12.0);
-                ui.label(RichText::new(t!("wallets.pass_empty"))
-                    .size(17.0)
-                    .color(Colors::INACTIVE_TEXT));
-            }
             ui.add_space(12.0);
         });
 

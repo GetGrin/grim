@@ -24,7 +24,7 @@ use serde::{Deserialize, Serialize};
 use serde::de::DeserializeOwned;
 
 use crate::node::NodeConfig;
-use crate::wallet::WalletList;
+use crate::wallet::Wallets;
 
 lazy_static! {
     /// Static settings state to be accessible globally.
@@ -94,7 +94,7 @@ impl AppConfig {
             w_node_config.peers = node_config.peers;
 
             // Reload wallets.
-            WalletList::reload(chain_type);
+            Wallets::reload(chain_type);
         }
     }
 

@@ -13,26 +13,29 @@
 // limitations under the License.
 
 use egui::Margin;
-
 use crate::gui::Colors;
+
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::View;
 use crate::wallet::Wallet;
 
 /// Selected wallet list item content.
 pub struct WalletContent {
-    /// Current wallet instance.
-    wallet: Wallet
+
 }
 
-impl WalletContent {
-    fn new(wallet: Wallet) -> Self {
-        Self { wallet }
+impl Default for WalletContent {
+    fn default() -> Self {
+        Self {}
     }
 }
 
 impl WalletContent {
-    pub fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame, cb: &dyn PlatformCallbacks) {
+    pub fn ui(&mut self,
+              ui: &mut egui::Ui,
+              frame: &mut eframe::Frame,
+              wallet: &Wallet,
+              cb: &dyn PlatformCallbacks) {
         // Show wallet content.
         egui::CentralPanel::default()
             .frame(egui::Frame {
@@ -40,13 +43,14 @@ impl WalletContent {
                 fill: Colors::WHITE,
                 inner_margin: Margin {
                     left: View::far_left_inset_margin(ui) + 4.0,
-                    right: View::far_right_inset_margin(ui, frame) + 4.0,
-                    top: 3.0,
+                    right: View::get_right_inset() + 4.0,
+                    top: 4.0,
                     bottom: 4.0,
                 },
                 ..Default::default()
             })
             .show_inside(ui, |ui| {
+                ui.label(&wallet.config.name);
                 //TODO: wallet content
             });
     }

@@ -18,7 +18,7 @@ use grin_core::global::ChainTypes;
 
 use serde_derive::{Deserialize, Serialize};
 use crate::{AppConfig, Settings};
-use crate::wallet::WalletList;
+use crate::wallet::Wallets;
 
 /// Wallet configuration.
 #[derive(Serialize, Deserialize, Clone)]
@@ -26,9 +26,9 @@ pub struct WalletConfig {
     /// Chain type for current wallet.
     chain_type: ChainTypes,
     /// Identifier for a wallet.
-    id: i64,
-    /// Readable wallet name.
-    name: String,
+    pub(crate) id: i64,
+    /// Human-readable wallet name for ui.
+    pub(crate) name: String,
     /// External node connection URL.
     external_node_url: Option<String>,
 }
@@ -60,7 +60,7 @@ impl WalletConfig {
 
     /// Get config file path for provided [`ChainTypes`] and wallet identifier.
     fn get_config_file_path(chain_type: &ChainTypes, id: i64) -> PathBuf {
-        let mut config_path = WalletList::get_base_path(chain_type);
+        let mut config_path = Wallets::get_base_path(chain_type);
         config_path.push(id.to_string());
         // Create if the config path doesn't exist.
         if !config_path.exists() {
@@ -73,7 +73,7 @@ impl WalletConfig {
     /// Get current wallet data path.
     pub fn get_data_path(&self) -> String {
         let chain_type = AppConfig::chain_type();
-        let mut config_path = WalletList::get_base_path(&chain_type);
+        let mut config_path = Wallets::get_base_path(&chain_type);
         config_path.push(self.id.to_string());
         config_path.to_str().unwrap().to_string()
     }
@@ -82,17 +82,6 @@ impl WalletConfig {
     fn save(&self) {
         let config_path = Self::get_config_file_path(&self.chain_type, self.id);
         Settings::write_to_file(self, config_path);
-    }
-
-    /// Get readable wallet name.
-    pub fn get_name(&self) -> &String {
-        &self.name
-    }
-
-    /// Set readable wallet name.
-    pub fn set_name(&mut self, name: String) {
-        self.name = name;
-        self.save();
     }
 
     /// Get external node connection URL.

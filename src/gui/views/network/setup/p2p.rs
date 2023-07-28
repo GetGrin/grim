@@ -353,7 +353,7 @@ impl P2PSetup {
                 format!("{} {}", PLUS_CIRCLE, t!("network_settings.add_peer"))
 
             };
-            View::button(ui, add_text, Colors::GOLD, || {
+            View::button(ui, add_text, Colors::BUTTON, || {
                 // Setup values for modal.
                 self.peer_edit = "".to_string();
                 // Select modal id.

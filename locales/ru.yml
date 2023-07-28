@@ -8,8 +8,7 @@ wallets:
   add: Добавить кошелёк
   name: 'Название:'
   pass: 'Пароль:'
-  name_empty: Введите название кошелька
-  pass_empty: Введите пароль для кошелька
+  pass_empty: Введите пароль от кошелька
   create: Создать
   recover: Восстановить
   saved_phrase: Сохранённая фраза
@@ -24,6 +23,8 @@ wallets:
   ext_conn: 'Внешние подключения:'
   add_node_url: Добавить URL узла
   invalid_url: Введенный URL-адрес недействителен
+  open: Открыть кошелёк
+  wrong_pass: Введён неправильный пароль
 network:
   self: Сеть
   node: Встроенный узел

@@ -159,23 +159,21 @@ impl View {
                         action: impl FnOnce()) {
         ui.scope(|ui| {
             // Setup colors.
-            ui.visuals_mut().widgets.inactive.bg_fill = Colors::GOLD;
+            ui.visuals_mut().widgets.inactive.bg_fill = Colors::BUTTON;
             ui.visuals_mut().widgets.hovered.bg_fill = Colors::GOLD;
             ui.visuals_mut().widgets.active.bg_fill = Colors::YELLOW;
 
             // Setup radius.
-            let mut r = 42.0 * 0.5;
+            let mut r = 44.0 * 0.5;
             let size = egui::Vec2::splat(2.0 * r + 5.0);
             let (rect, br) = ui.allocate_at_least(size, Sense::click_and_drag());
 
-            let mut icon_size = 24.0;
-            let mut icon_color = Colors::TEXT_BUTTON;
+            let mut icon_color = Colors::GRAY;
 
             // Increase radius and change icon size and color on-hover.
             if br.hovered() {
-                r = r * 1.05;
-                icon_size = icon_size * 1.07;
-                icon_color = Colors::BLACK;
+                r = r * 1.07;
+                icon_color = Colors::TEXT_BUTTON;
             }
 
             let visuals = ui.style().interact(&br);
@@ -187,7 +185,7 @@ impl View {
             });
             ui.allocate_ui_at_rect(rect, |ui| {
                 ui.centered_and_justified(|ui| {
-                    ui.label(RichText::new(icon).color(icon_color).size(icon_size));
+                    ui.label(RichText::new(icon).color(icon_color).size(25.0));
                 });
             });
             if Self::touched(ui, br) {

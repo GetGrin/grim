@@ -12,32 +12,164 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::collections::BTreeSet;
+use std::fs;
 use std::path::PathBuf;
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 
 use grin_core::global;
+use grin_core::global::ChainTypes;
 use grin_keychain::{ExtKeychain, Identifier, Keychain};
 use grin_util::types::ZeroingString;
 use grin_wallet_api::{Foreign, ForeignCheckMiddlewareFn, Owner};
 use grin_wallet_impls::{DefaultLCProvider, DefaultWalletImpl, HTTPNodeClient};
 use grin_wallet_libwallet::{Error, NodeClient, NodeVersionInfo, OutputStatus, Slate, slate_versions, SlatepackArmor, Slatepacker, SlatepackerArgs, TxLogEntry, wallet_lock, WalletBackend, WalletInfo, WalletInst, WalletLCProvider};
 use grin_wallet_libwallet::Error::GenericError;
+use lazy_static::lazy_static;
 use log::debug;
 use parking_lot::Mutex;
 use uuid::Uuid;
 
-use crate::AppConfig;
+use crate::{AppConfig, Settings};
 use crate::node::NodeConfig;
 use crate::wallet::selection::lock_tx_context;
 use crate::wallet::tx::{add_inputs_to_slate, new_tx_slate};
 use crate::wallet::updater::{cancel_tx, refresh_output_state, retrieve_txs};
 use crate::wallet::WalletConfig;
 
+lazy_static! {
+    /// Global wallets state.
+    static ref WALLETS_STATE: Arc<RwLock<Wallets>> = Arc::new(RwLock::new(Wallets::init()));
+}
+
+/// Manages [`Wallet`] list and state.
+pub struct Wallets {
+    /// List of wallets.
+    list: Vec<Wallet>,
+    /// Selected [`Wallet`] identifier from config.
+    selected_id: Option<i64>,
+    /// Identifiers of opened wallets.
+    opened_ids: BTreeSet<i64>
+}
+
+impl Wallets {
+    /// Base wallets directory name.
+    pub const BASE_DIR_NAME: &'static str = "wallets";
+
+    /// Initialize manager by loading list of wallets into state.
+    fn init() -> Self {
+        Self {
+            list: Self::load_wallets(&AppConfig::chain_type()),
+            selected_id: None,
+            opened_ids: Default::default() }
+    }
+
+    /// Create new wallet and add it to state.
+    pub fn create_wallet(
+        name: String,
+        password: String,
+        mnemonic: String,
+        external_node_url: Option<String>
+    )-> Result<(), Error> {
+        let wallet = Wallet::create(name, password, mnemonic, external_node_url)?;
+        let mut w_state = WALLETS_STATE.write().unwrap();
+        w_state.list.push(wallet);
+        Ok(())
+    }
+
+    /// Load wallets for provided [`ChainType`].
+    fn load_wallets(chain_type: &ChainTypes) -> Vec<Wallet> {
+        let mut wallets = Vec::new();
+        let wallets_dir = Self::get_base_path(chain_type);
+        // Load wallets from base directory.
+        for dir in wallets_dir.read_dir().unwrap() {
+            let wallet_dir = dir.unwrap().path();
+            if wallet_dir.is_dir() {
+                let wallet = Wallet::init(wallet_dir);
+                if let Some(w) = wallet {
+                    wallets.push(w);
+                }
+            }
+        }
+        wallets
+    }
+
+    /// Get list of wallets.
+    pub fn list() -> Vec<Wallet> {
+        let r_state = WALLETS_STATE.read().unwrap();
+        r_state.list.clone()
+    }
+
+    /// Select [`Wallet`] with provided identifier.
+    pub fn select(id: Option<i64>) {
+        let mut w_state = WALLETS_STATE.write().unwrap();
+        w_state.selected_id = id;
+    }
+
+    /// Get selected [`Wallet`] identifier.
+    pub fn selected_id() -> Option<i64> {
+        let r_state = WALLETS_STATE.read().unwrap();
+        r_state.selected_id
+    }
+
+    /// Open [`Wallet`] with provided identifier and password.
+    pub fn open(id: i64, password: String) -> Result<(), Error> {
+        let list = Self::list();
+        let mut w_state = WALLETS_STATE.write().unwrap();
+        for mut w in list {
+            if w.config.id == id {
+                w.open(password)?;
+                break;
+            }
+        }
+        w_state.opened_ids.insert(id);
+        Ok(())
+    }
+
+    /// Close [`Wallet`] with provided identifier.
+    pub fn close(id: i64) -> Result<(), Error> {
+        let list = Self::list();
+        let mut w_state = WALLETS_STATE.write().unwrap();
+        for mut w in list {
+            if w.config.id == id {
+                w.close()?;
+                break;
+            }
+        }
+        w_state.opened_ids.remove(&id);
+        Ok(())
+    }
+
+    /// Check if [`Wallet`] with provided identifier was open.
+    pub fn is_open(id: i64) -> bool {
+        let r_state = WALLETS_STATE.read().unwrap();
+        r_state.opened_ids.contains(&id)
+    }
+
+    /// Get wallets base directory path for provided [`ChainTypes`].
+    pub fn get_base_path(chain_type: &ChainTypes) -> PathBuf {
+        let mut wallets_path = Settings::get_base_path(Some(chain_type.shortname()));
+        wallets_path.push(Self::BASE_DIR_NAME);
+        // Create wallets base directory if it doesn't exist.
+        if !wallets_path.exists() {
+            let _ = fs::create_dir_all(wallets_path.clone());
+        }
+        wallets_path
+    }
+
+    /// Reload list of wallets for provided [`ChainTypes`].
+    pub fn reload(chain_type: &ChainTypes) {
+        let mut w_state = WALLETS_STATE.write().unwrap();
+        w_state.list = Self::load_wallets(chain_type);
+    }
+}
+
 /// Wallet instance and config wrapper.
 #[derive(Clone)]
 pub struct Wallet {
-    /// Wallet instance, exists when wallet is open.
-    instance: Option<WalletInstance>,
+    /// Wallet instance.
+    instance: WalletInstance,
+
     /// Wallet data path.
     path: String,
     /// Wallet configuration.
@@ -59,8 +191,8 @@ type WalletInstance = Arc<
 >;
 
 impl Wallet {
-    /// Create and open new wallet.
-    pub fn create(
+    /// Create new wallet, make it open and selected.
+    fn create(
         name: String,
         password: String,
         mnemonic: String,
@@ -68,41 +200,41 @@ impl Wallet {
     ) -> Result<Wallet, Error> {
         let config = WalletConfig::create(name.clone(), external_node_url);
         let wallet = Self::create_wallet_instance(config.clone())?;
-        let mut w_lock = wallet.lock();
-        let p = w_lock.lc_provider()?;
-
-        // Create wallet.
-        p.create_wallet(None,
-            Some(ZeroingString::from(mnemonic.clone())),
-            mnemonic.len(),
-            ZeroingString::from(password.clone()),
-            false,
-        )?;
-
-        // Open wallet.
-        p.open_wallet(None, ZeroingString::from(password), false, false)?;
-
         let w = Wallet {
-            instance: Some(wallet.clone()),
+            instance: wallet,
             path: config.get_data_path(),
             config,
         };
+
+        {
+            let mut w_lock = w.instance.lock();
+            let p = w_lock.lc_provider()?;
+
+            // Create wallet.
+            p.create_wallet(None,
+                            Some(ZeroingString::from(mnemonic.clone())),
+                            mnemonic.len(),
+                            ZeroingString::from(password.clone()),
+                            false,
+            )?;
+
+            // Open wallet.
+            p.open_wallet(None, ZeroingString::from(password), false, false)?;
+        }
+
         Ok(w)
     }
 
     /// Initialize wallet from provided data path.
-    pub fn init(data_path: PathBuf) -> Option<Wallet> {
+    fn init(data_path: PathBuf) -> Option<Wallet> {
         let wallet_config = WalletConfig::load(data_path.clone());
         if let Some(config) = wallet_config {
             let path = data_path.to_str().unwrap().to_string();
-            return Some(Self { instance: None, path, config });
+            if let Ok(instance) = Self::create_wallet_instance(config.clone()) {
+                return Some(Self { instance, path, config });
+            }
         }
         None
-    }
-
-    /// Check if wallet is open (instance exists).
-    pub fn is_open(&self) -> bool {
-        self.instance.is_some()
     }
 
     /// Create wallet instance from provided config.
@@ -152,42 +284,35 @@ impl Wallet {
     }
 
     /// Open wallet.
-    pub fn open_wallet(&mut self, password: ZeroingString) -> Result<(), Error> {
-        if let None = self.instance {
-            let wallet = Self::create_wallet_instance(self.config.clone())?;
-            let mut wallet_lock = wallet.lock();
-            let lc = wallet_lock.lc_provider()?;
-            lc.open_wallet(None, password, false, false)?;
-            self.instance = Some(wallet.clone());
-        }
+    fn open(&mut self, password: String) -> Result<(), Error> {
+        let mut wallet_lock = self.instance.lock();
+        let lc = wallet_lock.lc_provider()?;
+        lc.open_wallet(None, ZeroingString::from(password), false, false)?;
         Ok(())
     }
 
     /// Close wallet.
-    pub fn close_wallet(&self) -> Result<(), Error> {
-        if let Some(wallet) = &self.instance {
-            let mut wallet_lock = wallet.lock();
-            let lc = wallet_lock.lc_provider()?;
-            lc.close_wallet(None)?;
-        }
+    fn close(&mut self) -> Result<(), Error> {
+        let mut wallet_lock = self.instance.lock();
+        let lc = wallet_lock.lc_provider()?;
+        lc.close_wallet(None)?;
         Ok(())
     }
 
     /// Create transaction.
-    fn tx_create(
+    pub fn tx_create(
         &self,
         amount: u64,
         minimum_confirmations: u64,
         selection_strategy_is_use_all: bool,
     ) -> Result<(Vec<TxLogEntry>, String), Error> {
-        let wallet = self.instance.clone().ok_or(GenericError("Wallet was not open".to_string()))?;
         let parent_key_id = {
-            wallet_lock!(wallet.clone(), w);
+            wallet_lock!(self.instance, w);
             w.parent_key_id().clone()
         };
 
         let slate = {
-            wallet_lock!(wallet, w);
+            wallet_lock!(self.instance, w);
             let mut slate = new_tx_slate(&mut **w, amount, false, 2, false, None)?;
             let height = w.w2n_client().get_chain_tip()?.0;
 
@@ -223,7 +348,7 @@ impl Wallet {
             dec_key: None,
         });
         let slatepack = packer.create_slatepack(&slate)?;
-        let api = Owner::new(self.instance.clone().unwrap(), None);
+        let api = Owner::new(self.instance.clone(), None);
         let txs = api.retrieve_txs(None, false, None, Some(slate.id), None)?;
         let result = (
             txs.1,
@@ -263,18 +388,19 @@ impl Wallet {
     }
 
     /// Receive transaction.
-    fn tx_receive(
+    pub fn tx_receive(
         &self,
         account: &str,
         slate_armored: &str
     ) -> Result<(Vec<TxLogEntry>, String), Error> {
-        let wallet = self.instance.clone().ok_or(GenericError("Wallet was not open".to_string()))?;
-        let foreign_api = Foreign::new(wallet.clone(), None, Some(Self::check_middleware), false);
-        let owner_api = Owner::new(wallet, None);
+        let foreign_api =
+            Foreign::new(self.instance.clone(), None, Some(Self::check_middleware), false);
+        let owner_api = Owner::new(self.instance.clone(), None);
 
         let mut slate =
             owner_api.slate_from_slatepack_message(None, slate_armored.to_owned(), vec![0])?;
-        let slatepack = owner_api.decode_slatepack_message(None, slate_armored.to_owned(), vec![0])?;
+        let slatepack =
+            owner_api.decode_slatepack_message(None, slate_armored.to_owned(), vec![0])?;
 
         let _ret_address = slatepack.sender;
 
@@ -294,9 +420,8 @@ impl Wallet {
     }
 
     /// Cancel transaction.
-    fn tx_cancel(&self, id: u32) -> Result<String, Error> {
-        let wallet = self.instance.clone().ok_or(GenericError("Wallet was not open".to_string()))?;
-        wallet_lock!(wallet, w);
+    pub fn tx_cancel(&self, id: u32) -> Result<String, Error> {
+        wallet_lock!(self.instance, w);
         let parent_key_id = w.parent_key_id();
         cancel_tx(&mut **w, None, &parent_key_id, Some(id), None)?;
         Ok("".to_owned())
@@ -304,19 +429,19 @@ impl Wallet {
 
     /// Get transaction info.
     pub fn get_tx(&self, tx_slate_id: &str) -> Result<(bool, Vec<TxLogEntry>), Error> {
-        let api = Owner::new(self.instance.clone().unwrap(), None);
+        let api = Owner::new(self.instance.clone(), None);
         let uuid = Uuid::parse_str(tx_slate_id).unwrap();
         let txs = api.retrieve_txs(None, true, None, Some(uuid), None)?;
         Ok(txs)
     }
 
     /// Finalize transaction.
-    fn tx_finalize(&self, slate_armored: &str) -> Result<(bool, Vec<TxLogEntry>), Error> {
-        let wallet = self.instance.clone().ok_or(GenericError("Wallet was not open".to_string()))?;
-        let owner_api = Owner::new(wallet, None);
+    pub fn tx_finalize(&self, slate_armored: &str) -> Result<(bool, Vec<TxLogEntry>), Error> {
+        let owner_api = Owner::new(self.instance.clone(), None);
         let mut slate =
             owner_api.slate_from_slatepack_message(None, slate_armored.to_owned(), vec![0])?;
-        let slatepack = owner_api.decode_slatepack_message(None, slate_armored.to_owned(), vec![0])?;
+        let slatepack =
+            owner_api.decode_slatepack_message(None, slate_armored.to_owned(), vec![0])?;
 
         let _ret_address = slatepack.sender;
 
@@ -326,9 +451,8 @@ impl Wallet {
     }
 
     /// Post transaction to node for broadcasting.
-    fn tx_post(&self, tx_slate_id: &str) -> Result<(), Error> {
-        let wallet = self.instance.clone().ok_or(GenericError("Wallet was not open".to_string()))?;
-        let api = Owner::new(wallet, None);
+    pub fn tx_post(&self, tx_slate_id: &str) -> Result<(), Error> {
+        let api = Owner::new(self.instance.clone(), None);
         let tx_uuid = Uuid::parse_str(tx_slate_id).unwrap();
         let (_, txs) = api.retrieve_txs(None, true, None, Some(tx_uuid.clone()), None)?;
         if txs[0].confirmed {
@@ -355,14 +479,13 @@ impl Wallet {
         &self,
         minimum_confirmations: u64
     ) -> Result<(bool, Vec<TxLogEntry>, WalletInfo), Error> {
-        let wallet = self.instance.clone().ok_or(GenericError("Wallet was not open".to_string()))?;
-        let refreshed = Self::update_state(wallet.clone()).unwrap_or(false);
+        let refreshed = Self::update_state(self.instance.clone()).unwrap_or(false);
         let wallet_info = {
-            wallet_lock!(wallet, w);
+            wallet_lock!(self.instance, w);
             let parent_key_id = w.parent_key_id();
             Self::get_info(&mut **w, &parent_key_id, minimum_confirmations)?
         };
-        let api = Owner::new(wallet, None);
+        let api = Owner::new(self.instance.clone(), None);
 
         let txs = api.retrieve_txs(None, false, None, None, None)?;
         Ok((refreshed, txs.1, wallet_info))
