@@ -13,12 +13,12 @@
 // limitations under the License.
 
 use chrono::{DateTime, NaiveDateTime, Utc};
-use egui::{RichText, Rounding, ScrollArea, Stroke};
+use egui::{RichText, Rounding, ScrollArea};
 use grin_chain::SyncStatus;
 use grin_servers::WorkerStats;
 
 use crate::gui::Colors;
-use crate::gui::icons::{BARBELL, CLOCK_AFTERNOON, CPU, CUBE, FADERS, FOLDER_DASHED, FOLDER_NOTCH_MINUS, FOLDER_NOTCH_PLUS, HARD_DRIVES, PLUGS, PLUGS_CONNECTED, POLYGON};
+use crate::gui::icons::{BARBELL, CLOCK_AFTERNOON, CPU, CUBE, FADERS, FOLDER_DASHED, FOLDER_SIMPLE_MINUS, FOLDER_SIMPLE_PLUS, HARD_DRIVES, PLUGS, PLUGS_CONNECTED, POLYGON};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, Network, View};
 use crate::gui::views::network::setup::StratumSetup;
@@ -174,17 +174,12 @@ impl NetworkTab for NetworkMining {
                     workers_size,
                     |ui, row_range| {
                         for index in row_range {
+                            // Add space before the first item.
+                            if index == 0 {
+                                ui.add_space(4.0);
+                            }
                             let worker = stratum_stats.worker_stats.get(index).unwrap();
-                            let rounding = if workers_size == 1 {
-                                [true, true]
-                            } else if index == 0 {
-                                [true, false]
-                            } else if index == workers_size - 1 {
-                                [false, true]
-                            } else {
-                                [false, false]
-                            };
-                            worker_item_ui(ui, worker, rounding)
+                            worker_item_ui(ui, worker, View::item_rounding(index, workers_size));
                         }
                     },
                 );
@@ -217,28 +212,13 @@ impl NetworkTab for NetworkMining {
 const WORKER_ITEM_HEIGHT: f32 = 76.0;
 
 /// Draw worker statistics item.
-fn worker_item_ui(ui: &mut egui::Ui, ws: &WorkerStats, rounding: [bool; 2]) {
-    // Add space before the first item.
-    if rounding[0] {
-        ui.add_space(4.0);
-    }
-
+fn worker_item_ui(ui: &mut egui::Ui, ws: &WorkerStats, rounding: Rounding) {
     ui.horizontal_wrapped(|ui| {
         ui.vertical_centered_justified(|ui| {
             // Draw round background.
             let mut rect = ui.available_rect_before_wrap();
             rect.set_height(WORKER_ITEM_HEIGHT);
-            ui.painter().rect(
-                rect,
-                Rounding {
-                    nw: if rounding[0] { 8.0 } else { 0.0 },
-                    ne: if rounding[0] { 8.0 } else { 0.0 },
-                    sw: if rounding[1] { 8.0 } else { 0.0 },
-                    se: if rounding[1] { 8.0 } else { 0.0 },
-                },
-                Colors::WHITE,
-                Stroke { width: 1.0, color: Colors::ITEM_STROKE }
-            );
+            ui.painter().rect(rect, rounding, Colors::WHITE, View::ITEM_STROKE);
 
             ui.add_space(2.0);
             ui.horizontal(|ui| {
@@ -266,14 +246,14 @@ fn worker_item_ui(ui: &mut egui::Ui, ws: &WorkerStats, rounding: [bool; 2]) {
                 ui.add_space(6.0);
 
                 // Draw accepted shares.
-                let accepted_text = format!("{} {}", FOLDER_NOTCH_PLUS, ws.num_accepted);
+                let accepted_text = format!("{} {}", FOLDER_SIMPLE_PLUS, ws.num_accepted);
                 ui.heading(RichText::new(accepted_text)
                     .color(Colors::GREEN)
                     .size(16.0));
                 ui.add_space(6.0);
 
                 // Draw rejected shares.
-                let rejected_text = format!("{} {}", FOLDER_NOTCH_MINUS, ws.num_rejected);
+                let rejected_text = format!("{} {}", FOLDER_SIMPLE_MINUS, ws.num_rejected);
                 ui.heading(RichText::new(rejected_text)
                     .color(Colors::RED)
                     .size(16.0));

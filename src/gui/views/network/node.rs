@@ -165,45 +165,29 @@ impl NetworkTab for NetworkNode {
                 // Show peer stats when available.
                 if stats.peer_count > 0 {
                     View::sub_title(ui, format!("{} {}", HANDSHAKE, t!("network_node.peers")));
-                    for (index, ps) in stats.peer_stats.iter().enumerate() {
-                        let rounding = if stats.peer_count == 1 {
-                            [true, true]
-                        } else if index == 0 {
-                            [true, false]
-                        } else if index == &stats.peer_stats.len() - 1 {
-                            [false, true]
-                        } else {
-                            [false, false]
-                        };
-                        ui.vertical_centered(|ui| {
-                            peer_item_ui(ui, ps, rounding);
-                        });
+                    let peers = &stats.peer_stats;
+                    for (index, ps) in peers.iter().enumerate() {
+                        peer_item_ui(ui, ps, View::item_rounding(index, peers.len()));
+                        // Add space after the last item.
+                        if index == peers.len() - 1 {
+                            ui.add_space(5.0);
+                        }
                     }
                 }
             });
     }
 
-    fn on_modal_ui(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {}
+    fn on_modal_ui(&mut self, _: &mut egui::Ui, _: &Modal, _: &dyn PlatformCallbacks) {}
 }
 
 /// Draw connected peer info item.
-fn peer_item_ui(ui: &mut egui::Ui, peer: &PeerStats, rounding: [bool; 2]) {
+fn peer_item_ui(ui: &mut egui::Ui, peer: &PeerStats, rounding: Rounding) {
     let mut rect = ui.available_rect_before_wrap();
     rect.set_height(77.0);
     ui.allocate_ui_at_rect(rect, |ui| {
         ui.vertical(|ui| {
             // Draw round background.
-            ui.painter().rect(
-                rect,
-                Rounding {
-                    nw: if rounding[0] { 8.0 } else { 0.0 },
-                    ne: if rounding[0] { 8.0 } else { 0.0 },
-                    sw: if rounding[1] { 8.0 } else { 0.0 },
-                    se: if rounding[1] { 8.0 } else { 0.0 },
-                },
-                Colors::WHITE,
-                Stroke { width: 1.0, color: Colors::ITEM_STROKE }
-            );
+            ui.painter().rect(rect, rounding, Colors::WHITE, View::ITEM_STROKE);
 
             ui.add_space(2.0);
 
@@ -233,9 +217,4 @@ fn peer_item_ui(ui: &mut egui::Ui, peer: &PeerStats, rounding: [bool; 2]) {
             ui.add_space(2.0);
         });
     });
-
-    // Add space after the last item.
-    if rounding[1] {
-        ui.add_space(5.0);
-    }
 }

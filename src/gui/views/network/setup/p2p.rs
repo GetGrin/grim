@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::{Id, RichText, Rounding, Stroke, TextStyle, Ui, Widget};
+use egui::{Id, RichText, Rounding, TextStyle, Ui, Widget};
 use egui_extras::{Size, StripBuilder};
 use grin_core::global::ChainTypes;
 
 use crate::AppConfig;
 use crate::gui::Colors;
-use crate::gui::icons::{HANDSHAKE, PLUG, TRASH, GLOBE_SIMPLE, PLUS_CIRCLE, ARROW_FAT_LINES_UP, ARROW_FAT_LINES_DOWN, ARROW_FAT_LINE_UP, PROHIBIT_INSET, CLIPBOARD_TEXT};
+use crate::gui::icons::{ARROW_FAT_LINE_UP, ARROW_FAT_LINES_DOWN, ARROW_FAT_LINES_UP, CLIPBOARD_TEXT, COMPUTER_TOWER, GLOBE_SIMPLE, HANDSHAKE, PLUG, PLUS_CIRCLE, PROHIBIT_INSET, TRASH};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, ModalPosition, View};
 use crate::gui::views::network::settings::NetworkSettings;
@@ -301,7 +301,7 @@ impl P2PSetup {
 
     /// Draw peer list content based on provided [`PeerType`].
     fn peer_list_ui(&mut self, ui: &mut Ui, peer_type: &PeerType, cb: &dyn PlatformCallbacks) {
-        let peer_list = match peer_type {
+        let peers = match peer_type {
             PeerType::DefaultSeed => {
                 if AppConfig::chain_type() == ChainTypes::Testnet {
                     self.default_test_seeds.clone()
@@ -314,26 +314,17 @@ impl P2PSetup {
             PeerType::Denied => NodeConfig::get_denied_peers(),
             PeerType::Preferred => NodeConfig::get_preferred_peers()
         };
-        for (index, peer) in peer_list.iter().enumerate() {
-            let rounding = if peer_list.len() == 1 {
-                [true, true]
-            } else if index == 0 {
-                [true, false]
-            } else if index == peer_list.len() - 1 {
-                [false, true]
-            } else {
-                [false, false]
-            };
+        for (index, peer) in peers.iter().enumerate() {
             ui.horizontal_wrapped(|ui| {
                 // Draw peer list item.
-                Self::peer_item_ui(ui, peer, peer_type, rounding);
+                Self::peer_item_ui(ui, peer, peer_type, View::item_rounding(index, peers.len()));
             });
         }
 
         if peer_type != &PeerType::DefaultSeed {
             // Draw description.
             if peer_type != &PeerType::CustomSeed {
-                if !peer_list.is_empty() {
+                if !peers.is_empty() {
                     ui.add_space(12.0);
                 }
                 let desc = match peer_type {
@@ -482,22 +473,12 @@ impl P2PSetup {
     }
 
     /// Draw peer list item.
-    fn peer_item_ui(ui: &mut Ui, peer_addr: &String, peer_type: &PeerType, rounding: [bool; 2]) {
+    fn peer_item_ui(ui: &mut Ui, peer_addr: &String, peer_type: &PeerType, rounding: Rounding) {
         // Draw round background.
         let mut rect = ui.available_rect_before_wrap();
         rect.min += egui::emath::vec2(6.0, 0.0);
         rect.set_height(42.0);
-        ui.painter().rect(
-            rect,
-            Rounding {
-                nw: if rounding[0] { 6.0 } else { 0.0 },
-                ne: if rounding[0] { 6.0 } else { 0.0 },
-                sw: if rounding[1] { 6.0 } else { 0.0 },
-                se: if rounding[1] { 6.0 } else { 0.0 },
-            },
-            Colors::WHITE,
-            Stroke { width: 1.0, color: Colors::ITEM_STROKE }
-        );
+        ui.painter().rect(rect, rounding, Colors::WHITE, View::ITEM_STROKE);
 
         StripBuilder::new(ui)
             .size(Size::exact(42.0))
@@ -512,10 +493,10 @@ impl P2PSetup {
                             strip.cell(|ui| {
                                 ui.horizontal_centered(|ui| {
                                     // Draw peer address.
-                                    let peer_text = format!("{} {}", GLOBE_SIMPLE, &peer_addr);
+                                    let peer_text = format!("{} {}", COMPUTER_TOWER, &peer_addr);
                                     ui.label(RichText::new(peer_text)
                                         .color(Colors::TEXT_BUTTON)
-                                        .size(17.0));
+                                        .size(16.0));
                                 });
                             });
                             if peer_type != &PeerType::DefaultSeed {

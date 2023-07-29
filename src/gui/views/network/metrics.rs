@@ -13,7 +13,7 @@
 // limitations under the License.
 
 use chrono::{DateTime, NaiveDateTime, Utc};
-use egui::{RichText, Rounding, ScrollArea, Stroke, vec2};
+use egui::{RichText, Rounding, ScrollArea, vec2};
 use grin_servers::DiffBlock;
 
 use crate::gui::Colors;
@@ -135,34 +135,24 @@ impl NetworkTab for NetworkMetrics {
                 blocks_size,
                 |ui, row_range| {
                     for index in row_range {
+                        // Add space before the first item.
+                        if index == 0 {
+                            ui.add_space(4.0);
+                        }
                         let db = stats.diff_stats.last_blocks.get(index).unwrap();
-                        let rounding = if blocks_size == 1 {
-                            [true, true]
-                        } else if index == 0 {
-                            [true, false]
-                        } else if index == blocks_size - 1 {
-                            [false, true]
-                        } else {
-                            [false, false]
-                        };
-                        block_item_ui(ui, db, rounding)
+                        block_item_ui(ui, db, View::item_rounding(index, blocks_size))
                     }
                 },
             );
     }
 
-    fn on_modal_ui(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {}
+    fn on_modal_ui(&mut self, _: &mut egui::Ui, _: &Modal, _: &dyn PlatformCallbacks) {}
 }
 
 const BLOCK_ITEM_HEIGHT: f32 = 77.0;
 
 /// Draw block difficulty item.
-fn block_item_ui(ui: &mut egui::Ui, db: &DiffBlock, rounding: [bool; 2]) {
-    // Add space before the first item.
-    if rounding[0] {
-        ui.add_space(4.0);
-    }
-
+fn block_item_ui(ui: &mut egui::Ui, db: &DiffBlock, rounding: Rounding) {
     let mut rect = ui.available_rect_before_wrap();
     rect.set_height(BLOCK_ITEM_HEIGHT);
     ui.allocate_ui_at_rect(rect, |ui| {
@@ -171,17 +161,7 @@ fn block_item_ui(ui: &mut egui::Ui, db: &DiffBlock, rounding: [bool; 2]) {
             ui.vertical(|ui| {
                 // Draw round background.
                 rect.min += vec2(8.0, 0.0);
-                ui.painter().rect(
-                    rect,
-                    Rounding {
-                        nw: if rounding[0] { 8.0 } else { 0.0 },
-                        ne: if rounding[0] { 8.0 } else { 0.0 },
-                        sw: if rounding[1] { 8.0 } else { 0.0 },
-                        se: if rounding[1] { 8.0 } else { 0.0 },
-                    },
-                    Colors::WHITE,
-                    Stroke { width: 1.0, color: Colors::ITEM_STROKE }
-                );
+                ui.painter().rect(rect, rounding, Colors::WHITE, View::ITEM_STROKE);
 
                 ui.add_space(2.0);
 

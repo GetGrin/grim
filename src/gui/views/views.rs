@@ -28,6 +28,8 @@ pub struct View;
 impl View {
     /// Default stroke around views.
     pub const DEFAULT_STROKE: Stroke = Stroke { width: 1.0, color: Colors::STROKE };
+    /// Stroke around list items.
+    pub const ITEM_STROKE: Stroke = Stroke { width: 1.0, color: Colors::ITEM_STROKE };
 
     /// Callback on Enter key press event.
     pub fn on_enter_key(ui: &mut egui::Ui, cb: impl FnOnce()) {
@@ -192,6 +194,26 @@ impl View {
                 (action)();
             }
         });
+    }
+
+    /// Calculate list item rounding based on item index.
+    pub fn item_rounding(index: usize, len: usize) -> Rounding {
+        let rounding = if len == 1 {
+            [true, true]
+        } else if index == 0 {
+            [true, false]
+        } else if index == len - 1 {
+            [false, true]
+        } else {
+            [false, false]
+        };
+
+        Rounding {
+            nw: if rounding[0] { 8.0 } else { 0.0 },
+            ne: if rounding[0] { 8.0 } else { 0.0 },
+            sw: if rounding[1] { 8.0 } else { 0.0 },
+            se: if rounding[1] { 8.0 } else { 0.0 },
+        }
     }
 
     /// Draw rounded box with some value and label in the middle,
