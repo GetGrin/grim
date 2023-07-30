@@ -26,8 +26,8 @@ impl Colors {
     pub const GREEN: Color32 = Color32::from_rgb(0, 0x64, 0);
     pub const RED: Color32 = Color32::from_rgb(0x8B, 0, 0);
     pub const FILL: Color32 = Color32::from_gray(244);
-    pub const FILL_DARK: Color32 = Color32::from_gray(232);
-    pub const CHECKBOX: Color32 = Color32::from_gray(100);
+    pub const FILL_DARK: Color32 = Color32::from_gray(234);
+    pub const CHECKBOX: Color32 = Color32::from_gray(107);
     pub const TEXT: Color32 = Color32::from_gray(80);
     pub const TEXT_BUTTON: Color32 = Color32::from_gray(70);
     pub const TITLE: Color32 = Color32::from_gray(60);
@@ -35,6 +35,7 @@ impl Colors {
     pub const GRAY: Color32 = Color32::from_gray(120);
     pub const STROKE: Color32 = Color32::from_gray(190);
     pub const INACTIVE_TEXT: Color32 = Color32::from_gray(150);
+    pub const ITEM_BUTTON: Color32 = Color32::from_gray(90);
     pub const ITEM_STROKE: Color32 = Color32::from_gray(220);
     pub const ITEM_HOVER: Color32 = Color32::from_gray(205);
     pub const ITEM_CURRENT: Color32 = Color32::from_gray(227);

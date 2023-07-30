@@ -20,7 +20,7 @@ use lazy_static::lazy_static;
 
 use crate::gui::Colors;
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{WalletsContent, Modal, ModalContainer, Network, View};
+use crate::gui::views::{Modal, ModalContainer, Network, View, WalletsContent};
 use crate::node::Node;
 
 lazy_static! {
@@ -73,7 +73,7 @@ impl Root {
     pub const EXIT_MODAL_ID: &'static str = "exit_confirmation";
 
     /// Default width of side panel at application UI.
-    pub const SIDE_PANEL_MIN_WIDTH: f32 = 400.0;
+    pub const SIDE_PANEL_WIDTH: f32 = 400.0;
 
     pub fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame, cb: &dyn PlatformCallbacks) {
         // Show opened exit confirmation modal content.
@@ -110,7 +110,7 @@ impl Root {
         let dual_panel_mode = Self::is_dual_panel_mode(frame);
         let is_panel_open = dual_panel_mode || Self::is_network_panel_open();
         let panel_width = if dual_panel_mode {
-            Self::SIDE_PANEL_MIN_WIDTH + View::get_left_inset()
+            Self::SIDE_PANEL_WIDTH + View::get_left_inset()
         } else {
             frame.info().window_info.size.x
         };
@@ -126,7 +126,7 @@ impl Root {
         // Dual panel mode is available when window is wide and its width is at least 2 times
         // greater than minimal width of the side panel plus display insets from both sides.
         let side_insets = View::get_left_inset() + View::get_right_inset();
-        is_wide_screen && w >= (Self::SIDE_PANEL_MIN_WIDTH * 2.0) + side_insets
+        is_wide_screen && w >= (Self::SIDE_PANEL_WIDTH * 2.0) + side_insets
     }
 
     /// Toggle [`Network`] panel state.

@@ -83,16 +83,19 @@ impl AppConfig {
     pub fn change_chain_type(chain_type: &ChainTypes) {
         let current_chain_type = Self::chain_type();
         if current_chain_type != *chain_type {
-            let mut w_app_config = Settings::app_config_to_update();
-            w_app_config.chain_type = *chain_type;
-            w_app_config.save();
-
+            // Save chain type at app config.
+            {
+                let mut w_app_config = Settings::app_config_to_update();
+                w_app_config.chain_type = *chain_type;
+                w_app_config.save();
+            }
             // Load node config for selected chain type.
-            let mut w_node_config = Settings::node_config_to_update();
-            let node_config = NodeConfig::for_chain_type(chain_type);
-            w_node_config.node = node_config.node;
-            w_node_config.peers = node_config.peers;
-
+            {
+                let mut w_node_config = Settings::node_config_to_update();
+                let node_config = NodeConfig::for_chain_type(chain_type);
+                w_node_config.node = node_config.node;
+                w_node_config.peers = node_config.peers;
+            }
             // Reload wallets.
             Wallets::reload(chain_type);
         }

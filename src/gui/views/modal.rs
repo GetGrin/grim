@@ -68,8 +68,8 @@ pub struct Modal {
 impl Modal {
     /// Margin from [`Modal`] window at top/left/right.
     const DEFAULT_MARGIN: f32 = 10.0;
-    /// Default width of the content.
-    const DEFAULT_WIDTH: f32 = Root::SIDE_PANEL_MIN_WIDTH - (2.0 * Self::DEFAULT_MARGIN);
+    /// Maximum width of the content.
+    const DEFAULT_WIDTH: f32 = Root::SIDE_PANEL_WIDTH - (2.0 * Self::DEFAULT_MARGIN);
 
     /// Create opened and closeable Modal with center position.
     pub fn new(id: &'static str) -> Self {

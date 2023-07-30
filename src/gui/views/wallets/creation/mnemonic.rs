@@ -321,7 +321,7 @@ impl MnemonicSetup {
 /// Calculate word list columns count based on available ui width.
 fn list_columns_count(ui: &mut egui::Ui) -> usize {
     let w = ui.available_width();
-    let min_panel_w = Root::SIDE_PANEL_MIN_WIDTH - 12.0;
+    let min_panel_w = Root::SIDE_PANEL_WIDTH - 12.0;
     let double_min_panel_w = min_panel_w * 2.0;
     if w >= min_panel_w * 1.5 && w < double_min_panel_w {
         3

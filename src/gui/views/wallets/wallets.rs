@@ -18,7 +18,7 @@ use egui::{Align, Align2, Layout, Margin, RichText, Rounding, ScrollArea, TextSt
 use egui_extras::{Size, StripBuilder};
 
 use crate::gui::Colors;
-use crate::gui::icons::{ARROW_LEFT, CARET_RIGHT, COMPUTER_TOWER, EYE, EYE_SLASH, FOLDER, FOLDER_LOCK, FOLDER_OPEN, GEAR, GLOBE, GLOBE_SIMPLE, PLUS};
+use crate::gui::icons::{ARROW_LEFT, CARET_RIGHT, COMPUTER_TOWER, EYE, EYE_SLASH, FOLDER_LOCK, FOLDER_OPEN, GEAR, GLOBE, GLOBE_SIMPLE, PLUS};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, ModalContainer, ModalPosition, Root, TitlePanel, TitleType, View};
 use crate::gui::views::wallets::creation::{MnemonicSetup, WalletCreation};
@@ -229,14 +229,12 @@ impl WalletsContent {
                 .auto_shrink([false; 2])
                 .show(ui, |ui| {
                     ui.vertical_centered(|ui| {
-                        // Calculate wallet list width.
-                        let available_width = ui.available_width();
-                        let width = if dual_panel {
-                            available_width
-                        } else {
-                            min(available_width as i64, (Root::SIDE_PANEL_MIN_WIDTH * 1.3) as i64) as f32
-                        };
+                        // Setup wallet list width.
                         let mut rect = ui.available_rect_before_wrap();
+                        let mut width = ui.available_width();
+                        if !dual_panel {
+                            width = min(width as i64, (Root::SIDE_PANEL_WIDTH * 1.3) as i64) as f32
+                        }
                         rect.set_width(width);
 
                         ui.allocate_ui(rect.size(), |ui| {
@@ -274,7 +272,7 @@ impl WalletsContent {
 
         // Draw round background.
         let mut rect = ui.available_rect_before_wrap();
-        rect.set_height(77.0);
+        rect.set_height(78.0);
         let rounding = View::item_rounding(0, 1);
         let bg_color = if is_current { Colors::ITEM_CURRENT } else { Colors::FILL };
         let stroke = if is_current { View::ITEM_HOVER_STROKE } else { View::ITEM_HOVER_STROKE };
@@ -310,21 +308,20 @@ impl WalletsContent {
             ui.allocate_ui_with_layout(layout_size, Layout::left_to_right(Align::Center), |ui| {
                 ui.add_space(7.0);
                 ui.vertical(|ui| {
+                    ui.add_space(3.0);
                     // Setup wallet name text.
-                    let name_text = format!("{} {}", FOLDER, wallet.config.name);
                     let name_color = if is_selected { Colors::BLACK } else { Colors::TITLE };
-                    ui.add_space(4.0);
-                    View::ellipsize_text(ui, name_text, 18.0, name_color);
-                    ui.add_space(-1.0);
+                    View::ellipsize_text(ui, wallet.config.name.to_owned(), 18.0, name_color);
 
                     // Setup wallet connection text.
-                    let external_url = wallet.config.get_external_node_url();
+                    let external_url = &wallet.config.external_node_url;
                     let conn_text = if let Some(url) = external_url {
                         format!("{} {}", GLOBE_SIMPLE, url)
                     } else {
                         format!("{} {}", COMPUTER_TOWER, t!("network.node"))
                     };
                     View::ellipsize_text(ui, conn_text, 15.0, Colors::TEXT);
+                    ui.add_space(1.0);
 
                     // Setup wallet status text.
                     let status_text = if Wallets::is_open(id) {
@@ -491,10 +488,10 @@ impl WalletsContent {
         let available_width = if is_list_empty || is_wallet_creation {
             ui.available_width()
         } else {
-            ui.available_width() - Root::SIDE_PANEL_MIN_WIDTH
+            ui.available_width() - Root::SIDE_PANEL_WIDTH
         };
         if dual_panel {
-            let min_width = (Root::SIDE_PANEL_MIN_WIDTH + View::get_right_inset()) as i64;
+            let min_width = (Root::SIDE_PANEL_WIDTH + View::get_right_inset()) as i64;
             max(min_width, available_width as i64) as f32
         } else {
             if is_wallet_showing {
@@ -509,7 +506,7 @@ impl WalletsContent {
     fn is_dual_panel_mode(ui: &mut egui::Ui, frame: &mut eframe::Frame) -> bool {
         let dual_panel_root = Root::is_dual_panel_mode(frame);
         let max_width = ui.available_width();
-        dual_panel_root && max_width >= (Root::SIDE_PANEL_MIN_WIDTH * 2.0) + View::get_right_inset()
+        dual_panel_root && max_width >= (Root::SIDE_PANEL_WIDTH * 2.0) + View::get_right_inset()
     }
 
     /// Handle Back key event.

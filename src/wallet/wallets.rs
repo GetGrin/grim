@@ -160,8 +160,11 @@ impl Wallets {
 
     /// Reload list of wallets for provided [`ChainTypes`].
     pub fn reload(chain_type: &ChainTypes) {
+        let wallets = Self::load_wallets(chain_type);
         let mut w_state = WALLETS_STATE.write().unwrap();
-        w_state.list = Self::load_wallets(chain_type);
+        w_state.selected_id = None;
+        w_state.opened_ids = BTreeSet::default();
+        w_state.list = wallets;
     }
 }
 
@@ -241,7 +244,7 @@ impl Wallet {
     /// Create wallet instance from provided config.
     fn create_wallet_instance(config: WalletConfig) -> Result<WalletInstance, Error> {
         // Assume global chain type has already been initialized.
-        let chain_type = AppConfig::chain_type();
+        let chain_type = config.chain_type;
         if !global::GLOBAL_CHAIN_TYPE.is_init() {
             global::init_global_chain_type(chain_type);
         } else {
@@ -250,8 +253,8 @@ impl Wallet {
         }
 
         // Setup node client.
-        let (node_api_url, node_secret) = if let Some(url) = config.get_external_node_url() {
-            (url.to_string(), None)
+        let (node_api_url, node_secret) = if let Some(url) = &config.external_node_url {
+            (url.to_owned(), None)
         } else {
             (NodeConfig::get_api_address(), NodeConfig::get_api_secret())
         };

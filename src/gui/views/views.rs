@@ -128,25 +128,35 @@ impl View {
 
     /// Tab button with white background fill color, contains only icon.
     pub fn tab_button(ui: &mut egui::Ui, icon: &str, active: bool, action: impl FnOnce()) {
-        let text_color = match active {
-            true => Colors::TITLE,
-            false => Colors::TEXT
-        };
-        let stroke = match active {
-            true => Stroke::NONE,
-            false => Self::DEFAULT_STROKE
-        };
-        let color = match active {
-            true => Colors::FILL,
-            false => Colors::WHITE
-        };
-        let br = Button::new(RichText::new(icon.to_string()).size(22.0).color(text_color))
-            .stroke(stroke)
-            .fill(color)
-            .ui(ui);
-        if Self::touched(ui, br) {
-            (action)();
-        }
+        ui.scope(|ui| {
+            let text_color = match active {
+                true => Colors::TITLE,
+                false => Colors::TEXT
+            };
+
+            let mut button = Button::new(RichText::new(icon).size(22.0).color(text_color));
+
+            if !active {
+                // Disable expansion on click/hover.
+                ui.style_mut().visuals.widgets.hovered.expansion = 0.0;
+                ui.style_mut().visuals.widgets.active.expansion = 0.0;
+                // Setup fill colors.
+                ui.visuals_mut().widgets.inactive.weak_bg_fill = Colors::WHITE;
+                ui.visuals_mut().widgets.hovered.weak_bg_fill = Colors::BUTTON;
+                ui.visuals_mut().widgets.active.weak_bg_fill = Colors::FILL;
+                // Setup stroke colors.
+                ui.visuals_mut().widgets.inactive.bg_stroke = Self::DEFAULT_STROKE;
+                ui.visuals_mut().widgets.hovered.bg_stroke = Self::ITEM_HOVER_STROKE;
+                ui.visuals_mut().widgets.active.bg_stroke = Self::ITEM_STROKE;
+            } else {
+                button = button.fill(Colors::FILL).stroke(Stroke::NONE);
+            }
+
+            let br = button.ui(ui);
+            if Self::touched(ui, br) {
+                (action)();
+            }
+        });
     }
 
     /// Draw [`Button`] with specified background fill color.
@@ -174,19 +184,17 @@ impl View {
             // Disable expansion on click/hover.
             ui.style_mut().visuals.widgets.hovered.expansion = 0.0;
             ui.style_mut().visuals.widgets.active.expansion = 0.0;
-
             // Setup fill colors.
             ui.visuals_mut().widgets.inactive.weak_bg_fill = Colors::WHITE;
             ui.visuals_mut().widgets.hovered.weak_bg_fill = Colors::BUTTON;
             ui.visuals_mut().widgets.active.weak_bg_fill = Colors::FILL;
-
             // Setup stroke colors.
             ui.visuals_mut().widgets.inactive.bg_stroke = Self::DEFAULT_STROKE;
             ui.visuals_mut().widgets.hovered.bg_stroke = Self::ITEM_HOVER_STROKE;
             ui.visuals_mut().widgets.active.bg_stroke = Self::ITEM_STROKE;
 
             // Show button.
-            let br = Button::new(RichText::new(icon).size(20.0).color(Colors::CHECKBOX))
+            let br = Button::new(RichText::new(icon).size(20.0).color(Colors::ITEM_BUTTON))
                 .rounding(rounding)
                 .min_size(button_size)
                 .ui(ui);

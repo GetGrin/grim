@@ -14,9 +14,10 @@
 
 use std::fs;
 use std::path::PathBuf;
-use grin_core::global::ChainTypes;
 
+use grin_core::global::ChainTypes;
 use serde_derive::{Deserialize, Serialize};
+
 use crate::{AppConfig, Settings};
 use crate::wallet::Wallets;
 
@@ -24,13 +25,13 @@ use crate::wallet::Wallets;
 #[derive(Serialize, Deserialize, Clone)]
 pub struct WalletConfig {
     /// Chain type for current wallet.
-    chain_type: ChainTypes,
+    pub(crate) chain_type: ChainTypes,
     /// Identifier for a wallet.
     pub(crate) id: i64,
     /// Human-readable wallet name for ui.
     pub(crate) name: String,
     /// External node connection URL.
-    external_node_url: Option<String>,
+    pub(crate) external_node_url: Option<String>,
 }
 
 /// Wallet configuration file name.
@@ -84,13 +85,8 @@ impl WalletConfig {
         Settings::write_to_file(self, config_path);
     }
 
-    /// Get external node connection URL.
-    pub fn get_external_node_url(&self) -> &Option<String> {
-        &self.external_node_url
-    }
-
     /// Set external node connection URL.
-    pub fn set_external_node_url(&mut self, url: Option<String>) {
+    pub fn save_external_node_url(&mut self, url: Option<String>) {
         self.external_node_url = url;
         self.save();
     }
