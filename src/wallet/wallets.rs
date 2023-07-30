@@ -46,7 +46,7 @@ lazy_static! {
 pub struct Wallets {
     /// List of wallets.
     list: Vec<Wallet>,
-    /// Selected [`Wallet`] identifier from config.
+    /// Selected [`Wallet`] identifier.
     selected_id: Option<i64>,
     /// Identifiers of opened wallets.
     opened_ids: BTreeSet<i64>
@@ -61,7 +61,8 @@ impl Wallets {
         Self {
             list: Self::load_wallets(&AppConfig::chain_type()),
             selected_id: None,
-            opened_ids: Default::default() }
+            opened_ids: BTreeSet::default()
+        }
     }
 
     /// Create new wallet and add it to state.
@@ -198,7 +199,7 @@ impl Wallet {
         mnemonic: String,
         external_node_url: Option<String>
     ) -> Result<Wallet, Error> {
-        let config = WalletConfig::create(name.clone(), external_node_url);
+        let config = WalletConfig::create(name, external_node_url);
         let wallet = Self::create_wallet_instance(config.clone())?;
         let w = Wallet {
             instance: wallet,
@@ -566,7 +567,7 @@ impl Wallet {
     }
 
     /// Get summary info about the wallet.
-    pub fn get_info<'a, T: ?Sized, C, K>(
+    fn get_info<'a, T: ?Sized, C, K>(
         wallet: &mut T,
         parent_key_id: &Identifier,
         minimum_confirmations: u64,

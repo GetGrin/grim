@@ -25,6 +25,8 @@ wallets:
   invalid_url: Введенный URL-адрес недействителен
   open: Открыть кошелёк
   wrong_pass: Введён неправильный пароль
+  locked: Заблокирован
+  unlocked: Разблокирован
 network:
   self: Сеть
   node: Встроенный узел

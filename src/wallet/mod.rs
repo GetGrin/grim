@@ -17,8 +17,8 @@ pub mod selection;
 pub mod tx;
 pub mod keys;
 
-mod wallet;
-pub use wallet::{Wallet, Wallets};
+mod wallets;
+pub use wallets::{Wallet, Wallets};
 
 mod config;
 pub use config::*;

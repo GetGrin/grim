@@ -25,6 +25,8 @@ wallets:
   invalid_url: Entered URL is invalid
   open: Open the wallet
   wrong_pass: Entered password is wrong
+  locked: Locked
+  unlocked: Unlocked
 network:
   self: Network
   node: Integrated node

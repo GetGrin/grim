@@ -19,6 +19,7 @@ pub struct Colors;
 impl Colors {
     pub const WHITE: Color32 = Color32::from_gray(253);
     pub const BLACK: Color32 = Color32::from_gray(2);
+    pub const DARK_TEXT: Color32 = Color32::from_gray(30);
     pub const TRANSPARENT: Color32 = Color32::from_rgba_premultiplied(0, 0, 0, 0);
     pub const SEMI_TRANSPARENT: Color32 = Color32::from_black_alpha(100);
     pub const YELLOW: Color32 = Color32::from_rgb(254, 241, 2);
@@ -36,5 +37,6 @@ impl Colors {
     pub const STROKE: Color32 = Color32::from_gray(190);
     pub const INACTIVE_TEXT: Color32 = Color32::from_gray(150);
     pub const ITEM_STROKE: Color32 = Color32::from_gray(220);
-    pub const ITEM_HOVER_STROKE: Color32 = Color32::from_gray(205);
+    pub const ITEM_HOVER: Color32 = Color32::from_gray(205);
+    pub const ITEM_CURRENT: Color32 = Color32::from_gray(227);
 }
