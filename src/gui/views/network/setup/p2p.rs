@@ -18,7 +18,7 @@ use grin_core::global::ChainTypes;
 
 use crate::AppConfig;
 use crate::gui::Colors;
-use crate::gui::icons::{ARROW_FAT_LINE_UP, ARROW_FAT_LINES_DOWN, ARROW_FAT_LINES_UP, CLIPBOARD_TEXT, COMPUTER_TOWER, GLOBE_SIMPLE, HANDSHAKE, PLUG, PLUS_CIRCLE, PROHIBIT_INSET, TRASH};
+use crate::gui::icons::{ARROW_FAT_LINE_UP, ARROW_FAT_LINES_DOWN, ARROW_FAT_LINES_UP, CLIPBOARD_TEXT, GLOBE_SIMPLE, HANDSHAKE, PLUG, PLUS_CIRCLE, PROHIBIT_INSET, TRASH};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, ModalPosition, View};
 use crate::gui::views::network::settings::NetworkSettings;
@@ -510,60 +510,13 @@ impl P2PSetup {
                 ui.allocate_ui_with_layout(layout_size, Layout::left_to_right(Align::Center), |ui| {
                     ui.add_space(12.0);
                     // Draw peer address.
-                    let peer_text = format!("{} {}", COMPUTER_TOWER, &peer_addr);
+                    let peer_text = format!("{} {}", GLOBE_SIMPLE, &peer_addr);
                     ui.label(RichText::new(peer_text)
                         .color(Colors::TEXT_BUTTON)
                         .size(16.0));
                 });
             });
         });
-
-        // StripBuilder::new(ui)
-        //     .size(Size::exact(42.0))
-        //     .vertical(|mut strip| {
-        //         strip.strip(|builder| {
-        //             builder
-        //                 .size(Size::exact(13.0))
-        //                 .size(Size::remainder())
-        //                 .size(Size::exact(42.0))
-        //                 .horizontal(|mut strip| {
-        //                     strip.empty();
-        //                     strip.cell(|ui| {
-        //                         ui.horizontal_centered(|ui| {
-        //                             // Draw peer address.
-        //                             let peer_text = format!("{} {}", COMPUTER_TOWER, &peer_addr);
-        //                             ui.label(RichText::new(peer_text)
-        //                                 .color(Colors::TEXT_BUTTON)
-        //                                 .size(16.0));
-        //                         });
-        //                     });
-        //                     if peer_type != &PeerType::DefaultSeed {
-        //                         strip.cell(|ui| {
-        //                             // Draw delete button for non-default seed peers.
-        //                             View::item_button(ui, [false, true], TRASH, || {
-        //                                 match peer_type {
-        //                                     PeerType::CustomSeed => {
-        //                                         NodeConfig::remove_custom_seed(peer_addr);
-        //                                     }
-        //                                     PeerType::Allowed => {
-        //                                         NodeConfig::remove_allowed_peer(peer_addr);
-        //                                     }
-        //                                     PeerType::Denied => {
-        //                                         NodeConfig::remove_denied_peer(peer_addr);
-        //                                     }
-        //                                     PeerType::Preferred => {
-        //                                         NodeConfig::remove_preferred_peer(peer_addr);
-        //                                     }
-        //                                     PeerType::DefaultSeed => {}
-        //                                 }
-        //                             });
-        //                         });
-        //                     } else {
-        //                         strip.empty();
-        //                     }
-        //                 });
-        //         });
-        //     });
     }
 
     /// Draw seeding type setup content.
