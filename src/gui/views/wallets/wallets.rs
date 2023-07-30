@@ -14,7 +14,7 @@
 
 use std::cmp::{max, min};
 
-use egui::{Align, Align2, Layout, Margin, RichText, Rounding, TextStyle, Widget};
+use egui::{Align, Align2, Layout, Margin, RichText, Rounding, ScrollArea, TextStyle, Widget};
 use egui_extras::{Size, StripBuilder};
 
 use crate::gui::Colors;
@@ -142,33 +142,39 @@ impl WalletsContent {
                 }
             });
 
-        // Show non-empty list if wallet is not creating and not open at single panel mode.
-        if !empty_list && !create_wallet && (!open_wallet_panel || dual_panel) {
+        // Show non-empty list if network panel is closed at non-dual root mode
+        // and if wallet is not creating and not open at single panel mode.
+        let root_dual_panel = Root::is_dual_panel_mode(frame);
+        let wallets_panel_closed = !root_dual_panel && Root::is_network_panel_open();
+        if !wallets_panel_closed && !empty_list && !create_wallet && (!open_wallet_panel || dual_panel) {
+            // Setup flag to show wallet creation button if wallets panel is showing at root
+            // and wallet creation is not showing at dual panel mode.
+            let show_creation_btn = !wallets_panel_closed && (!open_wallet_panel || show_wallet);
+
             egui::CentralPanel::default()
                 .frame(egui::Frame {
                     stroke: View::DEFAULT_STROKE,
                     fill: Colors::FILL_DARK,
                     inner_margin: Margin {
-                        left: View::far_left_inset_margin(ui) + 6.0,
-                        right: View::far_right_inset_margin(ui, frame) + 6.0,
-                        top: 5.0,
-                        bottom: View::get_bottom_inset(),
+                        left: View::far_left_inset_margin(ui) + 4.0,
+                        right: View::far_right_inset_margin(ui, frame) + 4.0,
+                        top: 4.0,
+                        bottom: View::get_bottom_inset() + 4.0,
                     },
                     ..Default::default()
                 })
                 .show_inside(ui, |ui| {
-                    self.wallet_list_ui(ui, dual_panel, &wallets, cb);
-                });
+                    // Show list of wallets.
+                    let scroll = self.list_ui(ui, dual_panel, show_creation_btn, &wallets, cb);
 
-            // Do not show creation button if wallets panel is not showing at root
-            // or if wallet creation is showing at dual panel mode.
-            let root_dual_panel = Root::is_dual_panel_mode(frame);
-            let wallets_panel_not_open = !root_dual_panel && Root::is_network_panel_open();
-            if wallets_panel_not_open || (open_wallet_panel && !show_wallet) {
-                return;
-            } else {
-                self.create_wallet_btn_ui(ui, if dual_panel { wallet_panel_width } else { 0.0 });
-            }
+                    if show_creation_btn {
+                        // Setup right margin for button.
+                        let mut right_margin = if dual_panel { wallet_panel_width } else { 0.0 };
+                        if scroll { right_margin += 6.0 }
+                        // Show wallet creation button.
+                        self.create_wallet_btn_ui(ui, right_margin);
+                    }
+                });
         }
     }
 
@@ -204,36 +210,56 @@ impl WalletsContent {
         }, ui, frame);
     }
 
-    /// Draw list of wallets.
-    fn wallet_list_ui(&mut self,
-                      ui: &mut egui::Ui,
-                      dual_panel: bool,
-                      wallets: &Vec<Wallet>,
-                      cb: &dyn PlatformCallbacks) {
-        let available_width = ui.available_width();
-        // Calculate list width.
-        let width = if dual_panel {
-            available_width
-        } else {
-            min(available_width as i64, (Root::SIDE_PANEL_MIN_WIDTH * 1.3) as i64) as f32
-        };
+    /// Draw list of wallets. Returns `true` if scroller is showing.
+    fn list_ui(&mut self,
+               ui: &mut egui::Ui,
+               dual_panel: bool,
+               show_creation_btn: bool,
+               wallets: &Vec<Wallet>,
+               cb: &dyn PlatformCallbacks) -> bool {
+        let mut scroller_showing = false;
+        ui.scope(|ui| {
+            // Setup scroll bar color.
+            ui.style_mut().visuals.widgets.inactive.bg_fill = Colors::ITEM_HOVER;
+            ui.style_mut().visuals.widgets.hovered.bg_fill = Colors::STROKE;
 
-        // Draw list of wallets.
-        ui.vertical_centered(|ui| {
-            let mut rect = ui.available_rect_before_wrap();
-            rect.set_width(width);
-            ui.allocate_ui(rect.size(), |ui| {
-                for (index, w) in wallets.iter().enumerate() {
-                    // Draw wallet list item.
-                    self.wallet_item_ui(ui, w, cb);
-                    // Add space after last item.
-                    if index == wallets.len() - 1 {
-                        ui.add_space(36.0);
-                    }
-                }
-            });
+            // Draw list of wallets.
+            let scroll = ScrollArea::vertical()
+                .id_source("wallet_list")
+                .auto_shrink([false; 2])
+                .show(ui, |ui| {
+                    ui.vertical_centered(|ui| {
+                        // Calculate wallet list width.
+                        let available_width = ui.available_width();
+                        let width = if dual_panel {
+                            available_width
+                        } else {
+                            min(available_width as i64, (Root::SIDE_PANEL_MIN_WIDTH * 1.3) as i64) as f32
+                        };
+                        let mut rect = ui.available_rect_before_wrap();
+                        rect.set_width(width);
 
+                        ui.allocate_ui(rect.size(), |ui| {
+                            for (index, w) in wallets.iter().enumerate() {
+                                // Draw wallet list item.
+                                self.wallet_item_ui(ui, w, cb);
+                                // Add space after last item.
+                                let last_item = index == wallets.len() - 1;
+                                if !last_item {
+                                    ui.add_space(5.0);
+                                }
+                                // Add space for wallet creation button.
+                                if show_creation_btn && last_item {
+                                    ui.add_space(57.0);
+                                }
+                            }
+                        });
+                    });
+                });
+            // Scroller is showing if content size is larger than content on the screen.
+            scroller_showing = scroll.content_size.y > scroll.inner_rect.size().y;
         });
+        scroller_showing
     }
 
     /// Draw wallet list item.
@@ -248,7 +274,7 @@ impl WalletsContent {
 
         // Draw round background.
         let mut rect = ui.available_rect_before_wrap();
-        rect.set_height(76.0);
+        rect.set_height(77.0);
         let rounding = View::item_rounding(0, 1);
         let bg_color = if is_current { Colors::ITEM_CURRENT } else { Colors::FILL };
         let stroke = if is_current { View::ITEM_HOVER_STROKE } else { View::ITEM_HOVER_STROKE };
@@ -286,8 +312,8 @@ impl WalletsContent {
                 ui.vertical(|ui| {
                     // Setup wallet name text.
                     let name_text = format!("{} {}", FOLDER, wallet.config.name);
-                    let name_color = if is_selected { Colors::DARK_TEXT } else { Colors::TITLE };
-                    ui.add_space(3.0);
+                    let name_color = if is_selected { Colors::BLACK } else { Colors::TITLE };
+                    ui.add_space(4.0);
                     View::ellipsize_text(ui, name_text, 18.0, name_color);
                     ui.add_space(-1.0);
 
@@ -299,7 +325,6 @@ impl WalletsContent {
                         format!("{} {}", COMPUTER_TOWER, t!("network.node"))
                     };
                     View::ellipsize_text(ui, conn_text, 15.0, Colors::TEXT);
-                    ui.add_space(1.0);
 
                     // Setup wallet status text.
                     let status_text = if Wallets::is_open(id) {
@@ -308,11 +333,10 @@ impl WalletsContent {
                         format!("{} {}", FOLDER_LOCK, t!("wallets.locked"))
                     };
                     ui.label(RichText::new(status_text).size(15.0).color(Colors::GRAY));
-                    ui.add_space(3.0);
+                    ui.add_space(4.0);
                 })
             });
         });
-        ui.add_space(6.0);
     }
 
     /// Draw floating button to show wallet creation [`Modal`].

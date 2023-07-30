@@ -200,23 +200,21 @@ impl View {
     pub fn circle_button(ui: &mut egui::Ui, icon: &'static str, action: impl FnOnce()) {
         ui.scope(|ui| {
             // Setup colors.
-            ui.visuals_mut().widgets.inactive.bg_fill = Colors::BUTTON;
-            ui.visuals_mut().widgets.hovered.bg_fill = Colors::FILL;
-            ui.visuals_mut().widgets.active.bg_fill = Colors::FILL_DARK;
+            ui.visuals_mut().widgets.inactive.bg_fill = Colors::GOLD;
+            ui.visuals_mut().widgets.hovered.bg_fill = Colors::GOLD;
+            ui.visuals_mut().widgets.active.bg_fill = Colors::YELLOW;
 
             // Setup radius.
             let mut r = 44.0 * 0.5;
             let size = egui::Vec2::splat(2.0 * r + 5.0);
             let (rect, br) = ui.allocate_at_least(size, Sense::click_and_drag());
 
-            let mut icon_color = Colors::GRAY;
-            let mut stroke = Self::DEFAULT_STROKE;
+            let mut icon_color = Colors::TEXT;
 
             // Increase radius and change icon size and color on-hover.
             if br.hovered() {
                 r = r * 1.04;
-                icon_color = Colors::TEXT_BUTTON;
-                stroke = Self::ITEM_HOVER_STROKE;
+                icon_color = Colors::TITLE;
             }
 
             let visuals = ui.style().interact(&br);
@@ -224,7 +222,7 @@ impl View {
                 center: rect.center(),
                 radius: r,
                 fill: visuals.bg_fill,
-                stroke,
+                stroke: Self::DEFAULT_STROKE
             });
             ui.allocate_ui_at_rect(rect, |ui| {
                 ui.centered_and_justified(|ui| {

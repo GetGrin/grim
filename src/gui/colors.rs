@@ -18,8 +18,7 @@ pub struct Colors;
 
 impl Colors {
     pub const WHITE: Color32 = Color32::from_gray(253);
-    pub const BLACK: Color32 = Color32::from_gray(2);
-    pub const DARK_TEXT: Color32 = Color32::from_gray(30);
+    pub const BLACK: Color32 = Color32::from_gray(12);
     pub const TRANSPARENT: Color32 = Color32::from_rgba_premultiplied(0, 0, 0, 0);
     pub const SEMI_TRANSPARENT: Color32 = Color32::from_black_alpha(100);
     pub const YELLOW: Color32 = Color32::from_rgb(254, 241, 2);
