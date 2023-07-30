@@ -30,6 +30,8 @@ impl View {
     pub const DEFAULT_STROKE: Stroke = Stroke { width: 1.0, color: Colors::STROKE };
     /// Stroke around list items.
     pub const ITEM_STROKE: Stroke = Stroke { width: 1.0, color: Colors::ITEM_STROKE };
+    /// Stroke around list items.
+    pub const ITEM_HOVER_STROKE: Stroke = Stroke { width: 1.0, color: Colors::ITEM_HOVER_STROKE };
 
     /// Callback on Enter key press event.
     pub fn on_enter_key(ui: &mut egui::Ui, cb: impl FnOnce()) {
@@ -102,12 +104,16 @@ impl View {
     /// Title button with transparent background fill color, contains only icon.
     pub fn title_button(ui: &mut egui::Ui, icon: &str, action: impl FnOnce()) {
         ui.scope(|ui| {
-            // Disable stroke around title buttons on click.
-            ui.style_mut().visuals.widgets.active.bg_stroke = Stroke::NONE;
-            // Disable rounding on hover.
+            // Setup stroke around title buttons on click.
+            ui.style_mut().visuals.widgets.hovered.bg_stroke = Self::ITEM_HOVER_STROKE;
+            ui.style_mut().visuals.widgets.active.bg_stroke = Self::DEFAULT_STROKE;
+            // Disable rounding.
             ui.style_mut().visuals.widgets.hovered.rounding = Rounding::none();
-            // Disable stroke color on hover.
-            ui.style_mut().visuals.widgets.hovered.bg_stroke = Self::DEFAULT_STROKE;
+            ui.style_mut().visuals.widgets.active.rounding = Rounding::none();
+            // Disable expansion.
+            ui.style_mut().visuals.widgets.hovered.expansion = 0.0;
+            ui.style_mut().visuals.widgets.active.expansion = 0.0;
+
             // Setup text.
             let wt = RichText::new(icon.to_string()).size(22.0).color(Colors::TITLE);
             // Draw button.
@@ -156,14 +162,12 @@ impl View {
     }
 
     /// Draw round [`Button`] with icon.
-    pub fn round_button(ui: &mut egui::Ui,
-                        icon: &'static str,
-                        action: impl FnOnce()) {
+    pub fn round_button(ui: &mut egui::Ui, icon: &'static str, action: impl FnOnce()) {
         ui.scope(|ui| {
             // Setup colors.
             ui.visuals_mut().widgets.inactive.bg_fill = Colors::BUTTON;
-            ui.visuals_mut().widgets.hovered.bg_fill = Colors::GOLD;
-            ui.visuals_mut().widgets.active.bg_fill = Colors::YELLOW;
+            ui.visuals_mut().widgets.hovered.bg_fill = Colors::FILL;
+            ui.visuals_mut().widgets.active.bg_fill = Colors::FILL_DARK;
 
             // Setup radius.
             let mut r = 44.0 * 0.5;
@@ -174,7 +178,7 @@ impl View {
 
             // Increase radius and change icon size and color on-hover.
             if br.hovered() {
-                r = r * 1.07;
+                r = r * 1.05;
                 icon_color = Colors::TEXT_BUTTON;
             }
 
@@ -196,24 +200,63 @@ impl View {
         });
     }
 
+    /// Draw list item [`Button`] with given vertical padding and rounding on left and right sides.
+    pub fn item_button(ui: &mut egui::Ui, r: [bool; 2], icon: &'static str, action: impl FnOnce()) {
+        let rounding = Self::get_rounding([r[0], r[1], r[1], r[0]]);
+
+        // Setup button size.
+        let mut rect = ui.available_rect_before_wrap();
+        rect.set_width(32.0);
+        let button_size = rect.size();
+
+        ui.scope(|ui| {
+            // Disable expansion on click/hover.
+            ui.style_mut().visuals.widgets.hovered.expansion = 0.0;
+            ui.style_mut().visuals.widgets.active.expansion = 0.0;
+
+            // Setup fill colors.
+            ui.visuals_mut().widgets.inactive.weak_bg_fill = Colors::WHITE;
+            ui.visuals_mut().widgets.hovered.weak_bg_fill = Colors::BUTTON;
+            ui.visuals_mut().widgets.active.weak_bg_fill = Colors::FILL;
+
+            // Setup stroke colors.
+            ui.visuals_mut().widgets.inactive.bg_stroke = Self::DEFAULT_STROKE;
+            ui.visuals_mut().widgets.hovered.bg_stroke = Self::ITEM_HOVER_STROKE;
+            ui.visuals_mut().widgets.active.bg_stroke = Self::ITEM_STROKE;
+
+            // Show button.
+            let br = Button::new(RichText::new(icon).size(20.0).color(Colors::CHECKBOX))
+                .rounding(rounding)
+                .min_size(button_size)
+                .ui(ui);
+            if Self::touched(ui, br) {
+                (action)();
+            }
+        });
+    }
+
+    /// Get rounding for provided corners clockwise.
+    fn get_rounding(corners: [bool; 4]) -> Rounding {
+        Rounding {
+            nw: if corners[0] { 8.0 } else { 0.0 },
+            ne: if corners[1] { 8.0 } else { 0.0 },
+            sw: if corners[3] { 8.0 } else { 0.0 },
+            se: if corners[2] { 8.0 } else { 0.0 },
+        }
+    }
+
     /// Calculate list item rounding based on item index.
     pub fn item_rounding(index: usize, len: usize) -> Rounding {
         let rounding = if len == 1 {
-            [true, true]
+            [true, true, true, true]
         } else if index == 0 {
-            [true, false]
+            [true, true, false, false]
         } else if index == len - 1 {
-            [false, true]
+            [false, false, true, true]
         } else {
-            [false, false]
+            [false, false, false, false]
         };
-
-        Rounding {
-            nw: if rounding[0] { 8.0 } else { 0.0 },
-            ne: if rounding[0] { 8.0 } else { 0.0 },
-            sw: if rounding[1] { 8.0 } else { 0.0 },
-            se: if rounding[1] { 8.0 } else { 0.0 },
-        }
+        Self::get_rounding(rounding)
     }
 
     /// Draw rounded box with some value and label in the middle,

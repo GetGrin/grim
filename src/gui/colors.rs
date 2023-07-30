@@ -36,4 +36,5 @@ impl Colors {
     pub const STROKE: Color32 = Color32::from_gray(190);
     pub const INACTIVE_TEXT: Color32 = Color32::from_gray(150);
     pub const ITEM_STROKE: Color32 = Color32::from_gray(220);
+    pub const ITEM_HOVER_STROKE: Color32 = Color32::from_gray(205);
 }

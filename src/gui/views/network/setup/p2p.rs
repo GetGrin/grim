@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::{Id, RichText, Rounding, TextStyle, Ui, Widget};
+use egui::{Align, Id, Layout, RichText, Rounding, TextStyle, Ui, Widget};
 use egui_extras::{Size, StripBuilder};
 use grin_core::global::ChainTypes;
 
@@ -474,58 +474,96 @@ impl P2PSetup {
 
     /// Draw peer list item.
     fn peer_item_ui(ui: &mut Ui, peer_addr: &String, peer_type: &PeerType, rounding: Rounding) {
-        // Draw round background.
+        // Setup layout size.
         let mut rect = ui.available_rect_before_wrap();
-        rect.min += egui::emath::vec2(6.0, 0.0);
         rect.set_height(42.0);
-        ui.painter().rect(rect, rounding, Colors::WHITE, View::ITEM_STROKE);
 
-        StripBuilder::new(ui)
-            .size(Size::exact(42.0))
-            .vertical(|mut strip| {
-                strip.strip(|builder| {
-                    builder
-                        .size(Size::exact(13.0))
-                        .size(Size::remainder())
-                        .size(Size::exact(46.0))
-                        .horizontal(|mut strip| {
-                            strip.empty();
-                            strip.cell(|ui| {
-                                ui.horizontal_centered(|ui| {
-                                    // Draw peer address.
-                                    let peer_text = format!("{} {}", COMPUTER_TOWER, &peer_addr);
-                                    ui.label(RichText::new(peer_text)
-                                        .color(Colors::TEXT_BUTTON)
-                                        .size(16.0));
-                                });
-                            });
-                            if peer_type != &PeerType::DefaultSeed {
-                                strip.cell(|ui| {
-                                    // Draw delete button for non-default seed peers.
-                                    View::button(ui, TRASH.to_string(), Colors::BUTTON, || {
-                                        match peer_type {
-                                            PeerType::CustomSeed => {
-                                                NodeConfig::remove_custom_seed(peer_addr);
-                                            }
-                                            PeerType::Allowed => {
-                                                NodeConfig::remove_allowed_peer(peer_addr);
-                                            }
-                                            PeerType::Denied => {
-                                                NodeConfig::remove_denied_peer(peer_addr);
-                                            }
-                                            PeerType::Preferred => {
-                                                NodeConfig::remove_preferred_peer(peer_addr);
-                                            }
-                                            PeerType::DefaultSeed => {}
-                                        }
-                                    });
-                                });
-                            } else {
-                                strip.empty();
+        // Draw round background.
+        let mut bg_rect = rect.clone();
+        bg_rect.min += egui::emath::vec2(6.0, 0.0);
+        ui.painter().rect(bg_rect, rounding, Colors::WHITE, View::ITEM_STROKE);
+
+        ui.vertical(|ui| {
+            ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
+                // Draw delete button for non-default seed peers.
+                if peer_type != &PeerType::DefaultSeed {
+                    View::item_button(ui, [false, true], TRASH, || {
+                        match peer_type {
+                            PeerType::CustomSeed => {
+                                NodeConfig::remove_custom_seed(peer_addr);
                             }
-                        });
+                            PeerType::Allowed => {
+                                NodeConfig::remove_allowed_peer(peer_addr);
+                            }
+                            PeerType::Denied => {
+                                NodeConfig::remove_denied_peer(peer_addr);
+                            }
+                            PeerType::Preferred => {
+                                NodeConfig::remove_preferred_peer(peer_addr);
+                            }
+                            PeerType::DefaultSeed => {}
+                        }
+                    });
+                }
+
+                let layout_size = ui.available_size();
+                ui.allocate_ui_with_layout(layout_size, Layout::left_to_right(Align::Center), |ui| {
+                    ui.add_space(12.0);
+                    // Draw peer address.
+                    let peer_text = format!("{} {}", COMPUTER_TOWER, &peer_addr);
+                    ui.label(RichText::new(peer_text)
+                        .color(Colors::TEXT_BUTTON)
+                        .size(16.0));
                 });
             });
+        });
+
+        // StripBuilder::new(ui)
+        //     .size(Size::exact(42.0))
+        //     .vertical(|mut strip| {
+        //         strip.strip(|builder| {
+        //             builder
+        //                 .size(Size::exact(13.0))
+        //                 .size(Size::remainder())
+        //                 .size(Size::exact(42.0))
+        //                 .horizontal(|mut strip| {
+        //                     strip.empty();
+        //                     strip.cell(|ui| {
+        //                         ui.horizontal_centered(|ui| {
+        //                             // Draw peer address.
+        //                             let peer_text = format!("{} {}", COMPUTER_TOWER, &peer_addr);
+        //                             ui.label(RichText::new(peer_text)
+        //                                 .color(Colors::TEXT_BUTTON)
+        //                                 .size(16.0));
+        //                         });
+        //                     });
+        //                     if peer_type != &PeerType::DefaultSeed {
+        //                         strip.cell(|ui| {
+        //                             // Draw delete button for non-default seed peers.
+        //                             View::item_button(ui, [false, true], TRASH, || {
+        //                                 match peer_type {
+        //                                     PeerType::CustomSeed => {
+        //                                         NodeConfig::remove_custom_seed(peer_addr);
+        //                                     }
+        //                                     PeerType::Allowed => {
+        //                                         NodeConfig::remove_allowed_peer(peer_addr);
+        //                                     }
+        //                                     PeerType::Denied => {
+        //                                         NodeConfig::remove_denied_peer(peer_addr);
+        //                                     }
+        //                                     PeerType::Preferred => {
+        //                                         NodeConfig::remove_preferred_peer(peer_addr);
+        //                                     }
+        //                                     PeerType::DefaultSeed => {}
+        //                                 }
+        //                             });
+        //                         });
+        //                     } else {
+        //                         strip.empty();
+        //                     }
+        //                 });
+        //         });
+        //     });
     }
 
     /// Draw seeding type setup content.
