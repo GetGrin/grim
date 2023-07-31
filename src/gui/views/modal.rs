@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::cmp::min;
 use std::sync::RwLock;
 use std::sync::atomic::{AtomicBool, Ordering};
 
@@ -194,8 +193,8 @@ impl Modal {
 
         // Setup width of modal content.
         let side_insets = View::get_left_inset() + View::get_right_inset();
-        let available_width = (ui.available_width() - (side_insets + Self::DEFAULT_MARGIN)) as i64;
-        let width = min(available_width, Self::DEFAULT_WIDTH as i64) as f32;
+        let available_width = ui.available_width() - (side_insets + Self::DEFAULT_MARGIN);
+        let width = f32::min(available_width, Self::DEFAULT_WIDTH);
 
         // Show main content Window at given position.
         let (content_align, content_offset) = self.modal_position();

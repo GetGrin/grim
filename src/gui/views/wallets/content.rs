@@ -12,8 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::cmp::{max, min};
-
 use egui::{Align, Align2, Layout, Margin, RichText, Rounding, ScrollArea, TextStyle, Widget};
 use egui_extras::{Size, StripBuilder};
 
@@ -244,7 +242,7 @@ impl WalletsContent {
                         let mut rect = ui.available_rect_before_wrap();
                         let mut width = ui.available_width();
                         if !dual_panel {
-                            width = min(width as i64, (Root::SIDE_PANEL_WIDTH * 1.3) as i64) as f32
+                            width = f32::min(width, (Root::SIDE_PANEL_WIDTH * 1.3))
                         }
                         if width == 0.0 {
                             return;
@@ -505,8 +503,8 @@ impl WalletsContent {
             ui.available_width() - Root::SIDE_PANEL_WIDTH
         };
         if dual_panel {
-            let min_width = (Root::SIDE_PANEL_WIDTH + View::get_right_inset()) as i64;
-            max(min_width, available_width as i64) as f32
+            let min_width = Root::SIDE_PANEL_WIDTH + View::get_right_inset();
+            f32::max(min_width, available_width)
         } else {
             if is_wallet_showing {
                 ui.available_width()
