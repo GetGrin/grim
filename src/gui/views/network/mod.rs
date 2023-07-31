@@ -27,8 +27,8 @@ pub use node::*;
 mod setup;
 pub use setup::*;
 
-mod network;
-pub use network::*;
+mod content;
+pub use content::*;
 
 mod connections;
 pub use connections::*;

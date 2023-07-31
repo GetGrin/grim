@@ -12,14 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use eframe::epaint::Stroke;
 use egui::{RichText, Rounding, ScrollArea};
 use grin_servers::PeerStats;
 
 use crate::gui::Colors;
 use crate::gui::icons::{AT, CUBE, DEVICES, FLOW_ARROW, HANDSHAKE, PACKAGE, PLUGS_CONNECTED, SHARE_NETWORK};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Modal, Network, View};
+use crate::gui::views::{Modal, NetworkContent, View};
 use crate::gui::views::types::{NetworkTab, NetworkTabType};
 use crate::node::Node;
 
@@ -36,7 +35,7 @@ impl NetworkTab for NetworkNode {
         let server_stats = Node::get_stats();
         // Show message to enable node when it's not running.
         if !Node::is_running() {
-            Network::disabled_node_ui(ui);
+            NetworkContent::disabled_node_ui(ui);
             return;
         }
 

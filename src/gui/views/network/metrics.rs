@@ -19,7 +19,7 @@ use grin_servers::DiffBlock;
 use crate::gui::Colors;
 use crate::gui::icons::{AT, COINS, CUBE_TRANSPARENT, HASH, HOURGLASS_LOW, HOURGLASS_MEDIUM, TIMER};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Modal, Network, View};
+use crate::gui::views::{Modal, NetworkContent, View};
 use crate::gui::views::types::{NetworkTab, NetworkTabType};
 use crate::node::Node;
 
@@ -40,7 +40,7 @@ impl NetworkTab for NetworkMetrics {
         let server_stats = Node::get_stats();
         // Show message to enable node when it's not running.
         if !Node::is_running() {
-            Network::disabled_node_ui(ui);
+            NetworkContent::disabled_node_ui(ui);
             return;
         }
 

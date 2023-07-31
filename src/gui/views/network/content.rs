@@ -25,14 +25,14 @@ use crate::gui::views::types::{NetworkTab, NetworkTabType};
 use crate::node::Node;
 
 /// Network content.
-pub struct Network {
+pub struct NetworkContent {
     /// Current tab view to show at ui.
     current_tab: Box<dyn NetworkTab>,
     /// [`Modal`] ids allowed at this ui container.
     modal_ids: Vec<&'static str>,
 }
 
-impl Default for Network {
+impl Default for NetworkContent {
     fn default() -> Self {
         Self {
             current_tab: Box::new(NetworkNode::default()),
@@ -75,13 +75,13 @@ impl Default for Network {
     }
 }
 
-impl ModalContainer for Network {
+impl ModalContainer for NetworkContent {
     fn modal_ids(&self) -> &Vec<&'static str> {
         self.modal_ids.as_ref()
     }
 }
 
-impl Network {
+impl NetworkContent {
     pub fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame, cb: &dyn PlatformCallbacks) {
         // Show modal content for current ui container.
         if self.can_draw_modal() {

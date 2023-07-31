@@ -20,18 +20,18 @@ use lazy_static::lazy_static;
 
 use crate::gui::Colors;
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Modal, ModalContainer, Network, View, WalletsContent};
+use crate::gui::views::{Modal, ModalContainer, NetworkContent, View, WalletsContent};
 use crate::node::Node;
 
 lazy_static! {
-    /// Global state to check if [`Network`] panel is open.
+    /// Global state to check if [`NetworkContent`] panel is open.
     static ref NETWORK_PANEL_OPEN: AtomicBool = AtomicBool::new(false);
 }
 
 /// Contains main ui content, handles side panel state.
 pub struct Root {
-    /// Side panel [`Network`] content.
-    network: Network,
+    /// Side panel [`NetworkContent`] content.
+    network: NetworkContent,
     /// Central panel [`WalletsContent`] content.
     wallets: WalletsContent,
 
@@ -51,7 +51,7 @@ impl Default for Root {
         let os = OperatingSystem::from_target_os();
         let exit_allowed = os == OperatingSystem::Android || os == OperatingSystem::IOS;
         Self {
-            network: Network::default(),
+            network: NetworkContent::default(),
             wallets: WalletsContent::default(),
             exit_allowed,
             show_exit_progress: false,
@@ -105,7 +105,7 @@ impl Root {
             });
     }
 
-    /// Get [`Network`] panel state and width.
+    /// Get [`NetworkContent`] panel state and width.
     fn network_panel_state_width(frame: &mut eframe::Frame) -> (bool, f32) {
         let dual_panel_mode = Self::is_dual_panel_mode(frame);
         let is_panel_open = dual_panel_mode || Self::is_network_panel_open();
@@ -117,7 +117,7 @@ impl Root {
         (is_panel_open, panel_width)
     }
 
-    /// Check if ui can show [`Network`] and [`WalletsContent`] at same time.
+    /// Check if ui can show [`NetworkContent`] and [`WalletsContent`] at same time.
     pub fn is_dual_panel_mode(frame: &mut eframe::Frame) -> bool {
         let w = frame.info().window_info.size.x;
         let h = frame.info().window_info.size.y;
@@ -129,13 +129,13 @@ impl Root {
         is_wide_screen && w >= (Self::SIDE_PANEL_WIDTH * 2.0) + side_insets
     }
 
-    /// Toggle [`Network`] panel state.
+    /// Toggle [`NetworkContent`] panel state.
     pub fn toggle_network_panel() {
         let is_open = NETWORK_PANEL_OPEN.load(Ordering::Relaxed);
         NETWORK_PANEL_OPEN.store(!is_open, Ordering::Relaxed);
     }
 
-    /// Check if [`Network`] panel is open.
+    /// Check if [`NetworkContent`] panel is open.
     pub fn is_network_panel_open() -> bool {
         NETWORK_PANEL_OPEN.load(Ordering::Relaxed)
     }

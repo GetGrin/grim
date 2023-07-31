@@ -16,5 +16,5 @@ mod creation;
 mod wallet;
 mod setup;
 
-mod wallets;
-pub use wallets::*;
+mod content;
+pub use content::*;
