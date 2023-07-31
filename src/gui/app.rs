@@ -65,8 +65,11 @@ impl<Platform: PlatformCallbacks> eframe::App for PlatformApp<Platform> {
     }
 
     fn on_close_event(&mut self) -> bool {
-        Root::show_exit_modal();
-        self.root.exit_allowed
+        let exit =  self.root.exit_allowed;
+        if !exit {
+            Root::show_exit_modal();
+        }
+        exit
     }
 }
 

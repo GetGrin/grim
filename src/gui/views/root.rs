@@ -78,7 +78,7 @@ impl Root {
     pub fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame, cb: &dyn PlatformCallbacks) {
         // Show opened exit confirmation modal content.
         if self.can_draw_modal() {
-            self.exit_modal_content(ui, frame, cb);
+            self.exit_modal_content(ui, frame);
         }
 
         let (is_panel_open, panel_width) = Self::network_panel_state_width(frame);
@@ -148,14 +148,11 @@ impl Root {
     }
 
     /// Draw exit confirmation modal content.
-    fn exit_modal_content(&mut self,
-                          ui: &mut egui::Ui,
-                          frame: &mut eframe::Frame,
-                          cb: &dyn PlatformCallbacks) {
+    fn exit_modal_content(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame) {
         Modal::ui(ui, |ui, modal| {
             if self.show_exit_progress {
                 if !Node::is_running() {
-                    self.exit(frame, cb);
+                    self.exit(frame);
                     modal.close();
                 }
                 ui.add_space(16.0);
@@ -185,7 +182,7 @@ impl Root {
                         columns[0].vertical_centered_justified(|ui| {
                             View::button(ui, t!("modal_exit.exit"), Colors::WHITE, || {
                                 if !Node::is_running() {
-                                    self.exit(frame, cb);
+                                    self.exit(frame);
                                     modal.close();
                                 } else {
                                     Node::stop(true);
@@ -206,21 +203,10 @@ impl Root {
         });
     }
 
-    /// Platform-specific exit from the application.
-    fn exit(&mut self, frame: &mut eframe::Frame, cb: &dyn PlatformCallbacks) {
-        match OperatingSystem::from_target_os() {
-            OperatingSystem::Android => {
-                cb.exit();
-            }
-            OperatingSystem::IOS => {
-                //TODO: exit on iOS.
-            }
-            OperatingSystem::Nix | OperatingSystem::Mac | OperatingSystem::Windows => {
-                self.exit_allowed = true;
-                frame.close();
-            }
-            OperatingSystem::Unknown => {}
-        }
+    /// Exit from the application.
+    fn exit(&mut self, frame: &mut eframe::Frame) {
+        self.exit_allowed = true;
+        frame.close();
     }
 
     /// Handle Back key event.

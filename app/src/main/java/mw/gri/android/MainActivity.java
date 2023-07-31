@@ -5,7 +5,6 @@ import android.os.Bundle;
 import android.os.Process;
 import android.system.ErrnoException;
 import android.system.Os;
-import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
 import androidx.core.graphics.Insets;
@@ -14,14 +13,11 @@ import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import com.google.androidgamesdk.GameActivity;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-
 import static android.content.ClipDescription.MIMETYPE_TEXT_HTML;
 import static android.content.ClipDescription.MIMETYPE_TEXT_PLAIN;
 
 public class MainActivity extends GameActivity {
-
-    public static String FINISH_ACTIVITY_ACTION = "MainActivity.finish";
+    public static String STOP_APP_ACTION = "STOP_APP";
 
     static {
         System.loadLibrary("grim");
@@ -30,9 +26,9 @@ public class MainActivity extends GameActivity {
     private final BroadcastReceiver mBroadcastReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context ctx, Intent i) {
-            if (i.getAction().equals(FINISH_ACTIVITY_ACTION)) {
-                unregisterReceiver(this);
+            if (i.getAction().equals(STOP_APP_ACTION)) {
                 onExit();
+                Process.killProcess(Process.myPid());
             }
         }
     };
@@ -48,7 +44,7 @@ public class MainActivity extends GameActivity {
         super.onCreate(null);
 
         // Register receiver to finish activity from the BackgroundService.
-        registerReceiver(mBroadcastReceiver, new IntentFilter(FINISH_ACTIVITY_ACTION));
+        registerReceiver(mBroadcastReceiver, new IntentFilter(STOP_APP_ACTION));
 
         // Start notification service.
         BackgroundService.start(this);
@@ -99,43 +95,33 @@ public class MainActivity extends GameActivity {
     // Implemented into native code to handle key code BACK event.
     public native void onBack();
 
-    private boolean mManualExit;
-    private final AtomicBoolean mActivityDestroyed = new AtomicBoolean(false);
+    // Actions on app exit.
+    private void onExit() {
+        unregisterReceiver(mBroadcastReceiver);
+        BackgroundService.stop(this);
+    }
 
     @Override
     protected void onDestroy() {
-        if (!mManualExit) {
-            unregisterReceiver(mBroadcastReceiver);
-            onTermination();
-        }
+        onExit();
 
-        // Temp fix: kill process after 3 seconds to prevent app hanging at next launch.
+        // Kill process after 3 seconds if app was terminated from recent apps to prevent app hanging.
         new Thread(() -> {
             try {
+                onTermination();
                 Thread.sleep(3000);
-                if (!mActivityDestroyed.get()) {
-                    Process.killProcess(Process.myPid());
-                }
+                Process.killProcess(Process.myPid());
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
         }).start();
+
+        // Destroy an app and kill process.
         super.onDestroy();
-        mActivityDestroyed.set(true);
+        Process.killProcess(Process.myPid());
     }
 
-    // Called from native code.
-    public void onExit() {
-        // Return if exit was already requested.
-        if (mManualExit) {
-            return;
-        }
-        mManualExit = true;
-        BackgroundService.stop(this);
-        finish();
-    }
-
-    // Notify native code to stop activity (e.g. node) on app destroy.
+    // Notify native code to stop activity (e.g. node) if app was terminated from recent apps.
     public native void onTermination();
 
     // Called from native code to set text into clipboard.

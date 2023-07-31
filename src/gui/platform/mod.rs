@@ -26,5 +26,4 @@ pub trait PlatformCallbacks {
     fn hide_keyboard(&self);
     fn copy_string_to_buffer(&self, data: String);
     fn get_string_from_buffer(&self) -> String;
-    fn exit(&self);
 }

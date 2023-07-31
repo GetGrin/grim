@@ -76,5 +76,6 @@ eframe = { version = "0.22.0", features = [ "wgpu" ] }
 [target.'cfg(target_os = "android")'.dependencies]
 android_logger = "0.13.1"
 jni = "0.21.1"
+android-activity = "0.4.3"
 winit = { version = "0.28", features = [ "android-game-activity" ] }
 eframe = { version = "0.22.0", features = [ "wgpu", "android-game-activity" ] }

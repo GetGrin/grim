@@ -31,11 +31,13 @@ public class BackgroundService extends Service {
             mNotificationBuilder.setContentText(getSyncStatusText());
             NotificationManager manager = getSystemService(NotificationManager.class);
             manager.notify(SYNC_STATUS_NOTIFICATION_ID, mNotificationBuilder.build());
-            // Send broadcast to MainActivity if app exit is needed after node stop.
+
+            // Send broadcast to MainActivity if exit from the app is needed after node stop.
             if (exitAppAfterNodeStop()) {
-                sendBroadcast(new Intent(MainActivity.FINISH_ACTIVITY_ACTION));
+                sendBroadcast(new Intent(MainActivity.STOP_APP_ACTION));
                 mStopped = true;
             }
+
             // Repeat notification update if service is not stopped.
             if (!mStopped) {
                 mHandler.postDelayed(this, 500);
@@ -45,10 +47,15 @@ public class BackgroundService extends Service {
 
     @Override
     public void onCreate() {
+        if (mStopped) {
+            return;
+        }
+
         // Prevent CPU to sleep at background.
         PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
         mWakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, TAG);
         mWakeLock.acquire();
+
         // Create channel to show notifications.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel notificationChannel = new NotificationChannel(
@@ -58,6 +65,7 @@ public class BackgroundService extends Service {
             NotificationManager manager = getSystemService(NotificationManager.class);
             manager.createNotificationChannel(notificationChannel);
         }
+
         // Show notification with sync status.
         Intent i = getPackageManager().getLaunchIntentForPackage(this.getPackageName());
         PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, i, PendingIntent.FLAG_IMMUTABLE);
@@ -67,8 +75,10 @@ public class BackgroundService extends Service {
                 .setSmallIcon(R.drawable.ic_stat_name)
                 .setContentIntent(pendingIntent);
         Notification notification = mNotificationBuilder.build();
+
         // Start service at foreground state to prevent killing by system.
         startForeground(SYNC_STATUS_NOTIFICATION_ID, notification);
+
         // Update sync status at notification.
         mHandler.post(mUpdateSyncStatus);
     }
@@ -98,16 +108,20 @@ public class BackgroundService extends Service {
 
     public void onStop() {
         mStopped = true;
+
         // Stop updating the notification.
         mHandler.removeCallbacks(mUpdateSyncStatus);
+
         // Remove service from foreground state.
         stopForeground(Service.STOP_FOREGROUND_REMOVE);
+
         // Remove notification.
         NotificationManager notificationManager = getSystemService(NotificationManager.class);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             notificationManager.deleteNotificationChannel(TAG);
         }
         notificationManager.cancel(SYNC_STATUS_NOTIFICATION_ID);
+
         // Release wake lock to allow CPU to sleep at background.
         if (mWakeLock.isHeld()) {
             mWakeLock.release();
@@ -149,6 +163,6 @@ public class BackgroundService extends Service {
     private native String getSyncStatusText();
     // Get sync title text for notification from native code.
     private native String getSyncTitle();
-    // Check if exit app is needed after node stop from native code.
+    // Check if app from the app is needed after node stop from native code.
     private native boolean exitAppAfterNodeStop();
 }

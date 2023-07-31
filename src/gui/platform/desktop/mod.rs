@@ -27,6 +27,4 @@ impl PlatformCallbacks for Desktop {
     fn get_string_from_buffer(&self) -> String {
         "".to_string()
     }
-
-    fn exit(&self) {}
 }

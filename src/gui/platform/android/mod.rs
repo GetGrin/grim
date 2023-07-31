@@ -74,15 +74,4 @@ impl PlatformCallbacks for Android {
         };
         paste_data
     }
-
-    fn exit(&self) {
-        use jni::objects::{JObject};
-
-        let vm = unsafe { jni::JavaVM::from_raw(self.android_app.vm_as_ptr() as _) }.unwrap();
-        let mut env = vm.attach_current_thread().unwrap();
-        let activity = unsafe {
-            JObject::from_raw(self.android_app.activity_as_ptr() as jni::sys::jobject)
-        };
-        env.call_method(activity, "onExit", "()V", &[]).unwrap();
-    }
 }
