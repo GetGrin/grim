@@ -74,7 +74,10 @@ impl Wallets {
     )-> Result<(), Error> {
         let wallet = Wallet::create(name, password, mnemonic, external_node_url)?;
         let mut w_state = WALLETS_STATE.write().unwrap();
-        w_state.list.push(wallet);
+        let id = wallet.config.id;
+        w_state.opened_ids.insert(id);
+        w_state.selected_id = Some(id);
+        w_state.list.insert(0, wallet);
         Ok(())
     }
 

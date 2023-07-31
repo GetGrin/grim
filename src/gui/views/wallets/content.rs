@@ -111,6 +111,7 @@ impl WalletsContent {
         let dual_panel = Self::is_dual_panel_mode(ui, frame);
         let open_wallet_panel = dual_panel || show_wallet || create_wallet || empty_list;
         let wallet_panel_width = self.wallet_panel_width(ui, empty_list, dual_panel, show_wallet);
+        let available_width_zero = ui.available_width() == 0.0;
 
         // Show title panel.
         self.title_ui(ui, frame, dual_panel);
@@ -118,7 +119,7 @@ impl WalletsContent {
         // Show wallet panel content.
         egui::SidePanel::right("wallet_panel")
             .resizable(false)
-            .exact_width(wallet_panel_width)
+            .min_width(wallet_panel_width)
             .frame(egui::Frame {
                 fill: if empty_list && !create_wallet {
                     Colors::FILL_DARK
@@ -128,6 +129,9 @@ impl WalletsContent {
                 ..Default::default()
             })
             .show_animated_inside(ui, open_wallet_panel, |ui| {
+                if available_width_zero {
+                    return;
+                }
                 if create_wallet || !show_wallet {
                     // Show wallet creation content
                     self.creation_content.ui(ui, cb);
@@ -142,28 +146,35 @@ impl WalletsContent {
                 }
             });
 
-        // Show non-empty list if network panel is closed at non-dual root mode
-        // and if wallet is not creating and not open at single panel mode.
-        let root_dual_panel = Root::is_dual_panel_mode(frame);
-        let wallets_panel_closed = !root_dual_panel && Root::is_network_panel_open();
-        if !wallets_panel_closed && !empty_list && !create_wallet && (!open_wallet_panel || dual_panel) {
-            // Setup flag to show wallet creation button if wallets panel is showing at root
-            // and wallet creation is not showing at dual panel mode.
-            let show_creation_btn = !wallets_panel_closed && (!open_wallet_panel || show_wallet);
-
+        // Show non-empty list if wallet is not creating and not open at single panel mode.
+        if !empty_list && !create_wallet {
             egui::CentralPanel::default()
                 .frame(egui::Frame {
                     stroke: View::DEFAULT_STROKE,
                     fill: Colors::FILL_DARK,
                     inner_margin: Margin {
-                        left: View::far_left_inset_margin(ui) + 4.0,
-                        right: View::far_right_inset_margin(ui, frame) + 4.0,
+                        left: if available_width_zero || (!dual_panel && show_wallet) {
+                            0.0
+                        } else {
+                            View::far_left_inset_margin(ui) + 4.0
+                        },
+                        right: if available_width_zero || (!dual_panel && show_wallet) {
+                            0.0
+                        } else {
+                            View::far_right_inset_margin(ui, frame) + 4.0
+                        },
                         top: 4.0,
                         bottom: View::get_bottom_inset() + 4.0,
                     },
                     ..Default::default()
                 })
                 .show_inside(ui, |ui| {
+                    if available_width_zero {
+                        return;
+                    }
+                    // Show wallet creation button at dual panel mode or if wallet is not showing.
+                    let show_creation_btn = !show_wallet || (show_wallet && dual_panel);
+
                     // Show list of wallets.
                     let scroll = self.list_ui(ui, dual_panel, show_creation_btn, &wallets, cb);
 
@@ -234,6 +245,9 @@ impl WalletsContent {
                         let mut width = ui.available_width();
                         if !dual_panel {
                             width = min(width as i64, (Root::SIDE_PANEL_WIDTH * 1.3) as i64) as f32
+                        }
+                        if width == 0.0 {
+                            return;
                         }
                         rect.set_width(width);
 
