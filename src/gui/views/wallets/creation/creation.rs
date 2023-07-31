@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::{Margin, RichText, TextStyle, vec2, Widget};
+use egui::{Id, Margin, RichText, TextStyle, vec2, Widget};
 use egui_extras::{RetainedImage, Size, StripBuilder};
 
 use crate::built_info;
@@ -296,7 +296,7 @@ impl WalletCreation {
 
             // Show wallet name text edit.
             let name_resp = egui::TextEdit::singleline(&mut self.name_edit)
-                .id(ui.id().with("wallet_name_edit"))
+                .id(Id::from(modal.id).with("wallet_name_edit"))
                 .font(TextStyle::Heading)
                 .desired_width(ui.available_width())
                 .cursor_at_end(true)
@@ -330,7 +330,7 @@ impl WalletCreation {
                                     ui.add_space(2.0);
                                     // Draw wallet password text edit.
                                     let pass_resp = egui::TextEdit::singleline(&mut self.pass_edit)
-                                        .id(ui.id().with("wallet_pass_edit"))
+                                        .id(Id::from(modal.id).with("wallet_pass_edit"))
                                         .font(TextStyle::Heading)
                                         .desired_width(ui.available_width())
                                         .cursor_at_end(true)
@@ -374,7 +374,7 @@ impl WalletCreation {
                     });
                 });
                 columns[1].vertical_centered_justified(|ui| {
-                    View::button(ui, t!("continue"), Colors::WHITE, || {
+                    let mut on_next = || {
                         // Check if input values are not empty.
                         if self.name_edit.is_empty() || self.pass_edit.is_empty() {
                             return;
@@ -382,7 +382,14 @@ impl WalletCreation {
                         self.forward();
                         cb.hide_keyboard();
                         modal.close();
+                    };
+
+                    // Go to next creation step on Enter button press.
+                    View::on_enter_key(ui, || {
+                        (on_next)();
                     });
+
+                    View::button(ui, t!("continue"), Colors::WHITE, on_next);
                 });
             });
             ui.add_space(6.0);
