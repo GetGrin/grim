@@ -39,8 +39,8 @@ use uuid::Uuid;
 use crate::wallet::selection::{build_recipient_output, build_send_tx, select_coins_and_fee};
 use crate::wallet::updater::{cancel_tx_and_outputs, refresh_outputs, retrieve_outputs, retrieve_txs};
 
-/// Static value to increment UUIDs of slates.
 lazy_static! {
+    /// Static value to increment UUIDs of slates.
 	static ref SLATE_COUNTER: Mutex<u8> = Mutex::new(0);
 }
 
