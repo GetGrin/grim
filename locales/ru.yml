@@ -21,7 +21,9 @@ wallets:
   setup_conn_desc: Выберите способ подключения вашего кошелька к сети.
   conn_method: Способ подключения
   ext_conn: 'Внешние подключения:'
-  add_node_url: Добавить URL узла
+  add_node: Добавить узел
+  node_url: 'URL узла:'
+  node_secret: 'API токен (необязательно):'
   invalid_url: Введенный URL-адрес недействителен
   open: Открыть кошелёк
   wrong_pass: Введён неправильный пароль

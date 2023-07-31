@@ -24,7 +24,7 @@ use serde::{Deserialize, Serialize};
 use serde::de::DeserializeOwned;
 
 use crate::node::NodeConfig;
-use crate::wallet::Wallets;
+use crate::wallet::{ExternalConnection, Wallets};
 
 lazy_static! {
     /// Static settings state to be accessible globally.
@@ -34,9 +34,6 @@ lazy_static! {
 /// Application configuration file name.
 const APP_CONFIG_FILE_NAME: &'static str = "app.toml";
 
-/// Default external node URL.
-const DEFAULT_EXTERNAL_NODE_URL: &'static str = "https://grinnnode.live:3413";
-
 /// Common application settings.
 #[derive(Serialize, Deserialize)]
 pub struct AppConfig {
@@ -44,8 +41,8 @@ pub struct AppConfig {
     pub auto_start_node: bool,
     /// Chain type for node and wallets.
     chain_type: ChainTypes,
-    /// URLs of external nodes for wallets.
-    external_nodes_urls: Vec<String>
+    /// URLs of external connections for wallets.
+    external_connections: Vec<ExternalConnection>
 }
 
 impl Default for AppConfig {
@@ -53,8 +50,8 @@ impl Default for AppConfig {
         Self {
             auto_start_node: false,
             chain_type: ChainTypes::default(),
-            external_nodes_urls: vec![
-                DEFAULT_EXTERNAL_NODE_URL.to_string()
+            external_connections: vec![
+                ExternalConnection::default()
             ],
         }
     }
@@ -121,19 +118,41 @@ impl AppConfig {
         w_app_config.save();
     }
 
-    /// Get external nodes URLs.
-    pub fn external_nodes_urls() -> Vec<String> {
+    /// Get external connections for the wallet.
+    pub fn external_connections() -> Vec<ExternalConnection> {
         let r_config = Settings::app_config_to_read();
-        r_config.external_nodes_urls.clone()
+        r_config.external_connections.clone()
     }
 
-    /// Add external node URL.
-    pub fn add_external_node_url(address: String) {
+    /// Save external connection for the wallet in app config.
+    pub fn add_external_connection(conn: ExternalConnection) {
         let mut w_config = Settings::app_config_to_update();
-        w_config.external_nodes_urls.insert(0, address);
+        let mut exists = false;
+        for mut c in w_config.external_connections.iter_mut() {
+            // Update connection if URL exists.
+            if c.url == conn.url {
+                c.secret = conn.secret.clone();
+                exists = true;
+                break;
+            }
+        }
+        // Create new connection if URL not exists.
+        if !exists {
+            w_config.external_connections.insert(0, conn);
+        }
         w_config.save();
     }
 
+    /// Get external node connection secret from provided URL.
+    pub fn get_external_connection_secret(url: String) -> Option<String> {
+        let r_config = Settings::app_config_to_read();
+        for c in &r_config.external_connections {
+            if c.url == url {
+                return c.secret.clone();
+            }
+        }
+        None
+    }
 }
 
 /// Main application directory name.

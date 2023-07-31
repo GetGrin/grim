@@ -22,3 +22,6 @@ pub use wallets::{Wallet, Wallets};
 
 mod config;
 pub use config::*;
+
+mod types;
+pub use types::*;
