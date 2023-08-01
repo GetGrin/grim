@@ -16,7 +16,7 @@ use egui::{Align, Align2, Layout, Margin, RichText, Rounding, ScrollArea, TextSt
 use egui_extras::{Size, StripBuilder};
 
 use crate::gui::Colors;
-use crate::gui::icons::{ARROW_LEFT, CARET_RIGHT, COMPUTER_TOWER, EYE, EYE_SLASH, FOLDER_LOCK, FOLDER_OPEN, GEAR, GLOBE, GLOBE_SIMPLE, PLUS, SIDEBAR_SIMPLE, SUITCASE};
+use crate::gui::icons::{ARROW_LEFT, CARET_RIGHT, COMPUTER_TOWER, EYE, EYE_SLASH, FOLDER_LOCK, FOLDER_OPEN, GEAR, GLOBE, GLOBE_SIMPLE, LOCK_KEY, PLUS, SIDEBAR_SIMPLE, SUITCASE};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, ModalContainer, ModalPosition, Root, TitlePanel, TitleType, View};
 use crate::gui::views::wallets::creation::{MnemonicSetup, WalletCreation};
@@ -115,14 +115,15 @@ impl WalletsContent {
         let available_width_zero = ui.available_width() == 0.0;
 
         // Show title panel.
-        self.title_ui(ui, frame, dual_panel);
+        self.title_ui(ui, frame, dual_panel, create_wallet, show_wallet);
 
         // Show wallet panel content.
         egui::SidePanel::right("wallet_panel")
             .resizable(false)
             .min_width(wallet_panel_width)
             .frame(egui::Frame {
-                fill: if empty_list && !create_wallet {
+                fill: if empty_list && !create_wallet
+                    || (dual_panel && !self.show_list_at_dual_panel) {
                     Colors::FILL_DARK
                 } else {
                     Colors::WHITE
@@ -202,9 +203,14 @@ impl WalletsContent {
     }
 
     /// Draw [`TitlePanel`] content.
-    fn title_ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame, dual_panel: bool) {
+    fn title_ui(&mut self,
+                ui: &mut egui::Ui,
+                frame: &mut eframe::Frame,
+                dual_panel: bool,
+                create_wallet: bool,
+                show_wallet: bool) {
         // Setup title text.
-        let title_text = if self.creation_content.can_go_back() {
+        let title_text = if create_wallet {
             t!("wallets.add")
         } else {
             t!("wallets.title")
@@ -213,15 +219,15 @@ impl WalletsContent {
 
         // Draw title panel.
         TitlePanel::ui(title_content, |ui, frame| {
-            if Wallets::selected_id().is_some() && !dual_panel {
+            if show_wallet && !dual_panel {
                 View::title_button(ui, ARROW_LEFT, || {
                     Wallets::select(None);
                 });
-            } else if self.creation_content.can_go_back() {
+            } else if create_wallet {
                 View::title_button(ui, ARROW_LEFT, || {
                     self.creation_content.back();
                 });
-            } else if dual_panel {
+            } else if show_wallet && dual_panel {
                 let show_list = self.show_list_at_dual_panel;
                 let list_icon = if show_list {
                     SIDEBAR_SIMPLE
@@ -355,7 +361,7 @@ impl WalletsContent {
                 });
 
                 // Show button to close opened wallet.
-                View::item_button(ui, [false, false], FOLDER_LOCK, || {
+                View::item_button(ui, [false, false], LOCK_KEY, || {
                     Wallets::close(id).unwrap()
                 });
             }
