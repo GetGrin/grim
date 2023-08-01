@@ -16,7 +16,7 @@ use egui::{Align, Align2, Layout, Margin, RichText, Rounding, ScrollArea, TextSt
 use egui_extras::{Size, StripBuilder};
 
 use crate::gui::Colors;
-use crate::gui::icons::{ARROW_LEFT, CARET_RIGHT, COMPUTER_TOWER, EYE, EYE_SLASH, FOLDER_LOCK, FOLDER_OPEN, GEAR, GLOBE, GLOBE_SIMPLE, PLUS};
+use crate::gui::icons::{ARROW_LEFT, CARET_RIGHT, COMPUTER_TOWER, EYE, EYE_SLASH, FOLDER_LOCK, FOLDER_OPEN, GEAR, GLOBE, GLOBE_SIMPLE, PLUS, SIDEBAR_SIMPLE, SUITCASE};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, ModalContainer, ModalPosition, Root, TitlePanel, TitleType, View};
 use crate::gui::views::wallets::creation::{MnemonicSetup, WalletCreation};
@@ -35,9 +35,11 @@ pub struct WalletsContent {
 
     /// Selected [`Wallet`] content.
     wallet_content: WalletContent,
-
     /// Wallet creation content.
     creation_content: WalletCreation,
+
+    /// Flag to show [`Wallet`] list at dual panel mode.
+    show_list_at_dual_panel: bool,
 
     /// [`Modal`] ids allowed at this ui container.
     modal_ids: Vec<&'static str>
@@ -51,6 +53,7 @@ impl Default for WalletsContent {
             wrong_pass: false,
             wallet_content: WalletContent::default(),
             creation_content: WalletCreation::default(),
+            show_list_at_dual_panel: true,
             modal_ids: vec![
                 Self::OPEN_WALLET_MODAL,
                 WalletCreation::NAME_PASS_MODAL,
@@ -106,7 +109,7 @@ impl WalletsContent {
         };
 
         // Setup panels parameters.
-        let dual_panel = Self::is_dual_panel_mode(ui, frame);
+        let dual_panel = is_dual_panel_mode(ui, frame);
         let open_wallet_panel = dual_panel || show_wallet || create_wallet || empty_list;
         let wallet_panel_width = self.wallet_panel_width(ui, empty_list, dual_panel, show_wallet);
         let available_width_zero = ui.available_width() == 0.0;
@@ -127,36 +130,43 @@ impl WalletsContent {
                 ..Default::default()
             })
             .show_animated_inside(ui, open_wallet_panel, |ui| {
+                // Do not draw content on zero width.
                 if available_width_zero {
                     return;
                 }
+
                 if create_wallet || !show_wallet {
                     // Show wallet creation content
                     self.creation_content.ui(ui, cb);
                 } else  {
-                    for w in wallets.iter() {
+                    for wallet in wallets.iter() {
                         // Show content for selected wallet.
-                        if Some(w.config.id) == Wallets::selected_id() {
-                            self.wallet_content.ui(ui, frame, &w, cb);
+                        if Some(wallet.config.id) == Wallets::selected_id() {
+                            self.wallet_content.ui(ui, frame, &wallet, cb);
                             break;
                         }
                     }
                 }
             });
 
-        // Show non-empty list if wallet is not creating and not open at single panel mode.
+        // Show non-empty list if wallet is not creating.
         if !empty_list && !create_wallet {
+            // Flag to check if wallet list is hidden on the screen.
+            let list_hidden = available_width_zero || (dual_panel && !self.show_list_at_dual_panel)
+                || (!dual_panel && show_wallet);
+
+            // Show wallet list panel.
             egui::CentralPanel::default()
                 .frame(egui::Frame {
                     stroke: View::DEFAULT_STROKE,
                     fill: Colors::FILL_DARK,
                     inner_margin: Margin {
-                        left: if available_width_zero || (!dual_panel && show_wallet) {
+                        left: if list_hidden {
                             0.0
                         } else {
                             View::far_left_inset_margin(ui) + 4.0
                         },
-                        right: if available_width_zero || (!dual_panel && show_wallet) {
+                        right: if list_hidden {
                             0.0
                         } else {
                             View::far_right_inset_margin(ui, frame) + 4.0
@@ -167,11 +177,15 @@ impl WalletsContent {
                     ..Default::default()
                 })
                 .show_inside(ui, |ui| {
-                    if available_width_zero {
+                    // Do not draw content when list is hidden.
+                    if list_hidden {
                         return;
                     }
-                    // Show wallet creation button at dual panel mode or if wallet is not showing.
-                    let show_creation_btn = !show_wallet || (show_wallet && dual_panel);
+
+                    // Setup flag to show wallet creation button if wallet is not showing
+                    // at non-dual panel mode or showing at dual panel mode.
+                    let show_creation_btn
+                        = (!show_wallet && !dual_panel) || (dual_panel && show_wallet);
 
                     // Show list of wallets.
                     let scroll = self.list_ui(ui, dual_panel, show_creation_btn, &wallets, cb);
@@ -207,6 +221,16 @@ impl WalletsContent {
                 View::title_button(ui, ARROW_LEFT, || {
                     self.creation_content.back();
                 });
+            } else if dual_panel {
+                let show_list = self.show_list_at_dual_panel;
+                let list_icon = if show_list {
+                    SIDEBAR_SIMPLE
+                } else {
+                    SUITCASE
+                };
+                View::title_button(ui, list_icon, || {
+                    self.show_list_at_dual_panel = !show_list;
+                });
             } else if !Root::is_dual_panel_mode(frame) {
                 View::title_button(ui, GLOBE, || {
                     Root::toggle_network_panel();
@@ -217,6 +241,29 @@ impl WalletsContent {
                 //TODO: show settings.
             });
         }, ui, frame);
+    }
+
+    /// Calculate [`WalletContent`] panel width.
+    fn wallet_panel_width(
+        &self,
+        ui:&mut egui::Ui,
+        list_empty: bool,
+        dual_panel: bool,
+        show_wallet: bool
+    ) -> f32 {
+        let create_wallet = self.creation_content.can_go_back();
+        let available_width = if list_empty || create_wallet || (show_wallet && !dual_panel)
+            || !self.show_list_at_dual_panel {
+            ui.available_width()
+        } else {
+            ui.available_width() - Root::SIDE_PANEL_WIDTH
+        };
+        if dual_panel && self.show_list_at_dual_panel {
+            let min_width = Root::SIDE_PANEL_WIDTH + View::get_right_inset();
+            f32::max(min_width, available_width)
+        } else {
+            available_width
+        }
     }
 
     /// Draw list of wallets. Returns `true` if scroller is showing.
@@ -242,7 +289,7 @@ impl WalletsContent {
                         let mut rect = ui.available_rect_before_wrap();
                         let mut width = ui.available_width();
                         if !dual_panel {
-                            width = f32::min(width, (Root::SIDE_PANEL_WIDTH * 1.3))
+                            width = f32::min(width, Root::SIDE_PANEL_WIDTH * 1.3)
                         }
                         if width == 0.0 {
                             return;
@@ -273,10 +320,7 @@ impl WalletsContent {
     }
 
     /// Draw wallet list item.
-    fn wallet_item_ui(&mut self,
-                      ui: &mut egui::Ui,
-                      wallet: &Wallet,
-                      cb: &dyn PlatformCallbacks) {
+    fn wallet_item_ui(&mut self, ui: &mut egui::Ui, wallet: &Wallet, cb: &dyn PlatformCallbacks) {
         let id = wallet.config.id;
         let is_selected = Some(id) == Wallets::selected_id();
         let is_open = Wallets::is_open(id);
@@ -488,39 +532,6 @@ impl WalletsContent {
         });
     }
 
-    /// Calculate [`WalletContent`] panel width.
-    fn wallet_panel_width(
-        &self,
-        ui:&mut egui::Ui,
-        is_list_empty: bool,
-        dual_panel: bool,
-        is_wallet_showing: bool
-    ) -> f32 {
-        let is_wallet_creation = self.creation_content.can_go_back();
-        let available_width = if is_list_empty || is_wallet_creation {
-            ui.available_width()
-        } else {
-            ui.available_width() - Root::SIDE_PANEL_WIDTH
-        };
-        if dual_panel {
-            let min_width = Root::SIDE_PANEL_WIDTH + View::get_right_inset();
-            f32::max(min_width, available_width)
-        } else {
-            if is_wallet_showing {
-                ui.available_width()
-            } else {
-                available_width
-            }
-        }
-    }
-
-    /// Check if it's possible to show [`WalletsContent`] and [`WalletContent`] panels at same time.
-    fn is_dual_panel_mode(ui: &mut egui::Ui, frame: &mut eframe::Frame) -> bool {
-        let dual_panel_root = Root::is_dual_panel_mode(frame);
-        let max_width = ui.available_width();
-        dual_panel_root && max_width >= (Root::SIDE_PANEL_WIDTH * 2.0) + View::get_right_inset()
-    }
-
     /// Handle Back key event.
     /// Return `false` when event was handled.
     pub fn on_back(&mut self) -> bool {
@@ -530,4 +541,11 @@ impl WalletsContent {
         }
         !can_go_back
     }
+}
+
+/// Check if it's possible to show [`WalletsContent`] and [`WalletContent`] panels at same time.
+fn is_dual_panel_mode(ui: &mut egui::Ui, frame: &mut eframe::Frame) -> bool {
+    let dual_panel_root = Root::is_dual_panel_mode(frame);
+    let max_width = ui.available_width();
+    dual_panel_root && max_width >= (Root::SIDE_PANEL_WIDTH * 2.0) + View::get_right_inset()
 }
