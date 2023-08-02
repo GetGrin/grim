@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::collections::BTreeSet;
-use std::fs;
+use std::{cmp, thread};
 use std::path::PathBuf;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use grin_core::global;
 use grin_core::global::ChainTypes;
@@ -23,68 +23,40 @@ use grin_keychain::{ExtKeychain, Identifier, Keychain};
 use grin_util::types::ZeroingString;
 use grin_wallet_api::{Foreign, ForeignCheckMiddlewareFn, Owner};
 use grin_wallet_impls::{DefaultLCProvider, DefaultWalletImpl, HTTPNodeClient};
-use grin_wallet_libwallet::{Error, NodeClient, NodeVersionInfo, OutputStatus, Slate, slate_versions, SlatepackArmor, Slatepacker, SlatepackerArgs, TxLogEntry, wallet_lock, WalletBackend, WalletInfo, WalletInst, WalletLCProvider};
-use grin_wallet_libwallet::Error::GenericError;
-use lazy_static::lazy_static;
+use grin_wallet_libwallet::{Error, NodeClient, NodeVersionInfo, OutputStatus, scan, Slate, slate_versions, SlatepackArmor, Slatepacker, SlatepackerArgs, TxLogEntry, wallet_lock, WalletBackend, WalletInfo, WalletInst, WalletLCProvider};
 use log::debug;
 use parking_lot::Mutex;
 use uuid::Uuid;
 
-use crate::{AppConfig, Settings};
+use crate::AppConfig;
 use crate::node::NodeConfig;
+use crate::wallet::{ConnectionsConfig, WalletConfig};
 use crate::wallet::selection::lock_tx_context;
 use crate::wallet::tx::{add_inputs_to_slate, new_tx_slate};
 use crate::wallet::updater::{cancel_tx, refresh_output_state, retrieve_txs};
-use crate::wallet::WalletConfig;
 
-lazy_static! {
-    /// Global wallets state.
-    static ref WALLETS_STATE: Arc<RwLock<Wallets>> = Arc::new(RwLock::new(Wallets::init()));
-}
-
-/// Manages [`Wallet`] list and state.
+/// [`Wallet`] list wrapper.
 pub struct Wallets {
     /// List of wallets.
-    list: Vec<Wallet>,
+    pub(crate) list: Vec<Wallet>,
     /// Selected [`Wallet`] identifier.
     selected_id: Option<i64>,
-    /// Identifiers of opened wallets.
-    opened_ids: BTreeSet<i64>
+}
+
+impl Default for Wallets {
+    fn default() -> Self {
+        Self {
+            list: Self::init(&AppConfig::chain_type()),
+            selected_id: None
+        }
+    }
 }
 
 impl Wallets {
-    /// Base wallets directory name.
-    pub const BASE_DIR_NAME: &'static str = "wallets";
-
-    /// Initialize manager by loading list of wallets into state.
-    fn init() -> Self {
-        Self {
-            list: Self::load_wallets(&AppConfig::chain_type()),
-            selected_id: None,
-            opened_ids: BTreeSet::default()
-        }
-    }
-
-    /// Create new wallet and add it to state.
-    pub fn create_wallet(
-        name: String,
-        password: String,
-        mnemonic: String,
-        external_node_url: Option<String>
-    )-> Result<(), Error> {
-        let wallet = Wallet::create(name, password, mnemonic, external_node_url)?;
-        let mut w_state = WALLETS_STATE.write().unwrap();
-        let id = wallet.config.id;
-        w_state.opened_ids.insert(id);
-        w_state.selected_id = Some(id);
-        w_state.list.insert(0, wallet);
-        Ok(())
-    }
-
-    /// Load wallets for provided [`ChainType`].
-    fn load_wallets(chain_type: &ChainTypes) -> Vec<Wallet> {
+    /// Initialize wallets from base directory for provided [`ChainType`].
+    fn init(chain_type: &ChainTypes) -> Vec<Wallet> {
         let mut wallets = Vec::new();
-        let wallets_dir = Self::get_base_path(chain_type);
+        let wallets_dir = WalletConfig::get_base_path(chain_type);
         // Load wallets from base directory.
         for dir in wallets_dir.read_dir().unwrap() {
             let wallet_dir = dir.unwrap().path();
@@ -98,89 +70,118 @@ impl Wallets {
         wallets
     }
 
-    /// Get list of wallets.
-    pub fn list() -> Vec<Wallet> {
-        let r_state = WALLETS_STATE.read().unwrap();
-        r_state.list.clone()
+    /// Reinitialize wallets for provided [`ChainTypes`].
+    pub fn reinit(&mut self, chain_type: &ChainTypes) {
+        self.list = Self::init(chain_type);
     }
 
-    /// Select [`Wallet`] with provided identifier.
-    pub fn select(id: Option<i64>) {
-        let mut w_state = WALLETS_STATE.write().unwrap();
-        w_state.selected_id = id;
+    /// Add created [`Wallet`] to the list.
+    pub fn add(&mut self, wallet: Wallet) {
+        self.selected_id = Some(wallet.config.id);
+        self.list.insert(0, wallet);
     }
 
-    /// Get selected [`Wallet`] identifier.
-    pub fn selected_id() -> Option<i64> {
-        let r_state = WALLETS_STATE.read().unwrap();
-        r_state.selected_id
+    /// Select wallet with provided identifier.
+    pub fn select(&mut self, id: Option<i64>) {
+        self.selected_id = id;
     }
 
-    /// Open [`Wallet`] with provided identifier and password.
-    pub fn open(id: i64, password: String) -> Result<(), Error> {
-        let list = Self::list();
-        let mut w_state = WALLETS_STATE.write().unwrap();
-        for mut w in list {
-            if w.config.id == id {
-                w.open(password)?;
-                break;
+    /// Check if wallet is selected for provided identifier.
+    pub fn is_selected(&self, id: i64) -> bool {
+        return Some(id) == self.selected_id;
+    }
+
+    /// Check if selected wallet is open.
+    pub fn is_selected_open(&self) -> bool {
+        for w in &self.list {
+            if Some(w.config.id) == self.selected_id {
+                return w.is_open()
             }
         }
-        w_state.opened_ids.insert(id);
-        Ok(())
+        false
     }
 
-    /// Close [`Wallet`] with provided identifier.
-    pub fn close(id: i64) -> Result<(), Error> {
-        let list = Self::list();
-        let mut w_state = WALLETS_STATE.write().unwrap();
-        for mut w in list {
-            if w.config.id == id {
-                w.close()?;
-                break;
+    /// Open selected wallet.
+    pub fn open_selected(&mut self, password: String) -> Result<(), Error> {
+        for mut w in self.list.iter_mut() {
+            if Some(w.config.id) == self.selected_id {
+                return w.open(password);
             }
         }
-        w_state.opened_ids.remove(&id);
-        Ok(())
+        Err(Error::GenericError("Wallet is not selected".to_string()))
     }
 
-    /// Check if [`Wallet`] with provided identifier was open.
-    pub fn is_open(id: i64) -> bool {
-        let r_state = WALLETS_STATE.read().unwrap();
-        r_state.opened_ids.contains(&id)
-    }
-
-    /// Get wallets base directory path for provided [`ChainTypes`].
-    pub fn get_base_path(chain_type: &ChainTypes) -> PathBuf {
-        let mut wallets_path = Settings::get_base_path(Some(chain_type.shortname()));
-        wallets_path.push(Self::BASE_DIR_NAME);
-        // Create wallets base directory if it doesn't exist.
-        if !wallets_path.exists() {
-            let _ = fs::create_dir_all(wallets_path.clone());
+    /// Load the wallet by scanning available outputs at separate thread.
+    pub fn load(w: &mut Wallet) {
+        if !w.is_open() {
+            return;
         }
-        wallets_path
-    }
+        let mut wallet = w.clone();
+        thread::spawn(move || {
+            // Get pmmr range output indexes.
+            match wallet.pmmr_range() {
+                Ok((mut lowest_index, highest_index)) => {
+                    println!("pmmr_range {} {}", lowest_index, highest_index);
+                    let mut from_index = lowest_index;
+                    loop {
+                        // Scan outputs for last retrieved index.
+                        println!("scan_outputs {} {}", from_index, highest_index);
+                        match wallet.scan_outputs(from_index, highest_index) {
+                            Ok(last_index) => {
+                                println!("last_index {}", last_index);
+                                if lowest_index == 0 {
+                                    lowest_index = last_index;
+                                }
+                                if last_index == highest_index {
+                                    wallet.loading_progress = 100;
+                                    break;
+                                } else {
+                                    from_index = last_index;
+                                }
 
-    /// Reload list of wallets for provided [`ChainTypes`].
-    pub fn reload(chain_type: &ChainTypes) {
-        let wallets = Self::load_wallets(chain_type);
-        let mut w_state = WALLETS_STATE.write().unwrap();
-        w_state.selected_id = None;
-        w_state.opened_ids = BTreeSet::default();
-        w_state.list = wallets;
+                                // Update loading progress.
+                                let range = highest_index - lowest_index;
+                                let progress = last_index - lowest_index;
+                                wallet.loading_progress = cmp::min(
+                                    (progress / range) as u8 * 100,
+                                    99
+                                );
+                                println!("progress {}", wallet.loading_progress);
+                            }
+                            Err(e) => {
+                                wallet.loading_error = Some(e);
+                                break;
+                            }
+                        }
+                    }
+                    wallet.is_loaded.store(true, Ordering::Relaxed);
+                }
+                Err(e) => {
+                    wallet.loading_error = Some(e);
+                }
+            }
+        });
     }
 }
 
-/// Wallet instance and config wrapper.
+/// Contains wallet instance and config.
 #[derive(Clone)]
 pub struct Wallet {
     /// Wallet instance.
     instance: WalletInstance,
 
-    /// Wallet data path.
-    path: String,
     /// Wallet configuration.
     pub(crate) config: WalletConfig,
+
+    /// Flag to check if wallet is open.
+    is_open: Arc<AtomicBool>,
+
+    /// Flag to check if wallet is loaded and ready to use.
+    is_loaded: Arc<AtomicBool>,
+    /// Error on wallet loading.
+    loading_error: Option<Error>,
+    /// Loading progress in percents
+    loading_progress: u8,
 }
 
 /// Wallet instance type.
@@ -198,37 +199,38 @@ type WalletInstance = Arc<
 >;
 
 impl Wallet {
-    /// Create new wallet, make it open and selected.
-    fn create(
+    /// Create wallet from provided instance and config.
+    fn new(instance: WalletInstance, config: WalletConfig) -> Self {
+        Self {
+            instance,
+            config,
+            is_loaded: Arc::new(AtomicBool::new(false)),
+            is_open: Arc::new(AtomicBool::new(false)),
+            loading_error: None,
+            loading_progress: 0,
+        }
+    }
+
+    /// Create new wallet.
+    pub fn create(
         name: String,
         password: String,
         mnemonic: String,
         external_node_url: Option<String>
     ) -> Result<Wallet, Error> {
         let config = WalletConfig::create(name, external_node_url);
-        let wallet = Self::create_wallet_instance(config.clone())?;
-        let w = Wallet {
-            instance: wallet,
-            path: config.get_data_path(),
-            config,
-        };
-
+        let instance = Self::create_wallet_instance(config.clone())?;
+        let w = Wallet::new(instance, config);
         {
             let mut w_lock = w.instance.lock();
             let p = w_lock.lc_provider()?;
-
-            // Create wallet.
             p.create_wallet(None,
                             Some(ZeroingString::from(mnemonic.clone())),
                             mnemonic.len(),
-                            ZeroingString::from(password.clone()),
+                            ZeroingString::from(password),
                             false,
             )?;
-
-            // Open wallet.
-            p.open_wallet(None, ZeroingString::from(password), false, false)?;
         }
-
         Ok(w)
     }
 
@@ -236,12 +238,18 @@ impl Wallet {
     fn init(data_path: PathBuf) -> Option<Wallet> {
         let wallet_config = WalletConfig::load(data_path.clone());
         if let Some(config) = wallet_config {
-            let path = data_path.to_str().unwrap().to_string();
             if let Ok(instance) = Self::create_wallet_instance(config.clone()) {
-                return Some(Self { instance, path, config });
+                return Some(Wallet::new(instance, config));
             }
         }
         None
+    }
+
+    /// Reinitialize wallet instance to apply new config e.g. on change connection settings.
+    pub fn reinit(&mut self) -> Result<(), Error> {
+        self.close()?;
+        self.instance = Self::create_wallet_instance(self.config.clone())?;
+        Ok(())
     }
 
     /// Create wallet instance from provided config.
@@ -257,9 +265,11 @@ impl Wallet {
 
         // Setup node client.
         let (node_api_url, node_secret) = if let Some(url) = &config.external_node_url {
-            (url.to_owned(), None)
+            (url.to_owned(), ConnectionsConfig::get_external_connection_secret(url.to_owned()))
         } else {
-            (NodeConfig::get_api_address(), NodeConfig::get_api_secret())
+            let api_url = format!("http://{}", NodeConfig::get_api_address());
+            let api_secret = NodeConfig::get_foreign_api_secret();
+            (api_url, api_secret)
         };
         let node_client = HTTPNodeClient::new(&node_api_url, node_secret)?;
 
@@ -290,20 +300,67 @@ impl Wallet {
         Ok(Arc::new(Mutex::new(wallet)))
     }
 
-    /// Open wallet.
-    fn open(&mut self, password: String) -> Result<(), Error> {
-        let mut wallet_lock = self.instance.lock();
-        let lc = wallet_lock.lc_provider()?;
-        lc.open_wallet(None, ZeroingString::from(password), false, false)?;
-        Ok(())
-    }
-
-    /// Close wallet.
-    fn close(&mut self) -> Result<(), Error> {
+    /// Open wallet instance.
+    pub fn open(&self, password: String) -> Result<(), Error> {
         let mut wallet_lock = self.instance.lock();
         let lc = wallet_lock.lc_provider()?;
         lc.close_wallet(None)?;
+        lc.open_wallet(None, ZeroingString::from(password), false, false)?;
+        self.is_open.store(true, Ordering::Relaxed);
         Ok(())
+    }
+
+    /// Check if wallet is open.
+    pub fn is_open(&self) -> bool {
+        self.is_open.load(Ordering::Relaxed)
+    }
+
+    /// Close wallet.
+    pub fn close(&mut self) -> Result<(), Error> {
+        if self.is_open() {
+            let mut wallet_lock = self.instance.lock();
+            let lc = wallet_lock.lc_provider()?;
+            lc.close_wallet(None)?;
+            self.is_open.store(false, Ordering::Relaxed);
+        }
+        Ok(())
+    }
+
+    /// Scan wallet outputs to check/repair the wallet.
+    fn scan_outputs(
+        &self,
+        last_retrieved_index: u64,
+        highest_index: u64
+    ) -> Result<u64, Error> {
+        let wallet = self.instance.clone();
+        let info = scan(
+            wallet.clone(),
+            None,
+            false,
+            last_retrieved_index,
+            highest_index,
+            &None,
+        )?;
+        let result = info.last_pmmr_index;
+
+        let parent_key_id = {
+            wallet_lock!(wallet.clone(), w);
+            w.parent_key_id().clone()
+        };
+        {
+            wallet_lock!(wallet, w);
+            let mut batch = w.batch(None)?;
+            batch.save_last_confirmed_height(&parent_key_id, info.height)?;
+            batch.commit()?;
+        };
+        Ok(result)
+    }
+
+    /// Get pmmr indices representing the outputs for the wallet.
+    fn pmmr_range(&self) -> Result<(u64, u64), Error> {
+        wallet_lock!(self.instance.clone(), w);
+        let pmmr_range = w.w2n_client().height_range_to_pmmr_indices(0, None)?;
+        Ok(pmmr_range)
     }
 
     /// Create transaction.
@@ -463,10 +520,10 @@ impl Wallet {
         let tx_uuid = Uuid::parse_str(tx_slate_id).unwrap();
         let (_, txs) = api.retrieve_txs(None, true, None, Some(tx_uuid.clone()), None)?;
         if txs[0].confirmed {
-            return Err(Error::from(GenericError(format!(
+            return Err(Error::GenericError(format!(
                 "Transaction with id {} is already confirmed. Not posting.",
                 tx_slate_id
-            ))));
+            )));
         }
         let stored_tx = api.get_stored_tx(None, None, Some(&tx_uuid))?;
         match stored_tx {
@@ -474,10 +531,10 @@ impl Wallet {
                 api.post_tx(None, &stored_tx, true)?;
                 Ok(())
             }
-            None => Err(Error::from(GenericError(format!(
+            None => Err(Error::GenericError(format!(
                 "Transaction with id {} does not have transaction data. Not posting.",
                 tx_slate_id
-            )))),
+            ))),
         }
     }
 

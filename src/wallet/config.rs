@@ -19,7 +19,6 @@ use grin_core::global::ChainTypes;
 use serde_derive::{Deserialize, Serialize};
 
 use crate::{AppConfig, Settings};
-use crate::wallet::Wallets;
 
 /// Wallet configuration.
 #[derive(Serialize, Deserialize, Clone)]
@@ -36,6 +35,8 @@ pub struct WalletConfig {
 
 /// Wallet configuration file name.
 const CONFIG_FILE_NAME: &'static str = "grim-wallet.toml";
+/// Base wallets directory name.
+pub const BASE_DIR_NAME: &'static str = "wallets";
 
 impl WalletConfig {
     /// Create wallet config.
@@ -59,9 +60,20 @@ impl WalletConfig {
         None
     }
 
+    /// Get wallets base directory path for provided [`ChainTypes`].
+    pub fn get_base_path(chain_type: &ChainTypes) -> PathBuf {
+        let mut wallets_path = Settings::get_base_path(Some(chain_type.shortname()));
+        wallets_path.push(BASE_DIR_NAME);
+        // Create wallets base directory if it doesn't exist.
+        if !wallets_path.exists() {
+            let _ = fs::create_dir_all(wallets_path.clone());
+        }
+        wallets_path
+    }
+
     /// Get config file path for provided [`ChainTypes`] and wallet identifier.
     fn get_config_file_path(chain_type: &ChainTypes, id: i64) -> PathBuf {
-        let mut config_path = Wallets::get_base_path(chain_type);
+        let mut config_path = Self::get_base_path(chain_type);
         config_path.push(id.to_string());
         // Create if the config path doesn't exist.
         if !config_path.exists() {
@@ -74,7 +86,7 @@ impl WalletConfig {
     /// Get current wallet data path.
     pub fn get_data_path(&self) -> String {
         let chain_type = AppConfig::chain_type();
-        let mut config_path = Wallets::get_base_path(&chain_type);
+        let mut config_path = Self::get_base_path(&chain_type);
         config_path.push(self.id.to_string());
         config_path.to_str().unwrap().to_string()
     }

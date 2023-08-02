@@ -13,8 +13,10 @@
 // limitations under the License.
 
 mod creation;
-mod wallet;
 mod setup;
 
 mod content;
 pub use content::*;
+
+mod wallet;
+use wallet::WalletContent;

@@ -21,9 +21,10 @@ use crate::gui::icons::{CHECK, EYE, EYE_SLASH, FOLDER_PLUS, SHARE_FAT};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, ModalPosition, View};
 use crate::gui::views::wallets::creation::MnemonicSetup;
-use crate::gui::views::wallets::creation::types::{PhraseMode, Step};
+use crate::gui::views::wallets::creation::types::Step;
 use crate::gui::views::wallets::setup::ConnectionSetup;
-use crate::wallet::Wallets;
+use crate::wallet::types::PhraseMode;
+use crate::wallet::Wallet;
 
 /// Wallet creation content.
 pub struct WalletCreation {
@@ -61,7 +62,7 @@ impl Default for WalletCreation {
             logo: RetainedImage::from_image_bytes(
                 "logo.png",
                 include_bytes!("../../../../../img/logo.png"),
-            ).unwrap(),
+            ).unwrap()
         }
     }
 }
@@ -70,7 +71,10 @@ impl WalletCreation {
     /// Wallet name/password input modal identifier.
     pub const NAME_PASS_MODAL: &'static str = "name_pass_modal";
 
-    pub fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
+    pub fn ui(&mut self,
+              ui: &mut egui::Ui,
+              cb: &dyn PlatformCallbacks,
+              on_create: impl FnOnce(Wallet)) {
         // Show wallet creation step description and confirmation panel.
         if self.step.is_some() {
             egui::TopBottomPanel::bottom("wallet_creation_step_panel")
@@ -87,7 +91,7 @@ impl WalletCreation {
                 })
                 .show_inside(ui, |ui| {
                     ui.vertical_centered(|ui| {
-                        self.step_control_ui(ui);
+                        self.step_control_ui(ui, on_create);
                     });
                 });
         }
@@ -109,8 +113,16 @@ impl WalletCreation {
             });
     }
 
+    /// Reset wallet creation to default values.
+    fn reset(&mut self) {
+        self.step = None;
+        self.name_edit = String::from("");
+        self.pass_edit = String::from("");
+        self.mnemonic_setup.reset();
+    }
+
     /// Draw [`Step`] description and confirmation control.
-    fn step_control_ui(&mut self, ui: &mut egui::Ui) {
+    fn step_control_ui(&mut self, ui: &mut egui::Ui, on_create: impl FnOnce(Wallet)) {
         if let Some(step) = &self.step {
             // Setup step description text and availability.
             let (step_text, mut step_available) = match step {
@@ -164,7 +176,7 @@ impl WalletCreation {
                 ui.add_space(4.0);
                 // Show button.
                 View::button(ui, next_text.to_uppercase(), color, || {
-                    self.forward();
+                    self.forward(Some(on_create));
                 });
                 ui.add_space(4.0);
             }
@@ -223,13 +235,7 @@ impl WalletCreation {
             None => {}
             Some(step) => {
                 match step {
-                    Step::EnterMnemonic => {
-                        // Clear values if it needs to go back on first step.
-                        self.step = None;
-                        self.name_edit = String::from("");
-                        self.pass_edit = String::from("");
-                        self.mnemonic_setup.reset();
-                    }
+                    Step::EnterMnemonic => self.reset(),
                     Step::ConfirmMnemonic => self.step = Some(Step::EnterMnemonic),
                     Step::SetupConnection => self.step = Some(Step::EnterMnemonic)
                 }
@@ -238,37 +244,41 @@ impl WalletCreation {
     }
 
     /// Go to the next wallet creation [`Step`].
-    fn forward(&mut self) {
-        self.step = match &self.step {
-            None => Some(Step::EnterMnemonic),
-            Some(step) => {
-                match step {
-                    Step::EnterMnemonic => {
-                        if self.mnemonic_setup.mnemonic.mode == PhraseMode::Generate {
-                            Some(Step::ConfirmMnemonic)
+    fn forward(&mut self, on_create: Option<impl FnOnce(Wallet)>) {
+        self.step = if let Some(step) = &self.step {
+            match step {
+                Step::EnterMnemonic => {
+                    if self.mnemonic_setup.mnemonic.mode == PhraseMode::Generate {
+                        Some(Step::ConfirmMnemonic)
+                    } else {
+                        // Check if entered phrase was valid.
+                        if self.mnemonic_setup.valid_phrase {
+                            Some(Step::SetupConnection)
                         } else {
-                            // Check if entered phrase was valid.
-                            if self.mnemonic_setup.valid_phrase {
-                                Some(Step::SetupConnection)
-                            } else {
-                                Some(Step::EnterMnemonic)
-                            }
+                            Some(Step::EnterMnemonic)
                         }
                     }
-                    Step::ConfirmMnemonic => Some(Step::SetupConnection),
-                    Step::SetupConnection => {
-                        // Create wallet at last step.
-                        Wallets::create_wallet(
-                            self.name_edit.clone(),
-                            self.pass_edit.clone(),
-                            self.mnemonic_setup.mnemonic.get_phrase(),
-                            self.network_setup.get_ext_conn_url()
-                        ).unwrap();
-                        None
-                    }
+                }
+                Step::ConfirmMnemonic => Some(Step::SetupConnection),
+                Step::SetupConnection => {
+                    // Create wallet at last step.
+                    let name = self.name_edit.clone();
+                    let pass = self.pass_edit.clone();
+                    let phrase = self.mnemonic_setup.mnemonic.get_phrase();
+                    let ext_conn = self.network_setup.get_ext_conn_url();
+                    let wallet = Wallet::create(name, pass.clone(), phrase, ext_conn).unwrap();
+                    // Open created wallet.
+                    wallet.open(pass).unwrap();
+                    // Pass created wallet to callback.
+                    (on_create.unwrap())(wallet);
+                    // Reset creation data.
+                    self.reset();
+                    None
                 }
             }
-        }
+        } else {
+            Some(Step::EnterMnemonic)
+        };
     }
 
     /// Start wallet creation from showing [`Modal`] to enter name and password.
@@ -379,7 +389,7 @@ impl WalletCreation {
                         if self.name_edit.is_empty() || self.pass_edit.is_empty() {
                             return;
                         }
-                        self.forward();
+                        self.step = Some(Step::EnterMnemonic);
                         cb.hide_keyboard();
                         modal.close();
                     };

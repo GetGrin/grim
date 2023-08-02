@@ -12,28 +12,47 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use serde_derive::{Deserialize, Serialize};
-
-/// External node connection for the wallet.
-#[derive(Serialize, Deserialize, Clone)]
-pub struct ExternalConnection {
-    /// Node URL.
-    pub url: String,
-    /// Optional API secret key.
-    pub secret: Option<String>
+/// Mnemonic phrase setup mode.
+#[derive(PartialEq, Clone)]
+pub enum PhraseMode {
+    /// Generate new mnemonic phrase.
+    Generate,
+    /// Import existing mnemonic phrase.
+    Import
 }
 
-impl ExternalConnection {
-    /// Default external node URL.
-    const DEFAULT_EXTERNAL_NODE_URL: &'static str = "https://grinnnode.live:3413";
+/// Mnemonic phrase size based on words count.
+#[derive(PartialEq, Clone)]
+pub enum PhraseSize { Words12, Words15, Words18, Words21, Words24 }
 
-    pub fn new(url: String, secret: Option<String>) -> Self {
-        Self { url, secret }
+impl PhraseSize {
+    pub const VALUES: [PhraseSize; 5] = [
+        PhraseSize::Words12,
+        PhraseSize::Words15,
+        PhraseSize::Words18,
+        PhraseSize::Words21,
+        PhraseSize::Words24
+    ];
+
+    /// Gen words count number.
+    pub fn value(&self) -> usize {
+        match *self {
+            PhraseSize::Words12 => 12,
+            PhraseSize::Words15 => 15,
+            PhraseSize::Words18 => 18,
+            PhraseSize::Words21 => 21,
+            PhraseSize::Words24 => 24
+        }
     }
-}
 
-impl Default for ExternalConnection {
-    fn default() -> Self {
-        Self { url: Self::DEFAULT_EXTERNAL_NODE_URL.to_string(), secret: None }
+    /// Gen entropy size for current phrase size.
+    pub fn entropy_size(&self) -> usize {
+        match *self {
+            PhraseSize::Words12 => 16,
+            PhraseSize::Words15 => 20,
+            PhraseSize::Words18 => 24,
+            PhraseSize::Words21 => 28,
+            PhraseSize::Words24 => 32
+        }
     }
 }

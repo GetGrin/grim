@@ -2267,7 +2267,6 @@ dependencies = [
  "uuid",
  "wgpu",
  "winit",
- "zeroize",
 ]
 
 [[package]]

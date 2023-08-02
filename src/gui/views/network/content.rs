@@ -85,7 +85,7 @@ impl NetworkContent {
     pub fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame, cb: &dyn PlatformCallbacks) {
         // Show modal content for current ui container.
         if self.can_draw_modal() {
-            Modal::ui(ui, |ui, modal| {
+            Modal::ui(ui.ctx(), |ui, modal| {
                 self.current_tab.as_mut().on_modal_ui(ui, modal, cb);
             });
         }

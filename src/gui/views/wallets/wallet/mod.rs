@@ -12,20 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub mod types;
-pub mod updater;
-pub mod selection;
-pub mod tx;
-pub mod keys;
+mod content;
+mod txs;
+mod send;
+mod settings;
+mod receive;
 
-mod mnemonic;
-pub use mnemonic::Mnemonic;
-
-mod connections;
-pub use connections::*;
-
-mod wallets;
-pub use wallets::*;
-
-mod config;
-pub use config::*;
+pub use content::WalletContent;

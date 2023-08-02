@@ -24,7 +24,6 @@ use serde::{Deserialize, Serialize};
 use serde::de::DeserializeOwned;
 
 use crate::node::NodeConfig;
-use crate::wallet::{ExternalConnection, Wallets};
 
 lazy_static! {
     /// Static settings state to be accessible globally.
@@ -41,36 +40,18 @@ pub struct AppConfig {
     pub auto_start_node: bool,
     /// Chain type for node and wallets.
     chain_type: ChainTypes,
-    /// URLs of external connections for wallets.
-    external_connections: Vec<ExternalConnection>
 }
 
 impl Default for AppConfig {
     fn default() -> Self {
         Self {
             auto_start_node: false,
-            chain_type: ChainTypes::default(),
-            external_connections: vec![
-                ExternalConnection::default()
-            ],
+            chain_type: ChainTypes::default()
         }
     }
 }
 
 impl AppConfig {
-    /// Initialize application config from the file.
-    pub fn init() -> Self {
-        let path = Settings::get_config_path(APP_CONFIG_FILE_NAME, None);
-        let parsed = Settings::read_from_file::<AppConfig>(path.clone());
-        if !path.exists() || parsed.is_err() {
-            let default_config = AppConfig::default();
-            Settings::write_to_file(&default_config, path);
-            default_config
-        } else {
-            parsed.unwrap()
-        }
-    }
-
     /// Save app config to file.
     pub fn save(&self) {
         Settings::write_to_file(self, Settings::get_config_path(APP_CONFIG_FILE_NAME, None));
@@ -93,8 +74,6 @@ impl AppConfig {
                 w_node_config.node = node_config.node;
                 w_node_config.peers = node_config.peers;
             }
-            // Reload wallets.
-            Wallets::reload(chain_type);
         }
     }
 
@@ -117,42 +96,6 @@ impl AppConfig {
         w_app_config.auto_start_node = !autostart;
         w_app_config.save();
     }
-
-    /// Get external connections for the wallet.
-    pub fn external_connections() -> Vec<ExternalConnection> {
-        let r_config = Settings::app_config_to_read();
-        r_config.external_connections.clone()
-    }
-
-    /// Save external connection for the wallet in app config.
-    pub fn add_external_connection(conn: ExternalConnection) {
-        let mut w_config = Settings::app_config_to_update();
-        let mut exists = false;
-        for mut c in w_config.external_connections.iter_mut() {
-            // Update connection if URL exists.
-            if c.url == conn.url {
-                c.secret = conn.secret.clone();
-                exists = true;
-                break;
-            }
-        }
-        // Create new connection if URL not exists.
-        if !exists {
-            w_config.external_connections.insert(0, conn);
-        }
-        w_config.save();
-    }
-
-    /// Get external node connection secret from provided URL.
-    pub fn get_external_connection_secret(url: String) -> Option<String> {
-        let r_config = Settings::app_config_to_read();
-        for c in &r_config.external_connections {
-            if c.url == url {
-                return c.secret.clone();
-            }
-        }
-        None
-    }
 }
 
 /// Main application directory name.
@@ -169,12 +112,26 @@ pub struct Settings {
 impl Settings {
     /// Initialize settings with app and node configs.
     fn init() -> Self {
-        let app_config = AppConfig::init();
+        let path = Settings::get_config_path(APP_CONFIG_FILE_NAME, None);
+        let app_config = Self::init_config::<AppConfig>(path);
         Self {
             node_config: Arc::new(RwLock::new(NodeConfig::for_chain_type(&app_config.chain_type))),
             app_config: Arc::new(RwLock::new(app_config)),
         }
     }
+
+    /// Initialize config from provided file path or load default if file not exists.
+    pub fn init_config<T: Default + Serialize + DeserializeOwned>(path: PathBuf) -> T {
+        let parsed = Self::read_from_file::<T>(path.clone());
+        if !path.exists() || !parsed.is_err() {
+            let default_config = T::default();
+            Settings::write_to_file(&default_config, path);
+            default_config
+        } else {
+            parsed.unwrap()
+        }
+    }
+
 
     /// Get node config to read values.
     pub fn node_config_to_read() -> RwLockReadGuard<'static, NodeConfig> {

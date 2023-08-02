@@ -15,13 +15,12 @@
 use egui::{Id, RichText, ScrollArea, TextStyle, Widget};
 use url::Url;
 
-use crate::AppConfig;
 use crate::gui::Colors;
 use crate::gui::icons::{GLOBE, GLOBE_SIMPLE};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, ModalPosition, View};
 use crate::gui::views::wallets::setup::ConnectionMethod;
-use crate::wallet::ExternalConnection;
+use crate::wallet::{ConnectionsConfig, ExternalConnection};
 
 /// Wallet node connection method setup content.
 pub struct ConnectionSetup {
@@ -106,7 +105,7 @@ impl ConnectionSetup {
                     ui.add_space(12.0);
 
                     // Show external nodes URLs selection.
-                    for conn in AppConfig::external_connections() {
+                    for conn in ConnectionsConfig::external_connections() {
                         View::radio_value(ui,
                                           &mut self.method,
                                           ConnectionMethod::External(conn.url.clone()),
@@ -196,7 +195,7 @@ impl ConnectionSetup {
                                 Some(self.ext_node_secret_edit.to_owned())
                             };
                             let ext_conn = ExternalConnection::new(url.clone(), secret);
-                            AppConfig::add_external_connection(ext_conn);
+                            ConnectionsConfig::add_external_connection(ext_conn);
 
                             // Set added method as current.
                             self.method = ConnectionMethod::External(url);

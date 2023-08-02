@@ -18,7 +18,8 @@ use crate::gui::Colors;
 use crate::gui::icons::PENCIL;
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, ModalPosition, Root, View};
-use crate::gui::views::wallets::creation::types::{Mnemonic, PhraseMode, PhraseSize};
+use crate::wallet::Mnemonic;
+use crate::wallet::types::{PhraseMode, PhraseSize};
 
 /// Mnemonic phrase setup content.
 pub struct MnemonicSetup {

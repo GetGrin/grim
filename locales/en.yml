@@ -29,6 +29,7 @@ wallets:
   wrong_pass: Entered password is wrong
   locked: Locked
   unlocked: Unlocked
+  enable_node_required: 'Enable integrated node to use the wallet or change connection settings by selecting %{settings} at the bottom of the screen.'
 network:
   self: Network
   node: Integrated node

@@ -14,18 +14,25 @@
 
 use egui::{Align, Align2, Layout, Margin, RichText, Rounding, ScrollArea, TextStyle, Widget};
 use egui_extras::{Size, StripBuilder};
+use grin_core::global::ChainTypes;
 
+use crate::AppConfig;
 use crate::gui::Colors;
 use crate::gui::icons::{ARROW_LEFT, CARET_RIGHT, COMPUTER_TOWER, EYE, EYE_SLASH, FOLDER_LOCK, FOLDER_OPEN, GEAR, GLOBE, GLOBE_SIMPLE, LOCK_KEY, PLUS, SIDEBAR_SIMPLE, SUITCASE};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, ModalContainer, ModalPosition, Root, TitlePanel, TitleType, View};
 use crate::gui::views::wallets::creation::{MnemonicSetup, WalletCreation};
 use crate::gui::views::wallets::setup::ConnectionSetup;
-use crate::gui::views::wallets::wallet::WalletContent;
+use crate::gui::views::wallets::WalletContent;
 use crate::wallet::{Wallet, Wallets};
 
 /// Wallets content.
 pub struct WalletsContent {
+    /// Chain type for loaded wallets.
+    chain_type: ChainTypes,
+    /// Loaded list of wallets.
+    wallets: Wallets,
+
     /// Password to open wallet for [`Modal`].
     pass_edit: String,
     /// Flag to show/hide password at [`egui::TextEdit`] field.
@@ -48,6 +55,8 @@ pub struct WalletsContent {
 impl Default for WalletsContent {
     fn default() -> Self {
         Self {
+            chain_type: AppConfig::chain_type(),
+            wallets: Wallets::default(),
             pass_edit: "".to_string(),
             hide_pass: true,
             wrong_pass: false,
@@ -72,12 +81,12 @@ impl ModalContainer for WalletsContent {
 
 impl WalletsContent {
     /// Identifier for wallet opening [`Modal`].
-    pub const OPEN_WALLET_MODAL: &'static str = "open_wallet_modal";
+    const OPEN_WALLET_MODAL: &'static str = "open_wallet_modal";
 
     pub fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame, cb: &dyn PlatformCallbacks) {
         // Show modal content for current ui container.
         if self.can_draw_modal() {
-            Modal::ui(ui, |ui, modal| {
+            Modal::ui(ui.ctx(), |ui, modal| {
                 match modal.id {
                     Self::OPEN_WALLET_MODAL => {
                         self.open_wallet_modal_ui(ui, modal, cb);
@@ -96,17 +105,17 @@ impl WalletsContent {
             });
         }
 
-        // Get wallets.
-        let wallets = Wallets::list();
-        let empty_list = wallets.is_empty();
+        // Setup list of wallets if chain type was changed.
+        let chain_type = AppConfig::chain_type();
+        if self.chain_type != chain_type {
+            self.wallets.reinit(&chain_type);
+            self.chain_type = chain_type;
+        }
+        let empty_list = self.wallets.list.is_empty();
 
         // Setup wallet content flags.
         let create_wallet = self.creation_content.can_go_back();
-        let show_wallet = if let Some(id) = Wallets::selected_id() {
-            Wallets::is_open(id)
-        } else {
-            false
-        };
+        let show_wallet = self.wallets.is_selected_open();
 
         // Setup panels parameters.
         let dual_panel = is_dual_panel_mode(ui, frame);
@@ -135,15 +144,17 @@ impl WalletsContent {
                 if available_width_zero {
                     return;
                 }
-
                 if create_wallet || !show_wallet {
-                    // Show wallet creation content
-                    self.creation_content.ui(ui, cb);
+                    // Show wallet creation content.
+                    self.creation_content.ui(ui, cb, |wallet| {
+                        // Add created wallet to list.
+                        self.wallets.add(wallet);
+                    });
                 } else  {
-                    for wallet in wallets.iter() {
+                    for mut wallet in self.wallets.list.clone() {
                         // Show content for selected wallet.
-                        if Some(wallet.config.id) == Wallets::selected_id() {
-                            self.wallet_content.ui(ui, frame, &wallet, cb);
+                        if self.wallets.is_selected(wallet.config.id) {
+                            self.wallet_content.ui(ui, frame, &mut wallet, cb);
                             break;
                         }
                     }
@@ -189,7 +200,7 @@ impl WalletsContent {
                         = (!show_wallet && !dual_panel) || (dual_panel && show_wallet);
 
                     // Show list of wallets.
-                    let scroll = self.list_ui(ui, dual_panel, show_creation_btn, &wallets, cb);
+                    let scroll = self.list_ui(ui, dual_panel, show_creation_btn, cb);
 
                     if show_creation_btn {
                         // Setup right margin for button.
@@ -221,7 +232,7 @@ impl WalletsContent {
         TitlePanel::ui(title_content, |ui, frame| {
             if show_wallet && !dual_panel {
                 View::title_button(ui, ARROW_LEFT, || {
-                    Wallets::select(None);
+                    self.wallets.select(None);
                 });
             } else if create_wallet {
                 View::title_button(ui, ARROW_LEFT, || {
@@ -277,7 +288,6 @@ impl WalletsContent {
                ui: &mut egui::Ui,
                dual_panel: bool,
                show_creation_btn: bool,
-               wallets: &Vec<Wallet>,
                cb: &dyn PlatformCallbacks) -> bool {
         let mut scroller_showing = false;
         ui.scope(|ui| {
@@ -303,18 +313,14 @@ impl WalletsContent {
                         rect.set_width(width);
 
                         ui.allocate_ui(rect.size(), |ui| {
-                            for (index, w) in wallets.iter().enumerate() {
+                            for mut wallet in self.wallets.list.clone() {
                                 // Draw wallet list item.
-                                self.wallet_item_ui(ui, w, cb);
-                                // Add space after last item.
-                                let last_item = index == wallets.len() - 1;
-                                if !last_item {
-                                    ui.add_space(5.0);
-                                }
-                                // Add space for wallet creation button.
-                                if show_creation_btn && last_item {
-                                    ui.add_space(57.0);
-                                }
+                                self.wallet_item_ui(ui, &mut wallet, cb);
+                                ui.add_space(5.0);
+                            }
+                            // Add space for wallet creation button.
+                            if show_creation_btn {
+                                ui.add_space(52.0);
                             }
                         });
                     });
@@ -326,11 +332,13 @@ impl WalletsContent {
     }
 
     /// Draw wallet list item.
-    fn wallet_item_ui(&mut self, ui: &mut egui::Ui, wallet: &Wallet, cb: &dyn PlatformCallbacks) {
+    fn wallet_item_ui(&mut self,
+                      ui: &mut egui::Ui,
+                      wallet: &mut Wallet,
+                      cb: &dyn PlatformCallbacks) {
         let id = wallet.config.id;
-        let is_selected = Some(id) == Wallets::selected_id();
-        let is_open = Wallets::is_open(id);
-        let is_current = is_open && is_selected;
+        let is_selected = self.wallets.is_selected(id);
+        let is_current = wallet.is_open() && is_selected;
 
         // Draw round background.
         let mut rect = ui.available_rect_before_wrap();
@@ -348,21 +356,21 @@ impl WalletsContent {
             ui.style_mut().visuals.widgets.hovered.rounding = Rounding::same(8.0);
             ui.style_mut().visuals.widgets.active.rounding = Rounding::same(8.0);
 
-            if !is_open {
+            if !wallet.is_open() {
                 // Show button to open closed wallet.
                 View::item_button(ui, [false, true], FOLDER_OPEN, || {
-                    Wallets::select(Some(id));
+                    self.wallets.select(Some(id));
                     self.show_open_wallet_modal(cb);
                 });
             } else if !is_selected {
                 // Show button to select opened wallet.
                 View::item_button(ui, [false, true], CARET_RIGHT, || {
-                    Wallets::select(Some(id));
+                    self.wallets.select(Some(id));
                 });
 
                 // Show button to close opened wallet.
                 View::item_button(ui, [false, false], LOCK_KEY, || {
-                    Wallets::close(id).unwrap()
+                    let _ = wallet.close();
                 });
             }
 
@@ -386,7 +394,7 @@ impl WalletsContent {
                     ui.add_space(1.0);
 
                     // Setup wallet status text.
-                    let status_text = if Wallets::is_open(id) {
+                    let status_text = if wallet.is_open() {
                         format!("{} {}", FOLDER_OPEN, t!("wallets.unlocked"))
                     } else {
                         format!("{} {}", FOLDER_LOCK, t!("wallets.locked"))
@@ -497,23 +505,18 @@ impl WalletsContent {
             ui.columns(2, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
                     View::button(ui, t!("modal.cancel"), Colors::WHITE, || {
-                        // Clear values.
-                        self.pass_edit = "".to_string();
-                        self.wrong_pass = false;
-                        self.hide_pass = true;
                         // Close modal.
                         cb.hide_keyboard();
                         modal.close();
                     });
                 });
                 columns[1].vertical_centered_justified(|ui| {
-                    // Callback for continue button.
+                    // Callback for button to continue.
                     let mut on_continue = || {
                         if self.pass_edit.is_empty() {
                             return;
                         }
-                        let selected_id = Wallets::selected_id().unwrap();
-                        match Wallets::open(selected_id, self.pass_edit.clone()) {
+                        match self.wallets.open_selected(self.pass_edit.clone()) {
                             Ok(_) => {
                                 // Clear values.
                                 self.pass_edit = "".to_string();
@@ -526,6 +529,7 @@ impl WalletsContent {
                             Err(_) => self.wrong_pass = true
                         }
                     };
+
                     // Continue on Enter key press.
                     View::on_enter_key(ui, || {
                         (on_continue)();

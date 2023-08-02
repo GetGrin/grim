@@ -149,7 +149,7 @@ impl Root {
 
     /// Draw exit confirmation modal content.
     fn exit_modal_content(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame) {
-        Modal::ui(ui, |ui, modal| {
+        Modal::ui(ui.ctx(), |ui, modal| {
             if self.show_exit_progress {
                 if !Node::is_running() {
                     self.exit(frame);

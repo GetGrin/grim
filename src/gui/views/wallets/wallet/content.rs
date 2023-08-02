@@ -34,7 +34,7 @@ impl WalletContent {
     pub fn ui(&mut self,
               ui: &mut egui::Ui,
               frame: &mut eframe::Frame,
-              wallet: &Wallet,
+              wallet: &mut Wallet,
               cb: &dyn PlatformCallbacks) {
         // Show wallet content.
         egui::CentralPanel::default()
@@ -54,4 +54,6 @@ impl WalletContent {
                 //TODO: wallet content
             });
     }
+
+
 }

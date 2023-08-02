@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::sync::RwLock;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::RwLock;
 
 use egui::{Align2, RichText, Rounding, Stroke, Vec2};
 use egui::epaint::RectShape;
@@ -167,17 +167,17 @@ impl Modal {
     }
 
     /// Draw opened [`Modal`] content.
-    pub fn ui(ui: &mut egui::Ui, add_content: impl FnOnce(&mut egui::Ui, &Modal)) {
+    pub fn ui(ctx: &egui::Context, add_content: impl FnOnce(&mut egui::Ui, &Modal)) {
         if let Some(modal) = &MODAL_STATE.read().unwrap().modal {
             if modal.is_open() {
-                modal.window_ui(ui, add_content);
+                modal.window_ui(ctx, add_content);
             }
         }
     }
 
     /// Draw [`egui::Window`] with provided content.
-    fn window_ui(&self, ui: &mut egui::Ui, add_content: impl FnOnce(&mut egui::Ui, &Modal)) {
-        let rect = ui.ctx().screen_rect();
+    fn window_ui(&self, ctx: &egui::Context, add_content: impl FnOnce(&mut egui::Ui, &Modal)) {
+        let rect = ctx.screen_rect();
         egui::Window::new("modal_bg_window")
             .title_bar(false)
             .resizable(false)
@@ -187,13 +187,13 @@ impl Modal {
                 fill: Colors::SEMI_TRANSPARENT,
                 ..Default::default()
             })
-            .show(ui.ctx(), |ui| {
+            .show(ctx, |ui| {
                 ui.set_min_size(rect.size());
             });
 
         // Setup width of modal content.
         let side_insets = View::get_left_inset() + View::get_right_inset();
-        let available_width = ui.available_width() - (side_insets + Self::DEFAULT_MARGIN);
+        let available_width = rect.width() - (side_insets + Self::DEFAULT_MARGIN);
         let width = f32::min(available_width, Self::DEFAULT_WIDTH);
 
         // Show main content Window at given position.
@@ -209,7 +209,7 @@ impl Modal {
                 fill: Colors::YELLOW,
                 ..Default::default()
             })
-            .show(ui.ctx(), |ui| {
+            .show(ctx, |ui| {
                 if self.title.is_some() {
                     self.title_ui(ui);
                 }
@@ -217,7 +217,7 @@ impl Modal {
             }).unwrap().response.layer_id;
 
         // Always show main content Window above background Window.
-        ui.ctx().move_to_top(layer_id);
+        ctx.move_to_top(layer_id);
 
     }
 
