@@ -48,7 +48,7 @@ impl Modal {
     /// Maximum width of the content.
     const DEFAULT_WIDTH: f32 = Root::SIDE_PANEL_WIDTH - (2.0 * Self::DEFAULT_MARGIN);
 
-    /// Create opened and closeable Modal with center position.
+    /// Create opened and closeable [`Modal`] with center position.
     pub fn new(id: &'static str) -> Self {
         Self {
             id,
@@ -103,8 +103,8 @@ impl Modal {
         w_nav.modal = Some(self);
     }
 
-    /// Remove [`Modal`] from [`MODAL_STATE`] if it's showing and can be closed.
-    /// Return `false` if Modal existed in [`MODAL_STATE`] before call.
+    /// Remove [`Modal`] from [`ModalState`] if it's showing and can be closed.
+    /// Return `false` if Modal existed in [`ModalState`] before call.
     pub fn on_back() -> bool {
         let mut w_state = MODAL_STATE.write().unwrap();
 
@@ -119,7 +119,7 @@ impl Modal {
         true
     }
 
-    /// Return id of opened [`Modal`] or remove its instance from [`MODAL_STATE`] if it was closed.
+    /// Return id of opened [`Modal`] or remove its instance from [`ModalState`] if it was closed.
     pub fn opened() -> Option<&'static str> {
         // Check if Modal is showing.
         {
@@ -251,7 +251,7 @@ impl Modal {
         ui.painter().set(bg_idx, bg_shape);
     }
 
-    /// Draw the title.
+    /// Draw title content.
     fn title_ui(&self, ui: &mut egui::Ui) {
         let rect = ui.available_rect_before_wrap();
 
