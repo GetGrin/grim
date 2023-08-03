@@ -18,13 +18,13 @@ use lazy_static::lazy_static;
 use serde_derive::{Deserialize, Serialize};
 
 use crate::Settings;
-use crate::wallet::{BASE_DIR_NAME, ExternalConnection};
+use crate::wallet::ExternalConnection;
 
 lazy_static! {
     /// Static connections state to be accessible globally.
     static ref CONNECTIONS_STATE: Arc<RwLock<ConnectionsConfig>> = Arc::new(
         RwLock::new(
-            Settings::init_config(Settings::get_config_path(CONFIG_FILE_NAME, Some(BASE_DIR_NAME)))
+            Settings::init_config(Settings::get_config_path(CONFIG_FILE_NAME, None))
         )
     );
 }

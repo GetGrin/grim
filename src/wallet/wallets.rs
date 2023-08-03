@@ -16,6 +16,7 @@ use std::{cmp, thread};
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::time::Duration;
 
 use grin_core::global;
 use grin_core::global::ChainTypes;
@@ -33,6 +34,7 @@ use crate::node::NodeConfig;
 use crate::wallet::{ConnectionsConfig, WalletConfig};
 use crate::wallet::selection::lock_tx_context;
 use crate::wallet::tx::{add_inputs_to_slate, new_tx_slate};
+use crate::wallet::types::WalletInstance;
 use crate::wallet::updater::{cancel_tx, refresh_output_state, retrieve_txs};
 
 /// [`Wallet`] list wrapper.
@@ -53,6 +55,12 @@ impl Default for Wallets {
 }
 
 impl Wallets {
+    /// Delay in seconds to update outputs after wallet opening.
+    pub const OUTPUTS_UPDATE_DELAY: Duration = Duration::from_millis(30 * 1000);
+
+    /// Delay in seconds to update wallet info.
+    pub const INFO_UPDATE_DELAY: Duration = Duration::from_millis(10 * 1000);
+
     /// Initialize wallets from base directory for provided [`ChainType`].
     fn init(chain_type: ChainTypes) -> Vec<Wallet> {
         let mut wallets = Vec::new();
@@ -121,21 +129,30 @@ impl Wallets {
             // Get pmmr range output indexes.
             match wallet.pmmr_range() {
                 Ok((mut lowest_index, highest_index)) => {
-                    println!("pmmr_range {} {}", lowest_index, highest_index);
+                    println!("pmmr_range: {} {}", lowest_index, highest_index);
                     let mut from_index = lowest_index;
                     loop {
+                        // Stop loop if wallet is not open.
+                        if !wallet.is_open() {
+                            break;
+                        }
+
                         // Scan outputs for last retrieved index.
-                        println!("scan_outputs {} {}", from_index, highest_index);
+                        println!("scan_outputs from {} to {}", from_index, highest_index);
                         match wallet.scan_outputs(from_index, highest_index) {
                             Ok(last_index) => {
-                                println!("last_index {}", last_index);
+                                println!("retrieved index: {}", last_index);
                                 if lowest_index == 0 {
                                     lowest_index = last_index;
                                 }
+
+                                // Finish scanning or start new scan from last retrieved index.
                                 if last_index == highest_index {
+                                    println!("scan finished");
                                     wallet.loading_progress = 100;
-                                    break;
+                                    wallet.is_loaded.store(true, Ordering::Relaxed);
                                 } else {
+                                    println!("continue scan");
                                     from_index = last_index;
                                 }
 
@@ -146,17 +163,28 @@ impl Wallets {
                                     (progress / range) as u8 * 100,
                                     99
                                 );
-                                println!("progress {}", wallet.loading_progress);
+                                println!("progress: {}", wallet.loading_progress);
                             }
                             Err(e) => {
-                                wallet.loading_error = Some(e);
-                                break;
+                                if !wallet.is_loaded() {
+                                    wallet.loading_error = Some(e);
+                                    break;
+                                }
                             }
                         }
+
+                        // Stop loop if wallet is not open.
+                        if !wallet.is_open() {
+                            break;
+                        }
+
+                        // Scan outputs at next cycle again.
+                        println!("finished scanning, waiting");
+                        thread::sleep(Self::OUTPUTS_UPDATE_DELAY);
                     }
-                    wallet.is_loaded.store(true, Ordering::Relaxed);
                 }
                 Err(e) => {
+                    wallet.loading_progress = 0;
                     wallet.loading_error = Some(e);
                 }
             }
@@ -179,24 +207,10 @@ pub struct Wallet {
     /// Flag to check if wallet is loaded and ready to use.
     is_loaded: Arc<AtomicBool>,
     /// Error on wallet loading.
-    loading_error: Option<Error>,
+    pub loading_error: Option<Error>,
     /// Loading progress in percents
-    loading_progress: u8,
+    pub loading_progress: u8,
 }
-
-/// Wallet instance type.
-type WalletInstance = Arc<
-    Mutex<
-        Box<
-            dyn WalletInst<
-                'static,
-                DefaultLCProvider<'static, HTTPNodeClient, ExtKeychain>,
-                HTTPNodeClient,
-                ExtKeychain,
-            >,
-        >,
-    >,
->;
 
 impl Wallet {
     /// Create wallet from provided instance and config.
@@ -324,6 +338,11 @@ impl Wallet {
             self.is_open.store(false, Ordering::Relaxed);
         }
         Ok(())
+    }
+
+    /// Check if wallet is loaded and ready to use.
+    pub fn is_loaded(&self) -> bool {
+        self.is_loaded.load(Ordering::Relaxed)
     }
 
     /// Scan wallet outputs to check/repair the wallet.

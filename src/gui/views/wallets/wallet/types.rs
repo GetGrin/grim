@@ -13,17 +13,18 @@
 // limitations under the License.
 
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::wallets::wallet::types::{WalletTab, WalletTabType};
 
-/// Receive funds tab content.
-#[derive(Default)]
-pub struct WalletReceive;
+/// Wallet tab content interface.
+pub trait WalletTab {
+    fn get_type(&self) -> WalletTabType;
+    fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame, cb: &dyn PlatformCallbacks);
+}
 
-impl WalletTab for WalletReceive {
-    fn get_type(&self) -> WalletTabType {
-        WalletTabType::Receive
-    }
-
-    fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame, cb: &dyn PlatformCallbacks) {
-    }
+/// Type of [`WalletTab`] content.
+#[derive(PartialEq)]
+pub enum WalletTabType {
+    Info,
+    Receive,
+    Send,
+    Settings
 }

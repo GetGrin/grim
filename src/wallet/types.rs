@@ -12,6 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::sync::Arc;
+
+use grin_keychain::ExtKeychain;
+use grin_wallet_impls::{DefaultLCProvider, HTTPNodeClient};
+use grin_wallet_libwallet::WalletInst;
+use parking_lot::Mutex;
+
 /// Mnemonic phrase setup mode.
 #[derive(PartialEq, Clone)]
 pub enum PhraseMode {
@@ -56,3 +63,17 @@ impl PhraseSize {
         }
     }
 }
+
+/// Wallet instance type.
+pub type WalletInstance = Arc<
+    Mutex<
+        Box<
+            dyn WalletInst<
+                'static,
+                DefaultLCProvider<'static, HTTPNodeClient, ExtKeychain>,
+                HTTPNodeClient,
+                ExtKeychain,
+            >,
+        >,
+    >,
+>;

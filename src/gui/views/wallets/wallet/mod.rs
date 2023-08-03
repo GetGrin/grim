@@ -12,10 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-mod content;
-mod txs;
-mod send;
-mod settings;
-mod receive;
+pub mod types;
 
+mod info;
+pub use info::WalletInfo;
+
+mod receive;
+pub use receive::WalletReceive;
+
+mod send;
+pub use send::WalletSend;
+
+mod settings;
+pub use settings::WalletSettings;
+
+mod content;
 pub use content::WalletContent;

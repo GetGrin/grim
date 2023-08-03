@@ -11,3 +11,20 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
+use crate::gui::platform::PlatformCallbacks;
+use crate::gui::views::wallets::types::WalletTab;
+use crate::gui::views::wallets::wallet::types::WalletTabType;
+
+/// Wallet info tab content.
+#[derive(Default)]
+pub struct WalletInfo;
+
+impl WalletTab for WalletInfo {
+    fn get_type(&self) -> WalletTabType {
+        WalletTabType::Info
+    }
+
+    fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame, cb: &dyn PlatformCallbacks) {
+    }
+}

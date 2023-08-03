@@ -19,4 +19,4 @@ mod content;
 pub use content::*;
 
 mod wallet;
-use wallet::WalletContent;
+use wallet::*;
