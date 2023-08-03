@@ -46,7 +46,7 @@ pub struct WalletsContent {
     creation_content: WalletCreation,
 
     /// Flag to show [`Wallet`] list at dual panel mode.
-    show_list_at_dual_panel: bool,
+    show_wallets_at_dual_panel: bool,
 
     /// [`Modal`] identifiers allowed at this ui container.
     modal_ids: Vec<&'static str>
@@ -65,7 +65,7 @@ impl Default for WalletsContent {
             wrong_pass: false,
             wallet_content: WalletContent::default(),
             creation_content: WalletCreation::default(),
-            show_list_at_dual_panel: true,
+            show_wallets_at_dual_panel: AppConfig::show_wallets_at_dual_panel(),
             modal_ids: vec![
                 OPEN_WALLET_MODAL,
                 WalletCreation::NAME_PASS_MODAL
@@ -126,7 +126,7 @@ impl WalletsContent {
             .min_width(wallet_panel_width)
             .frame(egui::Frame {
                 fill: if empty_list && !create_wallet
-                    || (dual_panel && !self.show_list_at_dual_panel) {
+                    || (dual_panel && show_wallet && !self.show_wallets_at_dual_panel) {
                     Colors::FILL_DARK
                 } else {
                     Colors::WHITE
@@ -153,7 +153,7 @@ impl WalletsContent {
                             // Setup wallet content width.
                             let mut rect = ui.available_rect_before_wrap();
                             let mut width = ui.available_width();
-                            if dual_panel && self.show_list_at_dual_panel {
+                            if dual_panel && self.show_wallets_at_dual_panel {
                                 width = content_width - Root::SIDE_PANEL_WIDTH;
                             }
                             rect.set_width(width);
@@ -170,7 +170,8 @@ impl WalletsContent {
         // Show non-empty list if wallet is not creating.
         if !empty_list && !create_wallet {
             // Flag to check if wallet list is hidden on the screen.
-            let list_hidden = content_width == 0.0 || (dual_panel && !self.show_list_at_dual_panel)
+            let list_hidden = content_width == 0.0
+                || (dual_panel && show_wallet && !self.show_wallets_at_dual_panel)
                 || (!dual_panel && show_wallet);
 
             // Show wallet list panel.
@@ -245,14 +246,15 @@ impl WalletsContent {
                     self.creation_content.back();
                 });
             } else if show_wallet && dual_panel {
-                let show_list = self.show_list_at_dual_panel;
+                let show_list = self.show_wallets_at_dual_panel;
                 let list_icon = if show_list {
                     SIDEBAR_SIMPLE
                 } else {
                     SUITCASE
                 };
                 View::title_button(ui, list_icon, || {
-                    self.show_list_at_dual_panel = !show_list;
+                    self.show_wallets_at_dual_panel = !show_list;
+                    AppConfig::toggle_show_wallets_at_dual_panel();
                 });
             } else if !Root::is_dual_panel_mode(frame) {
                 View::title_button(ui, GLOBE, || {
@@ -276,12 +278,12 @@ impl WalletsContent {
     ) -> f32 {
         let create_wallet = self.creation_content.can_go_back();
         let available_width = if list_empty || create_wallet || (show_wallet && !dual_panel)
-            || !self.show_list_at_dual_panel {
+            || (show_wallet && !self.show_wallets_at_dual_panel) {
             ui.available_width()
         } else {
             ui.available_width() - Root::SIDE_PANEL_WIDTH
         };
-        if dual_panel && self.show_list_at_dual_panel {
+        if dual_panel && show_wallet && self.show_wallets_at_dual_panel {
             let min_width = Root::SIDE_PANEL_WIDTH + View::get_right_inset();
             f32::max(min_width, available_width)
         } else {

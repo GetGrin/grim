@@ -40,13 +40,16 @@ pub struct AppConfig {
     pub auto_start_node: bool,
     /// Chain type for node and wallets.
     chain_type: ChainTypes,
+    /// Flag to show wallet list at dual panel wallets mode.
+    show_wallets_at_dual_panel: bool,
 }
 
 impl Default for AppConfig {
     fn default() -> Self {
         Self {
             auto_start_node: false,
-            chain_type: ChainTypes::default()
+            chain_type: ChainTypes::default(),
+            show_wallets_at_dual_panel: true,
         }
     }
 }
@@ -96,6 +99,20 @@ impl AppConfig {
         w_app_config.auto_start_node = !autostart;
         w_app_config.save();
     }
+
+    /// Toggle flag to show wallet list at dual panel wallets mode.
+    pub fn show_wallets_at_dual_panel() -> bool {
+        let r_config = Settings::app_config_to_read();
+        r_config.show_wallets_at_dual_panel
+    }
+
+    /// Toggle flag to show wallet list at dual panel wallets mode.
+    pub fn toggle_show_wallets_at_dual_panel() {
+        let show = Self::show_wallets_at_dual_panel();
+        let mut w_app_config = Settings::app_config_to_update();
+        w_app_config.show_wallets_at_dual_panel = !show;
+        w_app_config.save();
+    }
 }
 
 /// Main application directory name.
@@ -123,7 +140,7 @@ impl Settings {
     /// Initialize config from provided file path or set [`Default`] if file not exists.
     pub fn init_config<T: Default + Serialize + DeserializeOwned>(path: PathBuf) -> T {
         let parsed = Self::read_from_file::<T>(path.clone());
-        if !path.exists() || !parsed.is_err() {
+        if !path.exists() || parsed.is_err() {
             let default_config = T::default();
             Settings::write_to_file(&default_config, path);
             default_config
