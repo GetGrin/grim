@@ -47,8 +47,13 @@ impl NetworkContent {
         egui::TopBottomPanel::bottom("network_tabs")
             .frame(egui::Frame {
                 fill: Colors::FILL,
-                inner_margin: Self::tabs_inner_margin(ui, frame),
-                ..Default::default()
+                inner_margin: Margin {
+                    left: View::get_left_inset() + 4.0,
+                    right: View::far_right_inset_margin(ui, frame) + 4.0,
+                    top: 4.0,
+                    bottom: View::get_bottom_inset() + 4.0,
+                },
+                ..Default::defaulDrawt()
             })
             .show_inside(ui, |ui| {
                 self.tabs_ui(ui);
@@ -58,7 +63,12 @@ impl NetworkContent {
         egui::CentralPanel::default()
             .frame(egui::Frame {
                 stroke: View::DEFAULT_STROKE,
-                inner_margin: Self::content_inner_margin(ui, frame),
+                inner_margin: Margin {
+                    left: View::get_left_inset() + 4.0,
+                    right: View::far_right_inset_margin(ui, frame) + 4.0,
+                    top: 3.0,
+                    bottom: 4.0,
+                },
                 fill: Colors::WHITE,
                 ..Default::default()
             })
@@ -69,26 +79,6 @@ impl NetworkContent {
         // Redraw content after delay if node is not syncing to update stats.
         if Node::not_syncing() {
             ui.ctx().request_repaint_after(Node::STATS_UPDATE_DELAY);
-        }
-    }
-
-    /// Calculate tabs inner margin based on display insets (cutouts).
-    fn tabs_inner_margin(ui: &mut egui::Ui, frame: &mut eframe::Frame) -> Margin {
-        Margin {
-            left: View::get_left_inset() + 4.0,
-            right: View::far_right_inset_margin(ui, frame) + 4.0,
-            top: 4.0,
-            bottom: View::get_bottom_inset() + 4.0,
-        }
-    }
-
-    /// Calculate content inner margin based on display insets (cutouts).
-    fn content_inner_margin(ui: &mut egui::Ui, frame: &mut eframe::Frame) -> Margin {
-        Margin {
-            left: View::get_left_inset() + 4.0,
-            right: View::far_right_inset_margin(ui, frame) + 4.0,
-            top: 3.0,
-            bottom: 4.0,
         }
     }
 
