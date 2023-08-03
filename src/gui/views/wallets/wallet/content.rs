@@ -19,7 +19,7 @@ use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::View;
 use crate::wallet::Wallet;
 
-/// Selected wallet list item content.
+/// Selected and opened wallet content.
 pub struct WalletContent {
 
 }

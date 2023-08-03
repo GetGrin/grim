@@ -20,15 +20,23 @@ use grin_servers::WorkerStats;
 use crate::gui::Colors;
 use crate::gui::icons::{BARBELL, CLOCK_AFTERNOON, CPU, CUBE, FADERS, FOLDER_DASHED, FOLDER_SIMPLE_MINUS, FOLDER_SIMPLE_PLUS, HARD_DRIVES, PLUGS, PLUGS_CONNECTED, POLYGON};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Modal, NetworkContent, View};
+use crate::gui::views::{NetworkContent, View};
 use crate::gui::views::network::setup::StratumSetup;
-use crate::gui::views::types::{NetworkTab, NetworkTabType};
+use crate::gui::views::network::types::{NetworkTab, NetworkTabType};
 use crate::node::{Node, NodeConfig};
 
 /// Mining tab content.
-#[derive(Default)]
 pub struct NetworkMining {
-    stratum_server_setup: StratumSetup
+    /// Stratum server setup content.
+    stratum_server_setup: StratumSetup,
+}
+
+impl Default for NetworkMining {
+    fn default() -> Self {
+        Self {
+            stratum_server_setup: StratumSetup::default()
+        }
+    }
 }
 
 impl NetworkTab for NetworkMining {
@@ -36,7 +44,7 @@ impl NetworkTab for NetworkMining {
         NetworkTabType::Mining
     }
 
-    fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
+    fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame, cb: &dyn PlatformCallbacks) {
         let server_stats = Node::get_stats();
 
         // Show message to enable node when it's not running.
@@ -67,15 +75,14 @@ impl NetworkTab for NetworkMining {
             return;
         }
 
-        let stratum_stats = Node::get_stratum_stats();
-
         // Show stratum server setup when mining server is not running.
+        let stratum_stats = Node::get_stratum_stats();
         if !stratum_stats.is_running {
             ScrollArea::vertical()
                 .id_source("stratum_setup_scroll")
                 .auto_shrink([false; 2])
                 .show(ui, |ui| {
-                    self.stratum_server_setup.ui(ui, cb);
+                    self.stratum_server_setup.ui(ui, frame, cb);
                 });
             return;
         }
@@ -192,23 +199,9 @@ impl NetworkTab for NetworkMining {
             });
         }
     }
-
-    fn on_modal_ui(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
-        match modal.id {
-            StratumSetup::STRATUM_PORT_MODAL => {
-                self.stratum_server_setup.port_modal(ui, modal, cb);
-            },
-            StratumSetup::ATTEMPT_TIME_MODAL => {
-                self.stratum_server_setup.attempt_modal(ui, modal, cb);
-            },
-            StratumSetup::MIN_SHARE_DIFF_MODAL => {
-                self.stratum_server_setup.min_diff_modal(ui, modal, cb);
-            },
-            _ => {}
-        }
-    }
 }
 
+/// Height of Stratum server worker list item.
 const WORKER_ITEM_HEIGHT: f32 = 76.0;
 
 /// Draw worker statistics item.

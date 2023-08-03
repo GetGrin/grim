@@ -12,16 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::{Id, RichText, TextStyle, Ui, Widget};
+use egui::{Id, RichText, TextStyle, Widget};
 
 use crate::gui::Colors;
 use crate::gui::icons::{BARBELL, HARD_DRIVES, PLUG, TIMER};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Modal, ModalPosition, View};
+use crate::gui::views::{Modal, View};
 use crate::gui::views::network::settings::NetworkSettings;
+use crate::gui::views::types::{ModalContainer, ModalPosition};
 use crate::node::{Node, NodeConfig};
 
-/// Stratum server setup ui section.
+/// Stratum server setup section content.
 pub struct StratumSetup {
     /// IP Addresses available at system.
     available_ips: Vec<String>,
@@ -38,8 +39,18 @@ pub struct StratumSetup {
     attempt_time_edit: String,
 
     /// Minimum share difficulty value to request from miners.
-    min_share_diff_edit: String
+    min_share_diff_edit: String,
+
+    /// [`Modal`] identifiers allowed at this ui container.
+    modal_ids: Vec<&'static str>
 }
+
+/// Identifier for stratum port [`Modal`].
+const STRATUM_PORT_MODAL: &'static str = "stratum_port";
+/// Identifier for attempt time [`Modal`].
+const ATTEMPT_TIME_MODAL: &'static str = "stratum_attempt_time";
+/// Identifier for minimum share difficulty [`Modal`].
+const MIN_SHARE_DIFF_MODAL: &'static str = "stratum_min_share_diff";
 
 impl Default for StratumSetup {
     fn default() -> Self {
@@ -51,20 +62,40 @@ impl Default for StratumSetup {
             stratum_port_available_edit: is_port_available,
             is_port_available,
             attempt_time_edit: NodeConfig::get_stratum_attempt_time(),
-            min_share_diff_edit: NodeConfig::get_stratum_min_share_diff()
+            min_share_diff_edit: NodeConfig::get_stratum_min_share_diff(),
+            modal_ids: vec![
+                STRATUM_PORT_MODAL,
+                ATTEMPT_TIME_MODAL,
+                MIN_SHARE_DIFF_MODAL
+            ]
+        }
+    }
+}
+
+impl ModalContainer for StratumSetup {
+    fn modal_ids(&self) -> &Vec<&'static str> {
+        &self.modal_ids
+    }
+
+    fn modal_ui(&mut self,
+                ui: &mut egui::Ui,
+                _: &mut eframe::Frame,
+                modal: &Modal,
+                cb: &dyn PlatformCallbacks) {
+        match modal.id {
+            STRATUM_PORT_MODAL => self.port_modal(ui, modal, cb),
+            ATTEMPT_TIME_MODAL => self.attempt_modal(ui, modal, cb),
+            MIN_SHARE_DIFF_MODAL => self.min_diff_modal(ui, modal, cb),
+            _ => {}
         }
     }
 }
 
 impl StratumSetup {
-    /// Identifier for stratum port [`Modal`].
-    pub const STRATUM_PORT_MODAL: &'static str = "stratum_port";
-    /// Identifier for attempt time [`Modal`].
-    pub const ATTEMPT_TIME_MODAL: &'static str = "stratum_attempt_time";
-    /// Identifier for minimum share difficulty [`Modal`].
-    pub const MIN_SHARE_DIFF_MODAL: &'static str = "stratum_min_share_diff";
+    pub fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame, cb: &dyn PlatformCallbacks) {
+        // Draw modal content for current ui container.
+        self.current_modal_ui(ui, frame, cb);
 
-    pub fn ui(&mut self, ui: &mut Ui, cb: &dyn PlatformCallbacks) {
         View::sub_title(ui, format!("{} {}", HARD_DRIVES, t!("network_mining.server")));
         View::horizontal_line(ui, Colors::STROKE);
         ui.add_space(6.0);
@@ -150,7 +181,7 @@ impl StratumSetup {
     }
 
     /// Draw stratum port value setup content.
-    fn port_setup_ui(&mut self, ui: &mut Ui, cb: &dyn PlatformCallbacks) {
+    fn port_setup_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         ui.label(RichText::new(t!("network_settings.stratum_port"))
             .size(16.0)
             .color(Colors::GRAY)
@@ -163,7 +194,7 @@ impl StratumSetup {
             self.stratum_port_edit = port;
             self.stratum_port_available_edit = self.is_port_available;
             // Show stratum port modal.
-            Modal::new(Self::STRATUM_PORT_MODAL)
+            Modal::new(STRATUM_PORT_MODAL)
                 .position(ModalPosition::CenterTop)
                 .title(t!("network_settings.change_value"))
                 .show();
@@ -182,7 +213,7 @@ impl StratumSetup {
     }
 
     /// Draw stratum port [`Modal`] content.
-    pub fn port_modal(&mut self, ui: &mut Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
+    fn port_modal(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.stratum_port"))
@@ -257,7 +288,7 @@ impl StratumSetup {
     }
 
     /// Draw attempt time value setup content.
-    fn attempt_time_ui(&mut self, ui: &mut Ui, cb: &dyn PlatformCallbacks) {
+    fn attempt_time_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         ui.label(RichText::new(t!("network_settings.attempt_time"))
             .size(16.0)
             .color(Colors::GRAY)
@@ -270,7 +301,7 @@ impl StratumSetup {
             self.attempt_time_edit = time;
 
             // Show attempt time modal.
-            Modal::new(Self::ATTEMPT_TIME_MODAL)
+            Modal::new(ATTEMPT_TIME_MODAL)
                 .position(ModalPosition::CenterTop)
                 .title(t!("network_settings.change_value"))
                 .show();
@@ -285,7 +316,7 @@ impl StratumSetup {
     }
 
     /// Draw attempt time [`Modal`] content.
-    pub fn attempt_modal(&mut self, ui: &mut Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
+    fn attempt_modal(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.attempt_time"))
@@ -348,7 +379,7 @@ impl StratumSetup {
     }
 
     /// Draw minimum share difficulty value setup content.
-    fn min_diff_ui(&mut self, ui: &mut Ui, cb: &dyn PlatformCallbacks) {
+    fn min_diff_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         ui.label(RichText::new(t!("network_settings.min_share_diff"))
             .size(16.0)
             .color(Colors::GRAY)
@@ -361,7 +392,7 @@ impl StratumSetup {
             self.min_share_diff_edit = diff;
 
             // Show share difficulty setup modal.
-            Modal::new(Self::MIN_SHARE_DIFF_MODAL)
+            Modal::new(MIN_SHARE_DIFF_MODAL)
                 .position(ModalPosition::CenterTop)
                 .title(t!("network_settings.change_value"))
                 .show();
@@ -371,7 +402,7 @@ impl StratumSetup {
     }
 
     /// Draw minimum acceptable share difficulty [`Modal`] content.
-    pub fn min_diff_modal(&mut self, ui: &mut Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
+    fn min_diff_modal(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.min_share_diff"))
@@ -435,7 +466,7 @@ impl StratumSetup {
 }
 
 /// Reminder to restart enabled node to show on edit setting at [`Modal`].
-pub fn server_restart_required_ui(ui: &mut Ui) {
+pub fn server_restart_required_ui(ui: &mut egui::Ui) {
     if Node::get_stratum_stats().is_running {
         ui.add_space(12.0);
         ui.label(RichText::new(t!("network_mining.restart_server_required"))

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::{Id, RichText, TextStyle, Ui, Widget};
+use egui::{Id, RichText, TextStyle, Widget};
 use egui_extras::{Size, StripBuilder};
 use grin_core::global::ChainTypes;
 
@@ -20,11 +20,12 @@ use crate::AppConfig;
 use crate::gui::Colors;
 use crate::gui::icons::{CLIPBOARD_TEXT, CLOCK_CLOCKWISE, COMPUTER_TOWER, COPY, PLUG, POWER, SHIELD, SHIELD_SLASH};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Modal, ModalPosition, NetworkContent, View};
+use crate::gui::views::{Modal, NetworkContent, View};
 use crate::gui::views::network::settings::NetworkSettings;
+use crate::gui::views::types::{ModalContainer, ModalPosition};
 use crate::node::{Node, NodeConfig};
 
-/// Integrated node server setup ui section.
+/// Integrated node general setup section content.
 pub struct NodeSetup {
     /// IP Addresses available at system.
     available_ips: Vec<String>,
@@ -42,7 +43,19 @@ pub struct NodeSetup {
 
     /// Future Time Limit value.
     ftl_edit: String,
+
+    /// [`Modal`] identifiers allowed at this ui container.
+    modal_ids: Vec<&'static str>
 }
+
+/// Identifier for API port value [`Modal`].
+pub const API_PORT_MODAL: &'static str = "api_port";
+/// Identifier for API secret value [`Modal`].
+pub const API_SECRET_MODAL: &'static str = "api_secret";
+/// Identifier for Foreign API secret value [`Modal`].
+pub const FOREIGN_API_SECRET_MODAL: &'static str = "foreign_api_secret";
+/// Identifier for FTL value [`Modal`].
+pub const FTL_MODAL: &'static str = "ftl";
 
 impl Default for NodeSetup {
     fn default() -> Self {
@@ -55,17 +68,41 @@ impl Default for NodeSetup {
             is_api_port_available,
             secret_edit: "".to_string(),
             ftl_edit: NodeConfig::get_ftl(),
+            modal_ids: vec![
+                API_PORT_MODAL,
+                API_SECRET_MODAL,
+                FOREIGN_API_SECRET_MODAL,
+                FTL_MODAL
+            ]
+        }
+    }
+}
+
+impl ModalContainer for NodeSetup {
+    fn modal_ids(&self) -> &Vec<&'static str> {
+        &self.modal_ids
+    }
+
+    fn modal_ui(&mut self,
+                ui: &mut egui::Ui,
+                _: &mut eframe::Frame,
+                modal: &Modal,
+                cb: &dyn PlatformCallbacks) {
+        match modal.id {
+            API_PORT_MODAL => self.api_port_modal(ui, modal, cb),
+            API_SECRET_MODAL => self.secret_modal(ui, modal, cb),
+            FOREIGN_API_SECRET_MODAL => self.secret_modal(ui, modal, cb),
+            FTL_MODAL => self.ftl_modal(ui, modal, cb),
+            _ => {}
         }
     }
 }
 
 impl NodeSetup {
-    pub const API_PORT_MODAL: &'static str = "api_port";
-    pub const API_SECRET_MODAL: &'static str = "api_secret";
-    pub const FOREIGN_API_SECRET_MODAL: &'static str = "foreign_api_secret";
-    pub const FTL_MODAL: &'static str = "ftl";
+    pub fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame, cb: &dyn PlatformCallbacks) {
+        // Draw modal content for current ui container.
+        self.current_modal_ui(ui, frame, cb);
 
-    pub fn ui(&mut self, ui: &mut Ui, cb: &dyn PlatformCallbacks) {
         View::sub_title(ui, format!("{} {}", COMPUTER_TOWER, t!("network_settings.server")));
         View::horizontal_line(ui, Colors::STROKE);
         ui.add_space(4.0);
@@ -150,10 +187,10 @@ impl NodeSetup {
                 // Show API port setup.
                 self.api_port_setup_ui(ui, cb);
                 // Show API secret setup.
-                self.secret_ui(Self::API_SECRET_MODAL, ui, cb);
+                self.secret_ui(API_SECRET_MODAL, ui, cb);
                 ui.add_space(12.0);
                 // Show Foreign API secret setup.
-                self.secret_ui(Self::FOREIGN_API_SECRET_MODAL, ui, cb);
+                self.secret_ui(FOREIGN_API_SECRET_MODAL, ui, cb);
                 ui.add_space(6.0);
             });
         }
@@ -183,7 +220,7 @@ impl NodeSetup {
     }
 
     /// Draw [`ChainTypes`] setup content.
-    fn chain_type_ui(&mut self, ui: &mut Ui) {
+    fn chain_type_ui(&mut self, ui: &mut egui::Ui) {
         let saved_chain_type = AppConfig::chain_type();
         let mut selected_chain_type = saved_chain_type;
 
@@ -207,7 +244,7 @@ impl NodeSetup {
     }
 
     /// Draw API port setup content.
-    fn api_port_setup_ui(&mut self, ui: &mut Ui, cb: &dyn PlatformCallbacks) {
+    fn api_port_setup_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         ui.label(RichText::new(t!("network_settings.api_port"))
             .size(16.0)
             .color(Colors::GRAY)
@@ -221,7 +258,7 @@ impl NodeSetup {
             self.api_port_available_edit = self.is_api_port_available;
 
             // Show API port modal.
-            Modal::new(Self::API_PORT_MODAL)
+            Modal::new(API_PORT_MODAL)
                 .position(ModalPosition::CenterTop)
                 .title(t!("network_settings.change_value"))
                 .show();
@@ -240,7 +277,7 @@ impl NodeSetup {
     }
 
     /// Draw API port [`Modal`] content.
-    pub fn api_port_modal(&mut self, ui: &mut Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
+    fn api_port_modal(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.api_port"))
@@ -309,9 +346,9 @@ impl NodeSetup {
     }
 
     /// Draw API secret token setup content.
-    fn secret_ui(&mut self, modal_id: &'static str, ui: &mut Ui, cb: &dyn PlatformCallbacks) {
+    fn secret_ui(&mut self, modal_id: &'static str, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         let secret_title = match modal_id {
-            Self::API_SECRET_MODAL => t!("network_settings.api_secret"),
+            API_SECRET_MODAL => t!("network_settings.api_secret"),
             _ => t!("network_settings.foreign_api_secret")
         };
         ui.label(RichText::new(secret_title)
@@ -321,7 +358,7 @@ impl NodeSetup {
         ui.add_space(6.0);
 
         let secret_value = match modal_id {
-            Self::API_SECRET_MODAL => NodeConfig::get_api_secret(),
+            API_SECRET_MODAL => NodeConfig::get_api_secret(),
             _ => NodeConfig::get_foreign_api_secret()
         };
 
@@ -344,11 +381,11 @@ impl NodeSetup {
     }
 
     /// Draw API secret token [`Modal`] content.
-    pub fn secret_modal(&mut self, ui: &mut Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
+    fn secret_modal(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             let description = match modal.id {
-                Self::API_SECRET_MODAL => t!("network_settings.api_secret"),
+                API_SECRET_MODAL => t!("network_settings.api_secret"),
                 _ => t!("network_settings.foreign_api_secret")
             };
             ui.label(RichText::new(description).size(17.0).color(Colors::GRAY));
@@ -417,7 +454,7 @@ impl NodeSetup {
             let on_save = || {
                 let secret = self.secret_edit.clone();
                 match modal.id {
-                    Self::API_SECRET_MODAL => {
+                    API_SECRET_MODAL => {
                         NodeConfig::save_api_secret(&secret);
                     }
                     _ => {
@@ -444,7 +481,7 @@ impl NodeSetup {
     }
 
     /// Draw FTL setup content.
-    fn ftl_ui(&mut self, ui: &mut Ui, cb: &dyn PlatformCallbacks) {
+    fn ftl_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         ui.label(RichText::new(t!("network_settings.ftl"))
             .size(16.0)
             .color(Colors::GRAY)
@@ -456,7 +493,7 @@ impl NodeSetup {
             // Setup values for modal.
             self.ftl_edit = ftl;
             // Show ftl value setup modal.
-            Modal::new(Self::FTL_MODAL)
+            Modal::new(FTL_MODAL)
                 .position(ModalPosition::CenterTop)
                 .title(t!("network_settings.change_value"))
                 .show();
@@ -470,7 +507,7 @@ impl NodeSetup {
     }
 
     /// Draw FTL [`Modal`] content.
-    pub fn ftl_modal(&mut self, ui: &mut Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
+    fn ftl_modal(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.ftl"))
@@ -533,7 +570,7 @@ impl NodeSetup {
     }
 
     /// Draw chain validation mode setup content.
-    pub fn validation_mode_ui(&mut self, ui: &mut Ui) {
+    pub fn validation_mode_ui(&mut self, ui: &mut egui::Ui) {
         let validate = NodeConfig::is_full_chain_validation();
         View::checkbox(ui, validate, t!("network_settings.full_validation"), || {
             NodeConfig::toggle_full_chain_validation();
@@ -547,7 +584,7 @@ impl NodeSetup {
     }
 
     /// Draw archive mode setup content.
-    pub fn archive_mode_ui(&mut self, ui: &mut Ui) {
+    fn archive_mode_ui(&mut self, ui: &mut egui::Ui) {
         let archive_mode = NodeConfig::is_archive_mode();
         View::checkbox(ui, archive_mode, t!("network_settings.archive_mode"), || {
             NodeConfig::toggle_archive_mode();

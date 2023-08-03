@@ -13,13 +13,11 @@
 // limitations under the License.
 
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::Modal;
 
 /// Network tab content interface.
 pub trait NetworkTab {
     fn get_type(&self) -> NetworkTabType;
-    fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks);
-    fn on_modal_ui(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks);
+    fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame, cb: &dyn PlatformCallbacks);
 }
 
 /// Type of [`NetworkTab`] content.

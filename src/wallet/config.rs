@@ -43,7 +43,7 @@ impl WalletConfig {
     pub fn create(name: String, external_node_url: Option<String>) -> WalletConfig {
         let id = chrono::Utc::now().timestamp();
         let chain_type = AppConfig::chain_type();
-        let config_path = Self::get_config_file_path(&chain_type, id);
+        let config_path = Self::get_config_file_path(chain_type, id);
 
         let config = WalletConfig { chain_type, id, name, external_node_url };
         Settings::write_to_file(&config, config_path);
@@ -61,8 +61,10 @@ impl WalletConfig {
     }
 
     /// Get wallets base directory path for provided [`ChainTypes`].
-    pub fn get_base_path(chain_type: &ChainTypes) -> PathBuf {
-        let mut wallets_path = Settings::get_base_path(Some(chain_type.shortname()));
+    pub fn get_base_path(chain_type: ChainTypes) -> PathBuf {
+        let chain_name = chain_type.shortname();
+        let sub_dir = Some(chain_name.as_str());
+        let mut wallets_path = Settings::get_base_path(sub_dir);
         wallets_path.push(BASE_DIR_NAME);
         // Create wallets base directory if it doesn't exist.
         if !wallets_path.exists() {
@@ -72,7 +74,7 @@ impl WalletConfig {
     }
 
     /// Get config file path for provided [`ChainTypes`] and wallet identifier.
-    fn get_config_file_path(chain_type: &ChainTypes, id: i64) -> PathBuf {
+    fn get_config_file_path(chain_type: ChainTypes, id: i64) -> PathBuf {
         let mut config_path = Self::get_base_path(chain_type);
         config_path.push(id.to_string());
         // Create if the config path doesn't exist.
@@ -86,14 +88,14 @@ impl WalletConfig {
     /// Get current wallet data path.
     pub fn get_data_path(&self) -> String {
         let chain_type = AppConfig::chain_type();
-        let mut config_path = Self::get_base_path(&chain_type);
+        let mut config_path = Self::get_base_path(chain_type);
         config_path.push(self.id.to_string());
         config_path.to_str().unwrap().to_string()
     }
 
     /// Save wallet config.
     fn save(&self) {
-        let config_path = Self::get_config_file_path(&self.chain_type, self.id);
+        let config_path = Self::get_config_file_path(self.chain_type, self.id);
         Settings::write_to_file(self, config_path);
     }
 

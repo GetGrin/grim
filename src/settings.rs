@@ -120,7 +120,7 @@ impl Settings {
         }
     }
 
-    /// Initialize config from provided file path or load default if file not exists.
+    /// Initialize config from provided file path or set [`Default`] if file not exists.
     pub fn init_config<T: Default + Serialize + DeserializeOwned>(path: PathBuf) -> T {
         let parsed = Self::read_from_file::<T>(path.clone());
         if !path.exists() || !parsed.is_err() {
@@ -154,7 +154,7 @@ impl Settings {
     }
 
     /// Get base directory path for config.
-    pub fn get_base_path(sub_dir: Option<String>) -> PathBuf {
+    pub fn get_base_path(sub_dir: Option<&str>) -> PathBuf {
         // Check if dir exists.
         let mut path = match dirs::home_dir() {
             Some(p) => p,
@@ -172,7 +172,7 @@ impl Settings {
     }
 
     /// Get config file path from provided name and sub-directory if needed.
-    pub fn get_config_path(config_name: &str, sub_dir: Option<String>) -> PathBuf {
+    pub fn get_config_path(config_name: &str, sub_dir: Option<&str>) -> PathBuf {
         let mut settings_path = Self::get_base_path(sub_dir);
         settings_path.push(config_name);
         settings_path

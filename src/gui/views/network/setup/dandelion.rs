@@ -12,16 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::{Id, RichText, TextStyle, Ui, Widget};
+use egui::{Id, RichText, TextStyle, Widget};
 
 use crate::gui::Colors;
 use crate::gui::icons::{CLOCK_COUNTDOWN, GRAPH, TIMER, WATCH};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Modal, ModalPosition, View};
+use crate::gui::views::{Modal, View};
 use crate::gui::views::network::settings::NetworkSettings;
+use crate::gui::views::types::{ModalContainer, ModalPosition};
 use crate::node::NodeConfig;
 
-/// Dandelion setup ui section.
+/// Dandelion server setup section content.
 pub struct DandelionSetup {
     /// Epoch duration value in seconds.
     epoch_edit: String,
@@ -34,7 +35,19 @@ pub struct DandelionSetup {
 
     /// Stem phase probability value (stem 90% of the time, fluff 10% of the time by default).
     stem_prob_edit: String,
+
+    /// [`Modal`] identifiers allowed at this ui container.
+    modal_ids: Vec<&'static str>,
 }
+
+/// Identifier epoch duration value [`Modal`].
+pub const EPOCH_MODAL: &'static str = "epoch_secs";
+/// Identifier for embargo expiration time value [`Modal`].
+pub const EMBARGO_MODAL: &'static str = "embargo_secs";
+/// Identifier for aggregation period value [`Modal`].
+pub const AGGREGATION_MODAL: &'static str = "aggregation_secs";
+/// Identifier for Stem phase probability value [`Modal`].
+pub const STEM_PROBABILITY_MODAL: &'static str = "stem_probability";
 
 impl Default for DandelionSetup {
     fn default() -> Self {
@@ -42,22 +55,42 @@ impl Default for DandelionSetup {
             epoch_edit: NodeConfig::get_dandelion_epoch(),
             embargo_edit: NodeConfig::get_reorg_cache_period(),
             aggregation_edit: NodeConfig::get_dandelion_aggregation(),
-            stem_prob_edit: NodeConfig::get_stem_probability()
+            stem_prob_edit: NodeConfig::get_stem_probability(),
+            modal_ids: vec![
+                EPOCH_MODAL,
+                EMBARGO_MODAL,
+                AGGREGATION_MODAL,
+                STEM_PROBABILITY_MODAL
+            ]
+        }
+    }
+}
+
+impl ModalContainer for DandelionSetup {
+    fn modal_ids(&self) -> &Vec<&'static str> {
+        &self.modal_ids
+    }
+
+    fn modal_ui(&mut self,
+                ui: &mut egui::Ui,
+                _: &mut eframe::Frame,
+                modal: &Modal,
+                cb: &dyn PlatformCallbacks) {
+        match modal.id {
+            EPOCH_MODAL => self.epoch_modal(ui, modal, cb),
+            EMBARGO_MODAL => self.embargo_modal(ui, modal, cb),
+            AGGREGATION_MODAL => self.aggregation_modal(ui, modal, cb),
+            STEM_PROBABILITY_MODAL => self.stem_prob_modal(ui, modal, cb),
+            _ => {}
         }
     }
 }
 
 impl DandelionSetup {
-    /// Identifier epoch duration value [`Modal`].
-    pub const EPOCH_MODAL: &'static str = "epoch_secs";
-    /// Identifier for embargo expiration time value [`Modal`].
-    pub const EMBARGO_MODAL: &'static str = "embargo_secs";
-    /// Identifier for aggregation period value [`Modal`].
-    pub const AGGREGATION_MODAL: &'static str = "aggregation_secs";
-    /// Identifier for Stem phase probability value [`Modal`].
-    pub const STEM_PROBABILITY_MODAL: &'static str = "stem_probability";
+    pub fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame, cb: &dyn PlatformCallbacks) {
+        // Draw modal content for current ui container.
+        self.current_modal_ui(ui, frame, cb);
 
-    pub fn ui(&mut self, ui: &mut Ui, cb: &dyn PlatformCallbacks) {
         View::sub_title(ui, format!("{} {}", GRAPH, "Dandelion"));
         View::horizontal_line(ui, Colors::STROKE);
         ui.add_space(6.0);
@@ -101,7 +134,7 @@ impl DandelionSetup {
     }
 
     /// Draw epoch duration setup content.
-    fn epoch_ui(&mut self, ui: &mut Ui, cb: &dyn PlatformCallbacks) {
+    fn epoch_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         ui.label(RichText::new(t!("network_settings.epoch_duration"))
             .size(16.0)
             .color(Colors::GRAY)
@@ -113,7 +146,7 @@ impl DandelionSetup {
             // Setup values for modal.
             self.epoch_edit = epoch;
             // Show epoch setup modal.
-            Modal::new(Self::EPOCH_MODAL)
+            Modal::new(EPOCH_MODAL)
                 .position(ModalPosition::CenterTop)
                 .title(t!("network_settings.change_value"))
                 .show();
@@ -123,7 +156,7 @@ impl DandelionSetup {
     }
 
     /// Draw epoch duration [`Modal`] content.
-    pub fn epoch_modal(&mut self, ui: &mut Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
+    fn epoch_modal(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.epoch_duration"))
@@ -186,7 +219,7 @@ impl DandelionSetup {
     }
 
     /// Draw embargo expiration time setup content.
-    fn embargo_ui(&mut self, ui: &mut Ui, cb: &dyn PlatformCallbacks) {
+    fn embargo_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         ui.label(RichText::new(t!("network_settings.embargo_timer"))
             .size(16.0)
             .color(Colors::GRAY)
@@ -198,16 +231,17 @@ impl DandelionSetup {
             // Setup values for modal.
             self.embargo_edit = embargo;
             // Show embargo setup modal.
-            Modal::new(Self::EMBARGO_MODAL)
+            Modal::new(EMBARGO_MODAL)
                 .position(ModalPosition::CenterTop)
                 .title(t!("network_settings.change_value"))
                 .show();
+            cb.show_keyboard();
         });
         ui.add_space(6.0);
     }
 
     /// Draw epoch duration [`Modal`] content.
-    pub fn embargo_modal(&mut self, ui: &mut Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
+    fn embargo_modal(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.embargo_timer"))
@@ -270,7 +304,7 @@ impl DandelionSetup {
     }
 
     /// Draw aggregation period setup content.
-    fn aggregation_ui(&mut self, ui: &mut Ui, cb: &dyn PlatformCallbacks) {
+    fn aggregation_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         ui.label(RichText::new(t!("network_settings.aggregation_period"))
             .size(16.0)
             .color(Colors::GRAY)
@@ -282,7 +316,7 @@ impl DandelionSetup {
             // Setup values for modal.
             self.aggregation_edit = agg;
             // Show aggregation setup modal.
-            Modal::new(Self::AGGREGATION_MODAL)
+            Modal::new(AGGREGATION_MODAL)
                 .position(ModalPosition::CenterTop)
                 .title(t!("network_settings.change_value"))
                 .show();
@@ -292,7 +326,7 @@ impl DandelionSetup {
     }
 
     /// Draw aggregation period [`Modal`] content.
-    pub fn aggregation_modal(&mut self, ui: &mut Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
+    fn aggregation_modal(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.aggregation_period"))
@@ -355,7 +389,7 @@ impl DandelionSetup {
     }
 
     /// Draw stem phase probability setup content.
-    fn stem_prob_ui(&mut self, ui: &mut Ui, cb: &dyn PlatformCallbacks) {
+    fn stem_prob_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         ui.label(RichText::new(t!("network_settings.stem_probability"))
             .size(16.0)
             .color(Colors::GRAY)
@@ -367,7 +401,7 @@ impl DandelionSetup {
             // Setup values for modal.
             self.stem_prob_edit = stem_prob;
             // Show stem probability setup modal.
-            Modal::new(Self::STEM_PROBABILITY_MODAL)
+            Modal::new(STEM_PROBABILITY_MODAL)
                 .position(ModalPosition::CenterTop)
                 .title(t!("network_settings.change_value"))
                 .show();
@@ -377,7 +411,7 @@ impl DandelionSetup {
     }
 
     /// Draw stem phase probability [`Modal`] content.
-    pub fn stem_prob_modal(&mut self, ui: &mut Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
+    fn stem_prob_modal(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.stem_probability"))

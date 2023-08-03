@@ -46,7 +46,7 @@ pub struct Wallets {
 impl Default for Wallets {
     fn default() -> Self {
         Self {
-            list: Self::init(&AppConfig::chain_type()),
+            list: Self::init(AppConfig::chain_type()),
             selected_id: None
         }
     }
@@ -54,7 +54,7 @@ impl Default for Wallets {
 
 impl Wallets {
     /// Initialize wallets from base directory for provided [`ChainType`].
-    fn init(chain_type: &ChainTypes) -> Vec<Wallet> {
+    fn init(chain_type: ChainTypes) -> Vec<Wallet> {
         let mut wallets = Vec::new();
         let wallets_dir = WalletConfig::get_base_path(chain_type);
         // Load wallets from base directory.
@@ -71,7 +71,7 @@ impl Wallets {
     }
 
     /// Reinitialize wallets for provided [`ChainTypes`].
-    pub fn reinit(&mut self, chain_type: &ChainTypes) {
+    pub fn reinit(&mut self, chain_type: ChainTypes) {
         self.list = Self::init(chain_type);
     }
 
@@ -103,7 +103,7 @@ impl Wallets {
 
     /// Open selected wallet.
     pub fn open_selected(&mut self, password: String) -> Result<(), Error> {
-        for mut w in self.list.iter_mut() {
+        for w in self.list.iter_mut() {
             if Some(w.config.id) == self.selected_id {
                 return w.open(password);
             }

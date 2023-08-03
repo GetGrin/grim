@@ -19,8 +19,8 @@ use grin_servers::DiffBlock;
 use crate::gui::Colors;
 use crate::gui::icons::{AT, COINS, CUBE_TRANSPARENT, HASH, HOURGLASS_LOW, HOURGLASS_MEDIUM, TIMER};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Modal, NetworkContent, View};
-use crate::gui::views::types::{NetworkTab, NetworkTabType};
+use crate::gui::views::{NetworkContent, View};
+use crate::gui::views::network::types::{NetworkTab, NetworkTabType};
 use crate::node::Node;
 
 /// Chain metrics tab content.
@@ -36,7 +36,7 @@ impl NetworkTab for NetworkMetrics {
         NetworkTabType::Metrics
     }
 
-    fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
+    fn ui(&mut self, ui: &mut egui::Ui, _: &mut eframe::Frame, _: &dyn PlatformCallbacks) {
         let server_stats = Node::get_stats();
         // Show message to enable node when it's not running.
         if !Node::is_running() {
@@ -145,8 +145,6 @@ impl NetworkTab for NetworkMetrics {
                 },
             );
     }
-
-    fn on_modal_ui(&mut self, _: &mut egui::Ui, _: &Modal, _: &dyn PlatformCallbacks) {}
 }
 
 const BLOCK_ITEM_HEIGHT: f32 = 77.0;

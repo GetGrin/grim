@@ -20,7 +20,8 @@ use lazy_static::lazy_static;
 
 use crate::gui::Colors;
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Modal, ModalContainer, NetworkContent, View, WalletsContent};
+use crate::gui::views::{Modal, NetworkContent, View, WalletsContent};
+use crate::gui::views::types::ModalContainer;
 use crate::node::Node;
 
 lazy_static! {
@@ -66,6 +67,17 @@ impl ModalContainer for Root {
     fn modal_ids(&self) -> &Vec<&'static str> {
         &self.allowed_modal_ids
     }
+
+    fn modal_ui(&mut self,
+                ui: &mut egui::Ui,
+                frame: &mut eframe::Frame,
+                modal: &Modal,
+                _: &dyn PlatformCallbacks) {
+        match modal.id {
+            Self::EXIT_MODAL_ID => self.exit_modal_content(ui, frame, modal),
+            _ => {}
+        }
+    }
 }
 
 impl Root {
@@ -76,10 +88,8 @@ impl Root {
     pub const SIDE_PANEL_WIDTH: f32 = 400.0;
 
     pub fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame, cb: &dyn PlatformCallbacks) {
-        // Show opened exit confirmation modal content.
-        if self.can_draw_modal() {
-            self.exit_modal_content(ui, frame);
-        }
+        // Draw modal content for current ui container.
+        self.current_modal_ui(ui, frame, cb);
 
         let (is_panel_open, panel_width) = Self::network_panel_state_width(frame);
         // Show network content.
@@ -148,59 +158,57 @@ impl Root {
     }
 
     /// Draw exit confirmation modal content.
-    fn exit_modal_content(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame) {
-        Modal::ui(ui.ctx(), |ui, modal| {
-            if self.show_exit_progress {
-                if !Node::is_running() {
-                    self.exit(frame);
-                    modal.close();
-                }
-                ui.add_space(16.0);
-                ui.vertical_centered(|ui| {
-                    View::small_loading_spinner(ui);
-                    ui.add_space(12.0);
-                    ui.label(RichText::new(t!("sync_status.shutdown"))
-                        .size(17.0)
-                        .color(Colors::TEXT));
-                });
-                ui.add_space(10.0);
-            } else {
-                ui.add_space(8.0);
-                ui.vertical_centered(|ui| {
-                    ui.label(RichText::new(t!("modal_exit.description"))
-                        .size(17.0)
-                        .color(Colors::TEXT));
-                });
-                ui.add_space(10.0);
+    fn exit_modal_content(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame, modal: &Modal) {
+        if self.show_exit_progress {
+            if !Node::is_running() {
+                self.exit(frame);
+                modal.close();
+            }
+            ui.add_space(16.0);
+            ui.vertical_centered(|ui| {
+                View::small_loading_spinner(ui);
+                ui.add_space(12.0);
+                ui.label(RichText::new(t!("sync_status.shutdown"))
+                    .size(17.0)
+                    .color(Colors::TEXT));
+            });
+            ui.add_space(10.0);
+        } else {
+            ui.add_space(8.0);
+            ui.vertical_centered(|ui| {
+                ui.label(RichText::new(t!("modal_exit.description"))
+                    .size(17.0)
+                    .color(Colors::TEXT));
+            });
+            ui.add_space(10.0);
 
-                // Show modal buttons.
-                ui.scope(|ui| {
-                    // Setup spacing between buttons.
-                    ui.spacing_mut().item_spacing = egui::Vec2::new(6.0, 0.0);
+            // Show modal buttons.
+            ui.scope(|ui| {
+                // Setup spacing between buttons.
+                ui.spacing_mut().item_spacing = egui::Vec2::new(6.0, 0.0);
 
-                    ui.columns(2, |columns| {
-                        columns[0].vertical_centered_justified(|ui| {
-                            View::button(ui, t!("modal_exit.exit"), Colors::WHITE, || {
-                                if !Node::is_running() {
-                                    self.exit(frame);
-                                    modal.close();
-                                } else {
-                                    Node::stop(true);
-                                    modal.disable_closing();
-                                    self.show_exit_progress = true;
-                                }
-                            });
-                        });
-                        columns[1].vertical_centered_justified(|ui| {
-                            View::button(ui, t!("modal.cancel"), Colors::WHITE, || {
+                ui.columns(2, |columns| {
+                    columns[0].vertical_centered_justified(|ui| {
+                        View::button(ui, t!("modal_exit.exit"), Colors::WHITE, || {
+                            if !Node::is_running() {
+                                self.exit(frame);
                                 modal.close();
-                            });
+                            } else {
+                                Node::stop(true);
+                                modal.disable_closing();
+                                self.show_exit_progress = true;
+                            }
                         });
                     });
-                    ui.add_space(6.0);
+                    columns[1].vertical_centered_justified(|ui| {
+                        View::button(ui, t!("modal.cancel"), Colors::WHITE, || {
+                            modal.close();
+                        });
+                    });
                 });
-            }
-        });
+                ui.add_space(6.0);
+            });
+        }
     }
 
     /// Exit from the application.

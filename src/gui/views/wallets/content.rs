@@ -20,9 +20,9 @@ use crate::AppConfig;
 use crate::gui::Colors;
 use crate::gui::icons::{ARROW_LEFT, CARET_RIGHT, COMPUTER_TOWER, EYE, EYE_SLASH, FOLDER_LOCK, FOLDER_OPEN, GEAR, GLOBE, GLOBE_SIMPLE, LOCK_KEY, PLUS, SIDEBAR_SIMPLE, SUITCASE};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Modal, ModalContainer, ModalPosition, Root, TitlePanel, TitleType, View};
-use crate::gui::views::wallets::creation::{MnemonicSetup, WalletCreation};
-use crate::gui::views::wallets::setup::ConnectionSetup;
+use crate::gui::views::{Modal, Root, TitlePanel, View};
+use crate::gui::views::types::{ModalContainer, ModalPosition, TitleType};
+use crate::gui::views::wallets::creation::WalletCreation;
 use crate::gui::views::wallets::WalletContent;
 use crate::wallet::{Wallet, Wallets};
 
@@ -48,9 +48,12 @@ pub struct WalletsContent {
     /// Flag to show [`Wallet`] list at dual panel mode.
     show_list_at_dual_panel: bool,
 
-    /// [`Modal`] ids allowed at this ui container.
+    /// [`Modal`] identifiers allowed at this ui container.
     modal_ids: Vec<&'static str>
 }
+
+/// Identifier for wallet opening [`Modal`].
+const OPEN_WALLET_MODAL: &'static str = "open_wallet_modal";
 
 impl Default for WalletsContent {
     fn default() -> Self {
@@ -64,10 +67,8 @@ impl Default for WalletsContent {
             creation_content: WalletCreation::default(),
             show_list_at_dual_panel: true,
             modal_ids: vec![
-                Self::OPEN_WALLET_MODAL,
-                WalletCreation::NAME_PASS_MODAL,
-                MnemonicSetup::WORD_INPUT_MODAL,
-                ConnectionSetup::ADD_CONNECTION_URL_MODAL
+                OPEN_WALLET_MODAL,
+                WalletCreation::NAME_PASS_MODAL
             ]
         }
     }
@@ -77,38 +78,31 @@ impl ModalContainer for WalletsContent {
     fn modal_ids(&self) -> &Vec<&'static str> {
         &self.modal_ids
     }
+
+    fn modal_ui(&mut self,
+                ui: &mut egui::Ui,
+                _: &mut eframe::Frame,
+                modal: &Modal,
+                cb: &dyn PlatformCallbacks) {
+        match modal.id {
+            OPEN_WALLET_MODAL => self.open_wallet_modal_ui(ui, modal, cb),
+            WalletCreation::NAME_PASS_MODAL => {
+                self.creation_content.name_pass_modal_ui(ui, modal, cb)
+            },
+            _ => {}
+        }
+    }
 }
 
 impl WalletsContent {
-    /// Identifier for wallet opening [`Modal`].
-    const OPEN_WALLET_MODAL: &'static str = "open_wallet_modal";
-
     pub fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame, cb: &dyn PlatformCallbacks) {
-        // Show modal content for current ui container.
-        if self.can_draw_modal() {
-            Modal::ui(ui.ctx(), |ui, modal| {
-                match modal.id {
-                    Self::OPEN_WALLET_MODAL => {
-                        self.open_wallet_modal_ui(ui, modal, cb);
-                    },
-                    WalletCreation::NAME_PASS_MODAL => {
-                        self.creation_content.modal_ui(ui, modal, cb);
-                    },
-                    MnemonicSetup::WORD_INPUT_MODAL => {
-                        self.creation_content.mnemonic_setup.modal_ui(ui, modal, cb);
-                    }
-                    ConnectionSetup::ADD_CONNECTION_URL_MODAL => {
-                        self.creation_content.network_setup.modal_ui(ui, modal, cb);
-                    }
-                    _ => {}
-                }
-            });
-        }
+        // Draw modal content for current ui container.
+        self.current_modal_ui(ui, frame, cb);
 
         // Setup list of wallets if chain type was changed.
         let chain_type = AppConfig::chain_type();
         if self.chain_type != chain_type {
-            self.wallets.reinit(&chain_type);
+            self.wallets.reinit(chain_type);
             self.chain_type = chain_type;
         }
         let empty_list = self.wallets.list.is_empty();
@@ -146,7 +140,7 @@ impl WalletsContent {
                 }
                 if create_wallet || !show_wallet {
                     // Show wallet creation content.
-                    self.creation_content.ui(ui, cb, |wallet| {
+                    self.creation_content.ui(ui, frame, cb, |wallet| {
                         // Add created wallet to list.
                         self.wallets.add(wallet);
                     });
@@ -207,7 +201,7 @@ impl WalletsContent {
                         let mut right_margin = if dual_panel { wallet_panel_width } else { 0.0 };
                         if scroll { right_margin += 6.0 }
                         // Show wallet creation button.
-                        self.create_wallet_btn_ui(ui, right_margin);
+                        self.create_wallet_btn_ui(ui, right_margin, cb);
                     }
                 });
         }
@@ -407,7 +401,10 @@ impl WalletsContent {
     }
 
     /// Draw floating button to show wallet creation [`Modal`].
-    fn create_wallet_btn_ui(&mut self, ui: &mut egui::Ui, right_margin: f32) {
+    fn create_wallet_btn_ui(&mut self,
+                            ui: &mut egui::Ui,
+                            right_margin: f32,
+                            cb: &dyn PlatformCallbacks) {
         egui::Window::new("create_wallet_button")
             .title_bar(false)
             .resizable(false)
@@ -416,7 +413,7 @@ impl WalletsContent {
             .frame(egui::Frame::default())
             .show(ui.ctx(), |ui| {
                 View::circle_button(ui, PLUS, || {
-                    self.creation_content.show_name_pass_modal();
+                    self.creation_content.show_name_pass_modal(cb);
                 });
             });
     }
@@ -428,7 +425,7 @@ impl WalletsContent {
         self.pass_edit = String::from("");
         self.wrong_pass = false;
         // Show modal.
-        Modal::new(Self::OPEN_WALLET_MODAL)
+        Modal::new(OPEN_WALLET_MODAL)
             .position(ModalPosition::CenterTop)
             .title(t!("wallets.open"))
             .show();

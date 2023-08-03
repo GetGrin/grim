@@ -21,33 +21,11 @@ use lazy_static::lazy_static;
 
 use crate::gui::Colors;
 use crate::gui::views::{Root, View};
+use crate::gui::views::types::{ModalPosition, ModalState};
 
 lazy_static! {
     /// Showing [`Modal`] state to be accessible from different ui parts.
     static ref MODAL_STATE: RwLock<ModalState> = RwLock::new(ModalState::default());
-}
-
-#[derive(Default)]
-struct ModalState {
-    modal: Option<Modal>
-}
-
-/// Contains ids to draw current [`Modal`] at this ui container if it's possible.
-pub trait ModalContainer {
-    /// List of [`Modal`] ids to draw at current ui container.
-    fn modal_ids(&self) -> &Vec<&'static str>;
-
-    /// Check if it's possible to draw [`Modal`] at current ui container.
-    fn can_draw_modal(&self) -> bool {
-        let modal_id = Modal::opened();
-        modal_id.is_some() && self.modal_ids().contains(&modal_id.unwrap())
-    }
-}
-
-/// Position of [`Modal`] on the screen.
-pub enum ModalPosition {
-    CenterTop,
-    Center
 }
 
 /// Stores data to draw modal [`egui::Window`] at ui.

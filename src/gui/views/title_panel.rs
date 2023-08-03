@@ -17,18 +17,14 @@ use egui::style::Margin;
 use egui_extras::{Size, StripBuilder};
 
 use crate::gui::Colors;
+use crate::gui::views::types::TitleType;
 use crate::gui::views::View;
-
-/// Represents title content, can be single title or with animated sub-title.
-pub enum TitleType {
-    Single(String),
-    WithSubTitle(String, String, bool)
-}
 
 /// Title panel with left/right action buttons and text in the middle.
 pub struct TitlePanel;
 
 impl TitlePanel {
+    /// Default [`TitlePanel`] content height.
     pub const DEFAULT_HEIGHT: f32 = 54.0;
 
     pub fn ui(title: TitleType,
@@ -94,7 +90,7 @@ impl TitlePanel {
         }
     }
 
-    /// Draw title text for [`TitleType::WithSubTitle`] type.
+    /// Draw content for [`TitleType::WithSubTitle`] type.
     fn with_sub_title(builder: StripBuilder, title: String, subtitle: String, animate_sub: bool) {
         builder
             .size(Size::remainder())

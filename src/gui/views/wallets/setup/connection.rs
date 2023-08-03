@@ -18,7 +18,8 @@ use url::Url;
 use crate::gui::Colors;
 use crate::gui::icons::{GLOBE, GLOBE_SIMPLE};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Modal, ModalPosition, View};
+use crate::gui::views::{Modal, View};
+use crate::gui::views::types::{ModalContainer, ModalPosition};
 use crate::gui::views::wallets::setup::ConnectionMethod;
 use crate::wallet::{ConnectionsConfig, ExternalConnection};
 
@@ -29,13 +30,19 @@ pub struct ConnectionSetup {
 
     /// Flag to check if modal was just opened.
     first_modal_launch: bool,
-    /// External node connection URL value for [`Modal`].
+    /// External connection URL value for [`Modal`].
     ext_node_url_edit: String,
-    /// External node connection API secret value for [`Modal`].
+    /// External connection API secret value for [`Modal`].
     ext_node_secret_edit: String,
     /// Flag to show URL format error.
     ext_node_url_error: bool,
+
+    /// [`Modal`] identifiers allowed at this ui container.
+    modal_ids: Vec<&'static str>
 }
+
+/// External connection [`Modal`] identifier.
+pub const EXT_CONNECTION_MODAL: &'static str = "ext_connection_modal";
 
 impl Default for ConnectionSetup {
     fn default() -> Self {
@@ -44,21 +51,38 @@ impl Default for ConnectionSetup {
             first_modal_launch: true,
             ext_node_url_edit: "".to_string(),
             ext_node_secret_edit: "".to_string(),
-            ext_node_url_error: false
+            ext_node_url_error: false,
+            modal_ids: vec![
+                EXT_CONNECTION_MODAL
+            ]
+        }
+    }
+}
+
+impl ModalContainer for ConnectionSetup {
+    fn modal_ids(&self) -> &Vec<&'static str> {
+        &self.modal_ids
+    }
+
+    fn modal_ui(&mut self,
+                ui: &mut egui::Ui,
+                _: &mut eframe::Frame,
+                modal: &Modal,
+                cb: &dyn PlatformCallbacks) {
+        match modal.id {
+            EXT_CONNECTION_MODAL => self.ext_conn_modal_ui(ui, modal, cb),
+            _ => {}
         }
     }
 }
 
 impl ConnectionSetup {
-    /// External node connection [`Modal`] identifier.
-    pub const ADD_CONNECTION_URL_MODAL: &'static str = "add_connection_url_modal";
-
     //TODO: Setup for provided wallet
     // pub fn new() -> Self {
     //     Self { method: ConnectionMethod::Integrated }
     // }
 
-    /// Get external node connection URL.
+    /// Get external connection URL.
     pub fn get_ext_conn_url(&self) -> Option<String> {
         match &self.method {
             ConnectionMethod::Integrated => None,
@@ -66,7 +90,10 @@ impl ConnectionSetup {
         }
     }
 
-    pub fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
+    pub fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame, cb: &dyn PlatformCallbacks) {
+        // Draw modal content for current ui container.
+        self.current_modal_ui(ui, frame, cb);
+
         ScrollArea::vertical()
             .id_source("wallet_connection_setup")
             .auto_shrink([false; 2])
@@ -96,7 +123,7 @@ impl ConnectionSetup {
                         self.ext_node_secret_edit = "".to_string();
                         self.ext_node_url_error = false;
                         // Show modal.
-                        Modal::new(Self::ADD_CONNECTION_URL_MODAL)
+                        Modal::new(EXT_CONNECTION_MODAL)
                             .position(ModalPosition::CenterTop)
                             .title(t!("wallets.add_node"))
                             .show();
@@ -116,8 +143,11 @@ impl ConnectionSetup {
             });
     }
 
-    /// Draw modal content.
-    pub fn modal_ui(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
+    /// Draw external connection [`Modal`] content.
+    pub fn ext_conn_modal_ui(&mut self,
+                             ui: &mut egui::Ui,
+                             modal: &Modal,
+                             cb: &dyn PlatformCallbacks) {
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("wallets.node_url"))
@@ -197,7 +227,7 @@ impl ConnectionSetup {
                             let ext_conn = ExternalConnection::new(url.clone(), secret);
                             ConnectionsConfig::add_external_connection(ext_conn);
 
-                            // Set added method as current.
+                            // Set added connection as current.
                             self.method = ConnectionMethod::External(url);
 
                             // Close modal.

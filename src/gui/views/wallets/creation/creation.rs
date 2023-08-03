@@ -19,7 +19,8 @@ use crate::built_info;
 use crate::gui::Colors;
 use crate::gui::icons::{CHECK, EYE, EYE_SLASH, FOLDER_PLUS, SHARE_FAT};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Modal, ModalPosition, View};
+use crate::gui::views::{Modal, View};
+use crate::gui::views::types::ModalPosition;
 use crate::gui::views::wallets::creation::MnemonicSetup;
 use crate::gui::views::wallets::creation::types::Step;
 use crate::gui::views::wallets::setup::ConnectionSetup;
@@ -71,8 +72,10 @@ impl WalletCreation {
     /// Wallet name/password input modal identifier.
     pub const NAME_PASS_MODAL: &'static str = "name_pass_modal";
 
+    /// Draw wallet creation content.
     pub fn ui(&mut self,
               ui: &mut egui::Ui,
+              frame: &mut eframe::Frame,
               cb: &dyn PlatformCallbacks,
               on_create: impl FnOnce(Wallet)) {
         // Show wallet creation step description and confirmation panel.
@@ -109,7 +112,7 @@ impl WalletCreation {
                 ..Default::default()
             })
             .show_inside(ui, |ui| {
-                self.step_content_ui(ui, cb);
+                self.step_content_ui(ui, frame, cb);
             });
     }
 
@@ -184,7 +187,10 @@ impl WalletCreation {
     }
 
     /// Draw wallet creation [`Step`] content.
-    fn step_content_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
+    fn step_content_ui(&mut self,
+                       ui: &mut egui::Ui,
+                       frame: &mut eframe::Frame,
+                       cb: &dyn PlatformCallbacks) {
         match &self.step {
             None => {
                 // Show wallet creation message if step is empty.
@@ -210,15 +216,15 @@ impl WalletCreation {
                     ui.add_space(8.0);
                     let add_text = format!("{} {}", FOLDER_PLUS, t!("wallets.add"));
                     View::button(ui, add_text, Colors::BUTTON, || {
-                        self.show_name_pass_modal();
+                        self.show_name_pass_modal(cb);
                     });
                 });
             }
             Some(step) => {
                 match step {
-                    Step::EnterMnemonic => self.mnemonic_setup.ui(ui),
-                    Step::ConfirmMnemonic => self.mnemonic_setup.confirm_ui(ui),
-                    Step::SetupConnection => self.network_setup.ui(ui, cb)
+                    Step::EnterMnemonic => self.mnemonic_setup.ui(ui, frame, cb),
+                    Step::ConfirmMnemonic => self.mnemonic_setup.confirm_ui(ui, frame, cb),
+                    Step::SetupConnection => self.network_setup.ui(ui, frame, cb)
                 }
             }
         }
@@ -271,7 +277,7 @@ impl WalletCreation {
                     wallet.open(pass).unwrap();
                     // Pass created wallet to callback.
                     (on_create.unwrap())(wallet);
-                    // Reset creation data.
+                    // Reset input data.
                     self.reset();
                     None
                 }
@@ -282,7 +288,7 @@ impl WalletCreation {
     }
 
     /// Start wallet creation from showing [`Modal`] to enter name and password.
-    pub fn show_name_pass_modal(&mut self) {
+    pub fn show_name_pass_modal(&mut self, cb: &dyn PlatformCallbacks) {
         // Reset modal values.
         self.hide_pass = true;
         self.modal_just_opened = true;
@@ -293,10 +299,14 @@ impl WalletCreation {
             .position(ModalPosition::CenterTop)
             .title(t!("wallets.add"))
             .show();
+        cb.show_keyboard();
     }
 
-    /// Draw wallet creation [`Modal`] content.
-    pub fn modal_ui(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
+    /// Draw creating wallet name/password input [`Modal`] content.
+    pub fn name_pass_modal_ui(&mut self,
+                              ui: &mut egui::Ui,
+                              modal: &Modal,
+                              cb: &dyn PlatformCallbacks) {
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("wallets.name"))

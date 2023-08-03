@@ -17,7 +17,8 @@ use egui::{Id, RichText, ScrollArea, TextStyle, Widget};
 use crate::gui::Colors;
 use crate::gui::icons::PENCIL;
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Modal, ModalPosition, Root, View};
+use crate::gui::views::{Modal, Root, View};
+use crate::gui::views::types::{ModalContainer, ModalPosition};
 use crate::wallet::Mnemonic;
 use crate::wallet::types::{PhraseMode, PhraseSize};
 
@@ -34,8 +35,14 @@ pub struct MnemonicSetup {
     /// Entered word value for [`Modal`].
     word_edit: String,
     /// Flag to check if entered word is valid.
-    valid_word_edit: bool
+    valid_word_edit: bool,
+
+    /// [`Modal`] identifiers allowed at this ui container.
+    modal_ids: Vec<&'static str>
 }
+
+/// Identifier for word input [`Modal`].
+pub const WORD_INPUT_MODAL: &'static str = "word_input_modal";
 
 impl Default for MnemonicSetup {
     fn default() -> Self {
@@ -44,17 +51,37 @@ impl Default for MnemonicSetup {
             valid_phrase: true,
             word_num_edit: 0,
             word_edit: String::from(""),
-            valid_word_edit: true
+            valid_word_edit: true,
+            modal_ids: vec![
+                WORD_INPUT_MODAL
+            ]
+        }
+    }
+}
+
+impl ModalContainer for MnemonicSetup {
+    fn modal_ids(&self) -> &Vec<&'static str> {
+        &self.modal_ids
+    }
+
+    fn modal_ui(&mut self,
+                ui: &mut egui::Ui,
+                _: &mut eframe::Frame,
+                modal: &Modal,
+                cb: &dyn PlatformCallbacks) {
+        match modal.id {
+            WORD_INPUT_MODAL => self.word_modal_ui(ui, modal, cb),
+            _ => {}
         }
     }
 }
 
 impl MnemonicSetup {
-    /// Identifier for word input [`Modal`].
-    pub const WORD_INPUT_MODAL: &'static str = "word_input_modal";
+    /// Draw content for phrase input step.
+    pub fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame, cb: &dyn PlatformCallbacks) {
+        // Draw modal content for current ui container.
+        self.current_modal_ui(ui, frame, cb);
 
-    /// Draw content for input step.
-    pub fn ui(&mut self, ui: &mut egui::Ui) {
         ScrollArea::vertical()
             .id_source("input_mnemonic_words_list")
             .auto_shrink([false; 2])
@@ -69,12 +96,18 @@ impl MnemonicSetup {
                 ui.add_space(6.0);
 
                 // Show words setup.
-                self.word_list_ui(ui, self.mnemonic.mode == PhraseMode::Import);
+                self.word_list_ui(ui, self.mnemonic.mode == PhraseMode::Import, cb);
             });
     }
 
-    /// Draw content for confirmation step.
-    pub fn confirm_ui(&mut self, ui: &mut egui::Ui) {
+    /// Draw content for phrase confirmation step.
+    pub fn confirm_ui(&mut self,
+                      ui: &mut egui::Ui,
+                      frame: &mut eframe::Frame,
+                      cb: &dyn PlatformCallbacks) {
+        // Draw modal content for current ui container.
+        self.current_modal_ui(ui, frame, cb);
+
         ui.add_space(4.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("wallets.saved_phrase")).size(16.0).color(Colors::GRAY));
@@ -85,7 +118,7 @@ impl MnemonicSetup {
             .auto_shrink([false; 2])
             .show(ui, |ui| {
                 // Show words setup.
-                self.word_list_ui(ui, true);
+                self.word_list_ui(ui, true, cb);
             });
     }
 
@@ -134,7 +167,7 @@ impl MnemonicSetup {
     }
 
     /// Draw list of words for mnemonic phrase.
-    fn word_list_ui(&mut self, ui: &mut egui::Ui, edit_words: bool) {
+    fn word_list_ui(&mut self, ui: &mut egui::Ui, edit_words: bool, cb: &dyn PlatformCallbacks) {
         ui.add_space(6.0);
         ui.scope(|ui| {
             // Setup spacing between columns.
@@ -161,25 +194,25 @@ impl MnemonicSetup {
                     ui.columns(cols, |columns| {
                         columns[0].horizontal(|ui| {
                             let word = chunk.get(0).unwrap();
-                            self.word_item_ui(ui, word_number, word, edit_words);
+                            self.word_item_ui(ui, word_number, word, edit_words, cb);
                         });
                         columns[1].horizontal(|ui| {
                             word_number += 1;
                             let word = chunk.get(1).unwrap();
-                            self.word_item_ui(ui, word_number, word, edit_words);
+                            self.word_item_ui(ui, word_number, word, edit_words, cb);
                         });
                         if size > 2 {
                             columns[2].horizontal(|ui| {
                                 word_number += 1;
                                 let word = chunk.get(2).unwrap();
-                                self.word_item_ui(ui, word_number, word, edit_words);
+                                self.word_item_ui(ui, word_number, word, edit_words, cb);
                             });
                         }
                         if size > 3 {
                             columns[3].horizontal(|ui| {
                                 word_number += 1;
                                 let word = chunk.get(3).unwrap();
-                                self.word_item_ui(ui, word_number, word, edit_words);
+                                self.word_item_ui(ui, word_number, word, edit_words, cb);
                             });
                         }
                     });
@@ -187,7 +220,7 @@ impl MnemonicSetup {
                     ui.columns(cols, |columns| {
                         columns[0].horizontal(|ui| {
                             let word = chunk.get(0).unwrap();
-                            self.word_item_ui(ui, word_number, word, edit_words);
+                            self.word_item_ui(ui, word_number, word, edit_words, cb);
                         });
                     });
                 }
@@ -197,7 +230,12 @@ impl MnemonicSetup {
     }
 
     /// Draw word list item for current mode.
-    fn word_item_ui(&mut self, ui: &mut egui::Ui, num: usize, word: &String, edit: bool) {
+    fn word_item_ui(&mut self,
+                    ui: &mut egui::Ui,
+                    num: usize,
+                    word: &String,
+                    edit: bool,
+                    cb: &dyn PlatformCallbacks) {
         if edit {
             ui.add_space(6.0);
             View::button(ui, PENCIL.to_string(), Colors::BUTTON, || {
@@ -206,10 +244,11 @@ impl MnemonicSetup {
                 self.word_edit = word.clone();
                 self.valid_word_edit = true;
                 // Show word edit modal.
-                Modal::new(MnemonicSetup::WORD_INPUT_MODAL)
+                Modal::new(WORD_INPUT_MODAL)
                     .position(ModalPosition::CenterTop)
                     .title(t!("wallets.saved_phrase"))
                     .show();
+                cb.show_keyboard();
             });
             ui.label(RichText::new(format!("#{} {}", num, word))
                 .size(17.0)
@@ -226,8 +265,8 @@ impl MnemonicSetup {
         self.mnemonic = Mnemonic::default();
     }
 
-    /// Show word input [`Modal`] content.
-    pub fn modal_ui(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
+    /// Draw word input [`Modal`] content.
+    fn word_modal_ui(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("wallets.enter_word", "number" => self.word_num_edit))

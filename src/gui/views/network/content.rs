@@ -19,77 +19,27 @@ use crate::AppConfig;
 use crate::gui::Colors;
 use crate::gui::icons::{CARDHOLDER, DATABASE, DOTS_THREE_OUTLINE_VERTICAL, FACTORY, FADERS, GAUGE, POWER};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Modal, ModalContainer, NetworkMetrics, NetworkMining, NetworkNode, NetworkSettings, Root, TitlePanel, TitleType, View};
-use crate::gui::views::network::setup::{DandelionSetup, NodeSetup, P2PSetup, PoolSetup, StratumSetup};
-use crate::gui::views::types::{NetworkTab, NetworkTabType};
+use crate::gui::views::{NetworkMetrics, NetworkMining, NetworkNode, NetworkSettings, Root, TitlePanel, View};
+use crate::gui::views::network::types::{NetworkTab, NetworkTabType};
+use crate::gui::views::types::TitleType;
 use crate::node::Node;
 
 /// Network content.
 pub struct NetworkContent {
     /// Current tab view to show at ui.
     current_tab: Box<dyn NetworkTab>,
-    /// [`Modal`] ids allowed at this ui container.
-    modal_ids: Vec<&'static str>,
 }
 
 impl Default for NetworkContent {
     fn default() -> Self {
         Self {
-            current_tab: Box::new(NetworkNode::default()),
-            modal_ids: vec![
-                // Network settings modals.
-                NetworkSettings::NODE_RESTART_REQUIRED_MODAL,
-                NetworkSettings::RESET_SETTINGS_MODAL,
-                // Node setup modals.
-                NodeSetup::API_PORT_MODAL,
-                NodeSetup::API_SECRET_MODAL,
-                NodeSetup::FOREIGN_API_SECRET_MODAL,
-                NodeSetup::FTL_MODAL,
-                // P2P setup modals.
-                P2PSetup::PORT_MODAL,
-                P2PSetup::CUSTOM_SEED_MODAL,
-                P2PSetup::ALLOW_PEER_MODAL,
-                P2PSetup::DENY_PEER_MODAL,
-                P2PSetup::PREFER_PEER_MODAL,
-                P2PSetup::BAN_WINDOW_MODAL,
-                P2PSetup::MAX_INBOUND_MODAL,
-                P2PSetup::MAX_OUTBOUND_MODAL,
-                P2PSetup::MIN_OUTBOUND_MODAL,
-                // Stratum setup modals.
-                StratumSetup::STRATUM_PORT_MODAL,
-                StratumSetup::ATTEMPT_TIME_MODAL,
-                StratumSetup::MIN_SHARE_DIFF_MODAL,
-                // Pool setup modals.
-                PoolSetup::FEE_BASE_MODAL,
-                PoolSetup::REORG_PERIOD_MODAL,
-                PoolSetup::POOL_SIZE_MODAL,
-                PoolSetup::STEMPOOL_SIZE_MODAL,
-                PoolSetup::MAX_WEIGHT_MODAL,
-                // Dandelion setup modals.
-                DandelionSetup::EPOCH_MODAL,
-                DandelionSetup::EMBARGO_MODAL,
-                DandelionSetup::AGGREGATION_MODAL,
-                DandelionSetup::STEM_PROBABILITY_MODAL,
-            ]
+            current_tab: Box::new(NetworkNode::default())
         }
-    }
-}
-
-impl ModalContainer for NetworkContent {
-    fn modal_ids(&self) -> &Vec<&'static str> {
-        self.modal_ids.as_ref()
     }
 }
 
 impl NetworkContent {
     pub fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame, cb: &dyn PlatformCallbacks) {
-        // Show modal content for current ui container.
-        if self.can_draw_modal() {
-            Modal::ui(ui.ctx(), |ui, modal| {
-                self.current_tab.as_mut().on_modal_ui(ui, modal, cb);
-            });
-        }
-
         // Show title panel.
         self.title_ui(ui, frame);
 
@@ -113,7 +63,7 @@ impl NetworkContent {
                 ..Default::default()
             })
             .show_inside(ui, |ui| {
-                self.current_tab.ui(ui, cb);
+                self.current_tab.ui(ui, frame, cb);
             });
 
         // Redraw content after delay if node is not syncing to update stats.
@@ -186,7 +136,7 @@ impl NetworkContent {
         let title_content = TitleType::WithSubTitle(title_text, subtitle_text, !not_syncing);
 
         // Draw title panel.
-        TitlePanel::ui(title_content, |ui, frame| {
+        TitlePanel::ui(title_content, |ui, _| {
             View::title_button(ui, DOTS_THREE_OUTLINE_VERTICAL, || {
                 //TODO: Show connections
             });

@@ -12,16 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::{Id, RichText, TextStyle, Ui, Widget};
+use egui::{Id, RichText, TextStyle, Widget};
 
 use crate::gui::Colors;
 use crate::gui::icons::{BEZIER_CURVE, BOUNDING_BOX, CHART_SCATTER, CIRCLES_THREE, CLOCK_COUNTDOWN, HAND_COINS};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Modal, ModalPosition, View};
+use crate::gui::views::{Modal, View};
 use crate::gui::views::network::settings::NetworkSettings;
+use crate::gui::views::types::{ModalContainer, ModalPosition};
 use crate::node::NodeConfig;
 
-/// Memory pool setup ui section.
+/// Memory pool setup section content.
 pub struct PoolSetup {
     /// Base fee value that's accepted into the pool.
     fee_base_edit: String,
@@ -37,7 +38,21 @@ pub struct PoolSetup {
 
     /// Maximum total weight of transactions to build a block.
     max_weight_edit: String,
+
+    /// [`Modal`] identifiers allowed at this ui container.
+    modal_ids: Vec<&'static str>,
 }
+
+/// Identifier for base fee value [`Modal`].
+pub const FEE_BASE_MODAL: &'static str = "fee_base";
+/// Identifier for reorg cache retention period value [`Modal`].
+pub const REORG_PERIOD_MODAL: &'static str = "reorg_period";
+/// Identifier for maximum number of transactions in the pool [`Modal`].
+pub const POOL_SIZE_MODAL: &'static str = "pool_size";
+/// Identifier for maximum number of transactions in the stempool [`Modal`].
+pub const STEMPOOL_SIZE_MODAL: &'static str = "stempool_size";
+/// Identifier for maximum total weight of transactions [`Modal`].
+pub const MAX_WEIGHT_MODAL: &'static str = "max_weight";
 
 impl Default for PoolSetup {
     fn default() -> Self {
@@ -47,23 +62,43 @@ impl Default for PoolSetup {
             pool_size_edit: NodeConfig::get_max_pool_size(),
             stempool_size_edit: NodeConfig::get_max_stempool_size(),
             max_weight_edit: NodeConfig::get_mineable_max_weight(),
+            modal_ids: vec![
+                FEE_BASE_MODAL,
+                REORG_PERIOD_MODAL,
+                POOL_SIZE_MODAL,
+                STEMPOOL_SIZE_MODAL,
+                MAX_WEIGHT_MODAL
+            ]
+        }
+    }
+}
+
+impl ModalContainer for PoolSetup {
+    fn modal_ids(&self) -> &Vec<&'static str> {
+        &self.modal_ids
+    }
+
+    fn modal_ui(&mut self,
+                ui: &mut egui::Ui,
+                _: &mut eframe::Frame,
+                modal: &Modal,
+                cb: &dyn PlatformCallbacks) {
+        match modal.id {
+            FEE_BASE_MODAL => self.fee_base_modal(ui, modal, cb),
+            REORG_PERIOD_MODAL => self.reorg_period_modal(ui, modal, cb),
+            POOL_SIZE_MODAL => self.pool_size_modal(ui, modal, cb),
+            STEMPOOL_SIZE_MODAL => self.stem_size_modal(ui, modal, cb),
+            MAX_WEIGHT_MODAL => self.max_weight_modal(ui, modal, cb),
+            _ => {}
         }
     }
 }
 
 impl PoolSetup {
-    /// Identifier for base fee value [`Modal`].
-    pub const FEE_BASE_MODAL: &'static str = "fee_base";
-    /// Identifier for reorg cache retention period value [`Modal`].
-    pub const REORG_PERIOD_MODAL: &'static str = "reorg_period";
-    /// Identifier for maximum number of transactions in the pool [`Modal`].
-    pub const POOL_SIZE_MODAL: &'static str = "pool_size";
-    /// Identifier for maximum number of transactions in the stempool [`Modal`].
-    pub const STEMPOOL_SIZE_MODAL: &'static str = "stempool_size";
-    /// Identifier for maximum total weight of transactions [`Modal`].
-    pub const MAX_WEIGHT_MODAL: &'static str = "max_weight";
+    pub fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame, cb: &dyn PlatformCallbacks) {
+        // Draw modal content for current ui container.
+        self.current_modal_ui(ui, frame, cb);
 
-    pub fn ui(&mut self, ui: &mut Ui, cb: &dyn PlatformCallbacks) {
         View::sub_title(ui, format!("{} {}", CHART_SCATTER, t!("network_settings.tx_pool")));
         View::horizontal_line(ui, Colors::STROKE);
         ui.add_space(6.0);
@@ -91,7 +126,7 @@ impl PoolSetup {
             ui.add_space(6.0);
 
             // Show stem pool size setup.
-            self.stempool_size_ui(ui, cb);
+            self.stem_size_ui(ui, cb);
 
             ui.add_space(6.0);
             View::horizontal_line(ui, Colors::ITEM_STROKE);
@@ -103,7 +138,7 @@ impl PoolSetup {
     }
 
     /// Draw fee base setup content.
-    fn fee_base_ui(&mut self, ui: &mut Ui, cb: &dyn PlatformCallbacks) {
+    fn fee_base_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         ui.label(RichText::new(t!("network_settings.pool_fee"))
             .size(16.0)
             .color(Colors::GRAY)
@@ -115,7 +150,7 @@ impl PoolSetup {
             // Setup values for modal.
             self.fee_base_edit = fee;
             // Show fee setup modal.
-            Modal::new(Self::FEE_BASE_MODAL)
+            Modal::new(FEE_BASE_MODAL)
                 .position(ModalPosition::CenterTop)
                 .title(t!("network_settings.change_value"))
                 .show();
@@ -125,7 +160,7 @@ impl PoolSetup {
     }
 
     /// Draw fee base [`Modal`] content.
-    pub fn fee_base_modal(&mut self, ui: &mut Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
+    fn fee_base_modal(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.pool_fee"))
@@ -188,7 +223,7 @@ impl PoolSetup {
     }
 
     /// Draw reorg cache retention period setup content.
-    fn reorg_period_ui(&mut self, ui: &mut Ui, cb: &dyn PlatformCallbacks) {
+    fn reorg_period_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         ui.label(RichText::new(t!("network_settings.reorg_period"))
             .size(16.0)
             .color(Colors::GRAY)
@@ -200,7 +235,7 @@ impl PoolSetup {
             // Setup values for modal.
             self.reorg_period_edit = period;
             // Show reorg period setup modal.
-            Modal::new(Self::REORG_PERIOD_MODAL)
+            Modal::new(REORG_PERIOD_MODAL)
                 .position(ModalPosition::CenterTop)
                 .title(t!("network_settings.change_value"))
                 .show();
@@ -210,7 +245,7 @@ impl PoolSetup {
     }
 
     /// Draw reorg cache retention period [`Modal`] content.
-    pub fn reorg_period_modal(&mut self, ui: &mut Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
+    fn reorg_period_modal(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.reorg_period"))
@@ -273,7 +308,7 @@ impl PoolSetup {
     }
 
     /// Draw maximum number of transactions in the pool setup content.
-    fn pool_size_ui(&mut self, ui: &mut Ui, cb: &dyn PlatformCallbacks) {
+    fn pool_size_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         ui.label(RichText::new(t!("network_settings.max_tx_pool"))
             .size(16.0)
             .color(Colors::GRAY)
@@ -285,7 +320,7 @@ impl PoolSetup {
             // Setup values for modal.
             self.pool_size_edit = size;
             // Show pool size setup modal.
-            Modal::new(Self::POOL_SIZE_MODAL)
+            Modal::new(POOL_SIZE_MODAL)
                 .position(ModalPosition::CenterTop)
                 .title(t!("network_settings.change_value"))
                 .show();
@@ -295,7 +330,7 @@ impl PoolSetup {
     }
 
     /// Draw maximum number of transactions in the pool [`Modal`] content.
-    pub fn pool_size_modal(&mut self, ui: &mut Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
+    fn pool_size_modal(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.max_tx_pool"))
@@ -358,7 +393,7 @@ impl PoolSetup {
     }
 
     /// Draw maximum number of transactions in the stempool setup content.
-    fn stempool_size_ui(&mut self, ui: &mut Ui, cb: &dyn PlatformCallbacks) {
+    fn stem_size_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         ui.label(RichText::new(t!("network_settings.max_tx_stempool"))
             .size(16.0)
             .color(Colors::GRAY)
@@ -370,7 +405,7 @@ impl PoolSetup {
             // Setup values for modal.
             self.stempool_size_edit = size;
             // Show stempool size setup modal.
-            Modal::new(Self::STEMPOOL_SIZE_MODAL)
+            Modal::new(STEMPOOL_SIZE_MODAL)
                 .position(ModalPosition::CenterTop)
                 .title(t!("network_settings.change_value"))
                 .show();
@@ -380,7 +415,7 @@ impl PoolSetup {
     }
 
     /// Draw maximum number of transactions in the stempool [`Modal`] content.
-    pub fn stempool_size_modal(&mut self, ui: &mut Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
+    fn stem_size_modal(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.max_tx_stempool"))
@@ -443,7 +478,7 @@ impl PoolSetup {
     }
 
     /// Draw maximum total weight of transactions setup content.
-    fn max_weight_ui(&mut self, ui: &mut Ui, cb: &dyn PlatformCallbacks) {
+    fn max_weight_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         ui.label(RichText::new(t!("network_settings.max_tx_weight"))
             .size(16.0)
             .color(Colors::GRAY)
@@ -455,7 +490,7 @@ impl PoolSetup {
             // Setup values for modal.
             self.max_weight_edit = weight;
             // Show total tx weight setup modal.
-            Modal::new(Self::MAX_WEIGHT_MODAL)
+            Modal::new(MAX_WEIGHT_MODAL)
                 .position(ModalPosition::CenterTop)
                 .title(t!("network_settings.change_value"))
                 .show();
@@ -465,7 +500,7 @@ impl PoolSetup {
     }
 
     /// Draw maximum total weight of transactions [`Modal`] content.
-    pub fn max_weight_modal(&mut self, ui: &mut Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
+    fn max_weight_modal(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.max_tx_weight"))

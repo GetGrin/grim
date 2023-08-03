@@ -18,13 +18,13 @@ use lazy_static::lazy_static;
 use serde_derive::{Deserialize, Serialize};
 
 use crate::Settings;
-use crate::wallet::ExternalConnection;
+use crate::wallet::{BASE_DIR_NAME, ExternalConnection};
 
 lazy_static! {
-    /// Static settings state to be accessible globally.
+    /// Static connections state to be accessible globally.
     static ref CONNECTIONS_STATE: Arc<RwLock<ConnectionsConfig>> = Arc::new(
         RwLock::new(
-            Settings::init_config(Settings::get_config_path(CONFIG_FILE_NAME, None))
+            Settings::init_config(Settings::get_config_path(CONFIG_FILE_NAME, Some(BASE_DIR_NAME)))
         )
     );
 }
@@ -36,9 +36,6 @@ pub struct ConnectionsConfig {
     external: Vec<ExternalConnection>
 }
 
-/// Wallet configuration file name.
-const CONFIG_FILE_NAME: &'static str = "connections.toml";
-
 impl Default for ConnectionsConfig {
     fn default() -> Self {
         Self {
@@ -48,6 +45,9 @@ impl Default for ConnectionsConfig {
         }
     }
 }
+
+/// Wallet configuration file name.
+const CONFIG_FILE_NAME: &'static str = "connections.toml";
 
 impl ConnectionsConfig {
     /// Save connections config to file.
@@ -89,5 +89,15 @@ impl ConnectionsConfig {
             }
         }
         None
+    }
+
+    /// Remove external node connection.
+    pub fn remove_external_connection(conn: &ExternalConnection) {
+        let mut w_config = CONNECTIONS_STATE.write().unwrap();
+        let index = w_config.external.iter().position(|c| c.url == conn.url);
+        if let Some(i) = index {
+            w_config.external.remove(i);
+            w_config.save();
+        }
     }
 }

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::{Align, Id, Layout, RichText, Rounding, TextStyle, Ui, Widget};
+use egui::{Align, Id, Layout, RichText, Rounding, TextStyle, Widget};
 use egui_extras::{Size, StripBuilder};
 use grin_core::global::ChainTypes;
 
@@ -20,8 +20,9 @@ use crate::AppConfig;
 use crate::gui::Colors;
 use crate::gui::icons::{ARROW_FAT_LINE_UP, ARROW_FAT_LINES_DOWN, ARROW_FAT_LINES_UP, CLIPBOARD_TEXT, GLOBE_SIMPLE, HANDSHAKE, PLUG, PLUS_CIRCLE, PROHIBIT_INSET, TRASH};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Modal, ModalPosition, View};
+use crate::gui::views::{Modal, View};
 use crate::gui::views::network::settings::NetworkSettings;
+use crate::gui::views::types::{ModalContainer, ModalPosition};
 use crate::node::{NodeConfig, PeersConfig};
 
 /// Type of peer.
@@ -34,7 +35,7 @@ enum PeerType {
     Preferred
 }
 
-/// P2P server setup ui section.
+/// P2P server setup section content.
 pub struct P2PSetup {
     /// P2P port value.
     port_edit: String,
@@ -64,8 +65,30 @@ pub struct P2PSetup {
     max_outbound_count: String,
 
     /// Preferred minimum number of outbound peers.
-    min_outbound_count: String
+    min_outbound_count: String,
+
+    /// [`Modal`] identifiers allowed at this ui container.
+    modal_ids: Vec<&'static str>
 }
+
+/// Identifier for port value [`Modal`].
+pub const PORT_MODAL: &'static str = "p2p_port";
+/// Identifier for custom seed [`Modal`].
+pub const CUSTOM_SEED_MODAL: &'static str = "p2p_custom_seed";
+/// Identifier for allowed peer [`Modal`].
+pub const ALLOW_PEER_MODAL: &'static str = "p2p_allow_peer";
+/// Identifier for denied peer [`Modal`].
+pub const DENY_PEER_MODAL: &'static str = "p2p_deny_peer";
+/// Identifier for preferred peer [`Modal`].
+pub const PREFER_PEER_MODAL: &'static str = "p2p_prefer_peer";
+/// Identifier for ban window [`Modal`].
+pub const BAN_WINDOW_MODAL: &'static str = "p2p_ban_window";
+/// Identifier for maximum number of inbound peers [`Modal`].
+pub const MAX_INBOUND_MODAL: &'static str = "p2p_max_inbound";
+/// Identifier for maximum number of outbound peers [`Modal`].
+pub const MAX_OUTBOUND_MODAL: &'static str = "p2p_max_outbound";
+/// Identifier for minimum number of outbound peers [`Modal`].
+pub const MIN_OUTBOUND_MODAL: &'static str = "p2p_min_outbound";
 
 impl Default for P2PSetup {
     fn default() -> Self {
@@ -91,34 +114,54 @@ impl Default for P2PSetup {
             max_inbound_count: NodeConfig::get_max_inbound_peers(),
             max_outbound_count: NodeConfig::get_max_outbound_peers(),
             min_outbound_count: NodeConfig::get_min_outbound_peers(),
+            modal_ids: vec![
+                PORT_MODAL,
+                CUSTOM_SEED_MODAL,
+                ALLOW_PEER_MODAL,
+                DENY_PEER_MODAL,
+                PREFER_PEER_MODAL,
+                BAN_WINDOW_MODAL,
+                MAX_INBOUND_MODAL,
+                MAX_OUTBOUND_MODAL,
+                MIN_OUTBOUND_MODAL
+            ]
+        }
+    }
+}
+
+impl ModalContainer for P2PSetup {
+    fn modal_ids(&self) -> &Vec<&'static str> {
+        &self.modal_ids
+    }
+
+    fn modal_ui(&mut self,
+                ui: &mut egui::Ui,
+                _: &mut eframe::Frame,
+                modal: &Modal,
+                cb: &dyn PlatformCallbacks) {
+        match modal.id {
+            PORT_MODAL => self.port_modal(ui, modal, cb),
+            CUSTOM_SEED_MODAL => self.peer_modal(ui, modal, cb),
+            ALLOW_PEER_MODAL => self.peer_modal(ui, modal, cb),
+            DENY_PEER_MODAL => self.peer_modal(ui, modal, cb),
+            PREFER_PEER_MODAL => self.peer_modal(ui, modal, cb),
+            BAN_WINDOW_MODAL => self.ban_window_modal(ui, modal, cb),
+            MAX_INBOUND_MODAL => self.max_inbound_modal(ui, modal, cb),
+            MAX_OUTBOUND_MODAL => self.max_outbound_modal(ui, modal, cb),
+            MIN_OUTBOUND_MODAL => self.min_outbound_modal(ui, modal, cb),
+            _ => {}
         }
     }
 }
 
 impl P2PSetup {
-    /// Identifier for port value [`Modal`].
-    pub const PORT_MODAL: &'static str = "p2p_port";
-    /// Identifier for custom seed [`Modal`].
-    pub const CUSTOM_SEED_MODAL: &'static str = "p2p_custom_seed";
-    /// Identifier for allowed peer [`Modal`].
-    pub const ALLOW_PEER_MODAL: &'static str = "p2p_allow_peer";
-    /// Identifier for denied peer [`Modal`].
-    pub const DENY_PEER_MODAL: &'static str = "p2p_deny_peer";
-    /// Identifier for preferred peer [`Modal`].
-    pub const PREFER_PEER_MODAL: &'static str = "p2p_prefer_peer";
-    /// Identifier for ban window [`Modal`].
-    pub const BAN_WINDOW_MODAL: &'static str = "p2p_ban_window";
-    /// Identifier for maximum number of inbound peers [`Modal`].
-    pub const MAX_INBOUND_MODAL: &'static str = "p2p_max_inbound";
-    /// Identifier for maximum number of outbound peers [`Modal`].
-    pub const MAX_OUTBOUND_MODAL: &'static str = "p2p_max_outbound";
-    /// Identifier for minimum number of outbound peers [`Modal`].
-    pub const MIN_OUTBOUND_MODAL: &'static str = "p2p_min_outbound";
-
     /// Title for custom DNS Seeds setup section.
     const DNS_SEEDS_TITLE: &'static str = "DNS Seeds";
 
-    pub fn ui(&mut self, ui: &mut Ui, cb: &dyn PlatformCallbacks) {
+    pub fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame, cb: &dyn PlatformCallbacks) {
+        // Draw modal content for current ui container.
+        self.current_modal_ui(ui, frame, cb);
+
         View::sub_title(ui, format!("{} {}", HANDSHAKE, t!("network_settings.p2p_server")));
         View::horizontal_line(ui, Colors::STROKE);
         ui.add_space(6.0);
@@ -199,7 +242,7 @@ impl P2PSetup {
     }
 
     /// Draw p2p port setup content.
-    fn port_ui(&mut self, ui: &mut Ui, cb: &dyn PlatformCallbacks) {
+    fn port_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         ui.label(RichText::new(t!("network_settings.p2p_port"))
             .size(16.0)
             .color(Colors::GRAY)
@@ -212,7 +255,7 @@ impl P2PSetup {
             self.port_edit = port;
             self.port_available_edit = self.is_port_available;
             // Show p2p port modal.
-            Modal::new(Self::PORT_MODAL)
+            Modal::new(PORT_MODAL)
                 .position(ModalPosition::CenterTop)
                 .title(t!("network_settings.change_value"))
                 .show();
@@ -231,7 +274,7 @@ impl P2PSetup {
     }
 
     /// Draw p2p port [`Modal`] content.
-    pub fn port_modal(&mut self, ui: &mut Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
+    fn port_modal(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.p2p_port"))
@@ -300,7 +343,7 @@ impl P2PSetup {
     }
 
     /// Draw peer list content based on provided [`PeerType`].
-    fn peer_list_ui(&mut self, ui: &mut Ui, peer_type: &PeerType, cb: &dyn PlatformCallbacks) {
+    fn peer_list_ui(&mut self, ui: &mut egui::Ui, peer_type: &PeerType, cb: &dyn PlatformCallbacks) {
         let peers = match peer_type {
             PeerType::DefaultSeed => {
                 if AppConfig::chain_type() == ChainTypes::Testnet {
@@ -317,7 +360,7 @@ impl P2PSetup {
         for (index, peer) in peers.iter().enumerate() {
             ui.horizontal_wrapped(|ui| {
                 // Draw peer list item.
-                Self::peer_item_ui(ui, peer, peer_type, View::item_rounding(index, peers.len()));
+                peer_item_ui(ui, peer, peer_type, View::item_rounding(index, peers.len()));
             });
         }
 
@@ -349,10 +392,10 @@ impl P2PSetup {
                 self.peer_edit = "".to_string();
                 // Select modal id.
                 let modal_id = match peer_type {
-                    PeerType::Allowed => Self::ALLOW_PEER_MODAL,
-                    PeerType::Denied => Self::DENY_PEER_MODAL,
-                    PeerType::Preferred => Self::PREFER_PEER_MODAL,
-                    _ => Self::CUSTOM_SEED_MODAL
+                    PeerType::Allowed => ALLOW_PEER_MODAL,
+                    PeerType::Denied => DENY_PEER_MODAL,
+                    PeerType::Preferred => PREFER_PEER_MODAL,
+                    _ => CUSTOM_SEED_MODAL
                 };
                 // Select modal title.
                 let modal_title = match peer_type {
@@ -373,11 +416,11 @@ impl P2PSetup {
     }
 
     /// Draw peer creation [`Modal`] content.
-    pub fn peer_modal(&mut self, ui: &mut Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
+    fn peer_modal(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             let label_text = match modal.id {
-                Self::CUSTOM_SEED_MODAL => t!("network_settings.seed_address"),
+                CUSTOM_SEED_MODAL => t!("network_settings.seed_address"),
                 &_ => t!("network_settings.peer_address")
             };
             ui.label(RichText::new(label_text).size(17.0).color(Colors::GRAY));
@@ -442,10 +485,10 @@ impl P2PSetup {
                     // Save peer at config.
                     if is_correct_address {
                         match modal.id {
-                            Self::CUSTOM_SEED_MODAL => NodeConfig::save_custom_seed(peer),
-                            Self::ALLOW_PEER_MODAL => NodeConfig::allow_peer(peer),
-                            Self::DENY_PEER_MODAL => NodeConfig::deny_peer(peer),
-                            Self::PREFER_PEER_MODAL => NodeConfig::prefer_peer(peer),
+                            CUSTOM_SEED_MODAL => NodeConfig::save_custom_seed(peer),
+                            ALLOW_PEER_MODAL => NodeConfig::allow_peer(peer),
+                            DENY_PEER_MODAL => NodeConfig::deny_peer(peer),
+                            PREFER_PEER_MODAL => NodeConfig::prefer_peer(peer),
                             &_ => {}
                         }
 
@@ -472,55 +515,8 @@ impl P2PSetup {
         });
     }
 
-    /// Draw peer list item.
-    fn peer_item_ui(ui: &mut Ui, peer_addr: &String, peer_type: &PeerType, rounding: Rounding) {
-        // Setup layout size.
-        let mut rect = ui.available_rect_before_wrap();
-        rect.set_height(42.0);
-
-        // Draw round background.
-        let mut bg_rect = rect.clone();
-        bg_rect.min += egui::emath::vec2(6.0, 0.0);
-        ui.painter().rect(bg_rect, rounding, Colors::WHITE, View::ITEM_STROKE);
-
-        ui.vertical(|ui| {
-            ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
-                // Draw delete button for non-default seed peers.
-                if peer_type != &PeerType::DefaultSeed {
-                    View::item_button(ui, [false, true], TRASH, || {
-                        match peer_type {
-                            PeerType::CustomSeed => {
-                                NodeConfig::remove_custom_seed(peer_addr);
-                            }
-                            PeerType::Allowed => {
-                                NodeConfig::remove_allowed_peer(peer_addr);
-                            }
-                            PeerType::Denied => {
-                                NodeConfig::remove_denied_peer(peer_addr);
-                            }
-                            PeerType::Preferred => {
-                                NodeConfig::remove_preferred_peer(peer_addr);
-                            }
-                            PeerType::DefaultSeed => {}
-                        }
-                    });
-                }
-
-                let layout_size = ui.available_size();
-                ui.allocate_ui_with_layout(layout_size, Layout::left_to_right(Align::Center), |ui| {
-                    ui.add_space(12.0);
-                    // Draw peer address.
-                    let peer_text = format!("{} {}", GLOBE_SIMPLE, &peer_addr);
-                    ui.label(RichText::new(peer_text)
-                        .color(Colors::TEXT_BUTTON)
-                        .size(16.0));
-                });
-            });
-        });
-    }
-
     /// Draw seeding type setup content.
-    fn seeding_type_ui(&mut self, ui: &mut Ui, cb: &dyn PlatformCallbacks) {
+    fn seeding_type_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         let title = Self::DNS_SEEDS_TITLE;
         ui.label(RichText::new(title).size(16.0).color(Colors::GRAY));
         ui.add_space(2.0);
@@ -540,7 +536,7 @@ impl P2PSetup {
     }
 
     /// Draw ban window setup content.
-    fn ban_window_ui(&mut self, ui: &mut Ui, cb: &dyn PlatformCallbacks) {
+    fn ban_window_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         ui.label(RichText::new(t!("network_settings.ban_window"))
             .size(16.0)
             .color(Colors::GRAY)
@@ -552,7 +548,7 @@ impl P2PSetup {
             // Setup values for modal.
             self.ban_window_edit = ban_window;
             // Show ban window period setup modal.
-            Modal::new(Self::BAN_WINDOW_MODAL)
+            Modal::new(BAN_WINDOW_MODAL)
                 .position(ModalPosition::CenterTop)
                 .title(t!("network_settings.change_value"))
                 .show();
@@ -567,7 +563,7 @@ impl P2PSetup {
     }
 
     /// Draw ban window [`Modal`] content.
-    pub fn ban_window_modal(&mut self, ui: &mut Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
+    fn ban_window_modal(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.ban_window"))
@@ -630,7 +626,7 @@ impl P2PSetup {
     }
 
     /// Draw maximum number of inbound peers setup content.
-    fn max_inbound_ui(&mut self, ui: &mut Ui, cb: &dyn PlatformCallbacks) {
+    fn max_inbound_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         ui.label(RichText::new(t!("network_settings.max_inbound_count"))
             .size(16.0)
             .color(Colors::GRAY)
@@ -643,7 +639,7 @@ impl P2PSetup {
             // Setup values for modal.
             self.max_inbound_count = max_inbound;
             // Show maximum number of inbound peers setup modal.
-            Modal::new(Self::MAX_INBOUND_MODAL)
+            Modal::new(MAX_INBOUND_MODAL)
                 .position(ModalPosition::CenterTop)
                 .title(t!("network_settings.change_value"))
                 .show();
@@ -653,7 +649,7 @@ impl P2PSetup {
     }
 
     /// Draw maximum number of inbound peers [`Modal`] content.
-    pub fn max_inbound_modal(&mut self, ui: &mut Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
+    fn max_inbound_modal(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.max_inbound_count"))
@@ -716,7 +712,7 @@ impl P2PSetup {
     }
 
     /// Draw maximum number of outbound peers setup content.
-    fn max_outbound_ui(&mut self, ui: &mut Ui, cb: &dyn PlatformCallbacks) {
+    fn max_outbound_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         ui.label(RichText::new(t!("network_settings.max_outbound_count"))
             .size(16.0)
             .color(Colors::GRAY)
@@ -729,7 +725,7 @@ impl P2PSetup {
             // Setup values for modal.
             self.max_outbound_count = max_outbound;
             // Show maximum number of outbound peers setup modal.
-            Modal::new(Self::MAX_OUTBOUND_MODAL)
+            Modal::new(MAX_OUTBOUND_MODAL)
                 .position(ModalPosition::CenterTop)
                 .title(t!("network_settings.change_value"))
                 .show();
@@ -739,7 +735,7 @@ impl P2PSetup {
     }
 
     /// Draw maximum number of outbound peers [`Modal`] content.
-    pub fn max_outbound_modal(&mut self, ui: &mut Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
+    fn max_outbound_modal(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.max_outbound_count"))
@@ -802,7 +798,7 @@ impl P2PSetup {
     }
 
     /// Draw minimum number of outbound peers setup content.
-    fn min_outbound_ui(&mut self, ui: &mut Ui, cb: &dyn PlatformCallbacks) {
+    fn min_outbound_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         ui.label(RichText::new(t!("network_settings.min_outbound_count"))
             .size(16.0)
             .color(Colors::GRAY)
@@ -815,7 +811,7 @@ impl P2PSetup {
             // Setup values for modal.
             self.min_outbound_count = min_outbound;
             // Show maximum number of outbound peers setup modal.
-            Modal::new(Self::MIN_OUTBOUND_MODAL)
+            Modal::new(MIN_OUTBOUND_MODAL)
                 .position(ModalPosition::CenterTop)
                 .title(t!("network_settings.change_value"))
                 .show();
@@ -829,7 +825,7 @@ impl P2PSetup {
     }
 
     /// Draw minimum number of outbound peers [`Modal`] content.
-    pub fn min_outbound_modal(&mut self, ui: &mut Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
+    fn min_outbound_modal(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.min_outbound_count"))
@@ -890,4 +886,51 @@ impl P2PSetup {
             ui.add_space(6.0);
         });
     }
+}
+
+/// Draw peer list item.
+fn peer_item_ui(ui: &mut egui::Ui, peer_addr: &String, peer_type: &PeerType, rounding: Rounding) {
+    // Setup layout size.
+    let mut rect = ui.available_rect_before_wrap();
+    rect.set_height(42.0);
+
+    // Draw round background.
+    let mut bg_rect = rect.clone();
+    bg_rect.min += egui::emath::vec2(6.0, 0.0);
+    ui.painter().rect(bg_rect, rounding, Colors::WHITE, View::ITEM_STROKE);
+
+    ui.vertical(|ui| {
+        ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
+            // Draw delete button for non-default seed peers.
+            if peer_type != &PeerType::DefaultSeed {
+                View::item_button(ui, [false, true], TRASH, || {
+                    match peer_type {
+                        PeerType::CustomSeed => {
+                            NodeConfig::remove_custom_seed(peer_addr);
+                        }
+                        PeerType::Allowed => {
+                            NodeConfig::remove_allowed_peer(peer_addr);
+                        }
+                        PeerType::Denied => {
+                            NodeConfig::remove_denied_peer(peer_addr);
+                        }
+                        PeerType::Preferred => {
+                            NodeConfig::remove_preferred_peer(peer_addr);
+                        }
+                        PeerType::DefaultSeed => {}
+                    }
+                });
+            }
+
+            let layout_size = ui.available_size();
+            ui.allocate_ui_with_layout(layout_size, Layout::left_to_right(Align::Center), |ui| {
+                ui.add_space(12.0);
+                // Draw peer address.
+                let peer_text = format!("{} {}", GLOBE_SIMPLE, &peer_addr);
+                ui.label(RichText::new(peer_text)
+                    .color(Colors::TEXT_BUTTON)
+                    .size(16.0));
+            });
+        });
+    });
 }

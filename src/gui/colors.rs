@@ -27,7 +27,7 @@ impl Colors {
     pub const RED: Color32 = Color32::from_rgb(0x8B, 0, 0);
     pub const FILL: Color32 = Color32::from_gray(244);
     pub const FILL_DARK: Color32 = Color32::from_gray(234);
-    pub const CHECKBOX: Color32 = Color32::from_gray(107);
+    pub const CHECKBOX: Color32 = Color32::from_gray(100);
     pub const TEXT: Color32 = Color32::from_gray(80);
     pub const TEXT_BUTTON: Color32 = Color32::from_gray(70);
     pub const TITLE: Color32 = Color32::from_gray(60);
