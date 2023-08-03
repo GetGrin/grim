@@ -46,23 +46,14 @@ impl NetworkTab for NetworkMetrics {
 
         // Show loading spinner when node is stopping.
         if Node::is_stopping() {
-            ui.centered_and_justified(|ui| {
-                View::big_loading_spinner(ui);
-            });
+            NetworkContent::loading_ui(ui, None);
             return;
         }
 
         // Show message when metrics are not available.
         if server_stats.is_none() || Node::is_restarting()
             || server_stats.as_ref().unwrap().diff_stats.height == 0 {
-            View::center_content(ui, 162.0, |ui| {
-                View::big_loading_spinner(ui);
-                ui.add_space(18.0);
-                ui.label(RichText::new(t!("network_metrics.loading"))
-                    .size(16.0)
-                    .color(Colors::INACTIVE_TEXT)
-                );
-            });
+            NetworkContent::loading_ui(ui, Some(t!("network_metrics.loading")));
             return;
         }
 

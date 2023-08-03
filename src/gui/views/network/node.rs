@@ -41,9 +41,7 @@ impl NetworkTab for NetworkNode {
 
         // Show loading spinner when stats are not available.
         if server_stats.is_none() || Node::is_restarting() || Node::is_stopping() {
-            ui.centered_and_justified(|ui| {
-                View::big_loading_spinner(ui);
-            });
+            NetworkContent::loading_ui(ui, None);
             return;
         }
 

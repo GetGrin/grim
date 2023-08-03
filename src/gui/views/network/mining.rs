@@ -55,23 +55,14 @@ impl NetworkTab for NetworkMining {
 
         // Show loading spinner when node is stopping or stratum server is starting.
         if Node::is_stopping() || Node::is_stratum_starting() {
-            ui.centered_and_justified(|ui| {
-                View::big_loading_spinner(ui);
-            });
+            NetworkContent::loading_ui(ui, None);
             return;
         }
 
         // Show message when mining is not available.
         if server_stats.is_none() || Node::is_restarting()
             || Node::get_sync_status().unwrap() != SyncStatus::NoSync {
-            View::center_content(ui, 162.0, |ui| {
-                View::big_loading_spinner(ui);
-                ui.add_space(18.0);
-                ui.label(RichText::new(t!("network_mining.loading"))
-                    .size(16.0)
-                    .color(Colors::INACTIVE_TEXT)
-                );
-            });
+            NetworkContent::loading_ui(ui, Some(t!("network_mining.loading")));
             return;
         }
 

@@ -26,7 +26,7 @@ use crate::node::Node;
 
 /// Network content.
 pub struct NetworkContent {
-    /// Current tab view to show at ui.
+    /// Current tab content to show.
     current_tab: Box<dyn NetworkTab>,
 }
 
@@ -53,7 +53,7 @@ impl NetworkContent {
                     top: 4.0,
                     bottom: View::get_bottom_inset() + 4.0,
                 },
-                ..Default::defaulDrawt()
+                ..Default::default()
             })
             .show_inside(ui, |ui| {
                 self.tabs_ui(ui);
@@ -154,6 +154,27 @@ impl NetworkContent {
             ui.add_space(2.0);
             Self::autorun_node_ui(ui);
         });
+    }
+
+    /// Content to draw on loading.
+    pub fn loading_ui(ui: &mut egui::Ui, text: Option<String>) {
+        match text {
+            None => {
+                ui.centered_and_justified(|ui| {
+                    View::big_loading_spinner(ui);
+                });
+            }
+            Some(t) => {
+                View::center_content(ui, 162.0, |ui| {
+                    View::big_loading_spinner(ui);
+                    ui.add_space(18.0);
+                    ui.label(RichText::new(t)
+                        .size(16.0)
+                        .color(Colors::INACTIVE_TEXT)
+                    );
+                });
+            }
+        }
     }
 
     /// Draw checkbox to run integrated node on application launch.
