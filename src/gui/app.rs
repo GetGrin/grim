@@ -14,7 +14,7 @@
 
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use egui::Context;
+use egui::{Context, Modifiers};
 use lazy_static::lazy_static;
 
 use crate::gui::Colors;
@@ -44,7 +44,7 @@ impl<Platform: PlatformCallbacks> eframe::App for PlatformApp<Platform> {
     fn update(&mut self, ctx: &Context, frame: &mut eframe::Frame) {
         // Handle Esc keyboard key event and platform Back button key event.
         let back_button_pressed = BACK_BUTTON_PRESSED.load(Ordering::Relaxed);
-        if ctx.input(|i| i.key_pressed(egui::Key::Escape) || back_button_pressed) {
+        if ctx.input_mut(|i| i.consume_key(Modifiers::NONE, egui::Key::Escape)) || back_button_pressed {
             if back_button_pressed {
                 BACK_BUTTON_PRESSED.store(false, Ordering::Relaxed);
             }
