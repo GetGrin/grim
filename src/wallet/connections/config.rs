@@ -63,6 +63,10 @@ impl ConnectionsConfig {
 
     /// Save external connection for the wallet in app config.
     pub fn add_external_connection(conn: ExternalConnection) {
+        // Do not update default connection.
+        if conn.url == ExternalConnection::DEFAULT_EXTERNAL_NODE_URL {
+            return;
+        }
         let mut w_config = CONNECTIONS_STATE.write().unwrap();
         let mut exists = false;
         for mut c in w_config.external.iter_mut() {
@@ -75,7 +79,25 @@ impl ConnectionsConfig {
         }
         // Create new connection if URL not exists.
         if !exists {
-            w_config.external.insert(0, conn);
+            w_config.external.push(conn);
+        }
+        w_config.save();
+    }
+
+    /// Save external connection for the wallet in app config.
+    pub fn update_external_connection(conn: ExternalConnection, updated: ExternalConnection) {
+        // Do not update default connection.
+        if conn.url == ExternalConnection::DEFAULT_EXTERNAL_NODE_URL {
+            return;
+        }
+        let mut w_config = CONNECTIONS_STATE.write().unwrap();
+        for mut c in w_config.external.iter_mut() {
+            // Update connection if URL exists.
+            if c.url == conn.url {
+                c.url = updated.url.clone();
+                c.secret = updated.secret.clone();
+                break;
+            }
         }
         w_config.save();
     }

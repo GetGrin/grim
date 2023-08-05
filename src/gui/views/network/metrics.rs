@@ -131,7 +131,7 @@ impl NetworkTab for NetworkMetrics {
                             ui.add_space(4.0);
                         }
                         let db = stats.diff_stats.last_blocks.get(index).unwrap();
-                        block_item_ui(ui, db, View::item_rounding(index, blocks_size))
+                        block_item_ui(ui, db, View::item_rounding(index, blocks_size, false));
                     }
                 },
             );

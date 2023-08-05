@@ -38,6 +38,7 @@ wallets:
   settings: Wallet settings
 network:
   self: Network
+  connections: Connections
   node: Integrated node
   metrics: Metrics
   mining: Mining

@@ -177,7 +177,8 @@ impl NetworkTab for NetworkMining {
                                 ui.add_space(4.0);
                             }
                             let worker = stratum_stats.worker_stats.get(index).unwrap();
-                            worker_item_ui(ui, worker, View::item_rounding(index, workers_size));
+                            let item_rounding = View::item_rounding(index, workers_size, false);
+                            worker_item_ui(ui, worker, item_rounding);
                         }
                     },
                 );

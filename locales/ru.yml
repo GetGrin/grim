@@ -24,7 +24,7 @@ wallets:
   add_node: Добавить узел
   node_url: 'URL узла:'
   node_secret: 'API токен (необязательно):'
-  invalid_url: Введенный URL-адрес недействителен
+  invalid_url: Введённый URL-адрес недействителен
   open: Открыть кошелёк
   wrong_pass: Введён неправильный пароль
   locked: Заблокирован
@@ -38,6 +38,7 @@ wallets:
   settings: Настройки кошелька
 network:
   self: Сеть
+  connections: Подключения
   node: Встроенный узел
   metrics: Показатели
   mining: Майнинг

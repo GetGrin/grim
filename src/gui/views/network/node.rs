@@ -164,7 +164,7 @@ impl NetworkTab for NetworkNode {
                     View::sub_title(ui, format!("{} {}", HANDSHAKE, t!("network_node.peers")));
                     let peers = &stats.peer_stats;
                     for (index, ps) in peers.iter().enumerate() {
-                        peer_item_ui(ui, ps, View::item_rounding(index, peers.len()));
+                        peer_item_ui(ui, ps, View::item_rounding(index, peers.len(), false));
                         // Add space after the last item.
                         if index == peers.len() - 1 {
                             ui.add_space(5.0);

@@ -31,7 +31,7 @@ impl View {
     /// Stroke for items.
     pub const ITEM_STROKE: Stroke = Stroke { width: 1.0, color: Colors::ITEM_STROKE };
     /// Stroke for hovered items and buttons.
-    pub const ITEM_HOVER_STROKE: Stroke = Stroke { width: 1.0, color: Colors::ITEM_HOVER };
+    pub const HOVER_STROKE: Stroke = Stroke { width: 1.0, color: Colors::ITEM_HOVER };
 
     /// Callback on Enter key press event.
     pub fn on_enter_key(ui: &mut egui::Ui, cb: impl FnOnce()) {
@@ -105,7 +105,7 @@ impl View {
     pub fn title_button(ui: &mut egui::Ui, icon: &str, action: impl FnOnce()) {
         ui.scope(|ui| {
             // Setup stroke around title buttons on click.
-            ui.style_mut().visuals.widgets.hovered.bg_stroke = Self::ITEM_HOVER_STROKE;
+            ui.style_mut().visuals.widgets.hovered.bg_stroke = Self::HOVER_STROKE;
             ui.style_mut().visuals.widgets.active.bg_stroke = Self::DEFAULT_STROKE;
             // Disable rounding.
             ui.style_mut().visuals.widgets.hovered.rounding = Rounding::none();
@@ -120,6 +120,7 @@ impl View {
             let br = Button::new(wt)
                 .fill(Colors::TRANSPARENT)
                 .ui(ui);
+            br.surrender_focus();
             if Self::touched(ui, br) {
                 (action)();
             }
@@ -146,13 +147,14 @@ impl View {
                 ui.visuals_mut().widgets.active.weak_bg_fill = Colors::FILL;
                 // Setup stroke colors.
                 ui.visuals_mut().widgets.inactive.bg_stroke = Self::DEFAULT_STROKE;
-                ui.visuals_mut().widgets.hovered.bg_stroke = Self::ITEM_HOVER_STROKE;
+                ui.visuals_mut().widgets.hovered.bg_stroke = Self::HOVER_STROKE;
                 ui.visuals_mut().widgets.active.bg_stroke = Self::ITEM_STROKE;
             } else {
                 button = button.fill(Colors::FILL).stroke(Stroke::NONE);
             }
 
             let br = button.ui(ui);
+            br.surrender_focus();
             if Self::touched(ui, br) {
                 (action)();
             }
@@ -172,9 +174,7 @@ impl View {
     }
 
     /// Draw list item [`Button`] with given vertical padding and rounding on left and right sides.
-    pub fn item_button(ui: &mut egui::Ui, r: [bool; 2], icon: &'static str, action: impl FnOnce()) {
-        let rounding = Self::get_rounding([r[0], r[1], r[1], r[0]]);
-
+    pub fn item_button(ui: &mut egui::Ui, r: Rounding, icon: &'static str, action: impl FnOnce()) {
         // Setup button size.
         let mut rect = ui.available_rect_before_wrap();
         rect.set_width(32.0);
@@ -190,14 +190,15 @@ impl View {
             ui.visuals_mut().widgets.active.weak_bg_fill = Colors::FILL;
             // Setup stroke colors.
             ui.visuals_mut().widgets.inactive.bg_stroke = Self::DEFAULT_STROKE;
-            ui.visuals_mut().widgets.hovered.bg_stroke = Self::ITEM_HOVER_STROKE;
+            ui.visuals_mut().widgets.hovered.bg_stroke = Self::HOVER_STROKE;
             ui.visuals_mut().widgets.active.bg_stroke = Self::ITEM_STROKE;
 
             // Show button.
             let br = Button::new(RichText::new(icon).size(20.0).color(Colors::ITEM_BUTTON))
-                .rounding(rounding)
+                .rounding(r)
                 .min_size(button_size)
                 .ui(ui);
+            br.surrender_focus();
             if Self::touched(ui, br) {
                 (action)();
             }
@@ -243,28 +244,35 @@ impl View {
         });
     }
 
-    /// Get rounding for provided corners clockwise.
-    fn get_rounding(corners: [bool; 4]) -> Rounding {
+    /// Calculate item background/button rounding based on item index.
+    pub fn item_rounding(index: usize, len: usize, is_button: bool) -> Rounding {
+        let corners = if is_button {
+            if len == 1 {
+                [false, true, true, false]
+            } else if index == 0 {
+                [false, true, false, false]
+            } else if index == len - 1 {
+                [false, false, true, false]
+            } else {
+                [false, false, false, false]
+            }
+        } else {
+            if len == 1 {
+                [true, true, true, true]
+            } else if index == 0 {
+                [true, true, false, false]
+            } else if index == len - 1 {
+                [false, false, true, true]
+            } else {
+                [false, false, false, false]
+            }
+        };
         Rounding {
             nw: if corners[0] { 8.0 } else { 0.0 },
             ne: if corners[1] { 8.0 } else { 0.0 },
             sw: if corners[3] { 8.0 } else { 0.0 },
             se: if corners[2] { 8.0 } else { 0.0 },
         }
-    }
-
-    /// Calculate list item rounding based on item index.
-    pub fn item_rounding(index: usize, len: usize) -> Rounding {
-        let rounding = if len == 1 {
-            [true, true, true, true]
-        } else if index == 0 {
-            [true, true, false, false]
-        } else if index == len - 1 {
-            [false, false, true, true]
-        } else {
-            [false, false, false, false]
-        };
-        Self::get_rounding(rounding)
     }
 
     /// Draw rounded box with some value and label in the middle,

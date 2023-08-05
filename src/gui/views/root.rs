@@ -153,7 +153,7 @@ impl Root {
     /// Show exit confirmation modal.
     pub fn show_exit_modal() {
         Modal::new(Self::EXIT_MODAL_ID)
-            .title(t!("modal.confirmation"))
+            .title(t!("modal_exit.exit"))
             .show();
     }
 

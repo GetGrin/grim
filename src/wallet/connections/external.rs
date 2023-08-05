@@ -25,7 +25,7 @@ pub struct ExternalConnection {
 
 impl ExternalConnection {
     /// Default external node URL.
-    const DEFAULT_EXTERNAL_NODE_URL: &'static str = "https://grinnnode.live:3413";
+    pub const DEFAULT_EXTERNAL_NODE_URL: &'static str = "https://grinnnode.live:3413";
 
     pub fn new(url: String, secret: Option<String>) -> Self {
         Self { url, secret }

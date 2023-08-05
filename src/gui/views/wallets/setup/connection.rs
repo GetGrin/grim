@@ -42,7 +42,7 @@ pub struct ConnectionSetup {
 }
 
 /// External connection [`Modal`] identifier.
-pub const EXT_CONNECTION_MODAL: &'static str = "ext_connection_modal";
+pub const ADD_EXT_CONNECTION_MODAL: &'static str = "add_ext_connection_modal";
 
 impl Default for ConnectionSetup {
     fn default() -> Self {
@@ -53,7 +53,7 @@ impl Default for ConnectionSetup {
             ext_node_secret_edit: "".to_string(),
             ext_node_url_error: false,
             modal_ids: vec![
-                EXT_CONNECTION_MODAL
+                ADD_EXT_CONNECTION_MODAL
             ]
         }
     }
@@ -70,7 +70,7 @@ impl ModalContainer for ConnectionSetup {
                 modal: &Modal,
                 cb: &dyn PlatformCallbacks) {
         match modal.id {
-            EXT_CONNECTION_MODAL => self.ext_conn_modal_ui(ui, modal, cb),
+            ADD_EXT_CONNECTION_MODAL => self.add_ext_conn_modal_ui(ui, modal, cb),
             _ => {}
         }
     }
@@ -117,17 +117,7 @@ impl ConnectionSetup {
                     // Show button to add new external node connection.
                     let add_node_text = format!("{} {}", GLOBE_SIMPLE, t!("wallets.add_node"));
                     View::button(ui, add_node_text, Colors::GOLD, || {
-                        // Setup values for Modal.
-                        self.first_modal_launch = true;
-                        self.ext_node_url_edit = "".to_string();
-                        self.ext_node_secret_edit = "".to_string();
-                        self.ext_node_url_error = false;
-                        // Show modal.
-                        Modal::new(EXT_CONNECTION_MODAL)
-                            .position(ModalPosition::CenterTop)
-                            .title(t!("wallets.add_node"))
-                            .show();
-                        cb.show_keyboard();
+                        self.show_add_ext_conn_modal(cb);
                     });
                     ui.add_space(12.0);
 
@@ -143,11 +133,26 @@ impl ConnectionSetup {
             });
     }
 
-    /// Draw external connection [`Modal`] content.
-    pub fn ext_conn_modal_ui(&mut self,
-                             ui: &mut egui::Ui,
-                             modal: &Modal,
-                             cb: &dyn PlatformCallbacks) {
+    /// Show external connection adding [`Modal`].
+    fn show_add_ext_conn_modal(&mut self, cb: &dyn PlatformCallbacks) {
+        // Setup values for Modal.
+        self.first_modal_launch = true;
+        self.ext_node_url_edit = "".to_string();
+        self.ext_node_secret_edit = "".to_string();
+        self.ext_node_url_error = false;
+        // Show modal.
+        Modal::new(ADD_EXT_CONNECTION_MODAL)
+            .position(ModalPosition::CenterTop)
+            .title(t!("wallets.add_node"))
+            .show();
+        cb.show_keyboard();
+    }
+
+    /// Draw external connection adding [`Modal`] content.
+    pub fn add_ext_conn_modal_ui(&mut self,
+                                 ui: &mut egui::Ui,
+                                 modal: &Modal,
+                                 cb: &dyn PlatformCallbacks) {
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("wallets.node_url"))
@@ -217,7 +222,7 @@ impl ConnectionSetup {
                         let error = Url::parse(self.ext_node_url_edit.as_str()).is_err();
                         self.ext_node_url_error = error;
                         if !error {
-                            // Save external connection.
+                            // Add external connection.
                             let url = self.ext_node_url_edit.to_owned();
                             let secret = if self.ext_node_secret_edit.is_empty() {
                                 None

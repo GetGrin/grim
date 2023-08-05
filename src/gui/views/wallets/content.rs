@@ -351,10 +351,9 @@ impl WalletsContent {
         // Draw round background.
         let mut rect = ui.available_rect_before_wrap();
         rect.set_height(78.0);
-        let rounding = View::item_rounding(0, 1);
+        let rounding = View::item_rounding(0, 1, false);
         let bg_color = if is_current { Colors::ITEM_CURRENT } else { Colors::FILL };
-        let stroke = if is_current { View::ITEM_HOVER_STROKE } else { View::ITEM_HOVER_STROKE };
-        ui.painter().rect(rect, rounding, bg_color, stroke);
+        ui.painter().rect(rect, rounding, bg_color, View::HOVER_STROKE);
 
         ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
             // Setup padding for item buttons.
@@ -366,18 +365,17 @@ impl WalletsContent {
 
             if !wallet.is_open() {
                 // Show button to open closed wallet.
-                View::item_button(ui, [false, true], FOLDER_OPEN, || {
+                View::item_button(ui, View::item_rounding(0, 1, true), FOLDER_OPEN, || {
                     self.wallets.select(Some(id));
                     self.show_open_wallet_modal(cb);
                 });
             } else if !is_selected {
                 // Show button to select opened wallet.
-                View::item_button(ui, [false, true], CARET_RIGHT, || {
+                View::item_button(ui, View::item_rounding(0, 1, true), CARET_RIGHT, || {
                     self.wallets.select(Some(id));
                 });
-
                 // Show button to close opened wallet.
-                View::item_button(ui, [false, false], LOCK_KEY, || {
+                View::item_button(ui, Rounding::none(), LOCK_KEY, || {
                     let _ = wallet.close();
                 });
             }

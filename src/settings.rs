@@ -40,8 +40,11 @@ pub struct AppConfig {
     pub auto_start_node: bool,
     /// Chain type for node and wallets.
     chain_type: ChainTypes,
-    /// Flag to show wallet list at dual panel wallets mode.
+
+    /// Flag to initially show wallet list at dual panel wallets mode.
     show_wallets_at_dual_panel: bool,
+    /// Flag to initially show all connections at network panel.
+    show_connections_network_panel: bool,
 }
 
 impl Default for AppConfig {
@@ -50,6 +53,7 @@ impl Default for AppConfig {
             auto_start_node: false,
             chain_type: ChainTypes::default(),
             show_wallets_at_dual_panel: true,
+            show_connections_network_panel: false,
         }
     }
 }
@@ -111,6 +115,20 @@ impl AppConfig {
         let show = Self::show_wallets_at_dual_panel();
         let mut w_app_config = Settings::app_config_to_update();
         w_app_config.show_wallets_at_dual_panel = !show;
+        w_app_config.save();
+    }
+
+    /// Toggle flag to show all connections at network panel.
+    pub fn show_connections_network_panel() -> bool {
+        let r_config = Settings::app_config_to_read();
+        r_config.show_connections_network_panel
+    }
+
+    /// Toggle flag to show all connections at network panel.
+    pub fn toggle_show_connections_network_panel() {
+        let show = Self::show_connections_network_panel();
+        let mut w_app_config = Settings::app_config_to_update();
+        w_app_config.show_connections_network_panel = !show;
         w_app_config.save();
     }
 }

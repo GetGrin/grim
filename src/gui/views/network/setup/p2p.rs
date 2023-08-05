@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::{Align, Id, Layout, RichText, Rounding, TextStyle, Widget};
+use egui::{Align, Id, Layout, RichText, TextStyle, Widget};
 use egui_extras::{Size, StripBuilder};
 use grin_core::global::ChainTypes;
 
@@ -360,7 +360,7 @@ impl P2PSetup {
         for (index, peer) in peers.iter().enumerate() {
             ui.horizontal_wrapped(|ui| {
                 // Draw peer list item.
-                peer_item_ui(ui, peer, peer_type, View::item_rounding(index, peers.len()));
+                peer_item_ui(ui, peer, peer_type, index, peers.len());
             });
         }
 
@@ -889,7 +889,11 @@ impl P2PSetup {
 }
 
 /// Draw peer list item.
-fn peer_item_ui(ui: &mut egui::Ui, peer_addr: &String, peer_type: &PeerType, rounding: Rounding) {
+fn peer_item_ui(ui: &mut egui::Ui,
+                peer_addr: &String,
+                peer_type: &PeerType,
+                index: usize,
+                len: usize,) {
     // Setup layout size.
     let mut rect = ui.available_rect_before_wrap();
     rect.set_height(42.0);
@@ -897,13 +901,14 @@ fn peer_item_ui(ui: &mut egui::Ui, peer_addr: &String, peer_type: &PeerType, rou
     // Draw round background.
     let mut bg_rect = rect.clone();
     bg_rect.min += egui::emath::vec2(6.0, 0.0);
-    ui.painter().rect(bg_rect, rounding, Colors::WHITE, View::ITEM_STROKE);
+    let item_rounding = View::item_rounding(index, len, false);
+    ui.painter().rect(bg_rect, item_rounding, Colors::WHITE, View::ITEM_STROKE);
 
     ui.vertical(|ui| {
         ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
             // Draw delete button for non-default seed peers.
             if peer_type != &PeerType::DefaultSeed {
-                View::item_button(ui, [false, true], TRASH, || {
+                View::item_button(ui, View::item_rounding(index, len, true), TRASH, || {
                     match peer_type {
                         PeerType::CustomSeed => {
                             NodeConfig::remove_custom_seed(peer_addr);

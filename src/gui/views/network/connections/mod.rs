@@ -12,21 +12,5 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::gui::platform::PlatformCallbacks;
-
-/// Network connections content.
-pub struct ConnectionsContent {
-
-}
-
-impl Default for ConnectionsContent {
-    fn default() -> Self {
-        Self {}
-    }
-}
-
-impl ConnectionsContent {
-    pub fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame, cb: &dyn PlatformCallbacks) {
-
-    }
-}
+mod content;
+pub use content::ConnectionsContent;
