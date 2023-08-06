@@ -14,5 +14,5 @@ cargo build ${release_param[@]} --target x86_64-unknown-linux-gnu
 
 if [ $? -eq 0 ]
 then
-  ./target/x86_64-unknown-linux-gnu/release/grim
+  ./target/x86_64-unknown-linux-gnu/${type}/grim
 fi
