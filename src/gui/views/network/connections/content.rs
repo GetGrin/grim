@@ -222,10 +222,7 @@ impl ConnectionsContent {
                         // Draw connections URL.
                         ui.add_space(4.0);
                         let conn_text = format!("{} {}", COMPUTER_TOWER, conn.url);
-                        ui.label(RichText::new(conn_text)
-                            .color(Colors::TEXT)
-                            .size(15.0));
-
+                        View::ellipsize_text(ui, conn_text, 15.0, Colors::TEXT);
                         ui.add_space(1.0);
 
                         // Setup connection status text.

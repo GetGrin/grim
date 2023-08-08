@@ -68,7 +68,7 @@ impl View {
         });
         job.wrap = TextWrapping {
             max_rows: 1,
-            break_anywhere: false,
+            break_anywhere: true,
             overflow_character: Option::from('﹍'),
             ..Default::default()
         };
@@ -322,7 +322,7 @@ impl View {
                     });
                     job.wrap = TextWrapping {
                         max_rows: 1,
-                        break_anywhere: false,
+                        break_anywhere: true,
                         overflow_character: Option::from('﹍'),
                         ..Default::default()
                     };
