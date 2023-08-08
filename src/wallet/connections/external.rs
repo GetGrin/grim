@@ -58,14 +58,17 @@ impl ExternalConnection {
         let conn = self.clone();
         std::thread::spawn(move || {
             let url = url::Url::parse(conn.url.as_str()).unwrap();
-            let addr = url.socket_addrs(|| None).unwrap();
-            match std::net::TcpStream::connect_timeout(&addr[0], Self::AVAILABILITY_CHECK_DELAY) {
-                Ok(_) => {
-                    ConnectionsConfig::update_ext_conn_availability(conn.id, true);
+            if let Ok(addr) = url.socket_addrs(|| None) {
+                match std::net::TcpStream::connect_timeout(&addr[0], Self::AVAILABILITY_CHECK_DELAY) {
+                    Ok(_) => {
+                        ConnectionsConfig::update_ext_conn_availability(conn.id, true);
+                    }
+                    Err(_) => {
+                        ConnectionsConfig::update_ext_conn_availability(conn.id, false);
+                    }
                 }
-                Err(_) => {
-                    ConnectionsConfig::update_ext_conn_availability(conn.id, false);
-                }
+            } else {
+                ConnectionsConfig::update_ext_conn_availability(conn.id, false);
             }
         });
     }
