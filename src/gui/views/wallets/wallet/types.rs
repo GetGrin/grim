@@ -13,11 +13,16 @@
 // limitations under the License.
 
 use crate::gui::platform::PlatformCallbacks;
+use crate::wallet::Wallet;
 
 /// Wallet tab content interface.
 pub trait WalletTab {
     fn get_type(&self) -> WalletTabType;
-    fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame, cb: &dyn PlatformCallbacks);
+    fn ui(&mut self,
+          ui: &mut egui::Ui,
+          frame: &mut eframe::Frame,
+          wallet: &Wallet,
+          cb: &dyn PlatformCallbacks);
 }
 
 /// Type of [`WalletTab`] content.

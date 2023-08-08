@@ -23,6 +23,7 @@ use crate::gui::views::{ConnectionsContent, NetworkMetrics, NetworkMining, Netwo
 use crate::gui::views::network::types::{NetworkTab, NetworkTabType};
 use crate::gui::views::types::TitleType;
 use crate::node::Node;
+use crate::wallet::ExternalConnection;
 
 /// Network content.
 pub struct NetworkContent {
@@ -178,6 +179,9 @@ impl NetworkContent {
             if !show_connections {
                 View::title_button(ui, DOTS_THREE_OUTLINE_VERTICAL, || {
                     AppConfig::toggle_show_connections_network_panel();
+                    if AppConfig::show_connections_network_panel() {
+                        ExternalConnection::start_ext_conn_availability_check();
+                    }
                 });
             } else {
                 View::title_button(ui, PLUS_CIRCLE, || {

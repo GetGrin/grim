@@ -12,28 +12,85 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::time::Duration;
+
 use serde_derive::{Deserialize, Serialize};
 
-/// External node connection for the wallet.
+use crate::AppConfig;
+use crate::wallet::ConnectionsConfig;
+
+/// External connection for the wallet.
 #[derive(Serialize, Deserialize, Clone)]
 pub struct ExternalConnection {
+    /// Connection identifier.
+    pub id: i64,
     /// Node URL.
     pub url: String,
     /// Optional API secret key.
-    pub secret: Option<String>
+    pub secret: Option<String>,
+
+    /// Flag to check if server is available.
+    #[serde(skip_serializing)]
+    pub available: Option<bool>
 }
 
 impl ExternalConnection {
-    /// Default external node URL.
-    pub const DEFAULT_EXTERNAL_NODE_URL: &'static str = "https://grinnnode.live:3413";
+    /// Default external node URL for main network.
+    pub const DEFAULT_MAIN_URL: &'static str = "https://grinnode.live:3413";
 
-    pub fn new(url: String, secret: Option<String>) -> Self {
-        Self { url, secret }
+    /// External connections availability check delay.
+    const AVAILABILITY_CHECK_DELAY: Duration = Duration::from_millis(10 * 1000);
+
+    /// Create default external connection.
+    pub fn default_main() -> Self {
+        Self { id: 1, url: Self::DEFAULT_MAIN_URL.to_string(), secret: None, available: None }
     }
-}
 
-impl Default for ExternalConnection {
-    fn default() -> Self {
-        Self { url: Self::DEFAULT_EXTERNAL_NODE_URL.to_string(), secret: None }
+    /// Create new external connection.
+    pub fn new(url: String, secret: Option<String>) -> Self {
+        let id = chrono::Utc::now().timestamp();
+        Self { id, url, secret, available: None }
+    }
+
+    /// Check connection availability.
+    fn check_conn_availability(&self) {
+        // Check every connection at separate thread.
+        let conn = self.clone();
+        std::thread::spawn(move || {
+            let url = url::Url::parse(conn.url.as_str()).unwrap();
+            let addr = url.socket_addrs(|| None).unwrap();
+            match std::net::TcpStream::connect_timeout(&addr[0], Self::AVAILABILITY_CHECK_DELAY) {
+                Ok(_) => {
+                    ConnectionsConfig::update_ext_conn_availability(conn.id, true);
+                }
+                Err(_) => {
+                    ConnectionsConfig::update_ext_conn_availability(conn.id, false);
+                }
+            }
+        });
+    }
+
+    /// Start external connections availability check at another thread.
+    pub fn start_ext_conn_availability_check() {
+        std::thread::spawn(move || {
+            let chain_type = AppConfig::chain_type();
+            loop {
+                // Stop checking if connections are not showing or network type was changed.
+                if !AppConfig::show_connections_network_panel()
+                    || chain_type != AppConfig::chain_type() {
+                    break;
+                }
+
+                // Check external connections URLs availability.
+                let conn_list = ConnectionsConfig::ext_conn_list();
+                for conn in conn_list {
+                    // Check every connection at separate thread.
+                    conn.check_conn_availability();
+                }
+
+                // Pause checking for delay value.
+                std::thread::sleep(Self::AVAILABILITY_CHECK_DELAY);
+            }
+        });
     }
 }

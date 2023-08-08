@@ -18,144 +18,46 @@ use std::path::PathBuf;
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
 use grin_config::ConfigError;
-use grin_core::global::ChainTypes;
 use lazy_static::lazy_static;
-use serde::{Deserialize, Serialize};
 use serde::de::DeserializeOwned;
+use serde::Serialize;
 
+use crate::config::AppConfig;
 use crate::node::NodeConfig;
+use crate::wallet::ConnectionsConfig;
 
 lazy_static! {
     /// Static settings state to be accessible globally.
     static ref SETTINGS_STATE: Arc<Settings> = Arc::new(Settings::init());
 }
 
-/// Application configuration file name.
-const APP_CONFIG_FILE_NAME: &'static str = "app.toml";
-
-/// Common application settings.
-#[derive(Serialize, Deserialize)]
-pub struct AppConfig {
-    /// Run node server on startup.
-    pub auto_start_node: bool,
-    /// Chain type for node and wallets.
-    chain_type: ChainTypes,
-
-    /// Flag to initially show wallet list at dual panel wallets mode.
-    show_wallets_at_dual_panel: bool,
-    /// Flag to initially show all connections at network panel.
-    show_connections_network_panel: bool,
-}
-
-impl Default for AppConfig {
-    fn default() -> Self {
-        Self {
-            auto_start_node: false,
-            chain_type: ChainTypes::default(),
-            show_wallets_at_dual_panel: true,
-            show_connections_network_panel: false,
-        }
-    }
-}
-
-impl AppConfig {
-    /// Save app config to file.
-    pub fn save(&self) {
-        Settings::write_to_file(self, Settings::get_config_path(APP_CONFIG_FILE_NAME, None));
-    }
-
-    /// Change chain type and load new [`NodeConfig`].
-    pub fn change_chain_type(chain_type: &ChainTypes) {
-        let current_chain_type = Self::chain_type();
-        if current_chain_type != *chain_type {
-            // Save chain type at app config.
-            {
-                let mut w_app_config = Settings::app_config_to_update();
-                w_app_config.chain_type = *chain_type;
-                w_app_config.save();
-            }
-            // Load node config for selected chain type.
-            {
-                let mut w_node_config = Settings::node_config_to_update();
-                let node_config = NodeConfig::for_chain_type(chain_type);
-                w_node_config.node = node_config.node;
-                w_node_config.peers = node_config.peers;
-            }
-        }
-    }
-
-    /// Get current [`ChainTypes`] for node and wallets.
-    pub fn chain_type() -> ChainTypes {
-        let r_config = Settings::app_config_to_read();
-        r_config.chain_type
-    }
-
-    /// Check if integrated node is starting with application.
-    pub fn autostart_node() -> bool {
-        let r_config = Settings::app_config_to_read();
-        r_config.auto_start_node
-    }
-
-    /// Toggle integrated node autostart.
-    pub fn toggle_node_autostart() {
-        let autostart = Self::autostart_node();
-        let mut w_app_config = Settings::app_config_to_update();
-        w_app_config.auto_start_node = !autostart;
-        w_app_config.save();
-    }
-
-    /// Toggle flag to show wallet list at dual panel wallets mode.
-    pub fn show_wallets_at_dual_panel() -> bool {
-        let r_config = Settings::app_config_to_read();
-        r_config.show_wallets_at_dual_panel
-    }
-
-    /// Toggle flag to show wallet list at dual panel wallets mode.
-    pub fn toggle_show_wallets_at_dual_panel() {
-        let show = Self::show_wallets_at_dual_panel();
-        let mut w_app_config = Settings::app_config_to_update();
-        w_app_config.show_wallets_at_dual_panel = !show;
-        w_app_config.save();
-    }
-
-    /// Toggle flag to show all connections at network panel.
-    pub fn show_connections_network_panel() -> bool {
-        let r_config = Settings::app_config_to_read();
-        r_config.show_connections_network_panel
-    }
-
-    /// Toggle flag to show all connections at network panel.
-    pub fn toggle_show_connections_network_panel() {
-        let show = Self::show_connections_network_panel();
-        let mut w_app_config = Settings::app_config_to_update();
-        w_app_config.show_connections_network_panel = !show;
-        w_app_config.save();
-    }
-}
-
 /// Main application directory name.
 const MAIN_DIR_NAME: &'static str = ".grim";
 
-/// Provides access to application, integrated node and wallets configs.
+/// Contains initialized configurations.
 pub struct Settings {
-    /// Application config instance.
+    /// Application configuration.
     app_config: Arc<RwLock<AppConfig>>,
-    /// Integrated node config instance.
+    /// Integrated node configuration.
     node_config: Arc<RwLock<NodeConfig>>,
+    /// Wallet connections configuration.
+    conn_config: Arc<RwLock<ConnectionsConfig>>,
 }
 
 impl Settings {
     /// Initialize settings with app and node configs.
     fn init() -> Self {
-        let path = Settings::get_config_path(APP_CONFIG_FILE_NAME, None);
-        let app_config = Self::init_config::<AppConfig>(path);
+        let app_config_path = Settings::get_config_path(AppConfig::FILE_NAME, None);
+        let app_config = Self::init_config::<AppConfig>(app_config_path);
+        let chain_type = &app_config.chain_type;
         Self {
-            node_config: Arc::new(RwLock::new(NodeConfig::for_chain_type(&app_config.chain_type))),
+            node_config: Arc::new(RwLock::new(NodeConfig::for_chain_type(chain_type))),
+            conn_config: Arc::new(RwLock::new(ConnectionsConfig::for_chain_type(chain_type))),
             app_config: Arc::new(RwLock::new(app_config)),
         }
     }
 
-    /// Initialize config from provided file path or set [`Default`] if file not exists.
+    /// Initialize configuration from provided file path or set [`Default`] if file not exists.
     pub fn init_config<T: Default + Serialize + DeserializeOwned>(path: PathBuf) -> T {
         let parsed = Self::read_from_file::<T>(path.clone());
         if !path.exists() || parsed.is_err() {
@@ -167,29 +69,38 @@ impl Settings {
         }
     }
 
-
-    /// Get node config to read values.
+    /// Get node configuration to read values.
     pub fn node_config_to_read() -> RwLockReadGuard<'static, NodeConfig> {
         SETTINGS_STATE.node_config.read().unwrap()
     }
 
-    /// Get node config to update values.
+    /// Get node configuration to update values.
     pub fn node_config_to_update() -> RwLockWriteGuard<'static, NodeConfig> {
         SETTINGS_STATE.node_config.write().unwrap()
     }
 
-    /// Get app config to read values.
+    /// Get app configuration to read values.
     pub fn app_config_to_read() -> RwLockReadGuard<'static, AppConfig> {
         SETTINGS_STATE.app_config.read().unwrap()
     }
 
-    /// Get app config to update values.
+    /// Get app configuration to update values.
     pub fn app_config_to_update() -> RwLockWriteGuard<'static, AppConfig> {
         SETTINGS_STATE.app_config.write().unwrap()
     }
 
-    /// Get base directory path for config.
-    pub fn get_base_path(sub_dir: Option<&str>) -> PathBuf {
+    /// Get connections configuration to read values.
+    pub fn conn_config_to_read() -> RwLockReadGuard<'static, ConnectionsConfig> {
+        SETTINGS_STATE.conn_config.read().unwrap()
+    }
+
+    /// Get connections configuration to update values.
+    pub fn conn_config_to_update() -> RwLockWriteGuard<'static, ConnectionsConfig> {
+        SETTINGS_STATE.conn_config.write().unwrap()
+    }
+
+    /// Get base directory path for configuration.
+    pub fn get_base_path(sub_dir: Option<String>) -> PathBuf {
         // Check if dir exists.
         let mut path = match dirs::home_dir() {
             Some(p) => p,
@@ -206,14 +117,14 @@ impl Settings {
         path
     }
 
-    /// Get config file path from provided name and sub-directory if needed.
-    pub fn get_config_path(config_name: &str, sub_dir: Option<&str>) -> PathBuf {
+    /// Get configuration file path from provided name and sub-directory if needed.
+    pub fn get_config_path(config_name: &str, sub_dir: Option<String>) -> PathBuf {
         let mut settings_path = Self::get_base_path(sub_dir);
         settings_path.push(config_name);
         settings_path
     }
 
-    /// Read config from the file.
+    /// Read configuration from the file.
     pub fn read_from_file<T: DeserializeOwned>(config_path: PathBuf) -> Result<T, ConfigError> {
         let file_content = fs::read_to_string(config_path.clone())?;
         let parsed = toml::from_str::<T>(file_content.as_str());
@@ -228,7 +139,7 @@ impl Settings {
         }
     }
 
-    /// Write config to the file.
+    /// Write configuration to the file.
     pub fn write_to_file<T: Serialize>(config: &T, path: PathBuf) {
         let conf_out = toml::to_string(config).unwrap();
         let mut file = File::create(path.to_str().unwrap()).unwrap();

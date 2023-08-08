@@ -14,6 +14,7 @@
 
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::wallets::wallet::types::{WalletTab, WalletTabType};
+use crate::wallet::Wallet;
 
 /// Wallet settings tab content.
 #[derive(Default)]
@@ -24,6 +25,6 @@ impl WalletTab for WalletSettings {
         WalletTabType::Settings
     }
 
-    fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame, cb: &dyn PlatformCallbacks) {
+    fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame, wallet: &Wallet, cb: &dyn PlatformCallbacks) {
     }
 }

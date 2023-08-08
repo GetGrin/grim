@@ -108,7 +108,7 @@ impl NodeSetup {
         ui.add_space(4.0);
 
         // Show chain type setup.
-        self.chain_type_ui(ui);
+        Self::chain_type_ui(ui);
 
         // Show loading indicator or controls to stop/start/restart node.
         if Node::is_stopping() || Node::is_restarting() || Node::is_starting() {
@@ -220,7 +220,7 @@ impl NodeSetup {
     }
 
     /// Draw [`ChainTypes`] setup content.
-    fn chain_type_ui(&mut self, ui: &mut egui::Ui) {
+    pub fn chain_type_ui(ui: &mut egui::Ui) {
         let saved_chain_type = AppConfig::chain_type();
         let mut selected_chain_type = saved_chain_type;
 

@@ -24,7 +24,7 @@ use crate::gui::views::{Modal, Root, TitlePanel, View};
 use crate::gui::views::types::{ModalContainer, ModalPosition, TitleType};
 use crate::gui::views::wallets::creation::WalletCreation;
 use crate::gui::views::wallets::WalletContent;
-use crate::wallet::{Wallet, Wallets};
+use crate::wallet::{ConnectionsConfig, ExternalConnection, Wallet, Wallets};
 
 /// Wallets content.
 pub struct WalletsContent {
@@ -140,9 +140,7 @@ impl WalletsContent {
                 }
                 if create_wallet || !show_wallet {
                     // Show wallet creation content.
-                    self.creation_content.ui(ui, frame, cb, |mut wallet| {
-                        // Load the wallet.
-                        Wallets::load(&mut wallet);
+                    self.creation_content.ui(ui, frame, cb, |wallet| {
                         // Add created wallet to list.
                         self.wallets.add(wallet);
                     });
@@ -365,17 +363,23 @@ impl WalletsContent {
 
             if !wallet.is_open() {
                 // Show button to open closed wallet.
-                View::item_button(ui, View::item_rounding(0, 1, true), FOLDER_OPEN, || {
+                View::item_button(ui, View::item_rounding(0, 1, true), FOLDER_OPEN, None, || {
                     self.wallets.select(Some(id));
                     self.show_open_wallet_modal(cb);
                 });
-            } else if !is_selected {
-                // Show button to select opened wallet.
-                View::item_button(ui, View::item_rounding(0, 1, true), CARET_RIGHT, || {
-                    self.wallets.select(Some(id));
-                });
+            } else {
+                if !is_selected {
+                    // Show button to select opened wallet.
+                    View::item_button(ui, View::item_rounding(0, 1, true), CARET_RIGHT, None, || {
+                        self.wallets.select(Some(id));
+                    });
+                }
                 // Show button to close opened wallet.
-                View::item_button(ui, Rounding::none(), LOCK_KEY, || {
+                View::item_button(ui, if !is_selected {
+                    Rounding::none()
+                } else {
+                    View::item_rounding(0, 1, true)
+                }, LOCK_KEY, None, || {
                     let _ = wallet.close();
                 });
             }
@@ -390,9 +394,12 @@ impl WalletsContent {
                     View::ellipsize_text(ui, wallet.config.name.to_owned(), 18.0, name_color);
 
                     // Setup wallet connection text.
-                    let external_url = &wallet.config.external_node_url;
-                    let conn_text = if let Some(url) = external_url {
-                        format!("{} {}", GLOBE_SIMPLE, url)
+                    let conn_text = if let Some(id) = wallet.config.ext_conn_id {
+                        let ext_conn_url = match ConnectionsConfig::ext_conn(id) {
+                            None => ExternalConnection::DEFAULT_MAIN_URL.to_string(),
+                            Some(ext_conn) => ext_conn.url
+                        };
+                        format!("{} {}", GLOBE_SIMPLE, ext_conn_url)
                     } else {
                         format!("{} {}", COMPUTER_TOWER, t!("network.node"))
                     };
@@ -525,7 +532,7 @@ impl WalletsContent {
                         if self.pass_edit.is_empty() {
                             return;
                         }
-                        match self.wallets.open_selected(self.pass_edit.clone()) {
+                        match self.wallets.launch_selected(self.pass_edit.clone()) {
                             Ok(_) => {
                                 // Clear values.
                                 self.pass_edit = "".to_string();

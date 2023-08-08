@@ -271,8 +271,8 @@ impl WalletCreation {
                     let name = self.name_edit.clone();
                     let pass = self.pass_edit.clone();
                     let phrase = self.mnemonic_setup.mnemonic.get_phrase();
-                    let ext_conn = self.network_setup.get_ext_conn_url();
-                    let wallet = Wallet::create(name, pass.clone(), phrase, ext_conn).unwrap();
+                    let conn_method = &self.network_setup.method;
+                    let wallet = Wallet::create(name, pass.clone(), phrase, conn_method).unwrap();
                     // Open created wallet.
                     wallet.open(pass).unwrap();
                     // Pass created wallet to callback.

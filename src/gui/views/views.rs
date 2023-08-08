@@ -104,6 +104,8 @@ impl View {
     /// Title button with transparent background fill color, contains only icon.
     pub fn title_button(ui: &mut egui::Ui, icon: &str, action: impl FnOnce()) {
         ui.scope(|ui| {
+            // Disable stroke when inactive.
+            ui.style_mut().visuals.widgets.inactive.bg_stroke = Stroke::NONE;
             // Setup stroke around title buttons on click.
             ui.style_mut().visuals.widgets.hovered.bg_stroke = Self::HOVER_STROKE;
             ui.style_mut().visuals.widgets.active.bg_stroke = Self::DEFAULT_STROKE;
@@ -173,8 +175,12 @@ impl View {
         }
     }
 
-    /// Draw list item [`Button`] with given vertical padding and rounding on left and right sides.
-    pub fn item_button(ui: &mut egui::Ui, r: Rounding, icon: &'static str, action: impl FnOnce()) {
+    /// Draw list item [`Button`] with provided rounding.
+    pub fn item_button(ui: &mut egui::Ui,
+                       rounding: Rounding,
+                       text: &'static str,
+                       color: Option<Color32>,
+                       action: impl FnOnce()) {
         // Setup button size.
         let mut rect = ui.available_rect_before_wrap();
         rect.set_width(32.0);
@@ -193,9 +199,12 @@ impl View {
             ui.visuals_mut().widgets.hovered.bg_stroke = Self::HOVER_STROKE;
             ui.visuals_mut().widgets.active.bg_stroke = Self::ITEM_STROKE;
 
+            // Setup button text color.
+            let text_color = if let Some(c) = color { c } else { Colors::ITEM_BUTTON };
+
             // Show button.
-            let br = Button::new(RichText::new(icon).size(20.0).color(Colors::ITEM_BUTTON))
-                .rounding(r)
+            let br = Button::new(RichText::new(text).size(20.0).color(text_color))
+                .rounding(rounding)
                 .min_size(button_size)
                 .ui(ui);
             br.surrender_focus();

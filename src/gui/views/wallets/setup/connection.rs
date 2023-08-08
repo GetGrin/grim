@@ -20,13 +20,13 @@ use crate::gui::icons::{GLOBE, GLOBE_SIMPLE};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, View};
 use crate::gui::views::types::{ModalContainer, ModalPosition};
-use crate::gui::views::wallets::setup::ConnectionMethod;
 use crate::wallet::{ConnectionsConfig, ExternalConnection};
+use crate::wallet::types::ConnectionMethod;
 
 /// Wallet node connection method setup content.
 pub struct ConnectionSetup {
     /// Selected connection method.
-    method: ConnectionMethod,
+    pub method: ConnectionMethod,
 
     /// Flag to check if modal was just opened.
     first_modal_launch: bool,
@@ -82,14 +82,6 @@ impl ConnectionSetup {
     //     Self { method: ConnectionMethod::Integrated }
     // }
 
-    /// Get external connection URL.
-    pub fn get_ext_conn_url(&self) -> Option<String> {
-        match &self.method {
-            ConnectionMethod::Integrated => None,
-            ConnectionMethod::External(url) => Some(url.clone())
-        }
-    }
-
     pub fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame, cb: &dyn PlatformCallbacks) {
         // Draw modal content for current ui container.
         self.current_modal_ui(ui, frame, cb);
@@ -122,10 +114,10 @@ impl ConnectionSetup {
                     ui.add_space(12.0);
 
                     // Show external nodes URLs selection.
-                    for conn in ConnectionsConfig::external_connections() {
+                    for conn in ConnectionsConfig::ext_conn_list() {
                         View::radio_value(ui,
                                           &mut self.method,
-                                          ConnectionMethod::External(conn.url.clone()),
+                                          ConnectionMethod::External(conn.id),
                                           conn.url);
                         ui.add_space(12.0);
                     }
@@ -162,7 +154,7 @@ impl ConnectionSetup {
 
             // Draw node URL text edit.
             let url_edit_resp = egui::TextEdit::singleline(&mut self.ext_node_url_edit)
-                .id(Id::from(modal.id).with("node_url_edit"))
+                .id(Id::from(modal.id))
                 .font(TextStyle::Heading)
                 .desired_width(ui.available_width())
                 .cursor_at_end(true)
@@ -230,10 +222,10 @@ impl ConnectionSetup {
                                 Some(self.ext_node_secret_edit.to_owned())
                             };
                             let ext_conn = ExternalConnection::new(url.clone(), secret);
-                            ConnectionsConfig::add_external_connection(ext_conn);
+                            ConnectionsConfig::add_ext_conn(ext_conn.clone());
 
                             // Set added connection as current.
-                            self.method = ConnectionMethod::External(url);
+                            self.method = ConnectionMethod::External(ext_conn.id);
 
                             // Close modal.
                             cb.hide_keyboard();

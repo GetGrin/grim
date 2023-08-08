@@ -15,6 +15,8 @@
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::wallets::types::WalletTab;
 use crate::gui::views::wallets::wallet::types::WalletTabType;
+use crate::gui::views::wallets::wallet::WalletContent;
+use crate::wallet::Wallet;
 
 /// Wallet info tab content.
 #[derive(Default)]
@@ -25,6 +27,11 @@ impl WalletTab for WalletInfo {
         WalletTabType::Info
     }
 
-    fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame, cb: &dyn PlatformCallbacks) {
+    fn ui(&mut self,
+          ui: &mut egui::Ui,
+          frame: &mut eframe::Frame,
+          wallet: &Wallet,
+          cb: &dyn PlatformCallbacks) {
+        WalletContent::show_loading_ui(ui, frame, wallet);
     }
 }

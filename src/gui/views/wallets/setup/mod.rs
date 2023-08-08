@@ -14,6 +14,3 @@
 
 mod connection;
 pub use connection::ConnectionSetup;
-
-mod types;
-pub use types::*;

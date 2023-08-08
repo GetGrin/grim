@@ -77,3 +77,12 @@ pub type WalletInstance = Arc<
         >,
     >,
 >;
+
+/// Wallet node connection method type.
+#[derive(PartialEq)]
+pub enum ConnectionMethod {
+    /// Integrated node.
+    Integrated,
+    /// External node, contains connection identifier.
+    External(i64)
+}

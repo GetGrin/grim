@@ -17,25 +17,25 @@ use url::Url;
 
 use crate::AppConfig;
 use crate::gui::Colors;
-use crate::gui::icons::{CARET_RIGHT, CHECK_CIRCLE, COMPUTER_TOWER, DOTS_THREE_CIRCLE, GLOBE_SIMPLE, PENCIL, PLAY, STOP, TRASH, X_CIRCLE};
+use crate::gui::icons::{CARET_RIGHT, CHECK_CIRCLE, COMPUTER_TOWER, DOTS_THREE_CIRCLE, PENCIL, POWER, TRASH, X_CIRCLE};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Modal, View};
+use crate::gui::views::{Modal, NodeSetup, View};
 use crate::gui::views::types::{ModalContainer, ModalPosition};
 use crate::node::{Node, NodeConfig};
 use crate::wallet::{ConnectionsConfig, ExternalConnection};
 
 /// Network connections content.
 pub struct ConnectionsContent {
-    /// Flag to check if modal was just opened.
+    /// Flag to check if [`Modal`] was just opened to focus on input field.
     first_modal_launch: bool,
     /// External connection URL value for [`Modal`].
     ext_node_url_edit: String,
     /// External connection API secret value for [`Modal`].
     ext_node_secret_edit: String,
-    /// Flag to show URL format error.
+    /// Flag to show URL format error at [`Modal`].
     ext_node_url_error: bool,
-    /// Flag to check if existing connection is editing.
-    edit_ext_conn: Option<ExternalConnection>,
+    /// Editing external connection identifier for [`Modal`].
+    ext_conn_id_edit: Option<i64>,
 
     /// [`Modal`] identifiers allowed at this ui container.
     modal_ids: Vec<&'static str>
@@ -43,12 +43,15 @@ pub struct ConnectionsContent {
 
 impl Default for ConnectionsContent {
     fn default() -> Self {
+        if AppConfig::show_connections_network_panel() {
+            ExternalConnection::start_ext_conn_availability_check();
+        }
         Self {
             first_modal_launch: true,
             ext_node_url_edit: "".to_string(),
             ext_node_secret_edit: "".to_string(),
             ext_node_url_error: false,
-            edit_ext_conn: None,
+            ext_conn_id_edit: None,
             modal_ids: vec![
                 Self::NETWORK_EXT_CONNECTION_MODAL
             ]
@@ -81,20 +84,30 @@ impl ConnectionsContent {
         // Draw modal content for current ui container.
         self.current_modal_ui(ui, frame, cb);
 
+        // Show network type selection.
+        let saved_chain_type = AppConfig::chain_type();
+        NodeSetup::chain_type_ui(ui);
+        // Start external connections availability check on network type change.
+        if saved_chain_type != AppConfig::chain_type() {
+            ExternalConnection::start_ext_conn_availability_check();
+        }
+        ui.add_space(5.0);
+
         // Show integrated node info content.
         Self::integrated_node_item_ui(ui);
 
-        ui.add_space(8.0);
-        ui.label(RichText::new(t!("wallets.ext_conn")).size(16.0).color(Colors::GRAY));
-        ui.add_space(6.0);
-
-        // Show external connections.
-        let ext_conn_list = ConnectionsConfig::external_connections();
-        for (index, conn) in ext_conn_list.iter().enumerate() {
-            ui.horizontal_wrapped(|ui| {
-                // Draw connection list item.
-                self.ext_conn_item_ui(ui, conn, index, ext_conn_list.len(), cb);
-            });
+        let ext_conn_list = ConnectionsConfig::ext_conn_list();
+        if !ext_conn_list.is_empty() {
+            ui.add_space(6.0);
+            ui.label(RichText::new(t!("wallets.ext_conn")).size(16.0).color(Colors::GRAY));
+            ui.add_space(6.0);
+            // Show external connections.
+            for (index, conn) in ext_conn_list.iter().enumerate() {
+                ui.horizontal_wrapped(|ui| {
+                    // Draw connection list item.
+                    self.ext_conn_item_ui(ui, conn, index, ext_conn_list.len(), cb);
+                });
+            }
         }
     }
 
@@ -115,26 +128,26 @@ impl ConnectionsContent {
             ui.style_mut().visuals.widgets.hovered.rounding = Rounding::same(8.0);
             ui.style_mut().visuals.widgets.active.rounding = Rounding::same(8.0);
 
-            // Draw button to show integrated node.
-            View::item_button(ui, View::item_rounding(0, 1, true), CARET_RIGHT, || {
+            // Draw button to show integrated node info.
+            View::item_button(ui, View::item_rounding(0, 1, true), CARET_RIGHT, None, || {
                 AppConfig::toggle_show_connections_network_panel();
             });
 
             if !Node::is_running() {
                 // Draw button to start integrated node.
-                View::item_button(ui, Rounding::none(), PLAY, || {
+                View::item_button(ui, Rounding::none(), POWER, Some(Colors::GREEN), || {
                     Node::start();
                 });
             } else if !Node::is_starting() && !Node::is_stopping() && !Node::is_restarting() {
-                // Show button to open closed wallet.
-                View::item_button(ui, Rounding::none(), STOP, || {
+                // Draw button to open closed wallet.
+                View::item_button(ui, Rounding::none(), POWER, Some(Colors::RED), || {
                     Node::stop(false);
                 });
             }
 
             let layout_size = ui.available_size();
             ui.allocate_ui_with_layout(layout_size, Layout::left_to_right(Align::Center), |ui| {
-                ui.add_space(7.0);
+                ui.add_space(6.0);
                 ui.vertical(|ui| {
                     ui.add_space(3.0);
                     ui.label(RichText::new(t!("network.node"))
@@ -157,7 +170,6 @@ impl ConnectionsContent {
                     };
                     let status_text = format!("{} {}", status_icon, Node::get_sync_status_text());
                     ui.label(RichText::new(status_text).size(15.0).color(Colors::GRAY));
-                    ui.add_space(4.0);
                 })
             });
         });
@@ -172,28 +184,28 @@ impl ConnectionsContent {
                         cb: &dyn PlatformCallbacks) {
         // Setup layout size.
         let mut rect = ui.available_rect_before_wrap();
-        rect.set_height(42.0);
+        rect.set_height(53.0);
 
         // Draw round background.
         let bg_rect = rect.clone();
         let item_rounding = View::item_rounding(index, len, false);
-        ui.painter().rect(bg_rect, item_rounding, Colors::FILL, View::ITEM_STROKE);
+        ui.painter().rect(bg_rect, item_rounding, Colors::FILL_DARK, View::ITEM_STROKE);
 
         ui.vertical(|ui| {
             ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
                 // Draw buttons for non-default connections.
-                if conn.url != ExternalConnection::DEFAULT_EXTERNAL_NODE_URL {
+                if conn.url != ExternalConnection::DEFAULT_MAIN_URL {
                     let button_rounding = View::item_rounding(index, len, true);
-                    View::item_button(ui, button_rounding, TRASH, || {
-                        ConnectionsConfig::remove_external_connection(conn);
+                    View::item_button(ui, button_rounding, TRASH, None, || {
+                        ConnectionsConfig::remove_ext_conn(conn.id);
                     });
-                    View::item_button(ui, Rounding::none(), PENCIL, || {
+                    View::item_button(ui, Rounding::none(), PENCIL, None, || {
                         // Setup values for Modal.
                         self.first_modal_launch = true;
                         self.ext_node_url_edit = conn.url.clone();
                         self.ext_node_secret_edit = conn.secret.clone().unwrap_or("".to_string());
                         self.ext_node_url_error = false;
-                        self.edit_ext_conn = Some(conn.clone());
+                        self.ext_conn_id_edit = Some(conn.id);
                         // Show modal.
                         Modal::new(Self::NETWORK_EXT_CONNECTION_MODAL)
                             .position(ModalPosition::CenterTop)
@@ -206,11 +218,29 @@ impl ConnectionsContent {
                 let layout_size = ui.available_size();
                 ui.allocate_ui_with_layout(layout_size, Layout::left_to_right(Align::Center), |ui| {
                     ui.add_space(6.0);
-                    // Draw connections URL.
-                    let conn_text = format!("{} {}", GLOBE_SIMPLE, conn.url);
-                    ui.label(RichText::new(conn_text)
-                        .color(Colors::TEXT_BUTTON)
-                        .size(16.0));
+                    ui.vertical(|ui| {
+                        // Draw connections URL.
+                        ui.add_space(4.0);
+                        let conn_text = format!("{} {}", COMPUTER_TOWER, conn.url);
+                        ui.label(RichText::new(conn_text)
+                            .color(Colors::TEXT)
+                            .size(15.0));
+
+                        ui.add_space(1.0);
+
+                        // Setup connection status text.
+                        let status_text = if let Some(available) = conn.available {
+                            if available {
+                                format!("{} {}", CHECK_CIRCLE, t!("network.available"))
+                            } else {
+                                format!("{} {}", X_CIRCLE, t!("network.not_available"))
+                            }
+                        } else {
+                            format!("{} {}", DOTS_THREE_CIRCLE, t!("network.availability_check"))
+                        };
+                        ui.label(RichText::new(status_text).size(15.0).color(Colors::GRAY));
+                        ui.add_space(3.0);
+                    });
                 });
             });
         });
@@ -223,7 +253,7 @@ impl ConnectionsContent {
         self.ext_node_url_edit = "".to_string();
         self.ext_node_secret_edit = "".to_string();
         self.ext_node_url_error = false;
-        self.edit_ext_conn = None;
+        self.ext_conn_id_edit = None;
         // Show modal.
         Modal::new(Self::NETWORK_EXT_CONNECTION_MODAL)
             .position(ModalPosition::CenterTop)
@@ -246,7 +276,7 @@ impl ConnectionsContent {
 
             // Draw node URL text edit.
             let url_edit_resp = egui::TextEdit::singleline(&mut self.ext_node_url_edit)
-                .id(Id::from(modal.id).with("node_url_edit"))
+                .id(Id::from(modal.id).with(self.ext_conn_id_edit))
                 .font(TextStyle::Heading)
                 .desired_width(ui.available_width())
                 .cursor_at_end(true)
@@ -315,13 +345,12 @@ impl ConnectionsContent {
                             };
 
                             // Update or create new connections.
-                            let ext_conn = ExternalConnection::new(url.clone(), secret);
-                            if let Some(edit_conn) = self.edit_ext_conn.clone() {
-                                ConnectionsConfig::update_external_connection(edit_conn, ext_conn);
-                                self.edit_ext_conn = None;
-                            } else {
-                                ConnectionsConfig::add_external_connection(ext_conn);
+                            let mut ext_conn = ExternalConnection::new(url, secret);
+                            if let Some(id) = self.ext_conn_id_edit {
+                                ext_conn.id = id;
                             }
+                            ConnectionsConfig::add_ext_conn(ext_conn);
+                            self.ext_conn_id_edit = None;
 
                             // Close modal.
                             cb.hide_keyboard();

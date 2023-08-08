@@ -19,33 +19,49 @@ use grin_core::global::ChainTypes;
 use serde_derive::{Deserialize, Serialize};
 
 use crate::{AppConfig, Settings};
+use crate::wallet::types::ConnectionMethod;
 
 /// Wallet configuration.
 #[derive(Serialize, Deserialize, Clone)]
 pub struct WalletConfig {
     /// Chain type for current wallet.
-    pub(crate) chain_type: ChainTypes,
+    pub chain_type: ChainTypes,
     /// Identifier for a wallet.
-    pub(crate) id: i64,
+    pub id: i64,
     /// Human-readable wallet name for ui.
-    pub(crate) name: String,
-    /// External node connection URL.
-    pub(crate) external_node_url: Option<String>,
+    pub name: String,
+    /// External connection identifier.
+    pub ext_conn_id: Option<i64>,
+    /// Minimal amount of confirmations.
+    pub min_confirmations: u64
 }
 
-/// Wallet configuration file name.
-const CONFIG_FILE_NAME: &'static str = "grim-wallet.toml";
 /// Base wallets directory name.
 pub const BASE_DIR_NAME: &'static str = "wallets";
+/// Wallet configuration file name.
+const CONFIG_FILE_NAME: &'static str = "grim-wallet.toml";
+
+/// Minimal amount of confirmations default value.
+const MIN_CONFIRMATIONS_DEFAULT: u64 = 10;
 
 impl WalletConfig {
     /// Create wallet config.
-    pub fn create(name: String, external_node_url: Option<String>) -> WalletConfig {
+    pub fn create(name: String, conn_method: &ConnectionMethod) -> WalletConfig {
+        // Setup configuration path.
         let id = chrono::Utc::now().timestamp();
         let chain_type = AppConfig::chain_type();
         let config_path = Self::get_config_file_path(chain_type, id);
-
-        let config = WalletConfig { chain_type, id, name, external_node_url };
+        // Write configuration to the file.
+        let config = WalletConfig {
+            chain_type,
+            id,
+            name,
+            ext_conn_id: match conn_method {
+                ConnectionMethod::Integrated => None,
+                ConnectionMethod::External(id) => Some(*id)
+            },
+            min_confirmations: MIN_CONFIRMATIONS_DEFAULT,
+        };
         Settings::write_to_file(&config, config_path);
         config
     }
@@ -62,8 +78,7 @@ impl WalletConfig {
 
     /// Get wallets base directory path for provided [`ChainTypes`].
     pub fn get_base_path(chain_type: ChainTypes) -> PathBuf {
-        let chain_name = chain_type.shortname();
-        let sub_dir = Some(chain_name.as_str());
+        let sub_dir = Some(chain_type.shortname());
         let mut wallets_path = Settings::get_base_path(sub_dir);
         wallets_path.push(BASE_DIR_NAME);
         // Create wallets base directory if it doesn't exist.
@@ -97,11 +112,5 @@ impl WalletConfig {
     fn save(&self) {
         let config_path = Self::get_config_file_path(self.chain_type, self.id);
         Settings::write_to_file(self, config_path);
-    }
-
-    /// Set external node connection URL.
-    pub fn save_external_node_url(&mut self, url: Option<String>) {
-        self.external_node_url = url;
-        self.save();
     }
 }

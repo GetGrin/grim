@@ -47,6 +47,9 @@ network:
   autorun: Autorun
   disabled_server: 'Enable integrated node or add another connection method by pressing %{dots} in the top-left corner of the screen.'
   no_ips: There are no available IP addresses on your system, server cannot be started, check your network connectivity.
+  available: Available
+  not_available: Not available
+  availability_check: Availability check
 sync_status:
   node_restarting: Node is restarting
   node_down: Node is down

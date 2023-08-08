@@ -19,7 +19,6 @@ use egui::{Context, Stroke};
 #[cfg(target_os = "android")]
 use winit::platform::android::activity::AndroidApp;
 
-pub use settings::{AppConfig, Settings};
 
 use crate::gui::{Colors, PlatformApp};
 use crate::gui::platform::PlatformCallbacks;
@@ -29,7 +28,13 @@ i18n!("locales");
 
 mod node;
 mod wallet;
+
 mod settings;
+pub use settings::Settings;
+
+mod config;
+pub use config::AppConfig;
+use crate::gui::views::View;
 
 pub mod gui;
 
@@ -123,8 +128,10 @@ pub fn setup_visuals(ctx: &Context) {
     // Setup selection color.
     visuals.selection.stroke = Stroke { width: 1.0, color: Colors::TEXT };
     visuals.selection.bg_fill = Colors::GOLD;
-    // Disable stroke around panels by default
+    // Disable stroke around panels by default.
     visuals.widgets.noninteractive.bg_stroke = Stroke::NONE;
+    // Setup stroke around inactive widgets.
+    visuals.widgets.inactive.bg_stroke = View::DEFAULT_STROKE;
     // Setup visuals
     ctx.set_visuals(visuals);
 }

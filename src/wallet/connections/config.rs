@@ -12,66 +12,73 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::sync::{Arc, RwLock};
-
-use lazy_static::lazy_static;
+use grin_core::global::ChainTypes;
 use serde_derive::{Deserialize, Serialize};
 
+use crate::config::AppConfig;
 use crate::Settings;
 use crate::wallet::ExternalConnection;
-
-lazy_static! {
-    /// Static connections state to be accessible globally.
-    static ref CONNECTIONS_STATE: Arc<RwLock<ConnectionsConfig>> = Arc::new(
-        RwLock::new(
-            Settings::init_config(Settings::get_config_path(CONFIG_FILE_NAME, None))
-        )
-    );
-}
 
 /// Wallet connections configuration.
 #[derive(Serialize, Deserialize, Clone)]
 pub struct ConnectionsConfig {
+    /// Network type for connections.
+    chain_type: ChainTypes,
     /// URLs of external connections for wallets.
     external: Vec<ExternalConnection>
 }
 
-impl Default for ConnectionsConfig {
-    fn default() -> Self {
-        Self {
-            external: vec![
-                ExternalConnection::default()
-            ],
+impl ConnectionsConfig {
+    /// Wallet connections configuration file name.
+    pub const FILE_NAME: &'static str = "connections.toml";
+
+    /// Initialize configuration for provided [`ChainTypes`].
+    pub fn for_chain_type(chain_type: &ChainTypes) -> Self {
+        let path = Settings::get_config_path(Self::FILE_NAME, Some(chain_type.shortname()));
+        let parsed = Settings::read_from_file::<ConnectionsConfig>(path.clone());
+        if !path.exists() || parsed.is_err() {
+            let default_config = ConnectionsConfig {
+                chain_type: *chain_type,
+                external: if chain_type == &ChainTypes::Mainnet {
+                    vec![
+                        ExternalConnection::default_main()
+                    ]
+                } else {
+                    vec![]
+                },
+            };
+            Settings::write_to_file(&default_config, path);
+            default_config
+        } else {
+            parsed.unwrap()
         }
     }
-}
 
-/// Wallet configuration file name.
-const CONFIG_FILE_NAME: &'static str = "connections.toml";
-
-impl ConnectionsConfig {
-    /// Save connections config to file.
+    /// Save connections configuration to the file.
     pub fn save(&self) {
-        Settings::write_to_file(self, Settings::get_config_path(CONFIG_FILE_NAME, None));
+        let chain_type = AppConfig::chain_type();
+        let sub_dir = Some(chain_type.shortname());
+        Settings::write_to_file(self, Settings::get_config_path(Self::FILE_NAME, sub_dir));
     }
 
-    /// Get external connections for the wallet.
-    pub fn external_connections() -> Vec<ExternalConnection> {
-        let r_config = CONNECTIONS_STATE.read().unwrap();
+    /// Get [`ExternalConnection`] list.
+    pub fn ext_conn_list() -> Vec<ExternalConnection> {
+        let r_config = Settings::conn_config_to_read();
         r_config.external.clone()
     }
 
-    /// Save external connection for the wallet in app config.
-    pub fn add_external_connection(conn: ExternalConnection) {
+    /// Save [`ExternalConnection`] in configuration.
+    pub fn add_ext_conn(conn: ExternalConnection) {
         // Do not update default connection.
-        if conn.url == ExternalConnection::DEFAULT_EXTERNAL_NODE_URL {
+        if conn.url == ExternalConnection::DEFAULT_MAIN_URL {
             return;
         }
-        let mut w_config = CONNECTIONS_STATE.write().unwrap();
+        let mut w_config = Settings::conn_config_to_update();
         let mut exists = false;
         for mut c in w_config.external.iter_mut() {
-            // Update connection if URL exists.
-            if c.url == conn.url {
+            // Update connection if config exists.
+            if c.id == conn.id {
+                c.url = conn.url.clone();
                 c.secret = conn.secret.clone();
                 exists = true;
                 break;
@@ -84,39 +91,33 @@ impl ConnectionsConfig {
         w_config.save();
     }
 
-    /// Save external connection for the wallet in app config.
-    pub fn update_external_connection(conn: ExternalConnection, updated: ExternalConnection) {
-        // Do not update default connection.
-        if conn.url == ExternalConnection::DEFAULT_EXTERNAL_NODE_URL {
-            return;
-        }
-        let mut w_config = CONNECTIONS_STATE.write().unwrap();
-        for mut c in w_config.external.iter_mut() {
-            // Update connection if URL exists.
-            if c.url == conn.url {
-                c.url = updated.url.clone();
-                c.secret = updated.secret.clone();
-                break;
-            }
-        }
-        w_config.save();
-    }
-
-    /// Get external node connection secret from provided URL.
-    pub fn get_external_connection_secret(url: String) -> Option<String> {
-        let r_config = CONNECTIONS_STATE.read().unwrap();
+    /// Get [`ExternalConnection`] by provided identifier.
+    pub fn ext_conn(id: i64) -> Option<ExternalConnection> {
+        let r_config = Settings::conn_config_to_read();
         for c in &r_config.external {
-            if c.url == url {
-                return c.secret.clone();
+            if c.id == id {
+                return Some(c.clone());
             }
         }
         None
     }
 
-    /// Remove external node connection.
-    pub fn remove_external_connection(conn: &ExternalConnection) {
-        let mut w_config = CONNECTIONS_STATE.write().unwrap();
-        let index = w_config.external.iter().position(|c| c.url == conn.url);
+    /// Set [`ExternalConnection`] availability flag.
+    pub fn update_ext_conn_availability(id: i64, available: bool) {
+        let mut w_config = Settings::conn_config_to_update();
+        for mut c in w_config.external.iter_mut() {
+            if c.id == id {
+                c.available = Some(available);
+                w_config.save();
+                break;
+            }
+        }
+    }
+
+    /// Remove external node connection by provided identifier.
+    pub fn remove_ext_conn(id: i64) {
+        let mut w_config = Settings::conn_config_to_update();
+        let index = w_config.external.iter().position(|c| c.id == id);
         if let Some(i) = index {
             w_config.external.remove(i);
             w_config.save();
