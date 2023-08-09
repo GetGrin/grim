@@ -129,7 +129,11 @@ impl WalletsContent {
                     || (dual_panel && show_wallet && !self.show_wallets_at_dual_panel) {
                     Colors::FILL_DARK
                 } else {
-                    Colors::WHITE
+                    if create_wallet {
+                        Colors::WHITE
+                    } else {
+                        Colors::BUTTON
+                    }
                 },
                 ..Default::default()
             })

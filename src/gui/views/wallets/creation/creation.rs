@@ -215,7 +215,7 @@ impl WalletCreation {
                     );
                     ui.add_space(8.0);
                     let add_text = format!("{} {}", FOLDER_PLUS, t!("wallets.add"));
-                    View::button(ui, add_text, Colors::BUTTON, || {
+                    View::button(ui, add_text, Colors::WHITE, || {
                         self.show_name_pass_modal(cb);
                     });
                 });
