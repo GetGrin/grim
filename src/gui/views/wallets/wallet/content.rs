@@ -12,10 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::time::Duration;
+
 use egui::{Margin, RichText};
 
 use crate::gui::Colors;
-use crate::gui::icons::{DOWNLOAD, POWER, UPLOAD, WALLET, WRENCH};
+use crate::gui::icons::{DOWNLOAD, GEAR_FINE, POWER, UPLOAD, WALLET};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Root, View};
 use crate::gui::views::wallets::{WalletInfo, WalletReceive, WalletSend, WalletSettings};
@@ -74,9 +76,9 @@ impl WalletContent {
                 self.current_tab.ui(ui, frame, wallet, cb);
             });
 
-        // Refresh content after delay for loaded wallet.
+        // Refresh content after 1 second for loaded wallet.
         if wallet.get_info().is_some() {
-            ui.ctx().request_repaint_after(Wallet::INFO_UPDATE_DELAY);
+            ui.ctx().request_repaint_after(Duration::from_millis(1000));
         } else {
             ui.ctx().request_repaint();
         }
@@ -109,7 +111,7 @@ impl WalletContent {
                     });
                 });
                 columns[3].vertical_centered_justified(|ui| {
-                    View::tab_button(ui, WRENCH, current_type == WalletTabType::Settings, || {
+                    View::tab_button(ui, GEAR_FINE, current_type == WalletTabType::Settings, || {
                         self.current_tab = Box::new(WalletSettings::default());
                     });
                 });
@@ -122,7 +124,7 @@ impl WalletContent {
         if wallet.config.ext_conn_id.is_none() && !Node::is_running() {
             let dual_panel_root = Root::is_dual_panel_mode(frame);
             View::center_content(ui, if !dual_panel_root { 162.0 } else { 96.0 }, |ui| {
-                let text = t!("wallets.enable_node", "settings" => WRENCH);
+                let text = t!("wallets.enable_node", "settings" => GEAR_FINE);
                 ui.label(RichText::new(text).size(16.0).color(Colors::INACTIVE_TEXT));
                 // Show button to enable integrated node at non-dual root panel mode.
                 if !dual_panel_root {
@@ -136,11 +138,11 @@ impl WalletContent {
             return true;
         } else {
             if wallet.get_info().is_none() || wallet.loading_progress() < 100 {
-                if let Some(error) = &wallet.loading_error {
-                    println!("e: {}", error);
-                    let text = t!("wallets.wallet_loading_err");
-                    ui.label(RichText::new(text).size(16.0).color(Colors::INACTIVE_TEXT));
-                    //TODO: button to retry.
+                if wallet.loading_error() {
+                    View::center_content(ui, 96.0, |ui| {
+                        let text = t!("wallets.wallet_loading_err", "settings" => GEAR_FINE);
+                        ui.label(RichText::new(text).size(16.0).color(Colors::INACTIVE_TEXT));
+                    });
                 } else {
                     View::center_content(ui, 162.0, |ui| {
                         View::big_loading_spinner(ui);
@@ -157,7 +159,6 @@ impl WalletContent {
                 }
                 return true;
             } else {
-                println!("12345 info!!!");
             }
         }
         false
