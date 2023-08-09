@@ -2,6 +2,9 @@ copy: Copy
 paste: Paste
 continue: Continue
 complete: Complete
+loading: Loading
+loading_error: Loading error
+retry: Retry
 wallets:
   title: Wallets
   create_desc: Create or import existing wallet from saved recovery phrase.
@@ -31,7 +34,7 @@ wallets:
   unlocked: Unlocked
   enable_node: 'Enable integrated node to use the wallet or change connection settings by selecting %{settings} at the bottom of the screen.'
   wallet_loading: 'Wallet is loading'
-  wallet_loading_err: 'An error occurred during loading the wallet, you can change connection settings by selecting %{settings} at the bottom of the screen.'
+  wallet_loading_err: 'An error occurred during loading the wallet, you can retry or change connection settings by selecting %{settings} at the bottom of the screen.'
   wallet: Wallet
   send: Send
   receive: Receive

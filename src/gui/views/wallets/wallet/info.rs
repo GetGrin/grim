@@ -32,6 +32,6 @@ impl WalletTab for WalletInfo {
           frame: &mut eframe::Frame,
           wallet: &Wallet,
           cb: &dyn PlatformCallbacks) {
-        WalletContent::show_loading_ui(ui, frame, wallet);
+        WalletContent::loading_ui(ui, frame, wallet);
     }
 }

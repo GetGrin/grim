@@ -15,9 +15,11 @@
 use std::time::Duration;
 
 use egui::{Margin, RichText};
+use grin_chain::SyncStatus;
 
+use crate::AppConfig;
 use crate::gui::Colors;
-use crate::gui::icons::{DOWNLOAD, GEAR_FINE, POWER, UPLOAD, WALLET};
+use crate::gui::icons::{DOWNLOAD, GEAR_FINE, POWER, REPEAT, UPLOAD, WALLET};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Root, View};
 use crate::gui::views::wallets::{WalletInfo, WalletReceive, WalletSend, WalletSettings};
@@ -119,48 +121,63 @@ impl WalletContent {
         });
     }
 
-    /// Content to draw when wallet is loading.
-    pub fn show_loading_ui(ui: &mut egui::Ui, frame: &mut eframe::Frame, wallet: &Wallet) -> bool {
-        if wallet.config.ext_conn_id.is_none() && !Node::is_running() {
-            let dual_panel_root = Root::is_dual_panel_mode(frame);
-            View::center_content(ui, if !dual_panel_root { 162.0 } else { 96.0 }, |ui| {
-                let text = t!("wallets.enable_node", "settings" => GEAR_FINE);
-                ui.label(RichText::new(text).size(16.0).color(Colors::INACTIVE_TEXT));
-                // Show button to enable integrated node at non-dual root panel mode.
-                if !dual_panel_root {
+    /// Content to draw when wallet is loading, returns `true` if wallet is not ready.
+    pub fn loading_ui(ui: &mut egui::Ui, frame: &mut eframe::Frame, wallet: &Wallet) -> bool {
+        if wallet.config.ext_conn_id.is_none() {
+            if !Node::is_running() || Node::is_stopping() {
+                let dual_panel_root = Root::is_dual_panel_mode(frame);
+                View::center_content(ui, if !dual_panel_root { 162.0 } else { 96.0 }, |ui| {
+                    let text = t!("wallets.enable_node", "settings" => GEAR_FINE);
+                    ui.label(RichText::new(text).size(16.0).color(Colors::INACTIVE_TEXT));
                     ui.add_space(8.0);
-                    let enable_node_text = format!("{} {}", POWER, t!("network.enable_node"));
-                    View::button(ui, enable_node_text, Colors::GOLD, || {
-                        Node::start();
-                    });
-                }
-            });
-            return true;
-        } else {
-            if wallet.get_info().is_none() || wallet.loading_progress() < 100 {
-                if wallet.loading_error() {
-                    View::center_content(ui, 96.0, |ui| {
-                        let text = t!("wallets.wallet_loading_err", "settings" => GEAR_FINE);
-                        ui.label(RichText::new(text).size(16.0).color(Colors::INACTIVE_TEXT));
-                    });
-                } else {
-                    View::center_content(ui, 162.0, |ui| {
-                        View::big_loading_spinner(ui);
-                        ui.add_space(18.0);
-                        // Setup loading progress text.
-                        let progress = wallet.loading_progress();
-                        let text = if progress == 0 {
-                            t!("wallets.wallet_loading")
-                        } else {
-                            format!("{}: {}%", t!("wallets.wallet_loading"), progress)
-                        };
-                        ui.label(RichText::new(text).size(16.0).color(Colors::INACTIVE_TEXT));
-                    });
-                }
+                    // Show button to enable integrated node at non-dual root panel mode
+                    // or when network connections are not showing and node is not stopping
+                    if (!dual_panel_root || AppConfig::show_connections_network_panel())
+                        && !Node::is_stopping() {
+                        let enable_node_text = format!("{} {}", POWER, t!("network.enable_node"));
+                        View::button(ui, enable_node_text, Colors::GOLD, || {
+                            Node::start();
+                        });
+                    }
+                });
+                return true
+            } else if wallet.get_info().is_none() {
+                Self::progress_ui(ui, wallet);
                 return true;
-            } else {
             }
+        } else if wallet.get_info().is_none() {
+            // Show error message with button to retry on wallet loading error or loading progress.
+            if wallet.loading_error() {
+                View::center_content(ui, 162.0, |ui| {
+                    let text = t!("wallets.wallet_loading_err", "settings" => GEAR_FINE);
+                    ui.label(RichText::new(text).size(16.0).color(Colors::INACTIVE_TEXT));
+                    ui.add_space(8.0);
+                    let retry_text = format!("{} {}", REPEAT, t!("retry"));
+                    View::button(ui, retry_text, Colors::GOLD, || {
+                        wallet.set_loading_error(false);
+                    });
+                });
+            } else {
+                Self::progress_ui(ui, wallet);
+            }
+            return true;
         }
         false
+    }
+
+    /// Draw wallet loading progress.
+    fn progress_ui(ui: &mut egui::Ui, wallet: &Wallet) {
+        View::center_content(ui, 162.0, |ui| {
+            View::big_loading_spinner(ui);
+            ui.add_space(18.0);
+            // Setup loading progress text.
+            let progress = wallet.loading_progress();
+            let text = if progress == 0 {
+                t!("wallets.wallet_loading")
+            } else {
+                format!("{}: {}%", t!("wallets.wallet_loading"), progress)
+            };
+            ui.label(RichText::new(text).size(16.0).color(Colors::INACTIVE_TEXT));
+        });
     }
 }

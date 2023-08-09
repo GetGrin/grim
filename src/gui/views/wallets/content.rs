@@ -18,7 +18,7 @@ use grin_core::global::ChainTypes;
 
 use crate::AppConfig;
 use crate::gui::Colors;
-use crate::gui::icons::{ARROW_LEFT, CARET_RIGHT, COMPUTER_TOWER, EYE, EYE_SLASH, FOLDER_LOCK, FOLDER_OPEN, GEAR, GLOBE, GLOBE_SIMPLE, LOCK_KEY, PLUS, SIDEBAR_SIMPLE, SUITCASE};
+use crate::gui::icons::{ARROW_LEFT, CARET_RIGHT, COMPUTER_TOWER, EYE, EYE_SLASH, FOLDER_LOCK, FOLDER_OPEN, GEAR, GLOBE, GLOBE_SIMPLE, LOCK_KEY, PLUS, SIDEBAR_SIMPLE, SPINNER, SUITCASE, WARNING_CIRCLE};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, Root, TitlePanel, View};
 use crate::gui::views::types::{ModalContainer, ModalPosition, TitleType};
@@ -408,7 +408,15 @@ impl WalletsContent {
 
                     // Setup wallet status text.
                     let status_text = if wallet.is_open() {
-                        format!("{} {}", FOLDER_OPEN, t!("wallets.unlocked"))
+                        if wallet.get_info().is_none() {
+                            if wallet.loading_error() {
+                                format!("{} {}", WARNING_CIRCLE, t!("loading_error"))
+                            } else {
+                                format!("{} {}", SPINNER, t!("loading"))
+                            }
+                        } else {
+                            format!("{} {}", FOLDER_OPEN, t!("wallets.unlocked"))
+                        }
                     } else {
                         format!("{} {}", FOLDER_LOCK, t!("wallets.locked"))
                     };
@@ -532,7 +540,7 @@ impl WalletsContent {
                         if self.pass_edit.is_empty() {
                             return;
                         }
-                        match self.wallets.launch_selected(self.pass_edit.clone()) {
+                        match self.wallets.open_selected(self.pass_edit.clone()) {
                             Ok(_) => {
                                 // Clear values.
                                 self.pass_edit = "".to_string();
