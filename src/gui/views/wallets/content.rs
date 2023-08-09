@@ -229,13 +229,22 @@ impl WalletsContent {
                 dual_panel: bool,
                 create_wallet: bool,
                 show_wallet: bool) {
-        // Setup title text.
+        let show_list = self.show_wallets_at_dual_panel;
+
+        // Setup title.
         let title_text = if create_wallet {
             t!("wallets.add")
         } else {
             t!("wallets.title")
         };
-        let title_content = TitleType::Single(title_text.to_uppercase());
+        let title_content = if self.wallets.is_selected_open() && (!dual_panel
+            || (dual_panel && !show_list)) {
+            let title_text = t!("wallets.wallet").to_uppercase();
+            let subtitle_text = self.wallets.selected_name();
+            TitleType::WithSubTitle(title_text, subtitle_text, false)
+        } else {
+            TitleType::Single(title_text.to_uppercase())
+        };
 
         // Draw title panel.
         TitlePanel::ui(title_content, |ui, frame| {
@@ -248,7 +257,6 @@ impl WalletsContent {
                     self.creation_content.back();
                 });
             } else if show_wallet && dual_panel {
-                let show_list = self.show_wallets_at_dual_panel;
                 let list_icon = if show_list {
                     SIDEBAR_SIMPLE
                 } else {

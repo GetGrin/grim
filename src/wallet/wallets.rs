@@ -88,6 +88,16 @@ impl Wallets {
         self.selected_id = id;
     }
 
+    /// Get selected [`Wallet`] name.
+    pub fn selected_name(&self) -> String {
+        for w in &self.list {
+            if Some(w.config.id) == self.selected_id {
+                return w.config.name.to_owned()
+            }
+        }
+        t!("wallets.unlocked")
+    }
+
     /// Check if [`Wallet`] is selected for provided identifier.
     pub fn is_selected(&self, id: i64) -> bool {
         return Some(id) == self.selected_id;
