@@ -117,8 +117,7 @@ impl ConnectionsContent {
         let mut rect = ui.available_rect_before_wrap();
         rect.set_height(78.0);
         let rounding = View::item_rounding(0, 1, false);
-        let bg_color = Colors::FILL_DARK;
-        ui.painter().rect(rect, rounding, bg_color, View::HOVER_STROKE);
+        ui.painter().rect(rect, rounding, Colors::FILL, View::ITEM_STROKE);
 
         ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
             // Setup padding for item buttons.
@@ -189,7 +188,7 @@ impl ConnectionsContent {
         // Draw round background.
         let bg_rect = rect.clone();
         let item_rounding = View::item_rounding(index, len, false);
-        ui.painter().rect(bg_rect, item_rounding, Colors::FILL_DARK, View::ITEM_STROKE);
+        ui.painter().rect(bg_rect, item_rounding, Colors::FILL, View::ITEM_STROKE);
 
         ui.vertical(|ui| {
             ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
@@ -222,7 +221,7 @@ impl ConnectionsContent {
                         // Draw connections URL.
                         ui.add_space(4.0);
                         let conn_text = format!("{} {}", COMPUTER_TOWER, conn.url);
-                        View::ellipsize_text(ui, conn_text, 15.0, Colors::TEXT);
+                        View::ellipsize_text(ui, conn_text, 15.0, Colors::TITLE);
                         ui.add_space(1.0);
 
                         // Setup connection status text.

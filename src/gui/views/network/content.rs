@@ -83,7 +83,7 @@ impl NetworkContent {
                     },
                 },
                 fill: if show_connections {
-                    Colors::FILL
+                    Colors::BUTTON
                 } else {
                     Colors::WHITE
                 },
