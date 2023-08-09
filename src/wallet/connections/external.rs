@@ -39,7 +39,7 @@ impl ExternalConnection {
     pub const DEFAULT_MAIN_URL: &'static str = "https://grinnode.live:3413";
 
     /// External connections availability check delay.
-    const AVAILABILITY_CHECK_DELAY: Duration = Duration::from_millis(10 * 1000);
+    const AV_CHECK_DELAY: Duration = Duration::from_millis(60 * 1000);
 
     /// Create default external connection.
     pub fn default_main() -> Self {
@@ -53,13 +53,13 @@ impl ExternalConnection {
     }
 
     /// Check connection availability.
-    fn check_conn_availability(&self) {
+    pub fn check_conn_availability(&self) {
         // Check every connection at separate thread.
         let conn = self.clone();
         std::thread::spawn(move || {
             let url = url::Url::parse(conn.url.as_str()).unwrap();
             if let Ok(addr) = url.socket_addrs(|| None) {
-                match std::net::TcpStream::connect_timeout(&addr[0], Self::AVAILABILITY_CHECK_DELAY) {
+                match std::net::TcpStream::connect_timeout(&addr[0], Self::AV_CHECK_DELAY) {
                     Ok(_) => {
                         ConnectionsConfig::update_ext_conn_availability(conn.id, true);
                     }
@@ -92,7 +92,7 @@ impl ExternalConnection {
                 }
 
                 // Pause checking for delay value.
-                std::thread::sleep(Self::AVAILABILITY_CHECK_DELAY);
+                std::thread::sleep(Self::AV_CHECK_DELAY);
             }
         });
     }

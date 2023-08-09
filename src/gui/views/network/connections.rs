@@ -332,7 +332,6 @@ impl ConnectionsContent {
                         let error = Url::parse(self.ext_node_url_edit.as_str()).is_err();
                         self.ext_node_url_error = error;
                         if !error {
-                            // Save external connection.
                             let url = self.ext_node_url_edit.to_owned();
                             let secret = if self.ext_node_secret_edit.is_empty() {
                                 None
@@ -340,13 +339,14 @@ impl ConnectionsContent {
                                 Some(self.ext_node_secret_edit.to_owned())
                             };
 
-                            // Update or create new connections.
+                            // Update or create new connection.
                             let mut ext_conn = ExternalConnection::new(url, secret);
+                            ext_conn.check_conn_availability();
                             if let Some(id) = self.ext_conn_id_edit {
                                 ext_conn.id = id;
                             }
-                            ConnectionsConfig::add_ext_conn(ext_conn);
                             self.ext_conn_id_edit = None;
+                            ConnectionsConfig::add_ext_conn(ext_conn);
 
                             // Close modal.
                             cb.hide_keyboard();
