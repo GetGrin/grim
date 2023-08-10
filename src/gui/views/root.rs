@@ -101,7 +101,12 @@ impl Root {
                 ..Default::default()
             })
             .show_animated_inside(ui, is_panel_open, |ui| {
-                self.network.ui(ui, frame, cb);
+                // Set content height as window height.
+                let mut rect = ui.available_rect_before_wrap();
+                rect.set_height(frame.info().window_info.size.y);
+                ui.allocate_ui_at_rect(rect, |ui| {
+                    self.network.ui(ui, frame, cb);
+                });
             });
 
         // Show wallets content.
@@ -111,7 +116,12 @@ impl Root {
                 ..Default::default()
             })
             .show_inside(ui, |ui| {
-                self.wallets.ui(ui, frame, cb);
+                // Set content height as window height.
+                let mut rect = ui.available_rect_before_wrap();
+                rect.set_height(frame.info().window_info.size.y);
+                ui.allocate_ui_at_rect(rect, |ui| {
+                    self.wallets.ui(ui, frame, cb);
+                });
             });
     }
 
