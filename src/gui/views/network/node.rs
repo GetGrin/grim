@@ -51,6 +51,8 @@ impl NetworkTab for NetworkNode {
             .id_source("integrated_node")
             .auto_shrink([false; 2])
             .show(ui, |ui| {
+                ui.add_space(1.0);
+
                 // Show header info.
                 View::sub_title(ui, format!("{} {}", FLOW_ARROW, t!("network_node.header")));
                 ui.columns(2, |columns| {

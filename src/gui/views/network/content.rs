@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::{RichText, ScrollArea};
+use egui::{RichText, ScrollArea, Stroke};
 use egui::style::Margin;
 
 use crate::AppConfig;
@@ -27,9 +27,8 @@ use crate::wallet::ExternalConnection;
 
 /// Network content.
 pub struct NetworkContent {
-    /// Current tab content to show.
-    current_tab: Box<dyn NetworkTab>,
-
+    /// Current integrated node tab content.
+    node_tab_content: Box<dyn NetworkTab>,
     /// Connections content.
     connections: ConnectionsContent
 }
@@ -37,7 +36,7 @@ pub struct NetworkContent {
 impl Default for NetworkContent {
     fn default() -> Self {
         Self {
-            current_tab: Box::new(NetworkNode::default()),
+            node_tab_content: Box::new(NetworkNode::default()),
             connections: ConnectionsContent::default(),
         }
     }
@@ -51,70 +50,99 @@ impl NetworkContent {
         // Show title panel.
         self.title_ui(ui, frame, show_connections, cb);
 
-        // Show bottom tabs.
-        if !show_connections {
-            egui::TopBottomPanel::bottom("network_tabs")
-                .frame(egui::Frame {
-                    fill: Colors::FILL,
-                    inner_margin: Margin {
-                        left: View::get_left_inset() + 4.0,
-                        right: View::far_right_inset_margin(ui, frame) + 4.0,
-                        top: 4.0,
-                        bottom: View::get_bottom_inset() + 4.0,
-                    },
-                    ..Default::default()
-                })
-                .show_inside(ui, |ui| {
-                    self.tabs_ui(ui);
-                });
-        }
-
-        egui::CentralPanel::default()
+        // Show integrated node tabs content.
+        egui::TopBottomPanel::bottom("node_tabs_panel")
+            .resizable(false)
             .frame(egui::Frame {
-                stroke: View::DEFAULT_STROKE,
+                fill: Colors::FILL,
                 inner_margin: Margin {
                     left: View::get_left_inset() + 4.0,
                     right: View::far_right_inset_margin(ui, frame) + 4.0,
-                    top: 3.0,
-                    bottom: if show_connections {
-                        View::get_bottom_inset() + 4.0
-                    } else {
-                        4.0
-                    },
-                },
-                fill: if show_connections {
-                    Colors::BUTTON
-                } else {
-                    Colors::WHITE
+                    top: 4.0,
+                    bottom: View::get_bottom_inset() + 4.0,
                 },
                 ..Default::default()
             })
-            .show_inside(ui, |ui| {
-                if show_connections {
-                    ScrollArea::vertical()
-                        .id_source("connections_content")
-                        .auto_shrink([false; 2])
-                        .show(ui, |ui| {
-                            ui.add_space(1.0);
-                            ui.vertical_centered(|ui| {
-                                // Setup wallet list width.
-                                let mut rect = ui.available_rect_before_wrap();
-                                let mut width = ui.available_width();
-                                if !Root::is_dual_panel_mode(frame) {
-                                    width = f32::min(width, Root::SIDE_PANEL_WIDTH * 1.3)
-                                }
-                                rect.set_width(width);
+            .show_animated_inside(ui, !show_connections, |ui| {
+                self.tabs_ui(ui);
+            });
 
-                                ui.allocate_ui(rect.size(), |ui| {
-                                    // Show connections content.
-                                    self.connections.ui(ui, frame, cb);
-                                });
+        // Show current node tab content.
+        egui::SidePanel::right("node_tab_content_panel")
+            .resizable(false)
+            .exact_width(ui.available_width())
+            .frame(egui::Frame {
+                stroke: View::DEFAULT_STROKE,
+                ..Default::default()
+            })
+            .show_animated_inside(ui, !show_connections, |ui| {
+                egui::CentralPanel::default()
+                    .frame(egui::Frame {
+                        fill: Colors::WHITE,
+                        stroke: View::DEFAULT_STROKE,
+                        inner_margin: Margin {
+                            left: View::get_left_inset() + 4.0,
+                            right: View::far_right_inset_margin(ui, frame) + 4.0,
+                            top: 3.0,
+                            bottom: 4.0,
+                        },
+                        ..Default::default()
+                    })
+                    .show_inside(ui, |ui| {
+                        self.node_tab_content.ui(ui, frame, cb);
+                    });
+            });
+
+        let content_width = ui.available_width();
+
+        // Show connections content.
+        egui::CentralPanel::default()
+            .frame(egui::Frame {
+                stroke: if show_connections{
+                    View::DEFAULT_STROKE
+                } else {
+                    Stroke::NONE
+                },
+                inner_margin: Margin {
+                    left: if show_connections {
+                        View::get_left_inset() + 4.0
+                    } else {
+                        0.0
+                    },
+                    right: if show_connections {
+                        View::far_right_inset_margin(ui, frame) + 4.0
+                    } else {
+                        0.0
+                    },
+                    top: 3.0,
+                    bottom: View::get_bottom_inset() + 4.0,
+                },
+                fill: Colors::BUTTON,
+                ..Default::default()
+            })
+            .show_inside(ui, |ui| {
+                if !show_connections {
+                    return;
+                }
+                ScrollArea::vertical()
+                    .id_source("connections_content")
+                    .auto_shrink([false; 2])
+                    .show(ui, |ui| {
+                        ui.add_space(1.0);
+                        ui.vertical_centered(|ui| {
+                            // Setup wallet list width.
+                            let mut rect = ui.available_rect_before_wrap();
+                            let mut width = ui.available_width();
+                            if !Root::is_dual_panel_mode(frame) {
+                                width = f32::min(width, Root::SIDE_PANEL_WIDTH * 1.3)
+                            }
+                            rect.set_width(width);
+
+                            ui.allocate_ui(rect.size(), |ui| {
+                                self.connections.ui(ui, frame, cb);
                             });
                         });
-                } else {
-                    // Show current tab content.
-                    self.current_tab.ui(ui, frame, cb);
-                }
+                    });
             });
 
         // Redraw after delay if node is not syncing to update stats.
@@ -132,27 +160,27 @@ impl NetworkContent {
             ui.style_mut().spacing.button_padding = egui::vec2(0.0, 8.0);
 
             // Draw tab buttons.
-            let current_type = self.current_tab.get_type();
+            let current_type = self.node_tab_content.get_type();
             ui.columns(4, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
                     View::tab_button(ui, DATABASE, current_type == NetworkTabType::Node, || {
-                            self.current_tab = Box::new(NetworkNode::default());
-                        });
+                        self.node_tab_content = Box::new(NetworkNode::default());
+                    });
                 });
                 columns[1].vertical_centered_justified(|ui| {
                     View::tab_button(ui, GAUGE, current_type == NetworkTabType::Metrics, || {
-                            self.current_tab = Box::new(NetworkMetrics::default());
-                        });
+                        self.node_tab_content = Box::new(NetworkMetrics::default());
+                    });
                 });
                 columns[2].vertical_centered_justified(|ui| {
                     View::tab_button(ui, FACTORY, current_type == NetworkTabType::Mining, || {
-                            self.current_tab = Box::new(NetworkMining::default());
-                        });
+                        self.node_tab_content = Box::new(NetworkMining::default());
+                    });
                 });
                 columns[3].vertical_centered_justified(|ui| {
                     View::tab_button(ui, FADERS, current_type == NetworkTabType::Settings, || {
-                            self.current_tab = Box::new(NetworkSettings::default());
-                        });
+                        self.node_tab_content = Box::new(NetworkSettings::default());
+                    });
                 });
             });
         });
@@ -165,7 +193,7 @@ impl NetworkContent {
                 show_connections: bool,
                 cb: &dyn PlatformCallbacks) {
         // Setup values for title panel.
-        let title_text = self.current_tab.get_type().title().to_uppercase();
+        let title_text = self.node_tab_content.get_type().title().to_uppercase();
         let subtitle_text = Node::get_sync_status_text();
         let not_syncing = Node::not_syncing();
         let title_content = if !show_connections {

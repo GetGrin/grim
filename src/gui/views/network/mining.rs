@@ -73,10 +73,13 @@ impl NetworkTab for NetworkMining {
                 .id_source("stratum_setup_scroll")
                 .auto_shrink([false; 2])
                 .show(ui, |ui| {
+                    ui.add_space(1.0);
                     self.stratum_server_setup.ui(ui, frame, cb);
                 });
             return;
         }
+
+        ui.add_space(1.0);
 
         // Show stratum mining server info.
         View::sub_title(ui, format!("{} {}", HARD_DRIVES, t!("network_mining.server")));

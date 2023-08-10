@@ -92,6 +92,8 @@ impl NetworkTab for NetworkSettings {
             .id_source("network_settings")
             .auto_shrink([false; 2])
             .show(ui, |ui| {
+                ui.add_space(1.0);
+
                 // Draw node setup section.
                 self.node.ui(ui, frame, cb);
 

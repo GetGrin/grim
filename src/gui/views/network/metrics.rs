@@ -59,6 +59,8 @@ impl NetworkTab for NetworkMetrics {
 
         let stats = server_stats.as_ref().unwrap();
 
+        ui.add_space(1.0);
+
         // Show emission info.
         View::sub_title(ui, format!("{} {}", COINS, t!("network_metrics.emission")));
         ui.columns(3, |columns| {
