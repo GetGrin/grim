@@ -14,7 +14,6 @@
 
 use egui::{Align, Align2, Layout, Margin, RichText, Rounding, ScrollArea, TextStyle, Widget};
 use egui_extras::{Size, StripBuilder};
-use grin_core::global::ChainTypes;
 
 use crate::AppConfig;
 use crate::gui::Colors;
@@ -24,14 +23,12 @@ use crate::gui::views::{Modal, Root, TitlePanel, View};
 use crate::gui::views::types::{ModalContainer, ModalPosition, TitleType};
 use crate::gui::views::wallets::creation::WalletCreation;
 use crate::gui::views::wallets::WalletContent;
-use crate::wallet::{ConnectionsConfig, ExternalConnection, Wallet, Wallets};
+use crate::wallet::{ConnectionsConfig, ExternalConnection, Wallet, WalletList};
 
 /// Wallets content.
 pub struct WalletsContent {
-    /// Chain type for loaded wallets.
-    chain_type: ChainTypes,
     /// Loaded list of wallets.
-    wallets: Wallets,
+    wallets: WalletList,
 
     /// Password to open wallet for [`Modal`].
     pass_edit: String,
@@ -58,8 +55,7 @@ const OPEN_WALLET_MODAL: &'static str = "open_wallet_modal";
 impl Default for WalletsContent {
     fn default() -> Self {
         Self {
-            chain_type: AppConfig::chain_type(),
-            wallets: Wallets::default(),
+            wallets: WalletList::default(),
             pass_edit: "".to_string(),
             hide_pass: true,
             wrong_pass: false,
@@ -99,13 +95,8 @@ impl WalletsContent {
         // Draw modal content for current ui container.
         self.current_modal_ui(ui, frame, cb);
 
-        // Setup list of wallets if chain type was changed.
-        let chain_type = AppConfig::chain_type();
-        if self.chain_type != chain_type {
-            self.wallets.reinit(chain_type);
-            self.chain_type = chain_type;
-        }
-        let empty_list = self.wallets.list.is_empty();
+        let wallets = self.wallets.list();
+        let empty_list = wallets.is_empty();
 
         // Setup wallet content flags.
         let create_wallet = self.creation_content.can_go_back();
@@ -123,7 +114,7 @@ impl WalletsContent {
         // Show wallet panel content.
         egui::SidePanel::right("wallet_panel")
             .resizable(false)
-            .min_width(wallet_panel_width)
+            .exact_width(wallet_panel_width)
             .frame(egui::Frame {
                 fill: if empty_list && !create_wallet
                     || (dual_panel && show_wallet && !self.show_wallets_at_dual_panel) {
@@ -149,7 +140,7 @@ impl WalletsContent {
                         self.wallets.add(wallet);
                     });
                 } else  {
-                    for mut wallet in self.wallets.list.clone() {
+                    for mut wallet in wallets.clone() {
                         // Show content for selected wallet.
                         if self.wallets.is_selected(wallet.config.id) {
                             // Setup wallet content width.
@@ -205,13 +196,14 @@ impl WalletsContent {
 
                     // Setup flag to show wallet creation button if wallet is not showing
                     // at non-dual panel mode or showing at dual panel mode.
-                    let show_creation_btn
+                    let show_creation_button
                         = (!show_wallet && !dual_panel) || (dual_panel && show_wallet);
 
                     // Show list of wallets.
-                    let scroll = self.wallet_list_ui(ui, dual_panel, show_creation_btn, cb);
+                    let scroll =
+                        self.wallet_list_ui(ui, wallets, dual_panel, show_creation_button, cb);
 
-                    if show_creation_btn {
+                    if show_creation_button {
                         // Setup right margin for button.
                         let mut right_margin = if dual_panel { wallet_panel_width } else { 0.0 };
                         if scroll { right_margin += 6.0 }
@@ -304,6 +296,7 @@ impl WalletsContent {
     /// Draw list of wallets. Returns `true` if scroller is showing.
     fn wallet_list_ui(&mut self,
                       ui: &mut egui::Ui,
+                      wallets: Vec<Wallet>,
                       dual_panel: bool,
                       show_creation_btn: bool,
                       cb: &dyn PlatformCallbacks) -> bool {
@@ -331,7 +324,7 @@ impl WalletsContent {
                         rect.set_width(width);
 
                         ui.allocate_ui(rect.size(), |ui| {
-                            for mut wallet in self.wallets.list.clone() {
+                            for mut wallet in wallets {
                                 // Draw wallet list item.
                                 self.wallet_item_ui(ui, &mut wallet, cb);
                                 ui.add_space(5.0);
@@ -386,14 +379,17 @@ impl WalletsContent {
                         self.wallets.select(Some(id));
                     });
                 }
-                // Show button to close opened wallet.
-                View::item_button(ui, if !is_selected {
-                    Rounding::none()
-                } else {
-                    View::item_rounding(0, 1, true)
-                }, LOCK_KEY, None, || {
-                    let _ = wallet.close();
-                });
+
+                // Show button to close opened wallet if wallet is not loading.
+                if !wallet.is_closing() {
+                    View::item_button(ui, if !is_selected {
+                        Rounding::none()
+                    } else {
+                        View::item_rounding(0, 1, true)
+                    }, LOCK_KEY, None, || {
+                        wallet.close();
+                    });
+                }
             }
 
             let layout_size = ui.available_size();
@@ -420,7 +416,9 @@ impl WalletsContent {
 
                     // Setup wallet status text.
                     let status_text = if wallet.is_open() {
-                        if wallet.get_info().is_none() {
+                        if wallet.is_closing() {
+                            format!("{} {}", SPINNER, t!("wallets.wallet_closing"))
+                        } else if wallet.get_data().is_none() {
                             if wallet.loading_error() {
                                 format!("{} {}", WARNING_CIRCLE, t!("loading_error"))
                             } else {

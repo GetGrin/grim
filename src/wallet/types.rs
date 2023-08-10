@@ -16,7 +16,7 @@ use std::sync::Arc;
 
 use grin_keychain::ExtKeychain;
 use grin_wallet_impls::{DefaultLCProvider, HTTPNodeClient};
-use grin_wallet_libwallet::WalletInst;
+use grin_wallet_libwallet::{TxLogEntry, WalletInfo, WalletInst};
 use parking_lot::Mutex;
 
 /// Mnemonic phrase setup mode.
@@ -64,6 +64,15 @@ impl PhraseSize {
     }
 }
 
+/// Wallet connection method.
+#[derive(PartialEq)]
+pub enum ConnectionMethod {
+    /// Integrated node.
+    Integrated,
+    /// External node, contains connection identifier.
+    External(i64)
+}
+
 /// Wallet instance type.
 pub type WalletInstance = Arc<
     Mutex<
@@ -78,11 +87,11 @@ pub type WalletInstance = Arc<
     >,
 >;
 
-/// Wallet node connection method type.
-#[derive(PartialEq)]
-pub enum ConnectionMethod {
-    /// Integrated node.
-    Integrated,
-    /// External node, contains connection identifier.
-    External(i64)
+/// Contains wallet data to show.
+#[derive(Clone)]
+pub struct WalletData {
+    /// Wallet balance.
+    pub info: WalletInfo,
+    /// Transactions.
+    pub txs: Vec<TxLogEntry>
 }

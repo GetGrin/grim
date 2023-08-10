@@ -29,3 +29,6 @@ pub use wallets::*;
 
 mod config;
 pub use config::*;
+
+mod list;
+pub use list::*;
