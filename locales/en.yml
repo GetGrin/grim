@@ -2,6 +2,7 @@ copy: Copy
 paste: Paste
 continue: Continue
 complete: Complete
+closing: Closing
 loading: Loading
 loading_error: Loading error
 retry: Retry
@@ -33,7 +34,9 @@ wallets:
   locked: Locked
   unlocked: Unlocked
   enable_node: 'Enable integrated node to use the wallet or change connection settings by selecting %{settings} at the bottom of the screen.'
-  wallet_loading: 'Wallet is loading'
+  wallet_loading: Loading wallet
+  wallet_closing: Closing wallet
+  tx_loading: Loading transactions
   wallet_loading_err: 'An error occurred during loading the wallet, you can retry or change connection settings by selecting %{settings} at the bottom of the screen.'
   wallet: Wallet
   send: Send
@@ -41,6 +44,7 @@ wallets:
   settings: Wallet settings
 network:
   self: Network
+  type: 'Network type:'
   connections: Connections
   node: Integrated node
   metrics: Metrics

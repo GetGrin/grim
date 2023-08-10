@@ -221,6 +221,11 @@ impl NodeSetup {
 
     /// Draw [`ChainTypes`] setup content.
     pub fn chain_type_ui(ui: &mut egui::Ui) {
+        ui.add_space(1.0);
+        ui.vertical_centered(|ui| {
+            ui.label(RichText::new(t!("network.type")).size(16.0).color(Colors::GRAY));
+        });
+
         let saved_chain_type = AppConfig::chain_type();
         let mut selected_chain_type = saved_chain_type;
 
@@ -245,10 +250,7 @@ impl NodeSetup {
 
     /// Draw API port setup content.
     fn api_port_setup_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
-        ui.label(RichText::new(t!("network_settings.api_port"))
-            .size(16.0)
-            .color(Colors::GRAY)
-        );
+        ui.label(RichText::new(t!("network_settings.api_port")).size(16.0).color(Colors::GRAY));
         ui.add_space(6.0);
 
         let (_, port) = NodeConfig::get_api_ip_port();
@@ -280,9 +282,7 @@ impl NodeSetup {
     fn api_port_modal(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
-            ui.label(RichText::new(t!("network_settings.api_port"))
-                .size(17.0)
-                .color(Colors::GRAY));
+            ui.label(RichText::new(t!("network_settings.api_port")).size(17.0).color(Colors::GRAY));
             ui.add_space(6.0);
 
             // Draw API port text edit.

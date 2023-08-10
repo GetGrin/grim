@@ -87,6 +87,7 @@ impl ConnectionsContent {
         // Show network type selection.
         let saved_chain_type = AppConfig::chain_type();
         NodeSetup::chain_type_ui(ui);
+
         // Start external connections availability check on network type change.
         if saved_chain_type != AppConfig::chain_type() {
             ExternalConnection::start_ext_conn_availability_check();
