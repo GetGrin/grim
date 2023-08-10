@@ -53,6 +53,8 @@ impl WalletList {
                 }
             }
         }
+        // Sort wallets by id.
+        wallets.sort_by_key(|w| w.config.id);
         wallets
     }
 
