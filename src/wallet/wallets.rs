@@ -33,7 +33,7 @@ use crate::node::{Node, NodeConfig};
 use crate::wallet::{ConnectionsConfig, ExternalConnection, WalletConfig};
 use crate::wallet::types::{ConnectionMethod, WalletData, WalletInstance};
 
-/// Contains wallet instance and handles wallet commands.
+/// Contains wallet instance, configuration and state, handles wallet commands.
 #[derive(Clone)]
 pub struct Wallet {
     /// Wallet instance.
@@ -267,6 +267,12 @@ impl Wallet {
             // Mark wallet as not opened.
             wallet_close.closing.store(false, Ordering::Relaxed);
             wallet_close.is_open.store(false, Ordering::Relaxed);
+
+            // Wake up wallet thread.
+            let thread_r = wallet_close.thread.read().unwrap();
+            if let Some(thread) = thread_r.as_ref() {
+                thread.unpark();
+            }
         });
     }
 
@@ -285,7 +291,7 @@ impl Wallet {
 }
 
 /// Delay in seconds to update wallet data every minute as average block time.
-const DATA_UPDATE_DELAY: Duration = Duration::from_millis(20 * 1000);
+const DATA_UPDATE_DELAY: Duration = Duration::from_millis(60 * 1000);
 
 /// Number of attempts to update data after wallet opening before setting an error.
 const DATA_UPDATE_ATTEMPTS: u8 = 10;
