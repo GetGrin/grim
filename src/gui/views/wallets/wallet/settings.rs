@@ -13,12 +13,16 @@
 // limitations under the License.
 
 use crate::gui::platform::PlatformCallbacks;
+use crate::gui::views::wallets::setup::ConnectionSetup;
 use crate::gui::views::wallets::wallet::types::{WalletTab, WalletTabType};
 use crate::wallet::Wallet;
 
 /// Wallet settings tab content.
 #[derive(Default)]
-pub struct WalletSettings;
+pub struct WalletSettings {
+    /// Connection setup content.
+    conn_setup: ConnectionSetup
+}
 
 impl WalletTab for WalletSettings {
     fn get_type(&self) -> WalletTabType {
@@ -28,7 +32,8 @@ impl WalletTab for WalletSettings {
     fn ui(&mut self,
           ui: &mut egui::Ui,
           frame: &mut eframe::Frame,
-          wallet: &Wallet,
+          wallet: &mut Wallet,
           cb: &dyn PlatformCallbacks) {
+        self.conn_setup.wallet_ui(ui, frame, wallet, cb);
     }
 }

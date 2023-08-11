@@ -60,11 +60,12 @@ impl WalletContent {
             .show_inside(ui, |ui| {
                 ui.vertical_centered(|ui| {
                     // Setup tabs width.
-                    let mut rect = ui.available_rect_before_wrap();
-                    let mut width = f32::min(ui.available_width(), Root::SIDE_PANEL_WIDTH * 2.0);
-                    if width == 0.0 {
+                    let available_width = ui.available_width();
+                    if available_width == 0.0 {
                         return;
                     }
+                    let mut rect = ui.available_rect_before_wrap();
+                    let width = f32::min(available_width, Root::SIDE_PANEL_WIDTH * 2.0);
                     rect.set_width(width);
 
                     // Draw wallet tabs.
@@ -90,11 +91,12 @@ impl WalletContent {
             .show_inside(ui, |ui| {
                 ui.vertical_centered(|ui| {
                     // Setup tab content width.
-                    let mut rect = ui.available_rect_before_wrap();
-                    let mut width = f32::min(ui.available_width(), Root::SIDE_PANEL_WIDTH * 2.0);
-                    if width == 0.0 {
+                    let available_width = ui.available_width();
+                    if available_width == 0.0 {
                         return;
                     }
+                    let mut rect = ui.available_rect_before_wrap();
+                    let width = f32::min(available_width, Root::SIDE_PANEL_WIDTH * 2.0);
                     rect.set_width(width);
 
                     // Draw current tab content.

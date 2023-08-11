@@ -20,7 +20,7 @@ use crate::gui::icons::{GLOBE, GLOBE_SIMPLE};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, View};
 use crate::gui::views::types::{ModalContainer, ModalPosition};
-use crate::wallet::{ConnectionsConfig, ExternalConnection};
+use crate::wallet::{ConnectionsConfig, ExternalConnection, Wallet};
 use crate::wallet::types::ConnectionMethod;
 
 /// Wallet node connection method setup content.
@@ -77,12 +77,51 @@ impl ModalContainer for ConnectionSetup {
 }
 
 impl ConnectionSetup {
-    //TODO: Setup for provided wallet
-    // pub fn new() -> Self {
-    //     Self { method: ConnectionMethod::Integrated }
-    // }
+    /// Draw wallet creation setup content.
+    pub fn create_ui(&mut self,
+                     ui: &mut egui::Ui,
+                     frame: &mut eframe::Frame,
+                     cb: &dyn PlatformCallbacks) {
+        self.ui(ui, frame, cb);
+    }
 
-    pub fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame, cb: &dyn PlatformCallbacks) {
+    /// Draw existing wallet connection setup content.
+    pub fn wallet_ui(&mut self,
+              ui: &mut egui::Ui,
+              frame: &mut eframe::Frame,
+              wallet: &mut Wallet,
+              cb: &dyn PlatformCallbacks) {
+        // Setup connection value from provided wallet.
+        match wallet.config.ext_conn_id {
+            None => self.method = ConnectionMethod::Integrated,
+            Some(id) => self.method = ConnectionMethod::External(id)
+        }
+
+        // Draw setup content.
+        self.ui(ui, frame, cb);
+
+        // Setup wallet connection value after change.
+        match self.method {
+            ConnectionMethod::Integrated => {
+                if wallet.config.ext_conn_id.is_some() {
+                    wallet.config.ext_conn_id = None;
+                    wallet.config.save();
+                }
+            }
+            ConnectionMethod::External(id) => {
+                if wallet.config.ext_conn_id != Some(id) {
+                    wallet.config.ext_conn_id = Some(id);
+                    wallet.config.save();
+                }
+            }
+        }
+    }
+
+    /// Draw connection setup content.
+    fn ui(&mut self,
+          ui: &mut egui::Ui,
+          frame: &mut eframe::Frame,
+          cb: &dyn PlatformCallbacks) {
         // Draw modal content for current ui container.
         self.current_modal_ui(ui, frame, cb);
 

@@ -25,6 +25,10 @@ impl WalletTab for WalletSend {
         WalletTabType::Send
     }
 
-    fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame, wallet: &Wallet, cb: &dyn PlatformCallbacks) {
+    fn ui(&mut self,
+          ui: &mut egui::Ui,
+          frame: &mut eframe::Frame,
+          wallet: &mut Wallet,
+          cb: &dyn PlatformCallbacks) {
     }
 }

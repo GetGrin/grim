@@ -30,7 +30,7 @@ impl WalletTab for WalletInfo {
     fn ui(&mut self,
           ui: &mut egui::Ui,
           frame: &mut eframe::Frame,
-          wallet: &Wallet,
+          wallet: &mut Wallet,
           cb: &dyn PlatformCallbacks) {
         WalletContent::loading_ui(ui, frame, wallet);
     }

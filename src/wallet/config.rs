@@ -109,7 +109,7 @@ impl WalletConfig {
     }
 
     /// Save wallet config.
-    fn save(&self) {
+    pub fn save(&self) {
         let config_path = Self::get_config_file_path(self.chain_type, self.id);
         Settings::write_to_file(self, config_path);
     }

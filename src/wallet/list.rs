@@ -20,56 +20,70 @@ use crate::wallet::{Wallet, WalletConfig};
 
 /// Wrapper for [`Wallet`] list.
 pub struct WalletList {
-    /// List of wallets.
-    list: Vec<Wallet>,
+    /// List of wallets for [`ChainTypes::Mainnet`].
+    pub main_list: Vec<Wallet>,
+    /// List of wallets for [`ChainTypes::Testnet`].
+    pub test_list: Vec<Wallet>,
     /// Selected [`Wallet`] identifier.
-    selected_id: Option<i64>,
+    pub selected_id: Option<i64>,
 }
 
 impl Default for WalletList {
     fn default() -> Self {
-        Self {
-            list: Self::init(),
-            selected_id: None
-        }
+        let (main_list, test_list) = Self::init();
+        Self { main_list, test_list, selected_id: None }
     }
 }
 
 impl WalletList {
-    /// Initialize [`Wallet`] list from base directory.
-    fn init() -> Vec<Wallet> {
-        let mut wallets = Vec::new();
+    /// Initialize [`Wallet`] lists for [`ChainTypes::Mainnet`] and [`ChainTypes::Testnet`].
+    fn init() -> (Vec<Wallet>, Vec<Wallet>) {
+        let mut main_wallets = Vec::new();
+        let mut test_wallets = Vec::new();
         let chain_types = vec![ChainTypes::Mainnet, ChainTypes::Testnet];
         for chain in chain_types {
+            // initialize wallets from base directory.
             let wallets_dir = WalletConfig::get_base_path(chain);
-            // Load wallets from base directory.
             for dir in wallets_dir.read_dir().unwrap() {
                 let wallet_dir = dir.unwrap().path();
                 if wallet_dir.is_dir() {
                     let wallet = Wallet::init(wallet_dir);
                     if let Some(w) = wallet {
-                        wallets.push(w);
+                        if chain == ChainTypes::Testnet {
+                            test_wallets.push(w);
+                        } else if chain == ChainTypes::Mainnet {
+                            main_wallets.push(w);
+                        }
                     }
                 }
             }
         }
         // Sort wallets by id.
-        wallets.sort_by_key(|w| w.config.id);
-        wallets
+        main_wallets.sort_by_key(|w| w.config.id);
+        test_wallets.sort_by_key(|w| w.config.id);
+        (main_wallets, test_wallets)
     }
 
-    /// Get wallet list for current [`ChainTypes`].
-    pub fn list(&self) -> Vec<Wallet> {
+    /// Get [`Wallet`] list for current [`ChainTypes`].
+    pub fn list(&self) -> &Vec<Wallet> {
         let chain_type = AppConfig::chain_type();
-        self.list.iter().cloned()
-            .filter(|w| w.config.chain_type == chain_type)
-            .collect::<Vec<Wallet>>()
+        if chain_type == ChainTypes::Mainnet {
+            &self.main_list
+        } else {
+            &self.test_list
+        }
     }
 
     /// Add created [`Wallet`] to the list.
     pub fn add(&mut self, wallet: Wallet) {
         self.selected_id = Some(wallet.config.id);
-        self.list.insert(0, wallet);
+        let chain_type = AppConfig::chain_type();
+        let list = if chain_type == ChainTypes::Mainnet {
+            &mut self.main_list
+        } else {
+            &mut self.test_list
+        };
+        list.insert(0, wallet);
     }
 
     /// Select [`Wallet`] with provided identifier.
@@ -79,7 +93,7 @@ impl WalletList {
 
     /// Get selected [`Wallet`] name.
     pub fn selected_name(&self) -> String {
-        for w in &self.list {
+        for w in self.list() {
             if Some(w.config.id) == self.selected_id {
                 return w.config.name.to_owned()
             }
@@ -87,14 +101,9 @@ impl WalletList {
         t!("wallets.unlocked")
     }
 
-    /// Check if [`Wallet`] is selected for provided identifier.
-    pub fn is_selected(&self, id: i64) -> bool {
-        return Some(id) == self.selected_id;
-    }
-
     /// Check if selected [`Wallet`] is open.
     pub fn is_selected_open(&self) -> bool {
-        for w in &self.list {
+        for w in self.list() {
             if Some(w.config.id) == self.selected_id {
                 return w.is_open()
             }
@@ -102,9 +111,14 @@ impl WalletList {
         false
     }
 
+    /// Check if current list is empty.
+    pub fn is_current_list_empty(&self) -> bool {
+        self.list().is_empty()
+    }
+
     /// Open selected [`Wallet`].
-    pub fn open_selected(&mut self, password: String) -> Result<(), Error> {
-        for w in self.list.iter_mut() {
+    pub fn open_selected(&self, password: String) -> Result<(), Error> {
+        for w in self.list() {
             if Some(w.config.id) == self.selected_id {
                 return w.open(password.clone());
             }

@@ -14,6 +14,7 @@
 
 use egui::{Align, Align2, Layout, Margin, RichText, Rounding, ScrollArea, TextStyle, Widget};
 use egui_extras::{Size, StripBuilder};
+use grin_core::global::ChainTypes;
 
 use crate::AppConfig;
 use crate::gui::Colors;
@@ -95,10 +96,8 @@ impl WalletsContent {
         // Draw modal content for current ui container.
         self.current_modal_ui(ui, frame, cb);
 
-        let wallets = self.wallets.list();
-        let empty_list = wallets.is_empty();
-
         // Setup wallet content flags.
+        let empty_list = self.wallets.is_current_list_empty();
         let create_wallet = self.creation_content.can_go_back();
         let show_wallet = self.wallets.is_selected_open();
 
@@ -140,9 +139,15 @@ impl WalletsContent {
                         self.wallets.add(wallet);
                     });
                 } else  {
-                    for mut wallet in wallets.clone() {
+                    let chain_type = AppConfig::chain_type();
+                    let list = if chain_type == ChainTypes::Mainnet {
+                        &mut self.wallets.main_list
+                    } else {
+                        &mut self.wallets.test_list
+                    };
+                    for wallet in list.iter_mut() {
                         // Show content for selected wallet.
-                        if self.wallets.is_selected(wallet.config.id) {
+                        if self.wallets.selected_id == Some(wallet.config.id) {
                             // Setup wallet content width.
                             let mut rect = ui.available_rect_before_wrap();
                             let mut width = ui.available_width();
@@ -152,7 +157,7 @@ impl WalletsContent {
                             rect.set_width(width);
                             // Show wallet content.
                             ui.allocate_ui_at_rect(rect, |ui| {
-                                self.wallet_content.ui(ui, frame, &mut wallet, cb);
+                                self.wallet_content.ui(ui, frame, wallet, cb);
                             });
                             break;
                         }
@@ -201,7 +206,7 @@ impl WalletsContent {
 
                     // Show list of wallets.
                     let scroll =
-                        self.wallet_list_ui(ui, wallets, dual_panel, show_creation_button, cb);
+                        self.wallet_list_ui(ui, dual_panel, show_creation_button, cb);
 
                     if show_creation_button {
                         // Setup right margin for button.
@@ -296,7 +301,6 @@ impl WalletsContent {
     /// Draw list of wallets. Returns `true` if scroller is showing.
     fn wallet_list_ui(&mut self,
                       ui: &mut egui::Ui,
-                      wallets: Vec<Wallet>,
                       dual_panel: bool,
                       show_creation_btn: bool,
                       cb: &dyn PlatformCallbacks) -> bool {
@@ -324,9 +328,10 @@ impl WalletsContent {
                         rect.set_width(width);
 
                         ui.allocate_ui(rect.size(), |ui| {
-                            for mut wallet in wallets {
+                            let list = self.wallets.list().clone();
+                            for wallet in &list {
                                 // Draw wallet list item.
-                                self.wallet_item_ui(ui, &mut wallet, cb);
+                                self.wallet_item_ui(ui, wallet, cb);
                                 ui.add_space(5.0);
                             }
                             // Add space for wallet creation button.
@@ -345,10 +350,10 @@ impl WalletsContent {
     /// Draw wallet list item.
     fn wallet_item_ui(&mut self,
                       ui: &mut egui::Ui,
-                      wallet: &mut Wallet,
+                      wallet: &Wallet,
                       cb: &dyn PlatformCallbacks) {
         let id = wallet.config.id;
-        let is_selected = self.wallets.is_selected(id);
+        let is_selected = self.wallets.selected_id == Some(id);
         let is_current = wallet.is_open() && is_selected;
 
         // Draw round background.
