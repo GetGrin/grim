@@ -82,22 +82,17 @@ impl MnemonicSetup {
         // Draw modal content for current ui container.
         self.current_modal_ui(ui, frame, cb);
 
-        ScrollArea::vertical()
-            .id_source("input_mnemonic_words_list")
-            .auto_shrink([false; 2])
-            .show(ui, |ui| {
-                ui.add_space(10.0);
+        ui.add_space(10.0);
 
-                // Show mode and type setup.
-                self.mode_type_ui(ui);
+        // Show mode and type setup.
+        self.mode_type_ui(ui);
 
-                ui.add_space(12.0);
-                View::horizontal_line(ui, Colors::ITEM_STROKE);
-                ui.add_space(6.0);
+        ui.add_space(12.0);
+        View::horizontal_line(ui, Colors::ITEM_STROKE);
+        ui.add_space(6.0);
 
-                // Show words setup.
-                self.word_list_ui(ui, self.mnemonic.mode == PhraseMode::Import, cb);
-            });
+        // Show words setup.
+        self.word_list_ui(ui, self.mnemonic.mode == PhraseMode::Import, cb);
     }
 
     /// Draw content for phrase confirmation step.
@@ -110,16 +105,11 @@ impl MnemonicSetup {
 
         ui.add_space(4.0);
         ui.vertical_centered(|ui| {
-            ui.label(RichText::new(t!("wallets.saved_phrase")).size(16.0).color(Colors::GRAY));
+            let text = format!("{}:", t!("wallets.saved_phrase"));
+            ui.label(RichText::new(text).size(16.0).color(Colors::GRAY));
         });
         ui.add_space(4.0);
-        ScrollArea::vertical()
-            .id_source("confirm_mnemonic_words_list")
-            .auto_shrink([false; 2])
-            .show(ui, |ui| {
-                // Show words setup.
-                self.word_list_ui(ui, true, cb);
-            });
+        self.word_list_ui(ui, true, cb);
     }
 
     /// Draw mode and size setup.

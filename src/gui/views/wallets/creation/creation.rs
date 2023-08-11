@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::{Id, Margin, RichText, TextStyle, vec2, Widget};
+use egui::{Id, Margin, RichText, ScrollArea, TextStyle, vec2, Widget};
 use egui_extras::{RetainedImage, Size, StripBuilder};
 
 use crate::built_info;
 use crate::gui::Colors;
 use crate::gui::icons::{CHECK, EYE, EYE_SLASH, FOLDER_PLUS, SHARE_FAT};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Modal, View};
+use crate::gui::views::{Modal, Root, View};
 use crate::gui::views::types::ModalPosition;
 use crate::gui::views::wallets::creation::MnemonicSetup;
 use crate::gui::views::wallets::creation::types::Step;
@@ -94,7 +94,24 @@ impl WalletCreation {
                 })
                 .show_inside(ui, |ui| {
                     ui.vertical_centered(|ui| {
-                        self.step_control_ui(ui, on_create);
+                        ui.vertical_centered(|ui| {
+                            // Setup content width.
+                            let mut rect = ui.available_rect_before_wrap();
+                            let mut width = f32::min(
+                                ui.available_width(),
+                                Root::SIDE_PANEL_WIDTH * 2.0
+                            );
+                            if width == 0.0 {
+                                return;
+                            }
+                            rect.set_width(width);
+
+                            // Draw step control content.
+                            ui.allocate_ui(rect.size(), |ui| {
+                                self.step_control_ui(ui, on_create);
+                            });
+                        });
+
                     });
                 });
         }
@@ -112,7 +129,33 @@ impl WalletCreation {
                 ..Default::default()
             })
             .show_inside(ui, |ui| {
-                self.step_content_ui(ui, frame, cb);
+                let id = if let Some(step) = &self.step {
+                    format!("creation_step_scroll_{}", step.name())
+                } else {
+                    "creation_step_scroll".to_owned()
+                };
+                ScrollArea::vertical()
+                    .id_source(id)
+                    .auto_shrink([false; 2])
+                    .show(ui, |ui| {
+                        ui.vertical_centered(|ui| {
+                            // Setup content width.
+                            let mut rect = ui.available_rect_before_wrap();
+                            let mut width = f32::min(
+                                ui.available_width(),
+                                Root::SIDE_PANEL_WIDTH * 2.0
+                            );
+                            if width == 0.0 {
+                                return;
+                            }
+                            rect.set_width(width);
+
+                            // Draw step content.
+                            ui.allocate_ui(rect.size(), |ui| {
+                                self.step_content_ui(ui, frame, cb);
+                            });
+                        });
+                    });
             });
     }
 

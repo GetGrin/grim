@@ -316,7 +316,7 @@ impl WalletsContent {
                         let mut rect = ui.available_rect_before_wrap();
                         let mut width = ui.available_width();
                         if !dual_panel {
-                            width = f32::min(width, Root::SIDE_PANEL_WIDTH * 1.3)
+                            width = f32::min(width, Root::SIDE_PANEL_WIDTH * 1.4)
                         }
                         if width == 0.0 {
                             return;

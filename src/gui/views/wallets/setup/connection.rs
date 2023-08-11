@@ -86,43 +86,39 @@ impl ConnectionSetup {
         // Draw modal content for current ui container.
         self.current_modal_ui(ui, frame, cb);
 
-        ScrollArea::vertical()
-            .id_source("wallet_connection_setup")
-            .auto_shrink([false; 2])
-            .show(ui, |ui| {
-                View::sub_title(ui, format!("{} {}", GLOBE, t!("wallets.conn_method")));
-                View::horizontal_line(ui, Colors::STROKE);
-                ui.add_space(4.0);
+        ui.add_space(2.0);
+        View::sub_title(ui, format!("{} {}", GLOBE, t!("wallets.conn_method")));
+        View::horizontal_line(ui, Colors::ITEM_STROKE);
+        ui.add_space(4.0);
 
-                ui.vertical_centered(|ui| {
-                    // Show integrated node selection.
-                    ui.add_space(6.0);
-                    View::radio_value(ui,
-                                      &mut self.method,
-                                      ConnectionMethod::Integrated,
-                                      t!("network.node"));
+        ui.vertical_centered(|ui| {
+            // Show integrated node selection.
+            ui.add_space(6.0);
+            View::radio_value(ui,
+                              &mut self.method,
+                              ConnectionMethod::Integrated,
+                              t!("network.node"));
 
-                    ui.add_space(10.0);
-                    ui.label(RichText::new(t!("wallets.ext_conn")).size(16.0).color(Colors::GRAY));
-                    ui.add_space(6.0);
+            ui.add_space(10.0);
+            ui.label(RichText::new(t!("wallets.ext_conn")).size(16.0).color(Colors::GRAY));
+            ui.add_space(6.0);
 
-                    // Show button to add new external node connection.
-                    let add_node_text = format!("{} {}", GLOBE_SIMPLE, t!("wallets.add_node"));
-                    View::button(ui, add_node_text, Colors::GOLD, || {
-                        self.show_add_ext_conn_modal(cb);
-                    });
-                    ui.add_space(12.0);
-
-                    // Show external nodes URLs selection.
-                    for conn in ConnectionsConfig::ext_conn_list() {
-                        View::radio_value(ui,
-                                          &mut self.method,
-                                          ConnectionMethod::External(conn.id),
-                                          conn.url);
-                        ui.add_space(12.0);
-                    }
-                });
+            // Show button to add new external node connection.
+            let add_node_text = format!("{} {}", GLOBE_SIMPLE, t!("wallets.add_node"));
+            View::button(ui, add_node_text, Colors::GOLD, || {
+                self.show_add_ext_conn_modal(cb);
             });
+            ui.add_space(12.0);
+
+            // Show external nodes URLs selection.
+            for conn in ConnectionsConfig::ext_conn_list() {
+                View::radio_value(ui,
+                                  &mut self.method,
+                                  ConnectionMethod::External(conn.id),
+                                  conn.url);
+                ui.add_space(12.0);
+            }
+        });
     }
 
     /// Show external connection adding [`Modal`].
@@ -187,7 +183,7 @@ impl ConnectionSetup {
 
             // Show error when specified URL is not valid.
             if self.ext_node_url_error {
-                ui.add_space(12.0);
+                ui.add_space(2.0);
                 ui.label(RichText::new(t!("wallets.invalid_url"))
                     .size(17.0)
                     .color(Colors::RED));

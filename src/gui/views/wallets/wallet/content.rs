@@ -45,7 +45,7 @@ impl WalletContent {
               frame: &mut eframe::Frame,
               wallet: &mut Wallet,
               cb: &dyn PlatformCallbacks) {
-        // Show bottom tabs.
+        // Show wallet tabs panel.
         egui::TopBottomPanel::bottom("wallet_tabs")
             .frame(egui::Frame {
                 fill: Colors::FILL,
@@ -58,10 +58,23 @@ impl WalletContent {
                 ..Default::default()
             })
             .show_inside(ui, |ui| {
-                self.tabs_ui(ui);
+                ui.vertical_centered(|ui| {
+                    // Setup tabs width.
+                    let mut rect = ui.available_rect_before_wrap();
+                    let mut width = f32::min(ui.available_width(), Root::SIDE_PANEL_WIDTH * 2.0);
+                    if width == 0.0 {
+                        return;
+                    }
+                    rect.set_width(width);
+
+                    // Draw wallet tabs.
+                    ui.allocate_ui(rect.size(), |ui| {
+                        self.tabs_ui(ui);
+                    });
+                });
             });
 
-        // Show tab content.
+        // Show tab content panel.
         egui::CentralPanel::default()
             .frame(egui::Frame {
                 stroke: View::DEFAULT_STROKE,
@@ -75,7 +88,20 @@ impl WalletContent {
                 ..Default::default()
             })
             .show_inside(ui, |ui| {
-                self.current_tab.ui(ui, frame, wallet, cb);
+                ui.vertical_centered(|ui| {
+                    // Setup tab content width.
+                    let mut rect = ui.available_rect_before_wrap();
+                    let mut width = f32::min(ui.available_width(), Root::SIDE_PANEL_WIDTH * 2.0);
+                    if width == 0.0 {
+                        return;
+                    }
+                    rect.set_width(width);
+
+                    // Draw current tab content.
+                    ui.allocate_ui(rect.size(), |ui| {
+                        self.current_tab.ui(ui, frame, wallet, cb);
+                    });
+                });
             });
 
         // Refresh content after 1 second for loaded wallet.
