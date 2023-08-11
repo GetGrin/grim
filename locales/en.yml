@@ -102,8 +102,6 @@ network_metrics:
   difficulty_window: 'Difficulty window %{size}'
 network_mining:
   loading: Mining will be available after the synchronization
-  enable_server: Enable server
-  disable_server: Disable server
   info: 'Mining server is enabled, you can change its settings by selecting %{settings} at the bottom of the screen. Data is updating when devices are connected.'
   restart_server_required: Server restart is required to apply changes.
   rewards_wallet: Wallet for rewards

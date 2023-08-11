@@ -15,7 +15,7 @@
 use egui::{Id, RichText, TextStyle, Widget};
 
 use crate::gui::Colors;
-use crate::gui::icons::{BARBELL, HARD_DRIVES, PLUG, TIMER};
+use crate::gui::icons::{BARBELL, HARD_DRIVES, PLUG, POWER, TIMER};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, View};
 use crate::gui::views::network::settings::NetworkSettings;
@@ -111,13 +111,15 @@ impl StratumSetup {
                     });
                 } else if Node::get_stratum_stats().is_running {
                     ui.add_space(6.0);
-                    View::button(ui, t!("network_mining.disable_server"), Colors::GOLD, || {
+                    let disable_text = format!("{} {}", POWER, t!("network_settings.disable"));
+                    View::button(ui, disable_text, Colors::GOLD, || {
                         Node::stop_stratum();
                     });
                     ui.add_space(6.0);
                 } else {
                     ui.add_space(6.0);
-                    View::button(ui, t!("network_mining.enable_server"), Colors::GOLD, || {
+                    let enable_text = format!("{} {}", POWER, t!("network_settings.enable"));
+                    View::button(ui, enable_text, Colors::GOLD, || {
                         Node::start_stratum();
                     });
                     ui.add_space(6.0);

@@ -102,8 +102,6 @@ network_metrics:
   difficulty_window: 'Окно сложности %{size}'
 network_mining:
   loading: Майнинг будет доступен после синхронизации
-  enable_server: Включить сервер
-  disable_server: Выключить сервер
   info: 'Сервер майнинга запущен, вы можете изменить его настройки, выбрав %{settings} внизу экрана. Данные обновляются, когда устройства подключены.'
   restart_server_required: Для применения изменений потребуется перезапуск Stratum сервера.
   rewards_wallet: Кошелёк для наград
