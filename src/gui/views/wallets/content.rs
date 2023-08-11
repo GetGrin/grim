@@ -135,6 +135,8 @@ impl WalletsContent {
                 if create_wallet || !show_wallet {
                     // Show wallet creation content.
                     self.creation_content.ui(ui, frame, cb, |wallet| {
+                        // Reset wallet content.
+                        self.wallet_content = WalletContent::default();
                         // Add created wallet to list.
                         self.wallets.add(wallet);
                     });
@@ -240,7 +242,7 @@ impl WalletsContent {
             let subtitle_text = self.wallets.selected_name();
             TitleType::WithSubTitle(title_text, subtitle_text, false)
         } else {
-            TitleType::Single(title_text.to_uppercase())
+            TitleType::Single(title_text.to_uppercase(), show_wallet && dual_panel)
         };
 
         // Draw title panel.
@@ -381,6 +383,9 @@ impl WalletsContent {
                 if !is_selected {
                     // Show button to select opened wallet.
                     View::item_button(ui, View::item_rounding(0, 1, true), CARET_RIGHT, None, || {
+                        // Reset wallet content.
+                        self.wallet_content = WalletContent::default();
+                        // Select wallet.
                         self.wallets.select(Some(id));
                     });
                 }
@@ -564,6 +569,8 @@ impl WalletsContent {
                                 // Close modal.
                                 cb.hide_keyboard();
                                 modal.close();
+                                // Reset wallet content.
+                                self.wallet_content = WalletContent::default();
                             }
                             Err(_) => self.wrong_pass = true
                         }

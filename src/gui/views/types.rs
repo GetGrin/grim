@@ -17,8 +17,8 @@ use crate::gui::views::Modal;
 
 /// Title content type, can be single title or with animated subtitle.
 pub enum TitleType {
-    /// Single text.
-    Single(String),
+    /// Single text with possibility to align text at left side at default panel size width.
+    Single(String, bool),
     /// With animated subtitle text.
     WithSubTitle(String, String, bool)
 }

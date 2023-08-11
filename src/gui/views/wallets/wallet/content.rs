@@ -65,7 +65,7 @@ impl WalletContent {
                         return;
                     }
                     let mut rect = ui.available_rect_before_wrap();
-                    let width = f32::min(available_width, Root::SIDE_PANEL_WIDTH * 2.0);
+                    let width = f32::min(available_width, Root::SIDE_PANEL_WIDTH * 1.3);
                     rect.set_width(width);
 
                     // Draw wallet tabs.
@@ -96,7 +96,7 @@ impl WalletContent {
                         return;
                     }
                     let mut rect = ui.available_rect_before_wrap();
-                    let width = f32::min(available_width, Root::SIDE_PANEL_WIDTH * 2.0);
+                    let width = f32::min(available_width, Root::SIDE_PANEL_WIDTH * 1.3);
                     rect.set_width(width);
 
                     // Draw current tab content.
@@ -205,7 +205,7 @@ impl WalletContent {
     }
 
     /// Draw wallet loading progress content.
-    fn loading_progress_ui(ui: &mut egui::Ui, wallet: &Wallet) {
+    pub fn loading_progress_ui(ui: &mut egui::Ui, wallet: &Wallet) {
         View::center_content(ui, 162.0, |ui| {
             View::big_loading_spinner(ui);
             ui.add_space(18.0);

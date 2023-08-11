@@ -59,8 +59,8 @@ impl WalletList {
             }
         }
         // Sort wallets by id.
-        main_wallets.sort_by_key(|w| w.config.id);
-        test_wallets.sort_by_key(|w| w.config.id);
+        main_wallets.sort_by_key(|w| -w.config.id);
+        test_wallets.sort_by_key(|w| -w.config.id);
         (main_wallets, test_wallets)
     }
 

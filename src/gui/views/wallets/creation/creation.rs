@@ -218,7 +218,7 @@ impl WalletCreation {
                 ui.add_space(4.0);
                 // Show button.
                 View::button(ui, next_text.to_uppercase(), color, || {
-                    self.forward(Some(on_create));
+                    self.forward(on_create);
                 });
                 ui.add_space(4.0);
             }
@@ -289,7 +289,7 @@ impl WalletCreation {
     }
 
     /// Go to the next wallet creation [`Step`].
-    fn forward(&mut self, on_create: Option<impl FnOnce(Wallet)>) {
+    fn forward(&mut self, on_create: impl FnOnce(Wallet)) {
         self.step = if let Some(step) = &self.step {
             match step {
                 Step::EnterMnemonic => {
@@ -315,7 +315,7 @@ impl WalletCreation {
                     // Open created wallet.
                     wallet.open(pass).unwrap();
                     // Pass created wallet to callback.
-                    (on_create.unwrap())(wallet);
+                    (on_create)(wallet);
                     // Reset input data.
                     self.reset();
                     None

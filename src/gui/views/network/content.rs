@@ -199,7 +199,7 @@ impl NetworkContent {
         let title_content = if !show_connections {
             TitleType::WithSubTitle(title_text, subtitle_text, !not_syncing)
         } else {
-            TitleType::Single(t!("network.connections").to_uppercase())
+            TitleType::Single(t!("network.connections").to_uppercase(), false)
         };
 
         // Draw title panel.
@@ -213,7 +213,7 @@ impl NetworkContent {
                 });
             } else {
                 View::title_button(ui, PLUS_CIRCLE, || {
-                    self.connections.show_add_ext_conn_modal(cb);
+                    self.connections.show_add_ext_conn_modal(None, cb);
                 });
             }
         }, |ui, frame| {

@@ -6,6 +6,7 @@ closing: Closing
 loading: Loading
 loading_error: Loading error
 retry: Retry
+close: Close
 wallets:
   title: Wallets
   create_desc: Create or import existing wallet from saved recovery phrase.

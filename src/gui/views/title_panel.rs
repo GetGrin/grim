@@ -18,7 +18,7 @@ use egui_extras::{Size, StripBuilder};
 
 use crate::gui::Colors;
 use crate::gui::views::types::TitleType;
-use crate::gui::views::View;
+use crate::gui::views::{Root, View};
 
 /// Title panel with left/right action buttons and text in the middle.
 pub struct TitlePanel;
@@ -32,11 +32,12 @@ impl TitlePanel {
               mut right_content: impl FnMut(&mut egui::Ui, &mut eframe::Frame),
               ui: &mut egui::Ui,
               frame: &mut eframe::Frame) {
-        // Setup identifier.
-        let id = match &title {
-            TitleType::Single(text) => Id::from(text.clone()),
-            TitleType::WithSubTitle(text, _, _) => Id::from(text.clone())
+        // Setup identifier and alignment.
+        let (id, align_left) = match &title {
+            TitleType::Single(text, align_left) => (Id::from(text.clone()), *align_left),
+            TitleType::WithSubTitle(text, _, _) => (Id::from(text.clone()), false)
         };
+        // Draw title panel.
         egui::TopBottomPanel::top(id)
             .resizable(false)
             .exact_height(Self::DEFAULT_HEIGHT)
@@ -48,16 +49,26 @@ impl TitlePanel {
             .show_inside(ui, |ui| {
                 StripBuilder::new(ui)
                     .size(Size::exact(Self::DEFAULT_HEIGHT))
-                    .size(Size::remainder())
+                    .size(if align_left {
+                        Size::exact(Root::SIDE_PANEL_WIDTH - 2.0 * Self::DEFAULT_HEIGHT)
+                    } else {
+                        Size::remainder()
+                    })
+                    .size(if align_left {
+                        Size::remainder()
+                    } else {
+                        Size::exact(0.0)
+                    })
                     .size(Size::exact(Self::DEFAULT_HEIGHT))
                     .horizontal(|mut strip| {
                         strip.cell(|ui| {
+                            // Draw left panel action content.
                             ui.centered_and_justified(|ui| {
                                 (left_content)(ui, frame);
                             });
                         });
                         match title {
-                            TitleType::Single(text) => {
+                            TitleType::Single(text, _) => {
                                 strip.cell(|ui| {
                                     ui.add_space(2.0);
                                     ui.centered_and_justified(|ui| {
@@ -71,7 +82,9 @@ impl TitlePanel {
                                 });
                             }
                         }
+                        strip.empty();
                         strip.cell(|ui| {
+                            // Draw right panel action content.
                             ui.centered_and_justified(|ui| {
                                 (right_content)(ui, frame);
                             });

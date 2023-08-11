@@ -202,18 +202,7 @@ impl ConnectionsContent {
                         ConnectionsConfig::remove_ext_conn(conn.id);
                     });
                     View::item_button(ui, Rounding::none(), PENCIL, None, || {
-                        // Setup values for Modal.
-                        self.first_modal_launch = true;
-                        self.ext_node_url_edit = conn.url.clone();
-                        self.ext_node_secret_edit = conn.secret.clone().unwrap_or("".to_string());
-                        self.ext_node_url_error = false;
-                        self.ext_conn_id_edit = Some(conn.id);
-                        // Show modal.
-                        Modal::new(Self::NETWORK_EXT_CONNECTION_MODAL)
-                            .position(ModalPosition::CenterTop)
-                            .title(t!("wallets.add_node"))
-                            .show();
-                        cb.show_keyboard();
+                        self.show_add_ext_conn_modal(Some(conn), cb);
                     });
                 }
 
@@ -246,13 +235,21 @@ impl ConnectionsContent {
     }
 
     /// Show [`Modal`] to add external connection.
-    pub fn show_add_ext_conn_modal(&mut self, cb: &dyn PlatformCallbacks) {
-        // Setup values for Modal.
+    pub fn show_add_ext_conn_modal(&mut self,
+                                   conn: Option<&ExternalConnection>,
+                                   cb: &dyn PlatformCallbacks) {
+        // Setup values.
         self.first_modal_launch = true;
-        self.ext_node_url_edit = "".to_string();
-        self.ext_node_secret_edit = "".to_string();
         self.ext_node_url_error = false;
-        self.ext_conn_id_edit = None;
+        if let Some(c) = conn {
+            self.ext_node_url_edit = c.url.to_owned();
+            self.ext_node_secret_edit = c.secret.clone().unwrap_or("".to_string());
+            self.ext_conn_id_edit = Some(c.id);
+        } else {
+            self.ext_node_url_edit = "".to_string();
+            self.ext_node_secret_edit = "".to_string();
+            self.ext_conn_id_edit = None;
+        }
         // Show modal.
         Modal::new(Self::NETWORK_EXT_CONNECTION_MODAL)
             .position(ModalPosition::CenterTop)
