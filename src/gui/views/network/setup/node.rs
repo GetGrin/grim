@@ -105,10 +105,11 @@ impl NodeSetup {
 
         View::sub_title(ui, format!("{} {}", COMPUTER_TOWER, t!("network_settings.server")));
         View::horizontal_line(ui, Colors::STROKE);
-        ui.add_space(4.0);
+        ui.add_space(6.0);
 
         // Show chain type setup.
         Self::chain_type_ui(ui);
+        ui.add_space(2.0);
 
         // Show loading indicator or controls to stop/start/restart node.
         if Node::is_stopping() || Node::is_restarting() || Node::is_starting() {
@@ -221,7 +222,6 @@ impl NodeSetup {
 
     /// Draw [`ChainTypes`] setup content.
     pub fn chain_type_ui(ui: &mut egui::Ui) {
-        ui.add_space(1.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network.type")).size(16.0).color(Colors::GRAY));
         });

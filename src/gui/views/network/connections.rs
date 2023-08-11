@@ -84,6 +84,8 @@ impl ConnectionsContent {
         // Draw modal content for current ui container.
         self.current_modal_ui(ui, frame, cb);
 
+        ui.add_space(2.0);
+
         // Show network type selection.
         let saved_chain_type = AppConfig::chain_type();
         NodeSetup::chain_type_ui(ui);
@@ -184,7 +186,7 @@ impl ConnectionsContent {
                         cb: &dyn PlatformCallbacks) {
         // Setup layout size.
         let mut rect = ui.available_rect_before_wrap();
-        rect.set_height(53.0);
+        rect.set_height(52.0);
 
         // Draw round background.
         let bg_rect = rect.clone();
@@ -306,7 +308,7 @@ impl ConnectionsContent {
 
             // Show error when specified URL is not valid.
             if self.ext_node_url_error {
-                ui.add_space(12.0);
+                ui.add_space(2.0);
                 ui.label(RichText::new(t!("wallets.invalid_url"))
                     .size(17.0)
                     .color(Colors::RED));

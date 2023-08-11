@@ -134,7 +134,7 @@ impl NetworkContent {
                             let mut rect = ui.available_rect_before_wrap();
                             let mut width = ui.available_width();
                             if !Root::is_dual_panel_mode(frame) {
-                                width = f32::min(width, Root::SIDE_PANEL_WIDTH * 1.3)
+                                width = f32::min(width, Root::SIDE_PANEL_WIDTH * 1.4)
                             }
                             rect.set_width(width);
 
