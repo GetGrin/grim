@@ -96,14 +96,12 @@ impl WalletCreation {
                     ui.vertical_centered(|ui| {
                         ui.vertical_centered(|ui| {
                             // Setup content width.
-                            let mut rect = ui.available_rect_before_wrap();
-                            let mut width = f32::min(
-                                ui.available_width(),
-                                Root::SIDE_PANEL_WIDTH * 2.0
-                            );
-                            if width == 0.0 {
+                            let available_width = ui.available_width();
+                            if available_width == 0.0 {
                                 return;
                             }
+                            let mut rect = ui.available_rect_before_wrap();
+                            let width = f32::min(available_width, Root::SIDE_PANEL_WIDTH * 2.0);
                             rect.set_width(width);
 
                             // Draw step control content.
@@ -140,14 +138,12 @@ impl WalletCreation {
                     .show(ui, |ui| {
                         ui.vertical_centered(|ui| {
                             // Setup content width.
-                            let mut rect = ui.available_rect_before_wrap();
-                            let mut width = f32::min(
-                                ui.available_width(),
-                                Root::SIDE_PANEL_WIDTH * 2.0
-                            );
-                            if width == 0.0 {
+                            let available_width = ui.available_width();
+                            if available_width == 0.0 {
                                 return;
                             }
+                            let mut rect = ui.available_rect_before_wrap();
+                            let width = f32::min(available_width, Root::SIDE_PANEL_WIDTH * 2.0);
                             rect.set_width(width);
 
                             // Draw step content.
@@ -267,7 +263,7 @@ impl WalletCreation {
                 match step {
                     Step::EnterMnemonic => self.mnemonic_setup.ui(ui, frame, cb),
                     Step::ConfirmMnemonic => self.mnemonic_setup.confirm_ui(ui, frame, cb),
-                    Step::SetupConnection => self.network_setup.ui(ui, frame, cb)
+                    Step::SetupConnection => self.network_setup.create_ui(ui, frame, cb)
                 }
             }
         }
