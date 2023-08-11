@@ -242,7 +242,8 @@ impl WalletsContent {
             let subtitle_text = self.wallets.selected_name();
             TitleType::WithSubTitle(title_text, subtitle_text, false)
         } else {
-            TitleType::Single(title_text.to_uppercase(), show_wallet && dual_panel)
+            let left_title_align = !create_wallet && show_wallet && dual_panel;
+            TitleType::Single(title_text.to_uppercase(), left_title_align)
         };
 
         // Draw title panel.
