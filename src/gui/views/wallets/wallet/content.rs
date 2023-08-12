@@ -14,7 +14,7 @@
 
 use std::time::Duration;
 
-use egui::{Margin, RichText};
+use egui::{Margin, RichText, ScrollArea};
 use grin_chain::SyncStatus;
 
 use crate::AppConfig;
@@ -91,21 +91,29 @@ impl WalletContent {
                 ..Default::default()
             })
             .show_inside(ui, |ui| {
-                ui.vertical_centered(|ui| {
-                    // Setup tab content width.
-                    let available_width = ui.available_width();
-                    if available_width == 0.0 {
-                        return;
-                    }
-                    let mut rect = ui.available_rect_before_wrap();
-                    let width = f32::min(available_width, Root::SIDE_PANEL_WIDTH * 1.3);
-                    rect.set_width(width);
+                let scroll_id = format!("wallet_tab_{}_{}",
+                                        wallet.config.id,
+                                        self.current_tab.get_type().id());
+                ScrollArea::vertical()
+                    .id_source(scroll_id)
+                    .auto_shrink([false; 2])
+                    .show(ui, |ui| {
+                        ui.vertical_centered(|ui| {
+                            // Setup tab content width.
+                            let available_width = ui.available_width();
+                            if available_width == 0.0 {
+                                return;
+                            }
+                            let mut rect = ui.available_rect_before_wrap();
+                            let width = f32::min(available_width, Root::SIDE_PANEL_WIDTH * 1.3);
+                            rect.set_width(width);
 
-                    // Draw current tab content.
-                    ui.allocate_ui(rect.size(), |ui| {
-                        self.current_tab.ui(ui, frame, wallet, cb);
+                            // Draw current tab content.
+                            ui.allocate_ui(rect.size(), |ui| {
+                                self.current_tab.ui(ui, frame, wallet, cb);
+                            });
+                        });
                     });
-                });
             });
 
         // Refresh content after 1 second for loaded wallet.

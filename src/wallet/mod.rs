@@ -24,8 +24,8 @@ pub use mnemonic::Mnemonic;
 mod connections;
 pub use connections::*;
 
-mod wallets;
-pub use wallets::*;
+mod wallet;
+pub use wallet::*;
 
 mod config;
 pub use config::*;
