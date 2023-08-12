@@ -24,8 +24,8 @@ use crate::gui::views::types::ModalPosition;
 use crate::gui::views::wallets::creation::MnemonicSetup;
 use crate::gui::views::wallets::creation::types::Step;
 use crate::gui::views::wallets::setup::ConnectionSetup;
+use crate::wallet::{ExternalConnection, Wallet};
 use crate::wallet::types::PhraseMode;
-use crate::wallet::Wallet;
 
 /// Wallet creation content.
 pub struct WalletCreation {
@@ -304,14 +304,19 @@ impl WalletCreation {
                         }
                     }
                 }
-                Step::ConfirmMnemonic => Some(Step::SetupConnection),
+                Step::ConfirmMnemonic => {
+                    // Check external connections availability on connection setup.
+                    ExternalConnection::start_ext_conn_availability_check();
+                    Some(Step::SetupConnection)
+                },
                 Step::SetupConnection => {
                     // Create wallet at last step.
                     let name = self.name_edit.clone();
                     let pass = self.pass_edit.clone();
                     let phrase = self.mnemonic_setup.mnemonic.get_phrase();
                     let conn_method = &self.network_setup.method;
-                    let wallet = Wallet::create(name, pass.clone(), phrase, conn_method).unwrap();
+                    let mut wallet
+                        = Wallet::create(name, pass.clone(), phrase, conn_method).unwrap();
                     // Open created wallet.
                     wallet.open(pass).unwrap();
                     // Pass created wallet to callback.

@@ -14,6 +14,7 @@
 
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::wallets::wallet::types::{WalletTab, WalletTabType};
+use crate::gui::views::wallets::wallet::WalletContent;
 use crate::wallet::Wallet;
 
 /// Send funds tab content.
@@ -30,5 +31,8 @@ impl WalletTab for WalletSend {
           frame: &mut eframe::Frame,
           wallet: &mut Wallet,
           cb: &dyn PlatformCallbacks) {
+        if WalletContent::loading_ui(ui, frame, wallet) {
+            return;
+        }
     }
 }

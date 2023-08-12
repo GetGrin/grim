@@ -117,8 +117,14 @@ impl WalletList {
     }
 
     /// Open selected [`Wallet`].
-    pub fn open_selected(&self, password: String) -> Result<(), Error> {
-        for w in self.list() {
+    pub fn open_selected(&mut self, password: String) -> Result<(), Error> {
+        let chain_type = AppConfig::chain_type();
+        let list = if chain_type == ChainTypes::Mainnet {
+            &mut self.main_list
+        } else {
+            &mut self.test_list
+        };
+        for w in list {
             if Some(w.config.id) == self.selected_id {
                 return w.open(password.clone());
             }

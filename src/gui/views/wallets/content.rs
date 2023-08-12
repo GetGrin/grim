@@ -333,6 +333,13 @@ impl WalletsContent {
                         ui.allocate_ui(rect.size(), |ui| {
                             let list = self.wallets.list().clone();
                             for wallet in &list {
+                                // Check if wallet reopen is needed.
+                                if !wallet.is_open() && wallet.reopen_needed() {
+                                    wallet.set_reopen(false);
+                                    self.wallets.select(Some(wallet.config.id));
+                                    self.show_open_wallet_modal(cb);
+                                }
+
                                 // Draw wallet list item.
                                 self.wallet_item_ui(ui, wallet, cb);
                                 ui.add_space(5.0);
@@ -430,7 +437,7 @@ impl WalletsContent {
                         if wallet.is_closing() {
                             format!("{} {}", SPINNER, t!("wallets.wallet_closing"))
                         } else if wallet.get_data().is_none() {
-                            if wallet.loading_error() {
+                            if wallet.load_error() {
                                 format!("{} {}", WARNING_CIRCLE, t!("loading_error"))
                             } else {
                                 format!("{} {}", SPINNER, t!("loading"))

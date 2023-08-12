@@ -46,6 +46,8 @@ impl WalletContent {
               wallet: &mut Wallet,
               cb: &dyn PlatformCallbacks) {
         // Show wallet tabs panel.
+        let not_show_tabs =
+            wallet.is_closing() || (wallet.get_data().is_none() && !wallet.load_error());
         egui::TopBottomPanel::bottom("wallet_tabs")
             .frame(egui::Frame {
                 fill: Colors::FILL,
@@ -57,7 +59,7 @@ impl WalletContent {
                 },
                 ..Default::default()
             })
-            .show_inside(ui, |ui| {
+            .show_animated_inside(ui, !not_show_tabs, |ui| {
                 ui.vertical_centered(|ui| {
                     // Setup tabs width.
                     let available_width = ui.available_width();
@@ -172,7 +174,7 @@ impl WalletContent {
                     }
                 });
                 return true
-            } else if wallet.loading_error()
+            } else if wallet.load_error()
                 && Node::get_sync_status() == Some(SyncStatus::NoSync) {
                 Self::loading_error_ui(ui, wallet);
                 return true;
@@ -181,7 +183,7 @@ impl WalletContent {
                 return true;
             }
         } else if wallet.get_data().is_none() {
-            if wallet.loading_error() {
+            if wallet.load_error() {
                 Self::loading_error_ui(ui, wallet);
             } else {
                 Self::loading_progress_ui(ui, wallet);
@@ -199,7 +201,7 @@ impl WalletContent {
             ui.add_space(8.0);
             let retry_text = format!("{} {}", REPEAT, t!("retry"));
             View::button(ui, retry_text, Colors::GOLD, || {
-                wallet.set_loading_error(false);
+                wallet.set_load_error(false);
             });
         });
     }
@@ -211,7 +213,7 @@ impl WalletContent {
             ui.add_space(18.0);
             // Setup loading progress text.
             let text = {
-                let info_progress = wallet.info_loading_progress();
+                let info_progress = wallet.info_load_progress();
                 if wallet.is_closing() {
                     t!("wallets.wallet_closing")
                 } else if info_progress != 100 {
@@ -221,7 +223,7 @@ impl WalletContent {
                         format!("{}: {}%", t!("wallets.wallet_loading"), info_progress)
                     }
                 } else {
-                    let tx_progress = wallet.txs_loading_progress();
+                    let tx_progress = wallet.txs_load_progress();
                     if tx_progress == 0 {
                         t!("wallets.tx_loading")
                     } else {

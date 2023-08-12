@@ -15,13 +15,23 @@
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::wallets::setup::ConnectionSetup;
 use crate::gui::views::wallets::wallet::types::{WalletTab, WalletTabType};
-use crate::wallet::Wallet;
+use crate::gui::views::wallets::wallet::WalletContent;
+use crate::wallet::{ExternalConnection, Wallet};
 
 /// Wallet settings tab content.
-#[derive(Default)]
 pub struct WalletSettings {
     /// Connection setup content.
     conn_setup: ConnectionSetup
+}
+
+impl Default for WalletSettings {
+    fn default() -> Self {
+        // Check external connections availability on first tab opening.
+        ExternalConnection::start_ext_conn_availability_check();
+        Self {
+            conn_setup: ConnectionSetup::default(),
+        }
+    }
 }
 
 impl WalletTab for WalletSettings {
@@ -34,6 +44,12 @@ impl WalletTab for WalletSettings {
           frame: &mut eframe::Frame,
           wallet: &mut Wallet,
           cb: &dyn PlatformCallbacks) {
+        // Show progress if wallet is loading after opening without an error.
+        if wallet.is_closing() || (wallet.get_data().is_none() && !wallet.load_error()) {
+            WalletContent::loading_progress_ui(ui, wallet);
+            return;
+        }
+
         self.conn_setup.wallet_ui(ui, frame, wallet, cb);
     }
 }

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::{Id, RichText, ScrollArea, TextStyle, Widget};
+use egui::{Id, RichText, TextStyle, Widget};
 
 use crate::gui::Colors;
 use crate::gui::icons::PENCIL;

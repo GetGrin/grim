@@ -12,11 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-mod connection;
-pub use connection::ConnectionSetup;
+/// Wallet recovery setup content.
+pub struct RecoverySetup {
 
-mod main;
-pub use main::MainSetup;
-
-mod recovery;
-pub use recovery::RecoverySetup;
+}
