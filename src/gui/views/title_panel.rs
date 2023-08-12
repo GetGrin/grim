@@ -17,8 +17,8 @@ use egui::style::Margin;
 use egui_extras::{Size, Strip, StripBuilder};
 
 use crate::gui::Colors;
-use crate::gui::views::types::{TitleContentType, TitleType};
 use crate::gui::views::{Root, View};
+use crate::gui::views::types::{TitleContentType, TitleType};
 
 /// Title panel with left/right action buttons and text in the middle.
 pub struct TitlePanel;
@@ -50,7 +50,7 @@ impl TitlePanel {
                     TitleContentType::Title(text) => text,
                     TitleContentType::WithSubTitle(text, _, _) => text
                 };
-                let id = Id::from(format!("{}_{}", first_text, second_text));
+                let id = Id::from(first_text.to_owned()).with(second_text);
                 (id, true)
             },
         };

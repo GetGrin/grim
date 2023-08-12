@@ -105,7 +105,7 @@ impl MnemonicSetup {
 
         ui.add_space(4.0);
         ui.vertical_centered(|ui| {
-            let text = format!("{}:", t!("wallets.saved_phrase"));
+            let text = format!("{}:", t!("wallets.recovery_phrase"));
             ui.label(RichText::new(text).size(16.0).color(Colors::GRAY));
         });
         ui.add_space(4.0);
@@ -236,7 +236,7 @@ impl MnemonicSetup {
                 // Show word edit modal.
                 Modal::new(WORD_INPUT_MODAL)
                     .position(ModalPosition::CenterTop)
-                    .title(t!("wallets.saved_phrase"))
+                    .title(t!("wallets.recovery_phrase"))
                     .show();
                 cb.show_keyboard();
             });
@@ -266,7 +266,7 @@ impl MnemonicSetup {
 
             // Draw word value text edit.
             let text_edit_resp = egui::TextEdit::singleline(&mut self.word_edit)
-                .id(Id::from(format!("{}{}", modal.id, self.word_num_edit)))
+                .id(Id::from(modal.id).with(self.word_num_edit))
                 .font(TextStyle::Heading)
                 .desired_width(ui.available_width())
                 .cursor_at_end(true)
