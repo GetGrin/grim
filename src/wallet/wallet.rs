@@ -302,6 +302,14 @@ impl Wallet {
         let r_data = self.data.read().unwrap();
         r_data.clone()
     }
+
+    /// Change wallet password.
+    pub fn change_password(&self, old: String, new: String) -> Result<(), Error> {
+        let instance = self.instance.clone().unwrap();
+        let mut wallet_lock = instance.lock();
+        let lc = wallet_lock.lc_provider()?;
+        lc.change_password(None, ZeroingString::from(old), ZeroingString::from(new))
+    }
 }
 
 /// Delay in seconds to update wallet data every minute as average block time.
