@@ -15,11 +15,19 @@
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::Modal;
 
-/// Title content type, can be single title or with animated subtitle.
+/// Title type, can be single or dual title in the row.
 pub enum TitleType {
-    /// Single text with possibility to align text at left side for default panel size width.
-    Single(String, bool),
-    /// With animated subtitle text.
+    /// Single title content.
+    Single(TitleContentType),
+    /// Dual title content, will align first content for default panel size width.
+    Dual(TitleContentType, TitleContentType),
+}
+
+/// Title content type, can be single title or with animated subtitle.
+pub enum TitleContentType {
+    /// Single text.
+    Title(String),
+    /// With optionally animated subtitle text.
     WithSubTitle(String, String, bool)
 }
 

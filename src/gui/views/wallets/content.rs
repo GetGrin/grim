@@ -21,8 +21,9 @@ use crate::gui::Colors;
 use crate::gui::icons::{ARROW_LEFT, CARET_RIGHT, COMPUTER_TOWER, EYE, EYE_SLASH, FOLDER_LOCK, FOLDER_OPEN, GEAR, GLOBE, GLOBE_SIMPLE, LOCK_KEY, PLUS, SIDEBAR_SIMPLE, SPINNER, SUITCASE, WARNING_CIRCLE};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, Root, TitlePanel, View};
-use crate::gui::views::types::{ModalContainer, ModalPosition, TitleType};
+use crate::gui::views::types::{ModalContainer, ModalPosition, TitleContentType, TitleType};
 use crate::gui::views::wallets::creation::WalletCreation;
+use crate::gui::views::wallets::types::WalletTabType;
 use crate::gui::views::wallets::WalletContent;
 use crate::wallet::{ConnectionsConfig, ExternalConnection, Wallet, WalletList};
 
@@ -231,19 +232,35 @@ impl WalletsContent {
         let show_list = self.show_wallets_at_dual_panel;
 
         // Setup title.
-        let title_text = if create_wallet {
-            t!("wallets.add")
-        } else {
-            t!("wallets.title")
-        };
         let title_content = if self.wallets.is_selected_open() && (!dual_panel
             || (dual_panel && !show_list)) {
-            let title_text = t!("wallets.wallet").to_uppercase();
-            let subtitle_text = self.wallets.selected_name();
-            TitleType::WithSubTitle(title_text, subtitle_text, false)
+            let title_text = self.wallet_content.current_tab.get_type().name().to_uppercase();
+            if self.wallet_content.current_tab.get_type() == WalletTabType::Settings {
+                TitleType::Single(TitleContentType::Title(title_text))
+            } else {
+                let subtitle_text = self.wallets.selected_name();
+                TitleType::Single(TitleContentType::WithSubTitle(title_text, subtitle_text, false))
+            }
         } else {
-            let left_title_align = !create_wallet && show_wallet && dual_panel;
-            TitleType::Single(title_text.to_uppercase(), left_title_align)
+            let title_text = if create_wallet {
+                t!("wallets.add")
+            } else {
+                t!("wallets.title")
+            }.to_uppercase();
+            let dual_title = !create_wallet && show_wallet && dual_panel;
+            if dual_title {
+                let wallet_tab_type = self.wallet_content.current_tab.get_type();
+                let wallet_tab_name = wallet_tab_type.name().to_uppercase();
+                let title_content = if wallet_tab_type == WalletTabType::Settings {
+                    TitleContentType::Title(wallet_tab_name)
+                } else {
+                    let subtitle_text = self.wallets.selected_name();
+                    TitleContentType::WithSubTitle(wallet_tab_name, subtitle_text, false)
+                };
+                TitleType::Dual(TitleContentType::Title(title_text), title_content)
+            } else {
+                TitleType::Single(TitleContentType::Title(title_text))
+            }
         };
 
         // Draw title panel.

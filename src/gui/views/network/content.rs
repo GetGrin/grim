@@ -21,7 +21,7 @@ use crate::gui::icons::{CARDHOLDER, DATABASE, DOTS_THREE_OUTLINE_VERTICAL, FACTO
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{ConnectionsContent, NetworkMetrics, NetworkMining, NetworkNode, NetworkSettings, Root, TitlePanel, View};
 use crate::gui::views::network::types::{NetworkTab, NetworkTabType};
-use crate::gui::views::types::TitleType;
+use crate::gui::views::types::{TitleContentType, TitleType};
 use crate::node::Node;
 use crate::wallet::ExternalConnection;
 
@@ -197,13 +197,13 @@ impl NetworkContent {
         let subtitle_text = Node::get_sync_status_text();
         let not_syncing = Node::not_syncing();
         let title_content = if !show_connections {
-            TitleType::WithSubTitle(title_text, subtitle_text, !not_syncing)
+            TitleContentType::WithSubTitle(title_text, subtitle_text, !not_syncing)
         } else {
-            TitleType::Single(t!("network.connections").to_uppercase(), false)
+            TitleContentType::Title(t!("network.connections").to_uppercase())
         };
 
         // Draw title panel.
-        TitlePanel::ui(title_content, |ui, _| {
+        TitlePanel::ui(TitleType::Single(title_content), |ui, _| {
             if !show_connections {
                 View::title_button(ui, DOTS_THREE_OUTLINE_VERTICAL, || {
                     AppConfig::toggle_show_connections_network_panel();

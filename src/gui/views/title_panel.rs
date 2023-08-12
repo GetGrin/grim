@@ -14,10 +14,10 @@
 
 use egui::{Color32, Id, lerp, Rgba};
 use egui::style::Margin;
-use egui_extras::{Size, StripBuilder};
+use egui_extras::{Size, Strip, StripBuilder};
 
 use crate::gui::Colors;
-use crate::gui::views::types::TitleType;
+use crate::gui::views::types::{TitleContentType, TitleType};
 use crate::gui::views::{Root, View};
 
 /// Title panel with left/right action buttons and text in the middle.
@@ -32,10 +32,27 @@ impl TitlePanel {
               mut right_content: impl FnMut(&mut egui::Ui, &mut eframe::Frame),
               ui: &mut egui::Ui,
               frame: &mut eframe::Frame) {
-        // Setup identifier and alignment.
-        let (id, align_left) = match &title {
-            TitleType::Single(text, align_left) => (Id::from(text.clone()), *align_left),
-            TitleType::WithSubTitle(text, _, _) => (Id::from(text.clone()), false)
+        // Setup identifier and title type.
+        let (id, dual_title) = match &title {
+            TitleType::Single(content) => {
+                let text = match content {
+                    TitleContentType::Title(text) => text,
+                    TitleContentType::WithSubTitle(text, _, _) => text
+                };
+                (Id::from(text.clone()), false)
+            },
+            TitleType::Dual(first, second) => {
+                let first_text = match first {
+                    TitleContentType::Title(text) => text,
+                    TitleContentType::WithSubTitle(text, _, _) => text
+                };
+                let second_text = match first {
+                    TitleContentType::Title(text) => text,
+                    TitleContentType::WithSubTitle(text, _, _) => text
+                };
+                let id = Id::from(format!("{}_{}", first_text, second_text));
+                (id, true)
+            },
         };
         // Draw title panel.
         egui::TopBottomPanel::top(id)
@@ -49,12 +66,17 @@ impl TitlePanel {
             .show_inside(ui, |ui| {
                 StripBuilder::new(ui)
                     .size(Size::exact(Self::DEFAULT_HEIGHT))
-                    .size(if align_left {
+                    .size(if dual_title {
                         Size::exact(Root::SIDE_PANEL_WIDTH - 2.0 * Self::DEFAULT_HEIGHT)
                     } else {
                         Size::remainder()
                     })
-                    .size(if align_left {
+                    .size(if dual_title {
+                        Size::exact(Self::DEFAULT_HEIGHT * 2.0)
+                    } else {
+                        Size::exact(0.0)
+                    })
+                    .size(if dual_title {
                         Size::remainder()
                     } else {
                         Size::exact(0.0)
@@ -67,22 +89,19 @@ impl TitlePanel {
                                 (left_content)(ui, frame);
                             });
                         });
+                        // Draw title text content.
                         match title {
-                            TitleType::Single(text, _) => {
-                                strip.cell(|ui| {
-                                    ui.add_space(2.0);
-                                    ui.centered_and_justified(|ui| {
-                                        View::ellipsize_text(ui, text, 19.0, Colors::TITLE);
-                                    });
-                                });
+                            TitleType::Single(content) => {
+                                Self::title_text_content(&mut strip, content);
+                                strip.empty();
+                                strip.empty();
                             }
-                            TitleType::WithSubTitle(text, subtitle_text, animate_sub) => {
-                                strip.strip(|builder| {
-                                    Self::with_sub_title(builder, text, subtitle_text, animate_sub);
-                                });
+                            TitleType::Dual(first, second) => {
+                                Self::title_text_content(&mut strip, first);
+                                strip.empty();
+                                Self::title_text_content(&mut strip, second);
                             }
                         }
-                        strip.empty();
                         strip.cell(|ui| {
                             // Draw right panel action content.
                             ui.centered_and_justified(|ui| {
@@ -91,6 +110,25 @@ impl TitlePanel {
                         });
                     });
             });
+    }
+
+    /// Setup title text content.
+    fn title_text_content(strip: &mut Strip, content: TitleContentType) {
+        match content {
+            TitleContentType::Title(text) => {
+                strip.cell(|ui| {
+                    ui.add_space(2.0);
+                    ui.centered_and_justified(|ui| {
+                        View::ellipsize_text(ui, text, 19.0, Colors::TITLE);
+                    });
+                });
+            }
+            TitleContentType::WithSubTitle(text, subtitle, animate) => {
+                strip.strip(|builder| {
+                    Self::with_sub_title(builder, text, subtitle, animate);
+                });
+            }
+        }
     }
 
     /// Calculate inner margin based on display insets (cutouts).

@@ -35,13 +35,13 @@ pub enum WalletTabType {
 }
 
 impl WalletTabType {
-    /// Identifier representing wallet tab type.
-    pub fn id(&self) -> String {
+    /// Name of wallet tab to show at ui.
+    pub fn name(&self) -> String {
         match *self {
-            WalletTabType::Info => "info".to_owned(),
-            WalletTabType::Receive => "receive".to_owned(),
-            WalletTabType::Send => "send".to_owned(),
-            WalletTabType::Settings => "settings".to_owned()
+            WalletTabType::Info => t!("wallets.wallet"),
+            WalletTabType::Receive => t!("wallets.receive"),
+            WalletTabType::Send => t!("wallets.send"),
+            WalletTabType::Settings => t!("wallets.settings")
         }
     }
 }
