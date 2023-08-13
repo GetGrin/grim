@@ -14,7 +14,7 @@
 
 use std::sync::atomic::{AtomicI32, Ordering};
 
-use egui::{Button, PointerState, Response, RichText, Sense, Spinner, Widget};
+use egui::{Button, CursorIcon, PointerState, Response, RichText, Sense, Spinner, Widget};
 use egui::epaint::{CircleShape, Color32, FontId, RectShape, Rounding, Stroke};
 use egui::epaint::text::TextWrapping;
 use egui::text::{LayoutJob, TextFormat};
@@ -121,7 +121,8 @@ impl View {
             // Draw button.
             let br = Button::new(wt)
                 .fill(Colors::TRANSPARENT)
-                .ui(ui);
+                .ui(ui)
+                .on_hover_cursor(CursorIcon::PointingHand);
             br.surrender_focus();
             if Self::touched(ui, br) {
                 (action)();
@@ -155,7 +156,7 @@ impl View {
                 button = button.fill(Colors::FILL).stroke(Stroke::NONE);
             }
 
-            let br = button.ui(ui);
+            let br = button.ui(ui).on_hover_cursor(CursorIcon::PointingHand);
             br.surrender_focus();
             if Self::touched(ui, br) {
                 (action)();
@@ -169,7 +170,8 @@ impl View {
         let br = Button::new(button_text)
             .stroke(Self::DEFAULT_STROKE)
             .fill(fill)
-            .ui(ui);
+            .ui(ui)
+            .on_hover_cursor(CursorIcon::PointingHand);
         if Self::touched(ui, br) {
             (action)();
         }
@@ -206,7 +208,8 @@ impl View {
             let br = Button::new(RichText::new(text).size(20.0).color(text_color))
                 .rounding(rounding)
                 .min_size(button_size)
-                .ui(ui);
+                .ui(ui)
+                .on_hover_cursor(CursorIcon::PointingHand);
             br.surrender_focus();
             if Self::touched(ui, br) {
                 (action)();
@@ -225,7 +228,8 @@ impl View {
             // Setup radius.
             let mut r = 44.0 * 0.5;
             let size = egui::Vec2::splat(2.0 * r + 5.0);
-            let (rect, br) = ui.allocate_at_least(size, Sense::click_and_drag());
+            let (rect, mut br) = ui.allocate_at_least(size, Sense::click_and_drag());
+            br = br.on_hover_cursor(CursorIcon::PointingHand);
 
             let mut icon_color = Colors::TEXT;
 
@@ -375,7 +379,8 @@ impl View {
             .frame(false)
             .stroke(Stroke::NONE)
             .fill(Colors::TRANSPARENT)
-            .ui(ui);
+            .ui(ui)
+            .on_hover_cursor(CursorIcon::PointingHand);
         if Self::touched(ui, br) {
             (callback)();
         }
@@ -384,7 +389,9 @@ impl View {
     /// Show a [`RadioButton`]. It is selected if `*current_value == selected_value`.
     /// If clicked, `selected_value` is assigned to `*current_value`.
     pub fn radio_value<T: PartialEq>(ui: &mut egui::Ui, current: &mut T, value: T, text: String) {
-        let mut response = ui.radio(*current == value, text);
+        let mut response = ui.radio(*current == value, text)
+            .on_hover_cursor(CursorIcon::PointingHand);
+        ;
         if Self::touched(ui, response.clone()) && *current != value {
             *current = value;
             response.mark_changed();
