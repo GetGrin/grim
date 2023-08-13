@@ -16,7 +16,7 @@ use egui::{Align, Id, Layout, RichText, Rounding, TextStyle, Widget};
 use url::Url;
 
 use crate::gui::Colors;
-use crate::gui::icons::{CHECK, CHECK_CIRCLE, CHECK_FAT, COMPUTER_TOWER, DOTS_THREE_CIRCLE, GLOBE, GLOBE_SIMPLE, POWER, X_CIRCLE};
+use crate::gui::icons::{CHECK, CHECK_CIRCLE, CHECK_FAT, COMPUTER_TOWER, DOTS_THREE_CIRCLE, GLOBE, PLUS_CIRCLE, POWER, X_CIRCLE};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, View};
 use crate::gui::views::types::{ModalContainer, ModalPosition};
@@ -164,7 +164,7 @@ impl ConnectionSetup {
                 ui.add_space(6.0);
 
                 // Show button to add new external node connection.
-                let add_node_text = format!("{} {}", GLOBE_SIMPLE, t!("wallets.add_node"));
+                let add_node_text = format!("{} {}", PLUS_CIRCLE, t!("wallets.add_node"));
                 View::button(ui, add_node_text, Colors::GOLD, || {
                     self.show_add_ext_conn_modal(cb);
                 });
@@ -203,16 +203,15 @@ impl ConnectionSetup {
                 View::item_button(ui, View::item_rounding(0, 1, true), CHECK, None, || {
                     self.method = ConnectionMethod::Integrated;
                 });
+            } else {
+                ui.add_space(14.0);
+                ui.label(RichText::new(CHECK_FAT).size(20.0).color(Colors::GREEN));
+                ui.add_space(14.0);
             }
 
             if !Node::is_running() {
                 // Draw button to start integrated node.
-                let rounding = if is_current_method {
-                    View::item_rounding(0, 1, true)
-                } else {
-                    Rounding::none()
-                };
-                View::item_button(ui, rounding, POWER, Some(Colors::GREEN), || {
+                View::item_button(ui, Rounding::none(), POWER, Some(Colors::GREEN), || {
                     Node::start();
                 });
             }
@@ -273,7 +272,7 @@ impl ConnectionSetup {
                     });
                 } else {
                     ui.add_space(12.0);
-                    ui.label(RichText::new(CHECK_FAT).size(20.0).color(Colors::TITLE));
+                    ui.label(RichText::new(CHECK_FAT).size(20.0).color(Colors::GREEN));
                 }
 
                 let layout_size = ui.available_size();
@@ -285,7 +284,6 @@ impl ConnectionSetup {
                         let conn_text = format!("{} {}", COMPUTER_TOWER, conn.url);
                         View::ellipsize_text(ui, conn_text, 15.0, Colors::TITLE);
                         ui.add_space(1.0);
-
                         // Setup connection status text.
                         let status_text = if let Some(available) = conn.available {
                             if available {

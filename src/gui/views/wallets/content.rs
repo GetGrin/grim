@@ -29,7 +29,7 @@ use crate::wallet::{ConnectionsConfig, ExternalConnection, Wallet, WalletList};
 
 /// Wallets content.
 pub struct WalletsContent {
-    /// Loaded list of wallets.
+    /// List of wallets.
     wallets: WalletList,
 
     /// Password to open wallet for [`Modal`].
@@ -415,8 +415,8 @@ impl WalletsContent {
                     });
                 }
 
-                // Show button to close opened wallet if wallet is not loading.
-                if !wallet.is_closing() {
+                // Show button to close opened wallet.
+                if !wallet.is_closing()  {
                     View::item_button(ui, if !is_selected {
                         Rounding::none()
                     } else {
@@ -437,7 +437,7 @@ impl WalletsContent {
                     View::ellipsize_text(ui, wallet.config.name.to_owned(), 18.0, name_color);
 
                     // Setup wallet connection text.
-                    let conn_text = if let Some(id) = wallet.config.ext_conn_id {
+                    let conn_text = if let Some(id) = wallet.get_current_ext_conn_id() {
                         let ext_conn_url = match ConnectionsConfig::ext_conn(id) {
                             None => ExternalConnection::DEFAULT_MAIN_URL.to_string(),
                             Some(ext_conn) => ext_conn.url
@@ -451,13 +451,41 @@ impl WalletsContent {
 
                     // Setup wallet status text.
                     let status_text = if wallet.is_open() {
-                        if wallet.is_closing() {
-                            format!("{} {}", SPINNER, t!("wallets.wallet_closing"))
-                        } else if wallet.get_data().is_none() {
-                            if wallet.load_error() {
-                                format!("{} {}", WARNING_CIRCLE, t!("loading_error"))
+                        if wallet.sync_error() {
+                            format!("{} {}", WARNING_CIRCLE, t!("loading_error"))
+                        } else if wallet.is_closing() {
+                            format!("{} {}", SPINNER, t!("wallets.closing"))
+                        } else if wallet.is_repairing() {
+                            let repair_progress = wallet.repairing_progress();
+                            if repair_progress == 0 {
+                                format!("{} {}", SPINNER, t!("wallets.checking"))
                             } else {
-                                format!("{} {}", SPINNER, t!("loading"))
+                                format!("{} {}: {}%",
+                                        SPINNER,
+                                        t!("wallets.checking"),
+                                        repair_progress)
+                            }
+                        } else if wallet.get_data().is_none() {
+                            let info_progress = wallet.info_sync_progress();
+                            if info_progress != 100 {
+                                if info_progress == 0 {
+                                    format!("{} {}", SPINNER, t!("wallets.loading"))
+                                } else {
+                                    format!("{} {}: {}%",
+                                            SPINNER,
+                                            t!("wallets.loading"),
+                                            info_progress)
+                                }
+                            } else {
+                                let tx_progress = wallet.txs_sync_progress();
+                                if tx_progress == 0 {
+                                    t!("wallets.tx_loading")
+                                } else {
+                                    format!("{} {}: {}%",
+                                            SPINNER,
+                                            t!("wallets.tx_loading"),
+                                            tx_progress)
+                                }
                             }
                         } else {
                             format!("{} {}", FOLDER_OPEN, t!("wallets.unlocked"))

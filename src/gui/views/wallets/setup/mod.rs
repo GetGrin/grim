@@ -15,8 +15,8 @@
 mod connection;
 pub use connection::ConnectionSetup;
 
-mod main;
-pub use main::MainSetup;
+mod common;
+pub use common::CommonSetup;
 
 mod recovery;
 pub use recovery::RecoverySetup;

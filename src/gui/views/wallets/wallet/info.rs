@@ -32,7 +32,7 @@ impl WalletTab for WalletInfo {
           frame: &mut eframe::Frame,
           wallet: &mut Wallet,
           cb: &dyn PlatformCallbacks) {
-        if WalletContent::loading_ui(ui, frame, wallet) {
+        if WalletContent::sync_ui(ui, frame, wallet) {
             return;
         }
     }

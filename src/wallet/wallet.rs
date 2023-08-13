@@ -24,6 +24,7 @@ use grin_core::global;
 use grin_keychain::{ExtKeychain, Keychain};
 use grin_util::secp::SecretKey;
 use grin_util::types::ZeroingString;
+use grin_wallet_api::Owner;
 use grin_wallet_impls::{DefaultLCProvider, DefaultWalletImpl, HTTPNodeClient};
 use grin_wallet_libwallet::{Error, NodeClient, StatusMessage, WalletInst, WalletLCProvider};
 use grin_wallet_libwallet::api_impl::owner::{retrieve_summary_info, retrieve_txs};
@@ -36,13 +37,15 @@ use crate::wallet::types::{ConnectionMethod, WalletData, WalletInstance};
 /// Contains wallet instance, configuration and state, handles wallet commands.
 #[derive(Clone)]
 pub struct Wallet {
-    /// Wallet instance, initializing on wallet opening and clearing on wallet closing.
-    instance: Option<WalletInstance>,
     /// Wallet configuration.
     pub config: WalletConfig,
+    /// Wallet instance, initializing on wallet opening and clearing on wallet closing.
+    instance: Option<WalletInstance>,
+    /// [`WalletInstance`] external connection id applied after opening.
+    instance_ext_conn_id: Option<i64>,
 
-    /// Wallet updating thread.
-    thread: Arc<RwLock<Option<Thread>>>,
+    /// Wallet sync thread.
+    sync_thread: Arc<RwLock<Option<Thread>>>,
 
     /// Flag to check if wallet reopening is needed.
     reopen: Arc<AtomicBool>,
@@ -52,33 +55,41 @@ pub struct Wallet {
     closing: Arc<AtomicBool>,
 
     /// Error on wallet loading.
-    load_error: Arc<AtomicBool>,
-    /// Info loading progress in percents
-    info_load_progress: Arc<AtomicU8>,
-    /// Transactions loading progress in percents
-    txs_load_progress: Arc<AtomicU8>,
+    sync_error: Arc<AtomicBool>,
+    /// Info loading progress in percents.
+    info_sync_progress: Arc<AtomicU8>,
+    /// Transactions loading progress in percents.
+    txs_sync_progress: Arc<AtomicU8>,
 
     /// Wallet data.
     data: Arc<RwLock<Option<WalletData>>>,
     /// Attempts amount to update wallet data.
-    data_update_attempts: Arc<AtomicU8>
+    sync_attempts: Arc<AtomicU8>,
+
+    /// Flag to check if wallet repairing and restoring missing outputs is needed.
+    repair_needed: Arc<AtomicBool>,
+    /// Wallet repair progress in percents.
+    repair_progress: Arc<AtomicU8>
 }
 
 impl Wallet {
     /// Create new [`Wallet`] instance with provided [`WalletConfig`].
     fn new(config: WalletConfig) -> Self {
         Self {
-            instance: None,
             config,
-            thread: Arc::from(RwLock::new(None)),
+            instance: None,
+            instance_ext_conn_id: None,
+            sync_thread: Arc::from(RwLock::new(None)),
             reopen: Arc::new(AtomicBool::new(false)),
             is_open: Arc::from(AtomicBool::new(false)),
             closing: Arc::new(AtomicBool::new(false)),
-            load_error: Arc::from(AtomicBool::new(false)),
-            info_load_progress: Arc::from(AtomicU8::new(0)),
-            txs_load_progress: Arc::from(AtomicU8::new(0)),
+            sync_error: Arc::from(AtomicBool::new(false)),
+            info_sync_progress: Arc::from(AtomicU8::new(0)),
+            txs_sync_progress: Arc::from(AtomicU8::new(0)),
             data: Arc::from(RwLock::new(None)),
-            data_update_attempts: Arc::new(AtomicU8::new(0))
+            sync_attempts: Arc::new(AtomicU8::new(0)),
+            repair_needed: Arc::new(AtomicBool::new(false)),
+            repair_progress: Arc::new(AtomicU8::new(0)),
         }
     }
 
@@ -166,26 +177,34 @@ impl Wallet {
         Ok(Arc::new(Mutex::new(wallet)))
     }
 
-    /// Open the wallet and start update the data at separate thread.
+    /// Open the wallet and start [`WalletData`] sync at separate thread.
     pub fn open(&mut self, password: String) -> Result<(), Error> {
         if self.is_open() {
             return Err(Error::GenericError("Already opened".to_string()));
         }
 
-        // Create new wallet instance.
-        let instance = Self::create_wallet_instance(self.config.clone())?;
-        self.instance = Some(instance.clone());
+        // Create new wallet instance if sync thread was stopped.
+        if self.sync_thread.write().unwrap().is_none() {
+            let new_instance = Self::create_wallet_instance(self.config.clone())?;
+            self.instance = Some(new_instance);
+            self.instance_ext_conn_id = self.config.ext_conn_id;
+        }
 
         // Open the wallet.
+        let instance = self.instance.clone().unwrap();
         let mut wallet_lock = instance.lock();
         let lc = wallet_lock.lc_provider()?;
         match lc.open_wallet(None, ZeroingString::from(password), false, false) {
             Ok(keychain) => {
-                // Start data updating if thread was not launched.
-                let mut thread_w = self.thread.write().unwrap();
+                // Reset an error on opening.
+                self.set_sync_error(false);
+                self.reset_sync_attempts();
+
+                // Start new synchronization thread or wake up existing one.
+                let mut thread_w = self.sync_thread.write().unwrap();
                 if thread_w.is_none() {
-                    println!("create new thread");
-                    let thread = start_wallet(self.clone(), keychain.clone());
+                    // Start wallet synchronization.
+                    let thread = start_sync(self.clone(), keychain.clone());
                     *thread_w = Some(thread);
                 } else {
                     println!("unfreeze thread");
@@ -201,51 +220,14 @@ impl Wallet {
         Ok(())
     }
 
-    /// Set wallet reopen status.
-    pub fn set_reopen(&self, reopen: bool) {
-        self.reopen.store(reopen, Ordering::Relaxed);
-    }
-
-    /// Check if wallet reopen is needed.
-    pub fn reopen_needed(&self) -> bool {
-        self.reopen.load(Ordering::Relaxed)
-    }
-
-    /// Get wallet transactions loading progress.
-    pub fn txs_load_progress(&self) -> u8 {
-        self.txs_load_progress.load(Ordering::Relaxed)
-    }
-
-    /// Get wallet info loading progress.
-    pub fn info_load_progress(&self) -> u8 {
-        self.info_load_progress.load(Ordering::Relaxed)
-    }
-
-    /// Check if wallet had an error on loading.
-    pub fn load_error(&self) -> bool {
-        self.load_error.load(Ordering::Relaxed)
-    }
-
-    /// Set an error for wallet on loading.
-    pub fn set_load_error(&self, error: bool) {
-        self.load_error.store(error, Ordering::Relaxed);
-    }
-
-    /// Get wallet data update attempts.
-    fn get_data_update_attempts(&self) -> u8 {
-        self.data_update_attempts.load(Ordering::Relaxed)
-    }
-
-    /// Increment wallet data update attempts.
-    fn increment_data_update_attempts(&self) {
-        let mut attempts = self.get_data_update_attempts();
-        attempts += 1;
-        self.data_update_attempts.store(attempts, Ordering::Relaxed);
-    }
-
-    /// Reset wallet data update attempts.
-    fn reset_data_update_attempts(&self) {
-        self.data_update_attempts.store(0, Ordering::Relaxed);
+    /// Get current external connection id applied to [`WalletInstance`]
+    /// after opening if sync is running or take it from configuration.
+    pub fn get_current_ext_conn_id(&self) -> Option<i64> {
+        if self.sync_thread.read().unwrap().is_some() {
+            self.instance_ext_conn_id
+        } else {
+            self.config.ext_conn_id
+        }
     }
 
     /// Check if wallet was open.
@@ -270,31 +252,74 @@ impl Wallet {
         let instance = wallet_close.instance.clone().unwrap();
         thread::spawn(move || {
             // Close the wallet.
-            let mut wallet_lock = instance.lock();
-            let lc = wallet_lock.lc_provider().unwrap();
-            let _ = lc.close_wallet(None);
-            wallet_close.instance = None;
-
-            // Clear wallet info.
-            let mut w_data = wallet_close.data.write().unwrap();
-            *w_data = None;
-
-            // Reset wallet loading values.
-            wallet_close.info_load_progress.store(0, Ordering::Relaxed);
-            wallet_close.txs_load_progress.store(0, Ordering::Relaxed);
-            wallet_close.set_load_error(false);
-            wallet_close.reset_data_update_attempts();
+            {
+                let mut wallet_lock = instance.lock();
+                let lc = wallet_lock.lc_provider().unwrap();
+                let _ = lc.close_wallet(None);
+            }
 
             // Mark wallet as not opened.
             wallet_close.closing.store(false, Ordering::Relaxed);
             wallet_close.is_open.store(false, Ordering::Relaxed);
 
             // Wake up wallet thread.
-            let thread_r = wallet_close.thread.read().unwrap();
+            let thread_r = wallet_close.sync_thread.read().unwrap();
             if let Some(thread) = thread_r.as_ref() {
                 thread.unpark();
             }
         });
+    }
+
+    /// Set wallet reopen status.
+    pub fn set_reopen(&self, reopen: bool) {
+        self.reopen.store(reopen, Ordering::Relaxed);
+    }
+
+    /// Check if wallet reopen is needed.
+    pub fn reopen_needed(&self) -> bool {
+        self.reopen.load(Ordering::Relaxed)
+    }
+
+    /// Get wallet transactions synchronization progress.
+    pub fn txs_sync_progress(&self) -> u8 {
+        self.txs_sync_progress.load(Ordering::Relaxed)
+    }
+
+    /// Get wallet info synchronization progress.
+    pub fn info_sync_progress(&self) -> u8 {
+        self.info_sync_progress.load(Ordering::Relaxed)
+    }
+
+    /// Check if wallet had an error on synchronization.
+    pub fn sync_error(&self) -> bool {
+        self.sync_error.load(Ordering::Relaxed)
+    }
+
+    /// Retry synchronization on error.
+    pub fn retry_sync(&self) {
+        self.set_sync_error(false);
+    }
+
+    /// Set an error for wallet on synchronization.
+    fn set_sync_error(&self, error: bool) {
+        self.sync_error.store(error, Ordering::Relaxed);
+    }
+
+    /// Get current wallet synchronization attempts before setting an error.
+    fn get_sync_attempts(&self) -> u8 {
+        self.sync_attempts.load(Ordering::Relaxed)
+    }
+
+    /// Increment wallet synchronization attempts before setting an error.
+    fn increment_sync_attempts(&self) {
+        let mut attempts = self.get_sync_attempts();
+        attempts += 1;
+        self.sync_attempts.store(attempts, Ordering::Relaxed);
+    }
+
+    /// Reset wallet synchronization attempts.
+    fn reset_sync_attempts(&self) {
+        self.sync_attempts.store(0, Ordering::Relaxed);
     }
 
     /// Get wallet data.
@@ -310,32 +335,66 @@ impl Wallet {
         let lc = wallet_lock.lc_provider()?;
         lc.change_password(None, ZeroingString::from(old), ZeroingString::from(new))
     }
+
+    /// Initiate wallet repair by scanning its outputs.
+    pub fn repair(&self) {
+        self.repair_needed.store(true, Ordering::Relaxed);
+        // Wake up wallet thread.
+        let thread_r = self.sync_thread.read().unwrap();
+        if let Some(thread) = thread_r.as_ref() {
+            thread.unpark();
+        }
+    }
+
+    /// Check if wallet is repairing.
+    pub fn is_repairing(&self) -> bool {
+        self.repair_needed.load(Ordering::Relaxed)
+    }
+
+    /// Get wallet repairing progress.
+    pub fn repairing_progress(&self) -> u8 {
+        self.repair_progress.load(Ordering::Relaxed)
+    }
+
+    pub fn delete_wallet(&self) {
+
+    }
 }
 
-/// Delay in seconds to update wallet data every minute as average block time.
-const DATA_UPDATE_DELAY: Duration = Duration::from_millis(60 * 1000);
+/// Delay in seconds to sync [`WalletData`] (60 seconds as average block time).
+const SYNC_DELAY: Duration = Duration::from_millis(60 * 1000);
 
-/// Number of attempts to update data after wallet opening before setting an error.
-const DATA_UPDATE_ATTEMPTS: u8 = 10;
+/// Number of attempts to sync [`WalletData`] before setting an error.
+const SYNC_ATTEMPTS: u8 = 10;
 
-/// Launch thread to update wallet data.
-fn start_wallet(wallet: Wallet, keychain: Option<SecretKey>) -> Thread {
-    let wallet_update = wallet.clone();
+/// Launch thread to sync wallet data from node.
+fn start_sync(wallet: Wallet, keychain: Option<SecretKey>) -> Thread {
+    // Reset progress values.
+    wallet.info_sync_progress.store(0, Ordering::Relaxed);
+    wallet.txs_sync_progress.store(0, Ordering::Relaxed);
+    wallet.repair_progress.store(0, Ordering::Relaxed);
+
+    println!("create new thread");
     thread::spawn(move || loop {
         println!("start new cycle");
-        // Stop updating if wallet was closed.
-        if !wallet_update.is_open() {
+        // Stop syncing if wallet was closed.
+        if !wallet.is_open() {
             println!("finishing thread at start");
-            let mut thread_w = wallet_update.thread.write().unwrap();
+            // Clear thread instance.
+            let mut thread_w = wallet.sync_thread.write().unwrap();
             *thread_w = None;
+
+            // Clear wallet info.
+            let mut w_data = wallet.data.write().unwrap();
+            *w_data = None;
             println!("finish at start complete");
             return;
         }
 
-        // Set an error when required integrated node is not enabled and
-        // skip next cycle of update when node sync is not finished.
-        if wallet_update.config.ext_conn_id.is_none() {
-            wallet_update.set_load_error(!Node::is_running() || Node::is_stopping());
+        // Set an error when required integrated node is not enabled
+        // and skip cycle when node sync is not finished.
+        if wallet.get_current_ext_conn_id().is_none() {
+            wallet.set_sync_error(!Node::is_running() || Node::is_stopping());
             if !Node::is_running() || Node::get_sync_status() != Some(SyncStatus::NoSync) {
                 println!("integrated node wait");
                 thread::park_timeout(Duration::from_millis(1000));
@@ -343,51 +402,60 @@ fn start_wallet(wallet: Wallet, keychain: Option<SecretKey>) -> Thread {
             }
         }
 
-        // Update wallet data if there is no error.
-        if !wallet_update.load_error() {
-            update_wallet_data(&wallet_update, keychain.clone());
+        // Scan outputs if repair is needed or sync data if there is no error.
+        if !wallet.sync_error() {
+            if wallet.is_repairing() {
+                scan_wallet(&wallet, keychain.clone())
+            } else {
+                sync_wallet_data(&wallet, keychain.clone());
+            }
         }
 
-        // Stop updating if wallet was closed.
-        if !wallet_update.is_open() {
+        // Stop sync if wallet was closed.
+        if !wallet.is_open() {
             println!("finishing thread after updating");
-            let mut thread_w = wallet_update.thread.write().unwrap();
+            // Clear thread instance.
+            let mut thread_w = wallet.sync_thread.write().unwrap();
             *thread_w = None;
+
+            // Clear wallet info.
+            let mut w_data = wallet.data.write().unwrap();
+            *w_data = None;
             println!("finishing after updating complete");
             return;
         }
 
-        // Repeat after default delay or after 1 second if update was not success.
-        let delay = if wallet_update.load_error()
-            || wallet_update.get_data_update_attempts() != 0 {
+        // Repeat after default delay or after 1 second if sync was not success.
+        let delay = if wallet.sync_error()
+            || wallet.get_sync_attempts() != 0 {
             Duration::from_millis(1000)
         } else {
-            DATA_UPDATE_DELAY
+            SYNC_DELAY
         };
         println!("park for {}", delay.as_millis());
         thread::park_timeout(delay);
     }).thread().clone()
 }
 
-/// Handle [`WalletCommand::UpdateData`] command to update [`WalletData`].
-fn update_wallet_data(wallet: &Wallet, keychain: Option<SecretKey>) {
-    println!("UPDATE start, attempts: {}", wallet.get_data_update_attempts());
+/// Retrieve [`WalletData`] from node.
+fn sync_wallet_data(wallet: &Wallet, keychain: Option<SecretKey>) {
+    println!("SYNC start, attempts: {}", wallet.get_sync_attempts());
 
-    let wallet_scan = wallet.clone();
+    let wallet_info = wallet.clone();
     let (info_tx, info_rx) = mpsc::channel::<StatusMessage>();
-    // Update info loading progress at separate thread.
+    // Update info sync progress at separate thread.
     thread::spawn(move || {
         while let Ok(m) = info_rx.recv() {
-            println!("UPDATE INFO MESSAGE");
+            println!("SYNC INFO MESSAGE");
             match m {
                 StatusMessage::UpdatingOutputs(_) => {}
                 StatusMessage::UpdatingTransactions(_) => {}
                 StatusMessage::FullScanWarn(_) => {}
                 StatusMessage::Scanning(_, progress) => {
-                    wallet_scan.info_load_progress.store(progress, Ordering::Relaxed);
+                    wallet_info.info_sync_progress.store(progress, Ordering::Relaxed);
                 }
                 StatusMessage::ScanningComplete(_) => {
-                    wallet_scan.info_load_progress.store(100, Ordering::Relaxed);
+                    wallet_info.info_sync_progress.store(100, Ordering::Relaxed);
                 }
                 StatusMessage::UpdateWarning(_) => {}
             }
@@ -406,37 +474,25 @@ fn update_wallet_data(wallet: &Wallet, keychain: Option<SecretKey>) {
             Ok(info) => {
                 // Do not retrieve txs if wallet was closed.
                 if !wallet.is_open() {
-                    println!("UPDATE stop at retrieve_summary_info");
                     return;
                 }
-
-                // Add attempt if scanning was not complete
-                // or set an error on initial request.
-                if wallet.info_load_progress() != 100 {
-                    println!("UPDATE retrieve_summary_info was not completed");
-                    if wallet.get_data().is_none() {
-                        wallet.set_load_error(true);
-                    } else {
-                        wallet.increment_data_update_attempts();
-                    }
-                } else {
-                    println!("UPDATE before retrieve_txs");
-
+                // Retrieve txs if retrieving info was success.
+                if wallet.info_sync_progress() == 100 {
                     let wallet_txs = wallet.clone();
                     let (txs_tx, txs_rx) = mpsc::channel::<StatusMessage>();
-                    // Update txs loading progress at separate thread.
+                    // Update txs sync progress at separate thread.
                     thread::spawn(move || {
                         while let Ok(m) = txs_rx.recv() {
-                            println!("UPDATE TXS MESSAGE");
+                            println!("SYNC TXS MESSAGE");
                             match m {
                                 StatusMessage::UpdatingOutputs(_) => {}
                                 StatusMessage::UpdatingTransactions(_) => {}
                                 StatusMessage::FullScanWarn(_) => {}
                                 StatusMessage::Scanning(_, progress) => {
-                                    wallet_txs.txs_load_progress.store(progress, Ordering::Relaxed);
+                                    wallet_txs.txs_sync_progress.store(progress, Ordering::Relaxed);
                                 }
                                 StatusMessage::ScanningComplete(_) => {
-                                    wallet_txs.txs_load_progress.store(100, Ordering::Relaxed);
+                                    wallet_txs.txs_sync_progress.store(100, Ordering::Relaxed);
                                 }
                                 StatusMessage::UpdateWarning(_) => {}
                             }
@@ -454,53 +510,104 @@ fn update_wallet_data(wallet: &Wallet, keychain: Option<SecretKey>) {
                         None
                     ) {
                         Ok(txs) => {
-                            // Do not update data if wallet was closed.
+                            // Do not sync data if wallet was closed.
                             if !wallet.is_open() {
                                 return;
                             }
-
-                            // Add attempt if retrieving was not complete
-                            // or set an error on initial request.
-                            if wallet.txs_load_progress() != 100 {
-                                if wallet.get_data().is_none() {
-                                    wallet.set_load_error(true);
-                                } else {
-                                    wallet.increment_data_update_attempts();
-                                }
-                            } else {
+                            // Save data if loading was completed.
+                            if wallet.txs_sync_progress() == 100 {
+                                // Reset attempts.
+                                wallet.reset_sync_attempts();
                                 // Set wallet data.
                                 let mut w_data = wallet.data.write().unwrap();
                                 *w_data = Some(WalletData { info: info.1, txs: txs.1 });
-
-                                // Reset attempts.
-                                wallet.reset_data_update_attempts();
+                                return;
                             }
                         }
                         Err(e) => {
                             println!("error on retrieve_txs {}", e);
-                            // Increment attempts value in case of error.
-                            wallet.increment_data_update_attempts();
                         }
                     }
                 }
             }
             Err(e) => {
                 println!("error on retrieve_summary_info {}", e);
-                // Increment attempts value in case of error.
-                wallet.increment_data_update_attempts();
             }
         }
     }
 
-    // Reset progress values.
-    wallet.info_load_progress.store(0, Ordering::Relaxed);
-    wallet.txs_load_progress.store(0, Ordering::Relaxed);
+    // Reset progress.
+    wallet.info_sync_progress.store(0, Ordering::Relaxed);
+    wallet.txs_sync_progress.store(0, Ordering::Relaxed);
 
-    println!("UPDATE finish, attempts: {}", wallet.get_data_update_attempts());
+    // Exit if wallet was closed.
+    if !wallet.is_open() {
+        return;
+    }
+
+    // Set an error if data was not loaded after opening or increment attempts count.
+    if wallet.get_data().is_none() {
+        wallet.set_sync_error(true);
+    } else {
+        wallet.increment_sync_attempts();
+    }
+
+    println!("SYNC cycle finished, attempts: {}", wallet.get_sync_attempts());
 
     // Set an error if maximum number of attempts was reached.
-    if wallet.get_data_update_attempts() >= DATA_UPDATE_ATTEMPTS {
-        wallet.reset_data_update_attempts();
-        wallet.set_load_error(true);
+    if wallet.get_sync_attempts() >= SYNC_ATTEMPTS {
+        wallet.reset_sync_attempts();
+        wallet.set_sync_error(true);
     }
+}
+
+/// Scan wallet's outputs, repairing and restoring missing outputs if required.
+fn scan_wallet(wallet: &Wallet, keychain: Option<SecretKey>) {
+    println!("repair the wallet");
+    let (info_tx, info_rx) = mpsc::channel::<StatusMessage>();
+    // Update scan progress at separate thread.
+    let wallet_scan = wallet.clone();
+    thread::spawn(move || {
+        while let Ok(m) = info_rx.recv() {
+            println!("REPAIR WALLET MESSAGE");
+            match m {
+                StatusMessage::UpdatingOutputs(_) => {}
+                StatusMessage::UpdatingTransactions(_) => {}
+                StatusMessage::FullScanWarn(_) => {}
+                StatusMessage::Scanning(_, progress) => {
+                    wallet_scan.repair_progress.store(progress, Ordering::Relaxed);
+                }
+                StatusMessage::ScanningComplete(_) => {
+                    wallet_scan.repair_progress.store(100, Ordering::Relaxed);
+                }
+                StatusMessage::UpdateWarning(_) => {}
+            }
+        }
+    });
+
+    // Start wallet scanning.
+    let api = Owner::new(wallet.instance.clone().unwrap(), Some(info_tx));
+    match api.scan(keychain.as_ref(), Some(1), false) {
+        Ok(()) => {
+            println!("repair was complete");
+            // Set sync error if scanning was not complete and wallet is open.
+            if wallet.is_open() && wallet.repair_progress.load(Ordering::Relaxed) != 100 {
+                wallet.set_sync_error(true);
+            } else {
+                wallet.repair_needed.store(false, Ordering::Relaxed);
+            }
+        }
+        Err(e) => {
+            println!("error on repair {}", e);
+            // Set sync error if wallet is open.
+            if wallet.is_open() {
+                wallet.set_sync_error(true);
+            } else {
+                wallet.repair_needed.store(false, Ordering::Relaxed);
+            }
+        }
+    }
+
+    // Reset repair progress.
+    wallet.repair_progress.store(0, Ordering::Relaxed);
 }

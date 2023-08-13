@@ -14,7 +14,7 @@
 
 use std::time::Duration;
 
-use egui::{Margin, RichText, ScrollArea};
+use egui::{Margin, RichText};
 use grin_chain::SyncStatus;
 
 use crate::AppConfig;
@@ -30,7 +30,7 @@ use crate::wallet::Wallet;
 /// Selected and opened wallet content.
 pub struct WalletContent {
     /// Current tab content to show.
-    current_tab: Box<dyn WalletTab>,
+    pub current_tab: Box<dyn WalletTab>,
 }
 
 impl Default for WalletContent {
@@ -46,8 +46,6 @@ impl WalletContent {
               wallet: &mut Wallet,
               cb: &dyn PlatformCallbacks) {
         // Show wallet tabs panel.
-        let not_show_tabs =
-            wallet.is_closing() || (wallet.get_data().is_none() && !wallet.load_error());
         egui::TopBottomPanel::bottom("wallet_tabs")
             .frame(egui::Frame {
                 fill: Colors::FILL,
@@ -59,7 +57,7 @@ impl WalletContent {
                 },
                 ..Default::default()
             })
-            .show_animated_inside(ui, !not_show_tabs, |ui| {
+            .show_animated_inside(ui, !Self::block_navigation_on_sync(wallet), |ui| {
                 ui.vertical_centered(|ui| {
                     // Setup tabs width.
                     let available_width = ui.available_width();
@@ -85,38 +83,16 @@ impl WalletContent {
                 inner_margin: Margin {
                     left: View::far_left_inset_margin(ui) + 4.0,
                     right: View::get_right_inset() + 4.0,
-                    top: 4.0,
+                    top: 3.0,
                     bottom: 4.0,
                 },
                 ..Default::default()
             })
             .show_inside(ui, |ui| {
-                let scroll_id = format!("wallet_tab_{}_{}",
-                                        wallet.config.id,
-                                        self.current_tab.get_type().id());
-                ScrollArea::vertical()
-                    .id_source(scroll_id)
-                    .auto_shrink([false; 2])
-                    .show(ui, |ui| {
-                        ui.vertical_centered(|ui| {
-                            // Setup tab content width.
-                            let available_width = ui.available_width();
-                            if available_width == 0.0 {
-                                return;
-                            }
-                            let mut rect = ui.available_rect_before_wrap();
-                            let width = f32::min(available_width, Root::SIDE_PANEL_WIDTH * 1.3);
-                            rect.set_width(width);
-
-                            // Draw current tab content.
-                            ui.allocate_ui(rect.size(), |ui| {
-                                self.current_tab.ui(ui, frame, wallet, cb);
-                            });
-                        });
-                    });
+                self.current_tab.ui(ui, frame, wallet, cb);
             });
 
-        // Refresh content after 1 second for loaded wallet.
+        // Refresh content after 1 second for synced wallet.
         if wallet.get_data().is_some() {
             ui.ctx().request_repaint_after(Duration::from_millis(1000));
         } else {
@@ -159,12 +135,15 @@ impl WalletContent {
         });
     }
 
-    /// Content to draw when wallet is loading, returns `true` if wallet is not ready.
-    pub fn loading_ui(ui: &mut egui::Ui, frame: &mut eframe::Frame, wallet: &Wallet) -> bool {
-        if wallet.is_closing() {
-            Self::loading_progress_ui(ui, wallet);
+    /// Draw content when wallet is syncing and not ready to use, returns `true` at this case.
+    pub fn sync_ui(ui: &mut egui::Ui, frame: &mut eframe::Frame, wallet: &Wallet) -> bool {
+        if wallet.is_repairing() && !wallet.sync_error() {
+            Self::sync_progress_ui(ui, wallet);
             return true;
-        } else if wallet.config.ext_conn_id.is_none() {
+        } else if wallet.is_closing() {
+            Self::sync_progress_ui(ui, wallet);
+            return true;
+        } else if wallet.get_current_ext_conn_id().is_none() {
             if !Node::is_running() || Node::is_stopping() {
                 let dual_panel_root = Root::is_dual_panel_mode(frame);
                 View::center_content(ui, 108.0, |ui| {
@@ -182,48 +161,70 @@ impl WalletContent {
                     }
                 });
                 return true
-            } else if wallet.load_error()
+            } else if wallet.sync_error()
                 && Node::get_sync_status() == Some(SyncStatus::NoSync) {
-                Self::loading_error_ui(ui, wallet);
+                Self::sync_error_ui(ui, wallet);
                 return true;
             } else if wallet.get_data().is_none() {
-                Self::loading_progress_ui(ui, wallet);
+                Self::sync_progress_ui(ui, wallet);
                 return true;
             }
+        } else if wallet.sync_error() {
+            Self::sync_error_ui(ui, wallet);
+            return true;
         } else if wallet.get_data().is_none() {
-            if wallet.load_error() {
-                Self::loading_error_ui(ui, wallet);
-            } else {
-                Self::loading_progress_ui(ui, wallet);
-            }
+            Self::sync_progress_ui(ui, wallet);
             return true;
         }
         false
     }
 
-    /// Draw wallet loading error content.
-    fn loading_error_ui(ui: &mut egui::Ui, wallet: &Wallet) {
+    /// Draw wallet sync error content.
+    fn sync_error_ui(ui: &mut egui::Ui, wallet: &Wallet) {
         View::center_content(ui, 108.0, |ui| {
             let text = t!("wallets.wallet_loading_err", "settings" => GEAR_FINE);
             ui.label(RichText::new(text).size(16.0).color(Colors::INACTIVE_TEXT));
             ui.add_space(8.0);
             let retry_text = format!("{} {}", REPEAT, t!("retry"));
             View::button(ui, retry_text, Colors::GOLD, || {
-                wallet.set_load_error(false);
+                wallet.retry_sync();
             });
         });
     }
 
-    /// Draw wallet loading progress content.
-    pub fn loading_progress_ui(ui: &mut egui::Ui, wallet: &Wallet) {
+    /// Check when to block tabs navigation on sync progress.
+    pub fn block_navigation_on_sync(wallet: &Wallet) -> bool {
+        let sync_error = wallet.sync_error();
+        let integrated_node = wallet.get_current_ext_conn_id().is_none();
+        let integrated_node_ready = Node::get_sync_status() == Some(SyncStatus::NoSync);
+        let sync_after_opening = wallet.get_data().is_none() && !wallet.sync_error();
+        // Block navigation if wallet is repairing and integrated node is not launching,
+        // or wallet is closing or syncing after opening when there is no data to show.
+        (wallet.is_repairing() && (integrated_node_ready || !integrated_node) && !sync_error)
+            || wallet.is_closing() || (sync_after_opening && !integrated_node)
+    }
+
+    /// Draw wallet sync progress content.
+    pub fn sync_progress_ui(ui: &mut egui::Ui, wallet: &Wallet) {
         View::center_content(ui, 162.0, |ui| {
             View::big_loading_spinner(ui);
             ui.add_space(18.0);
-            // Setup loading progress text.
+            // Setup sync progress text.
             let text = {
-                let info_progress = wallet.info_load_progress();
+                let integrated_node = wallet.get_current_ext_conn_id().is_none();
+                let integrated_node_ready = Node::get_sync_status() == Some(SyncStatus::NoSync);
+                let info_progress = wallet.info_sync_progress();
                 if wallet.is_closing() {
                     t!("wallets.wallet_closing")
+                } else if integrated_node && !integrated_node_ready {
+                    t!("wallets.node_loading", "settings" => GEAR_FINE)
+                } else if wallet.is_repairing() {
+                    let repair_progress = wallet.repairing_progress();
+                    if repair_progress == 0 {
+                        t!("wallets.wallet_checking")
+                    } else {
+                        format!("{}: {}%", t!("wallets.wallet_checking"), repair_progress)
+                    }
                 } else if info_progress != 100 {
                     if info_progress == 0 {
                         t!("wallets.wallet_loading")
@@ -231,7 +232,7 @@ impl WalletContent {
                         format!("{}: {}%", t!("wallets.wallet_loading"), info_progress)
                     }
                 } else {
-                    let tx_progress = wallet.txs_load_progress();
+                    let tx_progress = wallet.txs_sync_progress();
                     if tx_progress == 0 {
                         t!("wallets.tx_loading")
                     } else {

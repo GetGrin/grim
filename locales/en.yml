@@ -2,11 +2,11 @@ copy: Copy
 paste: Paste
 continue: Continue
 complete: Complete
-closing: Closing
-loading: Loading
 loading_error: Loading error
 retry: Retry
 close: Close
+change: Change
+show: Show
 wallets:
   title: Wallets
   create_desc: Create or import existing wallet from saved recovery phrase.
@@ -14,9 +14,12 @@ wallets:
   name: 'Name:'
   pass: 'Password:'
   pass_empty: Enter password from the wallet
+  current_pass: 'Current password:'
+  new_pass: 'New password:'
+  min_tx_conf_count: 'Minimum amount of confirmations for transactions:'
   create: Create
   recover: Restore
-  saved_phrase: Saved phrase
+  recovery_phrase: Recovery phrase
   words_count: 'Words count:'
   enter_word: 'Enter word #%{number}:'
   not_valid_word: Entered word is not valid
@@ -35,10 +38,22 @@ wallets:
   locked: Locked
   unlocked: Unlocked
   enable_node: 'Enable integrated node to use the wallet or change connection settings by selecting %{settings} at the bottom of the screen.'
+  node_loading: 'Wallet will be loaded after integrated node synchronization, you can change connection settings by selecting %{settings} at the bottom of the screen.'
+  loading: Loading
+  closing: Closing
+  checking: Checking
   wallet_loading: Loading wallet
   wallet_closing: Closing wallet
+  wallet_checking: Checking wallet
   tx_loading: Loading transactions
-  wallet_loading_err: 'An error occurred during loading the wallet, you can retry or change connection settings by selecting %{settings} at the bottom of the screen.'
+  recovery: Recovery
+  repair_wallet: Repair wallet
+  repair_desc: Check a wallet, repairing and restoring missing outputs if required. This operation will take time.
+  repair_unavailable: You need an active connection to the node and completed wallet synchronization.
+  delete: Delete wallet
+  delete_conf: 'Are you sure you want to remove the wallet? Enter password to confirm:'
+  delete_desc: Make sure you have saved your recovery phrase to access funds in the future.
+  wallet_loading_err: 'An error occurred during synchronization of the wallet, you can retry or change connection settings by selecting %{settings} at the bottom of the screen.'
   wallet: Wallet
   send: Send
   receive: Receive
