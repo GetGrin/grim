@@ -7,6 +7,7 @@ retry: Retry
 close: Close
 change: Change
 show: Show
+delete: Delete
 wallets:
   title: Wallets
   create_desc: Create or import existing wallet from saved recovery phrase.
@@ -51,7 +52,7 @@ wallets:
   repair_desc: Check a wallet, repairing and restoring missing outputs if required. This operation will take time.
   repair_unavailable: You need an active connection to the node and completed wallet synchronization.
   delete: Delete wallet
-  delete_conf: 'Are you sure you want to remove the wallet? Enter password to confirm:'
+  delete_conf: Are you sure you want to delete the wallet?
   delete_desc: Make sure you have saved your recovery phrase to access funds in the future.
   wallet_loading_err: 'An error occurred during synchronization of the wallet, you can retry or change connection settings by selecting %{settings} at the bottom of the screen.'
   wallet: Wallet

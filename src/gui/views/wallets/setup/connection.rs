@@ -38,9 +38,6 @@ pub struct ConnectionSetup {
     /// Flag to show URL format error.
     ext_node_url_error: bool,
 
-    /// Flag to show closing progress at confirmation [`Modal`] to reopen the [`Wallet`].
-    show_closing_progress: bool,
-
     /// [`Modal`] identifiers allowed at this ui container.
     modal_ids: Vec<&'static str>
 }
@@ -59,7 +56,6 @@ impl Default for ConnectionSetup {
             ext_node_url_edit: "".to_string(),
             ext_node_secret_edit: "".to_string(),
             ext_node_url_error: false,
-            show_closing_progress: false,
             modal_ids: vec![
                 ADD_EXT_CONNECTION_MODAL
             ]
@@ -135,7 +131,11 @@ impl ConnectionSetup {
 
         if changed {
             wallet.config.save();
-            self.show_reopen_confirmation_modal();
+            // Show reopen confirmation modal.
+            Modal::new(REOPEN_WALLET_CONFIRMATION_MODAL)
+                .position(ModalPosition::Center)
+                .title(t!("modal.confirmation"))
+                .show();
         }
     }
 
@@ -423,66 +423,41 @@ impl ConnectionSetup {
         });
     }
 
-    /// Show confirmation modal to reopen the [`Wallet`] after connection change.
-    fn show_reopen_confirmation_modal(&mut self,) {
-        self.show_closing_progress = false;
-        // Show modal.
-        Modal::new(REOPEN_WALLET_CONFIRMATION_MODAL)
-            .title(t!("modal.confirmation"))
-            .show();
-    }
-
     /// Draw confirmation modal content to reopen the [`Wallet`].
     fn reopen_modal_content(&mut self,
                             ui: &mut egui::Ui,
                             wallet: &Wallet,
                             modal: &Modal,
                             cb: &dyn PlatformCallbacks) {
-        if self.show_closing_progress {
-            if !wallet.is_closing() {
-                modal.close();
-                return;
-            }
-            ui.add_space(16.0);
-            ui.vertical_centered(|ui| {
-                View::small_loading_spinner(ui);
-                ui.add_space(12.0);
-                ui.label(RichText::new(t!("wallets.wallet_closing"))
-                    .size(17.0)
-                    .color(Colors::TEXT));
-            });
-            ui.add_space(10.0);
-        } else {
-            ui.add_space(8.0);
-            ui.vertical_centered(|ui| {
-                ui.label(RichText::new(t!("wallets.change_server_confirmation"))
-                    .size(17.0)
-                    .color(Colors::TEXT));
-            });
-            ui.add_space(10.0);
+        ui.add_space(8.0);
+        ui.vertical_centered(|ui| {
+            ui.label(RichText::new(t!("wallets.change_server_confirmation"))
+                .size(17.0)
+                .color(Colors::TEXT));
+        });
+        ui.add_space(10.0);
 
-            // Show modal buttons.
-            ui.scope(|ui| {
-                // Setup spacing between buttons.
-                ui.spacing_mut().item_spacing = egui::Vec2::new(6.0, 0.0);
+        // Show modal buttons.
+        ui.scope(|ui| {
+            // Setup spacing between buttons.
+            ui.spacing_mut().item_spacing = egui::Vec2::new(6.0, 0.0);
 
-                ui.columns(2, |columns| {
-                    columns[0].vertical_centered_justified(|ui| {
-                        View::button(ui, t!("modal.cancel"), Colors::WHITE, || {
-                            modal.close();
-                        });
-                    });
-                    columns[1].vertical_centered_justified(|ui| {
-                        View::button(ui, "OK".to_owned(), Colors::WHITE, || {
-                            modal.disable_closing();
-                            self.show_closing_progress = true;
-                            wallet.set_reopen(true);
-                            wallet.close();
-                        });
+            ui.columns(2, |columns| {
+                columns[0].vertical_centered_justified(|ui| {
+                    View::button(ui, t!("modal.cancel"), Colors::WHITE, || {
+                        modal.close();
                     });
                 });
-                ui.add_space(6.0);
+                columns[1].vertical_centered_justified(|ui| {
+                    View::button(ui, "OK".to_owned(), Colors::WHITE, || {
+                        modal.disable_closing();
+                        wallet.set_reopen(true);
+                        wallet.close();
+                        modal.close()
+                    });
+                });
             });
-        }
+            ui.add_space(6.0);
+        });
     }
 }

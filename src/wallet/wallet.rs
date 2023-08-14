@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::{fs, thread};
 use std::path::PathBuf;
 use std::sync::{Arc, mpsc, RwLock};
 use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
-use std::thread;
 use std::thread::Thread;
 use std::time::Duration;
 
@@ -53,6 +53,8 @@ pub struct Wallet {
     is_open: Arc<AtomicBool>,
     /// Flag to check if wallet is loading.
     closing: Arc<AtomicBool>,
+    /// Flag to check if wallet was deleted to remove it from list.
+    deleted: Arc<AtomicBool>,
 
     /// Error on wallet loading.
     sync_error: Arc<AtomicBool>,
@@ -83,6 +85,7 @@ impl Wallet {
             reopen: Arc::new(AtomicBool::new(false)),
             is_open: Arc::from(AtomicBool::new(false)),
             closing: Arc::new(AtomicBool::new(false)),
+            deleted: Arc::new(AtomicBool::new(false)),
             sync_error: Arc::from(AtomicBool::new(false)),
             info_sync_progress: Arc::from(AtomicU8::new(0)),
             txs_sync_progress: Arc::from(AtomicU8::new(0)),
@@ -183,8 +186,8 @@ impl Wallet {
             return Err(Error::GenericError("Already opened".to_string()));
         }
 
-        // Create new wallet instance if sync thread was stopped.
-        if self.sync_thread.write().unwrap().is_none() {
+        // Create new wallet instance if sync thread was stopped or instance was not created.
+        if self.sync_thread.write().unwrap().is_none() || self.instance.is_none() {
             let new_instance = Self::create_wallet_instance(self.config.clone())?;
             self.instance = Some(new_instance);
             self.instance_ext_conn_id = self.config.ext_conn_id;
@@ -248,15 +251,11 @@ impl Wallet {
         self.closing.store(true, Ordering::Relaxed);
 
         // Close wallet at separate thread.
-        let mut wallet_close = self.clone();
+        let wallet_close = self.clone();
         let instance = wallet_close.instance.clone().unwrap();
         thread::spawn(move || {
             // Close the wallet.
-            {
-                let mut wallet_lock = instance.lock();
-                let lc = wallet_lock.lc_provider().unwrap();
-                let _ = lc.close_wallet(None);
-            }
+            Self::close_wallet(&instance);
 
             // Mark wallet as not opened.
             wallet_close.closing.store(false, Ordering::Relaxed);
@@ -268,6 +267,13 @@ impl Wallet {
                 thread.unpark();
             }
         });
+    }
+
+    /// Close wallet for provided [`WalletInstance`].
+    fn close_wallet(instance: &WalletInstance) {
+        let mut wallet_lock = instance.lock();
+        let lc = wallet_lock.lc_provider().unwrap();
+        let _ = lc.close_wallet(None);
     }
 
     /// Set wallet reopen status.
@@ -356,8 +362,50 @@ impl Wallet {
         self.repair_progress.load(Ordering::Relaxed)
     }
 
-    pub fn delete_wallet(&self) {
+    /// Get recovery phrase.
+    pub fn get_recovery(&self, password: String) -> Result<ZeroingString, Error> {
+        let instance = self.instance.clone().unwrap();
+        let mut wallet_lock = instance.lock();
+        let lc = wallet_lock.lc_provider().unwrap();
+        lc.get_mnemonic(None, ZeroingString::from(password))
+    }
 
+    /// Close the wallet, delete its files and mark it as deleted.
+    pub fn delete_wallet(&self) {
+        if !self.is_open() || self.instance.is_none() {
+            return;
+        }
+        self.closing.store(true, Ordering::Relaxed);
+
+        // Delete wallet at separate thread.
+        let wallet_delete = self.clone();
+        thread::spawn(move || {
+            thread::sleep(Duration::from_millis(1000));
+            if let Some(instance) = wallet_delete.instance {
+                // Close the wallet.
+                Self::close_wallet(&instance);
+                // Remove wallet files.
+                let mut wallet_lock = instance.lock();
+                let _ = wallet_lock.lc_provider().unwrap();
+                let _ = fs::remove_dir_all(wallet_delete.config.get_data_path());
+            }
+
+            // Mark wallet as not opened and deleted.
+            wallet_delete.closing.store(false, Ordering::Relaxed);
+            wallet_delete.is_open.store(false, Ordering::Relaxed);
+            wallet_delete.deleted.store(true, Ordering::Relaxed);
+
+            // Wake up wallet thread.
+            let thread_r = wallet_delete.sync_thread.read().unwrap();
+            if let Some(thread) = thread_r.as_ref() {
+                thread.unpark();
+            }
+        });
+    }
+
+    /// Check if wallet was deleted to remove it from list.
+    pub fn is_deleted(&self) -> bool {
+        self.deleted.load(Ordering::Relaxed)
     }
 }
 

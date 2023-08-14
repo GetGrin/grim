@@ -14,7 +14,6 @@
 
 use egui::{Align, Align2, Layout, Margin, RichText, Rounding, ScrollArea, TextStyle, Widget};
 use egui_extras::{Size, StripBuilder};
-use grin_core::global::ChainTypes;
 
 use crate::AppConfig;
 use crate::gui::Colors;
@@ -142,15 +141,11 @@ impl WalletsContent {
                         self.wallets.add(wallet);
                     });
                 } else  {
-                    let chain_type = AppConfig::chain_type();
-                    let list = if chain_type == ChainTypes::Mainnet {
-                        &mut self.wallets.main_list
-                    } else {
-                        &mut self.wallets.test_list
-                    };
-                    for wallet in list.iter_mut() {
+                    let selected_id = self.wallets.selected_id.clone();
+                    let list = self.wallets.mut_list();
+                    for wallet in list {
                         // Show content for selected wallet.
-                        if self.wallets.selected_id == Some(wallet.config.id) {
+                        if selected_id == Some(wallet.config.id) {
                             // Setup wallet content width.
                             let mut rect = ui.available_rect_before_wrap();
                             let mut width = ui.available_width();
@@ -348,7 +343,9 @@ impl WalletsContent {
                         rect.set_width(width);
 
                         ui.allocate_ui(rect.size(), |ui| {
-                            let list = self.wallets.list().clone();
+                            let mut list = self.wallets.list().clone();
+                            // Remove deleted wallet from the list.
+                            list.retain(|w| !w.is_deleted());
                             for wallet in &list {
                                 // Check if wallet reopen is needed.
                                 if !wallet.is_open() && wallet.reopen_needed() {
@@ -479,7 +476,7 @@ impl WalletsContent {
                             } else {
                                 let tx_progress = wallet.txs_sync_progress();
                                 if tx_progress == 0 {
-                                    t!("wallets.tx_loading")
+                                    format!("{} {}", SPINNER, t!("wallets.tx_loading"))
                                 } else {
                                     format!("{} {}: {}%",
                                             SPINNER,

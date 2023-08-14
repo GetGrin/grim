@@ -71,7 +71,7 @@ impl CommonSetup {
               _: &mut eframe::Frame,
               wallet: &mut Wallet,
               cb: &dyn PlatformCallbacks) {
-        // Draw modal content for this ui container.
+        // Show modal content for this ui container.
         self.modal_content_ui(ui, wallet, cb);
 
         ui.vertical_centered(|ui| {
@@ -142,7 +142,7 @@ impl CommonSetup {
         });
     }
 
-    /// Draw modal content for current ui container.
+    /// Draw [`Modal`] content for this ui container.
     fn modal_content_ui(&mut self,
                         ui: &mut egui::Ui,
                         wallet: &mut Wallet,

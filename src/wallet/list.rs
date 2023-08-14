@@ -66,24 +66,38 @@ impl WalletList {
 
     /// Get [`Wallet`] list for current [`ChainTypes`].
     pub fn list(&self) -> &Vec<Wallet> {
-        let chain_type = AppConfig::chain_type();
-        if chain_type == ChainTypes::Mainnet {
+        if AppConfig::chain_type() == ChainTypes::Mainnet {
             &self.main_list
         } else {
             &self.test_list
         }
     }
 
-    /// Add created [`Wallet`] to the list.
-    pub fn add(&mut self, wallet: Wallet) {
-        self.selected_id = Some(wallet.config.id);
-        let chain_type = AppConfig::chain_type();
-        let list = if chain_type == ChainTypes::Mainnet {
+    /// Get mutable [`Wallet`] list for current [`ChainTypes`].
+    pub fn mut_list(&mut self) -> &mut Vec<Wallet> {
+        if AppConfig::chain_type() == ChainTypes::Mainnet {
             &mut self.main_list
         } else {
             &mut self.test_list
-        };
+        }
+    }
+
+    /// Add created [`Wallet`] to the list.
+    pub fn add(&mut self, wallet: Wallet) {
+        self.selected_id = Some(wallet.config.id);
+        let list = self.mut_list();
         list.insert(0, wallet);
+    }
+
+    /// Remove [`Wallet`] with provided identifier.
+    pub fn remove(&mut self, id: i64) {
+        let list = self.mut_list();
+        for (index, wallet) in list.iter().enumerate() {
+            if wallet.config.id == id {
+                list.remove(index);
+                return;
+            }
+        }
     }
 
     /// Select [`Wallet`] with provided identifier.
@@ -118,14 +132,9 @@ impl WalletList {
 
     /// Open selected [`Wallet`].
     pub fn open_selected(&mut self, password: String) -> Result<(), Error> {
-        let chain_type = AppConfig::chain_type();
-        let list = if chain_type == ChainTypes::Mainnet {
-            &mut self.main_list
-        } else {
-            &mut self.test_list
-        };
-        for w in list {
-            if Some(w.config.id) == self.selected_id {
+        let selected_id = self.selected_id.clone();
+        for w in self.mut_list() {
+            if Some(w.config.id) == selected_id {
                 return w.open(password.clone());
             }
         }
