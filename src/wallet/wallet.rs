@@ -13,12 +13,15 @@
 // limitations under the License.
 
 use std::{fs, thread};
+use std::net::{SocketAddr, TcpListener};
 use std::path::PathBuf;
 use std::sync::{Arc, mpsc, RwLock};
 use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
 use std::thread::Thread;
 use std::time::Duration;
 
+use futures::channel::oneshot;
+use grin_api::{ApiServer, Router};
 use grin_chain::SyncStatus;
 use grin_core::global;
 use grin_keychain::{ExtKeychain, Keychain};
@@ -26,6 +29,7 @@ use grin_util::Mutex;
 use grin_util::secp::SecretKey;
 use grin_util::types::ZeroingString;
 use grin_wallet_api::Owner;
+use grin_wallet_controller::controller::ForeignAPIHandlerV2;
 use grin_wallet_impls::{DefaultLCProvider, DefaultWalletImpl, HTTPNodeClient};
 use grin_wallet_libwallet::{Error, NodeClient, StatusMessage, WalletInst, WalletLCProvider};
 use grin_wallet_libwallet::api_impl::owner::{retrieve_summary_info, retrieve_txs};
@@ -46,6 +50,9 @@ pub struct Wallet {
 
     /// Wallet sync thread.
     sync_thread: Arc<RwLock<Option<Thread>>>,
+
+    /// Foreign API server.
+    foreign_api_server: Arc<RwLock<Option<ApiServer>>>,
 
     /// Flag to check if wallet reopening is needed.
     reopen: Arc<AtomicBool>,
@@ -74,6 +81,11 @@ pub struct Wallet {
     repair_progress: Arc<AtomicU8>
 }
 
+/// Default Foreign API server host.
+const DEFAULT_FOREIGN_API_HOST: &str = "127.0.0.1";
+/// Default Foreign API server port.
+const DEFAULT_FOREIGN_API_PORT: u16 = 3421;
+
 impl Wallet {
     /// Create new [`Wallet`] instance with provided [`WalletConfig`].
     fn new(config: WalletConfig) -> Self {
@@ -82,6 +94,7 @@ impl Wallet {
             instance: None,
             instance_ext_conn_id: None,
             sync_thread: Arc::from(RwLock::new(None)),
+            foreign_api_server: Arc::new(RwLock::new(None)),
             reopen: Arc::new(AtomicBool::new(false)),
             is_open: Arc::from(AtomicBool::new(false)),
             closing: Arc::new(AtomicBool::new(false)),
@@ -254,6 +267,18 @@ impl Wallet {
         let wallet_close = self.clone();
         let instance = wallet_close.instance.clone().unwrap();
         thread::spawn(move || {
+            // Stop created API server.
+            let api_server_exists = {
+                wallet_close.foreign_api_server.read().unwrap().is_some()
+            };
+            if api_server_exists {
+                let _ = thread::spawn(move || {
+                    let mut api_server_w = wallet_close.foreign_api_server.write().unwrap();
+                    api_server_w.as_mut().unwrap().stop();
+                    *api_server_w = None;
+                }).join();
+            }
+
             // Close the wallet.
             Self::close_wallet(&instance);
 
@@ -416,7 +441,7 @@ const SYNC_DELAY: Duration = Duration::from_millis(60 * 1000);
 const SYNC_ATTEMPTS: u8 = 10;
 
 /// Launch thread to sync wallet data from node.
-fn start_sync(wallet: Wallet, keychain: Option<SecretKey>) -> Thread {
+fn start_sync(mut wallet: Wallet, keychain: Option<SecretKey>) -> Thread {
     // Reset progress values.
     wallet.info_sync_progress.store(0, Ordering::Relaxed);
     wallet.txs_sync_progress.store(0, Ordering::Relaxed);
@@ -447,6 +472,20 @@ fn start_sync(wallet: Wallet, keychain: Option<SecretKey>) -> Thread {
                 println!("integrated node wait");
                 thread::park_timeout(Duration::from_millis(1000));
                 continue;
+            }
+        }
+
+        // Start Foreign API listener if API server was not created.
+        let api_server_exists = {
+            wallet.foreign_api_server.read().unwrap().is_some()
+        };
+        if !api_server_exists {
+            match start_api_server(&mut wallet, keychain.clone()) {
+                Ok(api_server) => {
+                    let mut api_server_w = wallet.foreign_api_server.write().unwrap();
+                    *api_server_w = Some(api_server);
+                }
+                Err(_) => {}
             }
         }
 
@@ -483,6 +522,48 @@ fn start_sync(wallet: Wallet, keychain: Option<SecretKey>) -> Thread {
         println!("park for {}", delay.as_millis());
         thread::park_timeout(delay);
     }).thread().clone()
+}
+
+/// Start Foreign API server to accept txs via Tor and receive mining rewards from Stratum server.
+fn start_api_server(wallet: &mut Wallet,
+                    keychain: Option<SecretKey>) -> Result<ApiServer, Error> {
+    // Find free port.
+    let free_port = (DEFAULT_FOREIGN_API_PORT..).find(|port| {
+        return match TcpListener::bind((DEFAULT_FOREIGN_API_HOST, port.to_owned())) {
+            Ok(_) => {
+                let node_p2p_port = NodeConfig::get_p2p_port();
+                let node_api_port = NodeConfig::get_api_ip_port().1;
+                port.to_string() != node_p2p_port && port.to_string() != node_api_port
+            },
+            Err(_) => false
+        }
+    }).unwrap();
+
+    // Setup API server address.
+    let api_addr = format!("{}:{}", DEFAULT_FOREIGN_API_HOST, free_port);
+
+    // Start Foreign API server thread.
+    let instance = wallet.instance.clone().unwrap();
+    let api_handler_v2 = ForeignAPIHandlerV2::new(instance,
+                                                  Arc::new(Mutex::new(keychain)),
+                                                  false,
+                                                  Mutex::new(None));
+    let mut router = Router::new();
+    router
+        .add_route("/v2/foreign", Arc::new(api_handler_v2))
+        .map_err(|_| Error::GenericError("Router failed to add route".to_string()))?;
+
+    let api_chan: &'static mut (oneshot::Sender<()>, oneshot::Receiver<()>) =
+        Box::leak(Box::new(oneshot::channel::<()>()));
+
+    let mut apis = ApiServer::new();
+    println!("Starting HTTP Foreign listener API server at {}.", api_addr);
+    let socket_addr: SocketAddr = api_addr.parse().unwrap();
+    let _ = apis.start(socket_addr, router, None, api_chan)
+        .map_err(|_| Error::GenericError("API thread failed to start".to_string()))?;
+
+    println!("HTTP Foreign listener started.");
+    Ok(apis)
 }
 
 /// Retrieve [`WalletData`] from node.
