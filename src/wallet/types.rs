@@ -15,9 +15,9 @@
 use std::sync::Arc;
 
 use grin_keychain::ExtKeychain;
+use grin_util::Mutex;
 use grin_wallet_impls::{DefaultLCProvider, HTTPNodeClient};
 use grin_wallet_libwallet::{TxLogEntry, WalletInfo, WalletInst};
-use parking_lot::Mutex;
 
 /// Mnemonic phrase setup mode.
 #[derive(PartialEq, Clone)]

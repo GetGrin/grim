@@ -13,10 +13,6 @@
 // limitations under the License.
 
 pub mod types;
-pub mod updater;
-pub mod selection;
-pub mod tx;
-pub mod keys;
 
 mod mnemonic;
 pub use mnemonic::Mnemonic;

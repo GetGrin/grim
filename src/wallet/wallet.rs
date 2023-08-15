@@ -22,13 +22,13 @@ use std::time::Duration;
 use grin_chain::SyncStatus;
 use grin_core::global;
 use grin_keychain::{ExtKeychain, Keychain};
+use grin_util::Mutex;
 use grin_util::secp::SecretKey;
 use grin_util::types::ZeroingString;
 use grin_wallet_api::Owner;
 use grin_wallet_impls::{DefaultLCProvider, DefaultWalletImpl, HTTPNodeClient};
 use grin_wallet_libwallet::{Error, NodeClient, StatusMessage, WalletInst, WalletLCProvider};
 use grin_wallet_libwallet::api_impl::owner::{retrieve_summary_info, retrieve_txs};
-use parking_lot::Mutex;
 
 use crate::node::{Node, NodeConfig};
 use crate::wallet::{ConnectionsConfig, ExternalConnection, WalletConfig};

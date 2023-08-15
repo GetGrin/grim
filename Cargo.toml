@@ -16,22 +16,21 @@ log = "0.4"
 
 ## node
 openssl-sys = { version = "0.9.82", features = ["vendored"] }
-grin_api = { git = "https://github.com/mimblewimble/grin", branch = "master" }
-grin_chain = { git = "https://github.com/mimblewimble/grin", branch = "master" }
-grin_config = { git = "https://github.com/mimblewimble/grin", branch = "master" }
-grin_core = { git = "https://github.com/mimblewimble/grin", branch = "master" }
-grin_p2p = { git = "https://github.com/mimblewimble/grin", branch = "master" }
-grin_servers = { git = "https://github.com/mimblewimble/grin", branch = "master" }
-grin_keychain = { git = "https://github.com/mimblewimble/grin", branch = "master" }
-grin_util = { git = "https://github.com/mimblewimble/grin", branch = "master" }
+grin_api = { git = "https://github.com/mimblewimble/grin", tag = "v5.2.0-beta.3" }
+grin_chain = { git = "https://github.com/mimblewimble/grin", tag = "v5.2.0-beta.3" }
+grin_config = { git = "https://github.com/mimblewimble/grin", tag = "v5.2.0-beta.3" }
+grin_core = { git = "https://github.com/mimblewimble/grin", tag = "v5.2.0-beta.3" }
+grin_p2p = { git = "https://github.com/mimblewimble/grin", tag = "v5.2.0-beta.3" }
+grin_servers = { git = "https://github.com/mimblewimble/grin", tag = "v5.2.0-beta.3" }
+grin_keychain = { git = "https://github.com/mimblewimble/grin", tag = "v5.2.0-beta.3" }
+grin_util = { git = "https://github.com/mimblewimble/grin", tag = "v5.2.0-beta.3" }
 
 ## wallet
-grin_wallet_impls = { git = "https://github.com/mimblewimble/grin-wallet", branch = "master" }
-grin_wallet_api = { git = "https://github.com/mimblewimble/grin-wallet", branch = "master" }
-grin_wallet_libwallet = { git = "https://github.com/mimblewimble/grin-wallet", branch = "master" }
-grin_wallet_util = { git = "https://github.com/mimblewimble/grin-wallet", branch = "master" }
-#grin_wallet_controller = "5.1.0"
-#grin_wallet_config = "5.1.0"
+grin_wallet_impls = { git = "https://github.com/mimblewimble/grin-wallet", tag = "v5.2.0-beta.1" }
+grin_wallet_api = { git = "https://github.com/mimblewimble/grin-wallet", tag = "v5.2.0-beta.1" }
+grin_wallet_libwallet = { git = "https://github.com/mimblewimble/grin-wallet", tag = "v5.2.0-beta.1" }
+grin_wallet_util = { git = "https://github.com/mimblewimble/grin-wallet", tag = "v5.2.0-beta.1" }
+grin_wallet_controller = { git = "https://github.com/mimblewimble/grin-wallet", tag = "v5.2.0-beta.1" }
 
 ## ui
 pollster = "0.3.0"
@@ -51,11 +50,6 @@ toml = "0.7.4"
 serde = "1"
 pnet = "0.34.0"
 url = "2.4.0"
-parking_lot = "0.10.2"
-uuid = { version = "0.8.2", features = ["serde", "v4"] }
-num-bigint = "0.4.3"
-byteorder = "1.3"
-ed25519-dalek = "1.0.0-pre.4"
 
 # stratum server
 serde_derive = "1"
