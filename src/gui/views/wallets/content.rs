@@ -228,7 +228,7 @@ impl WalletsContent {
 
         // Setup title.
         let title_content = if self.wallets.is_selected_open() && (!dual_panel
-            || (dual_panel && !show_list)) {
+            || (dual_panel && !show_list)) && !create_wallet {
             let title_text = self.wallet_content.current_tab.get_type().name().to_uppercase();
             if self.wallet_content.current_tab.get_type() == WalletTabType::Settings {
                 TitleType::Single(TitleContentType::Title(title_text))
@@ -332,17 +332,12 @@ impl WalletsContent {
                 .show(ui, |ui| {
                     ui.vertical_centered(|ui| {
                         // Setup wallet list width.
-                        let mut rect = ui.available_rect_before_wrap();
-                        let mut width = ui.available_width();
-                        if !dual_panel {
-                            width = f32::min(width, Root::SIDE_PANEL_WIDTH * 1.4)
-                        }
-                        if width == 0.0 {
-                            return;
-                        }
-                        rect.set_width(width);
-
-                        ui.allocate_ui(rect.size(), |ui| {
+                        let max_width = if !dual_panel {
+                            Root::SIDE_PANEL_WIDTH * 1.3
+                        } else {
+                            ui.available_width()
+                        };
+                        View::max_width_ui(ui, max_width, |ui| {
                             let mut list = self.wallets.list().clone();
                             // Remove deleted wallet from the list.
                             list.retain(|w| !w.is_deleted());

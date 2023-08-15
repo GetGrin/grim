@@ -95,17 +95,7 @@ impl WalletCreation {
                 .show_inside(ui, |ui| {
                     ui.vertical_centered(|ui| {
                         ui.vertical_centered(|ui| {
-                            // Setup content width.
-                            let available_width = ui.available_width();
-                            if available_width == 0.0 {
-                                return;
-                            }
-                            let mut rect = ui.available_rect_before_wrap();
-                            let width = f32::min(available_width, Root::SIDE_PANEL_WIDTH * 2.0);
-                            rect.set_width(width);
-
-                            // Draw step control content.
-                            ui.allocate_ui(rect.size(), |ui| {
+                            View::max_width_ui(ui, Root::SIDE_PANEL_WIDTH * 2.0, |ui| {
                                 self.step_control_ui(ui, on_create);
                             });
                         });
@@ -137,17 +127,12 @@ impl WalletCreation {
                     .auto_shrink([false; 2])
                     .show(ui, |ui| {
                         ui.vertical_centered(|ui| {
-                            // Setup content width.
-                            let available_width = ui.available_width();
-                            if available_width == 0.0 {
-                                return;
-                            }
-                            let mut rect = ui.available_rect_before_wrap();
-                            let width = f32::min(available_width, Root::SIDE_PANEL_WIDTH * 2.0);
-                            rect.set_width(width);
-
-                            // Draw step content.
-                            ui.allocate_ui(rect.size(), |ui| {
+                            let max_width = if self.step == Some(Step::SetupConnection) {
+                                Root::SIDE_PANEL_WIDTH * 1.3
+                            } else {
+                                Root::SIDE_PANEL_WIDTH * 2.0
+                            };
+                            View::max_width_ui(ui, max_width, |ui| {
                                 self.step_content_ui(ui, frame, cb);
                             });
                         });

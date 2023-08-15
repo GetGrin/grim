@@ -33,6 +33,25 @@ impl View {
     /// Stroke for hovered items and buttons.
     pub const HOVER_STROKE: Stroke = Stroke { width: 1.0, color: Colors::ITEM_HOVER };
 
+    /// Draw content with maximum width value.
+    pub fn max_width_ui(ui: &mut egui::Ui,
+                        max_width: f32,
+                        add_content: impl FnOnce(&mut egui::Ui)) {
+        // Setup content width.
+        let mut width = ui.available_width();
+        if width == 0.0 {
+            return;
+        }
+        let mut rect = ui.available_rect_before_wrap();
+        width = f32::min(width, max_width);
+        rect.set_width(width);
+
+        // Draw content.
+        ui.allocate_ui(rect.size(), |ui| {
+            (add_content)(ui);
+        });
+    }
+
     /// Callback on Enter key press event.
     pub fn on_enter_key(ui: &mut egui::Ui, cb: impl FnOnce()) {
         if ui.ctx().input(|i| i.key_pressed(egui::Key::Enter)) {

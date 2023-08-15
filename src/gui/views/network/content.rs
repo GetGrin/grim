@@ -93,8 +93,6 @@ impl NetworkContent {
                     });
             });
 
-        let content_width = ui.available_width();
-
         // Show connections content.
         egui::CentralPanel::default()
             .frame(egui::Frame {
@@ -130,15 +128,12 @@ impl NetworkContent {
                     .show(ui, |ui| {
                         ui.add_space(1.0);
                         ui.vertical_centered(|ui| {
-                            // Setup wallet list width.
-                            let mut rect = ui.available_rect_before_wrap();
-                            let mut width = ui.available_width();
-                            if !Root::is_dual_panel_mode(frame) {
-                                width = f32::min(width, Root::SIDE_PANEL_WIDTH * 1.4)
-                            }
-                            rect.set_width(width);
-
-                            ui.allocate_ui(rect.size(), |ui| {
+                            let max_width = if !Root::is_dual_panel_mode(frame) {
+                                Root::SIDE_PANEL_WIDTH * 1.3
+                            } else {
+                                ui.available_width()
+                            };
+                            View::max_width_ui(ui, max_width, |ui| {
                                 self.connections.ui(ui, frame, cb);
                             });
                         });

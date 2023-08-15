@@ -15,7 +15,7 @@
 use egui::{Id, ScrollArea};
 
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::Root;
+use crate::gui::views::{Root, View};
 use crate::gui::views::wallets::setup::{CommonSetup, ConnectionSetup, RecoverySetup};
 use crate::gui::views::wallets::wallet::types::{WalletTab, WalletTabType};
 use crate::gui::views::wallets::wallet::WalletContent;
@@ -64,17 +64,7 @@ impl WalletTab for WalletSettings {
             .auto_shrink([false; 2])
             .show(ui, |ui| {
                 ui.vertical_centered(|ui| {
-                    // Setup tab content width.
-                    let available_width = ui.available_width();
-                    if available_width == 0.0 {
-                        return;
-                    }
-                    let mut rect = ui.available_rect_before_wrap();
-                    let width = f32::min(available_width, Root::SIDE_PANEL_WIDTH * 1.3);
-                    rect.set_width(width);
-
-                    // Draw current tab content.
-                    ui.allocate_ui(rect.size(), |ui| {
+                    View::max_width_ui(ui, Root::SIDE_PANEL_WIDTH * 1.3, |ui| {
                         // Show common wallet setup.
                         self.common_setup.ui(ui, frame, wallet, cb);
                         // Show wallet connections setup.
