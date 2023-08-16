@@ -147,7 +147,7 @@ impl WalletContent {
                     ui.add_space(3.0);
                     // Show spendable amount.
                     let amount = amount_to_hr_string(data.info.amount_currently_spendable, false);
-                    let amount_text = format!("1234567{} ツ", amount);
+                    let amount_text = format!("{} ツ", amount);
                     ui.label(RichText::new(amount_text).size(18.0).color(Colors::BLACK));
 
                     // Show account name.
