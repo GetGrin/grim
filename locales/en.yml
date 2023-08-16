@@ -2,7 +2,7 @@ copy: Copy
 paste: Paste
 continue: Continue
 complete: Complete
-loading_error: Loading error
+error: Error
 retry: Retry
 close: Close
 change: Change

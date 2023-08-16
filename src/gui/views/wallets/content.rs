@@ -444,7 +444,7 @@ impl WalletsContent {
                     // Setup wallet status text.
                     let status_text = if wallet.is_open() {
                         if wallet.sync_error() {
-                            format!("{} {}", WARNING_CIRCLE, t!("loading_error"))
+                            format!("{} {}", WARNING_CIRCLE, t!("error"))
                         } else if wallet.is_closing() {
                             format!("{} {}", SPINNER, t!("wallets.closing"))
                         } else if wallet.is_repairing() {

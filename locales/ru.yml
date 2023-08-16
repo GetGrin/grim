@@ -2,7 +2,7 @@ copy: Копировать
 paste: Вставить
 continue: Продолжить
 complete: Завершить
-loading_error: Ошибка загрузки
+error: Ошибка
 retry: Повторить
 close: Закрыть
 change: Изменить

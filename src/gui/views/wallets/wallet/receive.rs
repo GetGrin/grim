@@ -42,7 +42,7 @@ impl WalletTab for WalletReceive {
         // Show receiving content panel.
         egui::CentralPanel::default()
             .frame(egui::Frame {
-                stroke: View::DEFAULT_STROKE,
+                stroke: View::ITEM_STROKE,
                 fill: Colors::WHITE,
                 inner_margin: Margin {
                     left: View::far_left_inset_margin(ui) + 4.0,

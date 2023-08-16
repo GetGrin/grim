@@ -60,7 +60,13 @@ impl WalletContent {
                     left: View::far_left_inset_margin(ui) + 4.0,
                     right: View::get_right_inset() + 4.0,
                     top: 4.0,
-                    bottom: View::get_bottom_inset() + 4.0,
+                    bottom: 0.0,
+                },
+                outer_margin: Margin {
+                    left: 0.0,
+                    right: 0.0,
+                    top: 0.0,
+                    bottom: -1.0,
                 },
                 ..Default::default()
             })
@@ -117,9 +123,9 @@ impl WalletContent {
     /// Draw wallet account balance.
     fn account_balance_ui(ui: &mut egui::Ui, data: &WalletData, account: &Option<String>) {
         let mut rect = ui.available_rect_before_wrap();
-        rect.set_height(76.0);
+        rect.set_height(75.0);
         // Draw round background.
-        let rounding = View::item_rounding(0, 1, false);
+        let rounding = View::item_rounding(0, 2, false);
         ui.painter().rect(rect, rounding, Colors::BUTTON, View::ITEM_STROKE);
 
         ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
@@ -131,7 +137,7 @@ impl WalletContent {
             ui.style_mut().visuals.widgets.active.rounding = Rounding::same(8.0);
 
             // Draw button to add new account.
-            View::item_button(ui, View::item_rounding(0, 1, true), PLUS, None, || {
+            View::item_button(ui, View::item_rounding(0, 2, true), PLUS, None, || {
                 //TODO add account modal.
             });
 
@@ -156,9 +162,8 @@ impl WalletContent {
                         Some(name) => name.to_owned()
                     };
                     let account_text = format!("{} {}", FILE_ARCHIVE, account_name);
-                    ui.add_space(-1.0);
+                    ui.add_space(-2.0);
                     View::ellipsize_text(ui, account_text, 15.0, Colors::TEXT);
-                    ui.add_space(1.0);
 
                     // Show confirmed height.
                     let height_text = format!("{} {}", PACKAGE, data.info.last_confirmed_height);
