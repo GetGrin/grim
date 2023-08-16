@@ -323,7 +323,7 @@ impl View {
                 sw: if r[2] { 8.0 } else { 0.0 },
                 se: if r[3] { 8.0 } else { 0.0 },
             },
-            fill: Colors::WHITE,
+            fill: Colors::TRANSPARENT,
             stroke: Self::ITEM_STROKE,
         };
         let bg_idx = ui.painter().add(bg_shape);

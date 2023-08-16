@@ -33,7 +33,7 @@ impl Colors {
     pub const TITLE: Color32 = Color32::from_gray(60);
     pub const BUTTON: Color32 = Color32::from_gray(249);
     pub const GRAY: Color32 = Color32::from_gray(120);
-    pub const STROKE: Color32 = Color32::from_gray(190);
+    pub const STROKE: Color32 = Color32::from_gray(200);
     pub const INACTIVE_TEXT: Color32 = Color32::from_gray(150);
     pub const ITEM_BUTTON: Color32 = Color32::from_gray(90);
     pub const ITEM_STROKE: Color32 = Color32::from_gray(220);
