@@ -12,12 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use egui::Margin;
+use crate::gui::Colors;
 use crate::gui::platform::PlatformCallbacks;
+use crate::gui::views::View;
 use crate::gui::views::wallets::wallet::types::{WalletTab, WalletTabType};
 use crate::gui::views::wallets::wallet::WalletContent;
 use crate::wallet::Wallet;
 
-/// Send funds tab content.
+/// Sending tab content.
 #[derive(Default)]
 pub struct WalletSend;
 
@@ -30,9 +33,33 @@ impl WalletTab for WalletSend {
           ui: &mut egui::Ui,
           frame: &mut eframe::Frame,
           wallet: &mut Wallet,
-          cb: &dyn PlatformCallbacks) {
+          _: &dyn PlatformCallbacks) {
         if WalletContent::sync_ui(ui, frame, wallet) {
             return;
         }
+
+        // Show sending content panel.
+        egui::CentralPanel::default()
+            .frame(egui::Frame {
+                stroke: View::DEFAULT_STROKE,
+                fill: Colors::WHITE,
+                inner_margin: Margin {
+                    left: View::far_left_inset_margin(ui) + 4.0,
+                    right: View::get_right_inset() + 4.0,
+                    top: 3.0,
+                    bottom: 4.0,
+                },
+                ..Default::default()
+            })
+            .show_inside(ui, |ui| {
+                self.send_ui(ui, wallet);
+            });
+    }
+}
+
+impl WalletSend {
+    /// Draw sending content.
+    pub fn send_ui(&self, ui: &mut egui::Ui, wallet: &mut Wallet) {
+
     }
 }

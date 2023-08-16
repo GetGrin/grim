@@ -9,6 +9,10 @@ change: Change
 show: Show
 delete: Delete
 wallets:
+  await_conf_amount: Awaiting confirmation
+  await_fin_amount: Awaiting finalization
+  locked_amount: Locked
+  txs_empty: 'To receive/send coins use %{receive}/%{send} buttons at the bottom of the screen, to change wallet settings press %{settings}.'
   title: Wallets
   create_desc: Create or import existing wallet from saved recovery phrase.
   add: Add wallet
@@ -47,6 +51,7 @@ wallets:
   wallet_closing: Closing wallet
   wallet_checking: Checking wallet
   tx_loading: Loading transactions
+  default_account: Default account
   recovery: Recovery
   repair_wallet: Repair wallet
   repair_desc: Check a wallet, repairing and restoring missing outputs if required. This operation will take time.
@@ -132,7 +137,7 @@ network_mining:
   disconnected: Disconnected
 network_settings:
   change_value: Change value
-  stratum_ip: 'Stratum IP Address:'
+  stratum_ip: 'Stratum IP address:'
   stratum_port: 'Stratum port:'
   port_unavailable: Specified port is unavailable
   restart_node_required: Node restart is required to apply changes.
@@ -140,8 +145,8 @@ network_settings:
   disable: Disable
   restart: Restart
   server: Server
-  api_ip: 'API IP Address:'
-  api_port: 'API Port:'
+  api_ip: 'API IP address:'
+  api_port: 'API port:'
   api_secret: 'Rest API and V2 Owner API token:'
   foreign_api_secret: 'Foreign API token:'
   disabled: Disabled

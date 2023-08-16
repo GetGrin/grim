@@ -9,6 +9,10 @@ change: Изменить
 show: Показать
 delete: Удалить
 wallets:
+  await_conf_amount: Ожидает подтверждения
+  await_fin_amount: Ожидает завершения
+  locked_amount: Заблокировано
+  txs_empty: 'Для получения/отправки монет используйте кнопки %{receive}/%{send} внизу экрана, для изменения настроек кошелька нажмите %{settings}.'
   title: Кошельки
   create_desc: Создайте или импортируйте существующий кошелёк из сохранённой фразы восстановления.
   add: Добавить кошелёк
@@ -47,6 +51,7 @@ wallets:
   wallet_closing: Закрытие кошелька
   wallet_checking: Проверка кошелька
   tx_loading: Загрузка транзакций
+  default_account: Стандартный аккаунт
   recovery: Восстановление
   repair_wallet: Починить кошелёк
   repair_desc: Проверить кошелёк, исправляя и восстанавливая недостающие выходы, если это необходимо. Эта операция займёт время.
@@ -132,7 +137,7 @@ network_mining:
   disconnected: Отключен
 network_settings:
   change_value: Изменить значение
-  stratum_ip: 'Stratum IP Адрес:'
+  stratum_ip: 'Stratum IP адрес:'
   stratum_port: 'Порт Stratum:'
   port_unavailable: Указанный порт недоступен
   restart_node_required: Для применения изменений требуется перезапуск узла.
@@ -140,8 +145,8 @@ network_settings:
   disable: Выключить
   restart: Перезапуск
   server: Сервер
-  api_ip: 'API IP Адрес:'
-  api_port: 'API Порт:'
+  api_ip: 'API IP адрес:'
+  api_port: 'API порт:'
   api_secret: 'Rest и V2 Owner API токен:'
   foreign_api_secret: 'Foreign API токен:'
   disabled: Отключен

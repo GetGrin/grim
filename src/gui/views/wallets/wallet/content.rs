@@ -14,17 +14,19 @@
 
 use std::time::Duration;
 
-use egui::{Margin, RichText};
+use egui::{Align, Layout, Margin, RichText, Rounding};
 use grin_chain::SyncStatus;
+use grin_core::core::amount_to_hr_string;
 
 use crate::AppConfig;
 use crate::gui::Colors;
-use crate::gui::icons::{DOWNLOAD, GEAR_FINE, POWER, REPEAT, UPLOAD, WALLET};
+use crate::gui::icons::{DOWNLOAD, FILE_ARCHIVE, GEAR_FINE, LIST, PACKAGE, PLUS, POWER, REPEAT, UPLOAD, WALLET};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Root, View};
 use crate::gui::views::wallets::{WalletInfo, WalletReceive, WalletSend, WalletSettings};
 use crate::gui::views::wallets::types::{WalletTab, WalletTabType};
 use crate::node::Node;
+use crate::wallet::types::WalletData;
 use crate::wallet::Wallet;
 
 /// Selected and opened wallet content.
@@ -45,9 +47,36 @@ impl WalletContent {
               frame: &mut eframe::Frame,
               wallet: &mut Wallet,
               cb: &dyn PlatformCallbacks) {
+        let data = wallet.get_data();
+        let data_empty = data.is_none();
+
+        // Show wallet balance panel when data is not empty and current tab is not Settings.
+        let show_balance = self.current_tab.get_type() != WalletTabType::Settings && !data_empty;
+        egui::TopBottomPanel::top("wallet_balance")
+            .frame(egui::Frame {
+                fill: Colors::FILL,
+                stroke: View::DEFAULT_STROKE,
+                inner_margin: Margin {
+                    left: View::far_left_inset_margin(ui) + 4.0,
+                    right: View::get_right_inset() + 4.0,
+                    top: 4.0,
+                    bottom: View::get_bottom_inset() + 4.0,
+                },
+                ..Default::default()
+            })
+            .show_animated_inside(ui, show_balance, |ui| {
+                ui.vertical_centered(|ui| {
+                    // Draw wallet tabs.
+                    View::max_width_ui(ui, Root::SIDE_PANEL_WIDTH * 1.3, |ui| {
+                        Self::account_balance_ui(ui, data.as_ref().unwrap(), &wallet.config.account);
+                    });
+                });
+            });
+
         // Show wallet tabs panel.
         egui::TopBottomPanel::bottom("wallet_tabs")
             .frame(egui::Frame {
+                stroke: View::DEFAULT_STROKE,
                 fill: Colors::FILL,
                 inner_margin: Margin {
                     left: View::far_left_inset_margin(ui) + 4.0,
@@ -69,14 +98,8 @@ impl WalletContent {
         // Show tab content panel.
         egui::CentralPanel::default()
             .frame(egui::Frame {
-                stroke: View::DEFAULT_STROKE,
                 fill: Colors::WHITE,
-                inner_margin: Margin {
-                    left: View::far_left_inset_margin(ui) + 4.0,
-                    right: View::get_right_inset() + 4.0,
-                    top: 3.0,
-                    bottom: 4.0,
-                },
+                stroke: View::DEFAULT_STROKE,
                 ..Default::default()
             })
             .show_inside(ui, |ui| {
@@ -84,11 +107,65 @@ impl WalletContent {
             });
 
         // Refresh content after 1 second for synced wallet.
-        if wallet.get_data().is_some() {
+        if !data_empty {
             ui.ctx().request_repaint_after(Duration::from_millis(1000));
         } else {
             ui.ctx().request_repaint();
         }
+    }
+
+    /// Draw wallet account balance.
+    fn account_balance_ui(ui: &mut egui::Ui, data: &WalletData, account: &Option<String>) {
+        let mut rect = ui.available_rect_before_wrap();
+        rect.set_height(76.0);
+        // Draw round background.
+        let rounding = View::item_rounding(0, 1, false);
+        ui.painter().rect(rect, rounding, Colors::BUTTON, View::ITEM_STROKE);
+
+        ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
+            // Setup padding for item buttons.
+            ui.style_mut().spacing.button_padding = egui::vec2(14.0, 0.0);
+            // Setup rounding for item buttons.
+            ui.style_mut().visuals.widgets.inactive.rounding = Rounding::same(8.0);
+            ui.style_mut().visuals.widgets.hovered.rounding = Rounding::same(8.0);
+            ui.style_mut().visuals.widgets.active.rounding = Rounding::same(8.0);
+
+            // Draw button to add new account.
+            View::item_button(ui, View::item_rounding(0, 1, true), PLUS, None, || {
+                //TODO add account modal.
+            });
+
+            // Draw button to show list of accounts.
+            View::item_button(ui, Rounding::none(), LIST, None, || {
+                //TODO: accounts list modal
+            });
+
+            let layout_size = ui.available_size();
+            ui.allocate_ui_with_layout(layout_size, Layout::left_to_right(Align::Center), |ui| {
+                ui.add_space(6.0);
+                ui.vertical(|ui| {
+                    ui.add_space(3.0);
+                    // Show spendable amount.
+                    let amount = amount_to_hr_string(data.info.amount_currently_spendable, false);
+                    let amount_text = format!("1234567{} ツ", amount);
+                    ui.label(RichText::new(amount_text).size(18.0).color(Colors::BLACK));
+
+                    // Show account name.
+                    let account_name = match account {
+                        None => t!("wallets.default_account"),
+                        Some(name) => name.to_owned()
+                    };
+                    let account_text = format!("{} {}", FILE_ARCHIVE, account_name);
+                    ui.add_space(-1.0);
+                    View::ellipsize_text(ui, account_text, 15.0, Colors::TEXT);
+                    ui.add_space(1.0);
+
+                    // Show confirmed height.
+                    let height_text = format!("{} {}", PACKAGE, data.info.last_confirmed_height);
+                    ui.label(RichText::new(height_text).size(15.0).color(Colors::GRAY));
+                })
+            });
+        });
     }
 
     /// Draw tab buttons in the bottom of the screen.

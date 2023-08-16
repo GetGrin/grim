@@ -24,11 +24,13 @@ use crate::wallet::types::ConnectionMethod;
 /// Wallet configuration.
 #[derive(Serialize, Deserialize, Clone)]
 pub struct WalletConfig {
+    /// Last chosen wallet account label.
+    pub account: Option<String>,
     /// Chain type for current wallet.
     pub chain_type: ChainTypes,
     /// Identifier for a wallet.
     pub id: i64,
-    /// Human-readable wallet name for ui.
+    /// Wallet name.
     pub name: String,
     /// External connection identifier.
     pub ext_conn_id: Option<i64>,
@@ -41,11 +43,11 @@ pub const BASE_DIR_NAME: &'static str = "wallets";
 /// Wallet configuration file name.
 const CONFIG_FILE_NAME: &'static str = "grim-wallet.toml";
 
-/// Minimal amount of confirmations default value.
+/// Default value of minimal amount of confirmations.
 const MIN_CONFIRMATIONS_DEFAULT: u64 = 10;
 
 impl WalletConfig {
-    /// Create wallet config.
+    /// Create new wallet config.
     pub fn create(name: String, conn_method: &ConnectionMethod) -> WalletConfig {
         // Setup configuration path.
         let id = chrono::Utc::now().timestamp();
@@ -53,6 +55,7 @@ impl WalletConfig {
         let config_path = Self::get_config_file_path(chain_type, id);
         // Write configuration to the file.
         let config = WalletConfig {
+            account: None,
             chain_type,
             id,
             name,
@@ -60,7 +63,7 @@ impl WalletConfig {
                 ConnectionMethod::Integrated => None,
                 ConnectionMethod::External(id) => Some(*id)
             },
-            min_confirmations: MIN_CONFIRMATIONS_DEFAULT,
+            min_confirmations: MIN_CONFIRMATIONS_DEFAULT
         };
         Settings::write_to_file(&config, config_path);
         config
