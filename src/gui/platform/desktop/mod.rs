@@ -22,9 +22,13 @@ impl PlatformCallbacks for Desktop {
 
     fn hide_keyboard(&self) {}
 
-    fn copy_string_to_buffer(&self, data: String) {}
+    fn copy_string_to_buffer(&self, data: String) {
+        let mut clipboard = arboard::Clipboard::new().unwrap();
+        clipboard.set_text(data).unwrap();
+    }
 
     fn get_string_from_buffer(&self) -> String {
-        "".to_string()
+        let mut clipboard = arboard::Clipboard::new().unwrap();
+        clipboard.get_text().unwrap()
     }
 }
