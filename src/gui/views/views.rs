@@ -417,7 +417,7 @@ impl View {
         }
     }
 
-    /// Draw horizontal line
+    /// Draw horizontal line.
     pub fn horizontal_line(ui: &mut egui::Ui, color: Color32) {
         let line_size = egui::Vec2::new(ui.available_width(), 1.0);
         let (line_rect, _) = ui.allocate_exact_size(line_size, Sense::hover());
@@ -425,6 +425,14 @@ impl View {
         painter.hline(line_rect.x_range(),
                       painter.round_to_pixel(line_rect.center().y),
                       Stroke { width: 1.0, color });
+    }
+
+    /// Format timestamp in seconds with local UTC offset.
+    pub fn format_time(ts: i64) -> String {
+        let utc_offset = chrono::Local::now().offset().local_minus_utc();
+        let utc_time = ts + utc_offset as i64;
+        let tx_time = chrono::NaiveDateTime::from_timestamp_opt(utc_time, 0).unwrap();
+        tx_time.format("%d/%m/%Y %H:%M:%S").to_string()
     }
 
     /// Get top display inset (cutout) size.

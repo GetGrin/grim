@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use chrono::{DateTime, NaiveDateTime, Utc};
 use egui::{RichText, Rounding, ScrollArea};
 use grin_chain::SyncStatus;
 use grin_servers::WorkerStats;
@@ -264,13 +263,10 @@ fn worker_item_ui(ui: &mut egui::Ui, ws: &WorkerStats, rounding: Rounding) {
                 ui.add_space(6.0);
 
                 // Draw block time
-                let seen = ws.last_seen.duration_since(std::time::UNIX_EPOCH).unwrap().as_secs();
-                let naive_datetime = NaiveDateTime::from_timestamp_opt(seen as i64, 0).unwrap();
-                let datetime: DateTime<Utc> = DateTime::from_utc(naive_datetime, Utc);
-                let date_text = format!("{} {}",
-                                        CLOCK_AFTERNOON,
-                                        datetime.format("%d/%m/%Y %H:%M:%S UTC"));
-                ui.heading(RichText::new(date_text)
+                let seen_ts = ws.last_seen.duration_since(std::time::UNIX_EPOCH).unwrap().as_secs();
+                let seen_time = View::format_time(seen_ts as i64);
+                let seen_text = format!("{} {}", CLOCK_AFTERNOON, seen_time);
+                ui.heading(RichText::new(seen_text)
                     .color(Colors::GRAY)
                     .size(16.0));
             });

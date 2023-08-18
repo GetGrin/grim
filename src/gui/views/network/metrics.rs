@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use chrono::{DateTime, NaiveDateTime, Utc};
 use egui::{RichText, Rounding, ScrollArea, vec2};
 use grin_servers::DiffBlock;
 
@@ -176,14 +175,12 @@ fn block_item_ui(ui: &mut egui::Ui, db: &DiffBlock, rounding: Rounding) {
                 // Draw block date.
                 ui.horizontal(|ui| {
                     ui.add_space(6.0);
-                    let block_time = NaiveDateTime::from_timestamp_opt(db.time as i64, 0).unwrap();
-                    let block_date: DateTime<Utc> = DateTime::from_utc(block_time, Utc);
-                    let block_time_text = block_date.format("%d/%m/%Y %H:%M:%S UTC").to_string();
+                    let block_time = View::format_time(db.time as i64);
                     ui.label(RichText::new(format!("{} {}s {} {}",
                                                    TIMER,
                                                    db.duration,
                                                    HOURGLASS_LOW,
-                                                   block_time_text))
+                                                   block_time))
                         .color(Colors::GRAY)
                         .size(16.0));
                 });

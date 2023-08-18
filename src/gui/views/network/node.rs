@@ -77,10 +77,11 @@ impl NetworkTab for NetworkNode {
                                           [false, false, true, false]);
                     });
                     columns[1].vertical_centered(|ui| {
-                        let h_ts = stats.header_stats.latest_timestamp;
+                        let h_ts = stats.header_stats.latest_timestamp.timestamp();
+                        let h_time = View::format_time(h_ts);
                         View::rounded_box(ui,
-                                          h_ts.format("%d/%m/%Y %H:%M").to_string(),
-                                          t!("network_node.time_utc"),
+                                          h_time,
+                                          t!("network_node.time"),
                                           [false, false, false, true]);
                     });
                 });
@@ -110,10 +111,11 @@ impl NetworkTab for NetworkNode {
                                           [false, false, true, false]);
                     });
                     columns[1].vertical_centered(|ui| {
-                        let b_ts = stats.chain_stats.latest_timestamp;
+                        let b_ts = stats.chain_stats.latest_timestamp.timestamp();
+                        let b_time = View::format_time(b_ts);
                         View::rounded_box(ui,
-                                          format!("{}", b_ts.format("%d/%m/%Y %H:%M")),
-                                          t!("network_node.time_utc"),
+                                          b_time,
+                                          t!("network_node.time"),
                                           [false, false, false, true]);
                     });
                 });
