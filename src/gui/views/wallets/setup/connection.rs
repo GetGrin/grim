@@ -192,10 +192,6 @@ impl ConnectionSetup {
         ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
             // Setup padding for item buttons.
             ui.style_mut().spacing.button_padding = egui::vec2(14.0, 0.0);
-            // Setup rounding for item buttons.
-            ui.style_mut().visuals.widgets.inactive.rounding = Rounding::same(8.0);
-            ui.style_mut().visuals.widgets.hovered.rounding = Rounding::same(8.0);
-            ui.style_mut().visuals.widgets.active.rounding = Rounding::same(8.0);
 
             // Draw button to select integrated node if it was not selected.
             let is_current_method = self.method == ConnectionMethod::Integrated;
