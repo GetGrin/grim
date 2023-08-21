@@ -8,6 +8,7 @@ close: Закрыть
 change: Изменить
 show: Показать
 delete: Удалить
+clear: Очистить
 wallets:
   await_conf_amount: Ожидает подтверждения
   await_fin_amount: Ожидает завершения
@@ -52,6 +53,20 @@ wallets:
   wallet_checking: Проверка кошелька
   tx_loading: Загрузка транзакций
   default_account: Стандартный аккаунт
+  tx_sent: Отправлено
+  tx_received: Получено
+  tx_sending: Отправка
+  tx_receiving: Получение
+  tx_confirming: Ожидает подтверждения
+  tx_cancelling: Отмена
+  tx_canceled: Отменено
+  tx_confirmed: Подтверждено
+  manually: Вручную
+  receive_paste_slatepack: 'Введите Slatepack сообщение, полученное от отправителя для создания ответа:'
+  receive_send_slatepack: 'Отправьте ответ отправителю для завершения транзакции:'
+  receive_slatepack_err: Во время создания ответа произошла ошибка, проверьте входные данные.
+  response_copied: Ответ скопирован в буфер обмена.
+  create_response: Создать ответ
   recovery: Восстановление
   repair_wallet: Починить кошелёк
   repair_desc: Проверить кошелёк, исправляя и восстанавливая недостающие выходы, если это необходимо. Эта операция займёт время.
@@ -107,7 +122,7 @@ network_node:
   hash: Хэш
   height: Высота
   difficulty: Сложность
-  time_utc: Время (UTC)
+  time: Время
   transactions: Транзакции
   main_pool: Основной пул
   stem_pool: Stem пул

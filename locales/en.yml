@@ -8,6 +8,7 @@ close: Close
 change: Change
 show: Show
 delete: Delete
+clear: Clear
 wallets:
   await_conf_amount: Awaiting confirmation
   await_fin_amount: Awaiting finalization
@@ -52,6 +53,20 @@ wallets:
   wallet_checking: Checking wallet
   tx_loading: Loading transactions
   default_account: Default account
+  tx_sent: Sent
+  tx_received: Received
+  tx_sending: Sending
+  tx_receiving: Receiving
+  tx_confirming: Awaiting confirmation
+  tx_cancelling: Cancelling
+  tx_canceled: Canceled
+  tx_confirmed: Confirmed
+  manually: Manually
+  receive_paste_slatepack: 'Enter Slatepack message received from the sender to create a response:'
+  receive_send_slatepack: 'Send response to the sender to finalize the transaction:'
+  receive_slatepack_err: An error occurred during creation of the response, check input data.
+  response_copied: Response copied to the clipboard.
+  create_response: Create response
   recovery: Recovery
   repair_wallet: Repair wallet
   repair_desc: Check a wallet, repairing and restoring missing outputs if required. This operation will take time.
@@ -107,7 +122,7 @@ network_node:
   hash: Hash
   height: Height
   difficulty: Difficulty
-  time_utc: Time (UTC)
+  time: Time
   transactions: Transactions
   main_pool: Main pool
   stem_pool: Stem pool

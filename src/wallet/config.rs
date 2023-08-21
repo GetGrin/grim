@@ -42,6 +42,8 @@ pub struct WalletConfig {
 pub const BASE_DIR_NAME: &'static str = "wallets";
 /// Wallet configuration file name.
 const CONFIG_FILE_NAME: &'static str = "grim-wallet.toml";
+/// Slatepacks directory name.
+const SLATEPACKS_DIR_NAME: &'static str = "slatepacks";
 
 /// Default value of minimal amount of confirmations.
 const MIN_CONFIRMATIONS_DEFAULT: u64 = 10;
@@ -109,6 +111,16 @@ impl WalletConfig {
         let mut config_path = Self::get_base_path(chain_type);
         config_path.push(self.id.to_string());
         config_path.to_str().unwrap().to_string()
+    }
+
+    /// Get slatepacks data path for current wallet.
+    pub fn get_slatepacks_path(&self) -> PathBuf {
+        let mut slatepacks_dir = PathBuf::from(self.get_data_path());
+        slatepacks_dir.push(SLATEPACKS_DIR_NAME);
+        if !slatepacks_dir.exists() {
+            let _ = fs::create_dir_all(slatepacks_dir.clone());
+        }
+        slatepacks_dir
     }
 
     /// Save wallet config.

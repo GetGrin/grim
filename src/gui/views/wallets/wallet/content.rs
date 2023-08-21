@@ -73,8 +73,8 @@ impl WalletContent {
             .show_animated_inside(ui, show_balance, |ui| {
                 ui.vertical_centered(|ui| {
                     // Draw wallet tabs.
-                    View::max_width_ui(ui, Root::SIDE_PANEL_WIDTH * 1.3, |ui| {
-                        Self::account_balance_ui(ui, data.as_ref().unwrap(), &wallet.config.account);
+                    View::max_width_ui(ui, Root::SIDE_PANEL_WIDTH * 1.35, |ui| {
+                        Self::account_ui(ui, data.as_ref().unwrap(), &wallet.config.account);
                     });
                 });
             });
@@ -120,8 +120,8 @@ impl WalletContent {
         }
     }
 
-    /// Draw wallet account balance.
-    fn account_balance_ui(ui: &mut egui::Ui, data: &WalletData, account: &Option<String>) {
+    /// Draw wallet account content.
+    fn account_ui(ui: &mut egui::Ui, data: &WalletData, account: &Option<String>) {
         let mut rect = ui.available_rect_before_wrap();
         rect.set_height(75.0);
         // Draw round background.
@@ -131,10 +131,6 @@ impl WalletContent {
         ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
             // Setup padding for item buttons.
             ui.style_mut().spacing.button_padding = egui::vec2(14.0, 0.0);
-            // Setup rounding for item buttons.
-            ui.style_mut().visuals.widgets.inactive.rounding = Rounding::same(8.0);
-            ui.style_mut().visuals.widgets.hovered.rounding = Rounding::same(8.0);
-            ui.style_mut().visuals.widgets.active.rounding = Rounding::same(8.0);
 
             // Draw button to add new account.
             View::item_button(ui, View::item_rounding(0, 2, true), PLUS, None, || {

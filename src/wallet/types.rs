@@ -90,8 +90,8 @@ pub type WalletInstance = Arc<
 /// Contains wallet data to show.
 #[derive(Clone)]
 pub struct WalletData {
-    /// Wallet balance.
+    /// Wallet balance information.
     pub info: WalletInfo,
-    /// Transactions.
+    /// Wallet transactions.
     pub txs: Vec<TxLogEntry>
 }
