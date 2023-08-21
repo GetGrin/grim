@@ -119,7 +119,7 @@ impl MnemonicSetup {
         ui.columns(2, |columns| {
             columns[0].vertical_centered(|ui| {
                 let create_mode = PhraseMode::Generate;
-                let create_text = t!("wallets.create");
+                let create_text = t!("create");
                 View::radio_value(ui, &mut mode, create_mode, create_text);
             });
             columns[1].vertical_centered(|ui| {

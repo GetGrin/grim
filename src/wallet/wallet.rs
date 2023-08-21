@@ -227,10 +227,14 @@ impl Wallet {
                 self.set_sync_error(false);
                 self.reset_sync_attempts();
 
+                // Set current account.
+                let wallet_inst = lc.wallet_inst()?;
+                let label = self.config.account.to_owned();
+                wallet_inst.set_parent_key_id_by_name(label.as_str())?;
+
                 // Start new synchronization thread or wake up existing one.
                 let mut thread_w = self.sync_thread.write().unwrap();
                 if thread_w.is_none() {
-                    // Start wallet synchronization.
                     let thread = start_sync(self.clone());
                     *thread_w = Some(thread);
                 } else {
@@ -288,11 +292,9 @@ impl Wallet {
                 wallet_close.foreign_api_server.read().unwrap().is_some()
             };
             if api_server_exists {
-                let _ = thread::spawn(move || {
-                    let mut api_server_w = wallet_close.foreign_api_server.write().unwrap();
-                    api_server_w.as_mut().unwrap().stop();
-                    *api_server_w = None;
-                }).join();
+                let mut api_server_w = wallet_close.foreign_api_server.write().unwrap();
+                api_server_w.as_mut().unwrap().stop();
+                *api_server_w = None;
             }
 
             // Close the wallet.
@@ -302,11 +304,8 @@ impl Wallet {
             wallet_close.closing.store(false, Ordering::Relaxed);
             wallet_close.is_open.store(false, Ordering::Relaxed);
 
-            // Wake up wallet thread.
-            let thread_r = wallet_close.sync_thread.read().unwrap();
-            if let Some(thread) = thread_r.as_ref() {
-                thread.unpark();
-            }
+            // Wake up thread to exit.
+            wallet_close.refresh();
         });
     }
 
@@ -318,13 +317,32 @@ impl Wallet {
     }
 
     /// Create account into wallet.
-    pub fn create_account(&self, label: String) -> Result<(), Error> {
+    pub fn create_account(&self, label: &String) -> Result<(), Error> {
         let mut api = Owner::new(self.instance.clone().unwrap(), None);
         controller::owner_single_use(None, None, Some(&mut api), |api, m| {
-            api.create_account_path(m, &label)?;
-            println!("Account: '{}' Created!", label);
+            api.create_account_path(m, label)?;
             Ok(())
         })
+    }
+
+    /// Set active account from provided label.
+    pub fn set_active_account(&mut self, label: &String) -> Result<(), Error> {
+        let instance = self.instance.clone().unwrap();
+        let mut wallet_lock = instance.lock();
+        let lc = wallet_lock.lc_provider()?;
+        let wallet_inst = lc.wallet_inst()?;
+        wallet_inst.set_parent_key_id_by_name(label.as_str())?;
+
+        // Save account label into config.
+        self.config.save_account(label);
+
+        // Clear wallet info.
+        let mut w_data = self.data.write().unwrap();
+        *w_data = None;
+
+        // Refresh wallet data.
+        self.refresh();
+        Ok(())
     }
 
     /// Get list of accounts for the wallet.
@@ -396,17 +414,21 @@ impl Wallet {
         r_data.clone()
     }
 
+    /// Wake up wallet thread to refresh wallet info and update statuses.
+    fn refresh(&self) {
+        let thread_r = self.sync_thread.read().unwrap();
+        if let Some(thread) = thread_r.as_ref() {
+            thread.unpark();
+        }
+    }
+
     /// Receive transaction via Slatepack Message.
     pub fn receive(&self, message: String) -> Result<String, Error> {
         let mut api = Owner::new(self.instance.clone().unwrap(), None);
         match parse_slatepack(&mut api, None, None, Some(message.clone())) {
             Ok((mut slate, _)) => {
                 controller::foreign_single_use(api.wallet_inst.clone(), None, |api| {
-                    let account = if let Some(acc) = self.config.clone().account {
-                        acc
-                    } else {
-                        "default".to_string()
-                    };
+                    let account = self.config.clone().account;
                     slate = api.receive_tx(&slate, Some(account.as_str()), None)?;
                     Ok(())
                 })?;
@@ -425,6 +447,9 @@ impl Wallet {
                 let mut output = File::create(slatepack_dir)?;
                 output.write_all(response.as_bytes())?;
                 output.sync_all()?;
+
+                // Refresh wallet info.
+                self.refresh();
 
                 Ok(response)
             }
@@ -447,15 +472,12 @@ impl Wallet {
         }
 
         // Launch tx cancelling at separate thread.
-        let mut wallet_cancel = self.clone();
+        let wallet_cancel = self.clone();
         let instance = wallet_cancel.instance.clone().unwrap();
         thread::spawn(move || {
             let _ = cancel_tx(instance, None, &None, Some(id), None);
-            // Wake up wallet thread to update statuses.
-            let thread_r = wallet_cancel.sync_thread.read().unwrap();
-            if let Some(thread) = thread_r.as_ref() {
-                thread.unpark();
-            }
+            // Refresh wallet info to update statuses.
+            wallet_cancel.refresh();
         });
     }
 
@@ -480,11 +502,7 @@ impl Wallet {
     /// Initiate wallet repair by scanning its outputs.
     pub fn repair(&self) {
         self.repair_needed.store(true, Ordering::Relaxed);
-        // Wake up wallet thread.
-        let thread_r = self.sync_thread.read().unwrap();
-        if let Some(thread) = thread_r.as_ref() {
-            thread.unpark();
-        }
+        self.refresh();
     }
 
     /// Check if wallet is repairing.
@@ -514,27 +532,23 @@ impl Wallet {
 
         // Delete wallet at separate thread.
         let wallet_delete = self.clone();
+        let instance = wallet_delete.instance.clone().unwrap();
         thread::spawn(move || {
-            thread::sleep(Duration::from_millis(1000));
-            if let Some(instance) = wallet_delete.instance {
-                // Close the wallet.
-                Self::close_wallet(&instance);
-                // Remove wallet files.
-                let mut wallet_lock = instance.lock();
-                let _ = wallet_lock.lc_provider().unwrap();
-                let _ = fs::remove_dir_all(wallet_delete.config.get_data_path());
-            }
+            // Close the wallet.
+            Self::close_wallet(&instance);
+
+            // Remove wallet files.
+            let mut wallet_lock = instance.lock();
+            let _ = wallet_lock.lc_provider().unwrap();
+            let _ = fs::remove_dir_all(wallet_delete.config.get_data_path());
 
             // Mark wallet as not opened and deleted.
             wallet_delete.closing.store(false, Ordering::Relaxed);
             wallet_delete.is_open.store(false, Ordering::Relaxed);
             wallet_delete.deleted.store(true, Ordering::Relaxed);
 
-            // Wake up wallet thread.
-            let thread_r = wallet_delete.sync_thread.read().unwrap();
-            if let Some(thread) = thread_r.as_ref() {
-                thread.unpark();
-            }
+            // Wake up thread to exit.
+            wallet_delete.refresh();
         });
     }
 

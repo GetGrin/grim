@@ -14,6 +14,7 @@
 
 use std::fs;
 use std::path::PathBuf;
+use std::string::ToString;
 
 use grin_core::global::ChainTypes;
 use serde_derive::{Deserialize, Serialize};
@@ -24,8 +25,8 @@ use crate::wallet::types::ConnectionMethod;
 /// Wallet configuration.
 #[derive(Serialize, Deserialize, Clone)]
 pub struct WalletConfig {
-    /// Last chosen wallet account label.
-    pub account: Option<String>,
+    /// Current wallet account label.
+    pub account: String,
     /// Chain type for current wallet.
     pub chain_type: ChainTypes,
     /// Identifier for a wallet.
@@ -39,7 +40,7 @@ pub struct WalletConfig {
 }
 
 /// Base wallets directory name.
-pub const BASE_DIR_NAME: &'static str = "wallets";
+const BASE_DIR_NAME: &'static str = "wallets";
 /// Wallet configuration file name.
 const CONFIG_FILE_NAME: &'static str = "grim-wallet.toml";
 /// Slatepacks directory name.
@@ -49,6 +50,9 @@ const SLATEPACKS_DIR_NAME: &'static str = "slatepacks";
 const MIN_CONFIRMATIONS_DEFAULT: u64 = 10;
 
 impl WalletConfig {
+    /// Default account name value.
+    pub const DEFAULT_ACCOUNT_LABEL: &'static str = "default";
+
     /// Create new wallet config.
     pub fn create(name: String, conn_method: &ConnectionMethod) -> WalletConfig {
         // Setup configuration path.
@@ -57,7 +61,7 @@ impl WalletConfig {
         let config_path = Self::get_config_file_path(chain_type, id);
         // Write configuration to the file.
         let config = WalletConfig {
-            account: None,
+            account: Self::DEFAULT_ACCOUNT_LABEL.to_string(),
             chain_type,
             id,
             name,
@@ -127,5 +131,11 @@ impl WalletConfig {
     pub fn save(&self) {
         let config_path = Self::get_config_file_path(self.chain_type, self.id);
         Settings::write_to_file(self, config_path);
+    }
+
+    /// Save account label value.
+    pub fn save_account(&mut self, label: &String) {
+        self.account = label.to_owned();
+        self.save();
     }
 }

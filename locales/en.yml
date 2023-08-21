@@ -9,6 +9,7 @@ change: Change
 show: Show
 delete: Delete
 clear: Clear
+create: Create
 wallets:
   await_conf_amount: Awaiting confirmation
   await_fin_amount: Awaiting finalization
@@ -23,7 +24,6 @@ wallets:
   current_pass: 'Current password:'
   new_pass: 'New password:'
   min_tx_conf_count: 'Minimum amount of confirmations for transactions:'
-  create: Create
   recover: Restore
   recovery_phrase: Recovery phrase
   words_count: 'Words count:'
@@ -53,6 +53,8 @@ wallets:
   wallet_checking: Checking wallet
   tx_loading: Loading transactions
   default_account: Default account
+  create_account: Create account
+  label: 'Label:'
   tx_sent: Sent
   tx_received: Received
   tx_sending: Sending
@@ -123,7 +125,6 @@ network_node:
   height: Height
   difficulty: Difficulty
   time: Time
-  transactions: Transactions
   main_pool: Main pool
   stem_pool: Stem pool
   data: Data
