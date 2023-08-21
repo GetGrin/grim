@@ -33,8 +33,7 @@ grin_wallet_util = { git = "https://github.com/mimblewimble/grin-wallet", tag = 
 grin_wallet_controller = { git = "https://github.com/mimblewimble/grin-wallet", tag = "v5.2.0-beta.1" }
 
 ## ui
-pollster = "0.3.0"
-wgpu = "0.16.1"
+wgpu = "0.17.0"
 egui = { version = "0.22.0", default-features = false }
 egui_extras = { version = "0.22.0", features = ["image"] }
 rust-i18n = "2.1.0"
@@ -42,12 +41,11 @@ rust-i18n = "2.1.0"
 ## other
 futures = "0.3"
 dirs = "5.0.1"
-once_cell = "1.10.0"
 sys-locale = "0.3.0"
 chrono = "0.4.23"
 lazy_static = "1.4.0"
 toml = "0.7.4"
-serde = "1"
+serde = "1.0.170"
 pnet = "0.34.0"
 url = "2.4.0"
 
