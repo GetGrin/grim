@@ -37,7 +37,7 @@ impl Default for AppConfig {
         Self {
             auto_start_node: false,
             chain_type: ChainTypes::default(),
-            show_wallets_at_dual_panel: true,
+            show_wallets_at_dual_panel: false,
             show_connections_network_panel: false,
         }
     }

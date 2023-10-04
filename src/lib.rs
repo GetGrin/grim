@@ -15,13 +15,18 @@
 #[macro_use]
 extern crate rust_i18n;
 
+use eframe::wgpu;
 use egui::{Context, Stroke};
+
 #[cfg(target_os = "android")]
 use winit::platform::android::activity::AndroidApp;
 
+pub use config::AppConfig;
+pub use settings::Settings;
 
 use crate::gui::{Colors, PlatformApp};
 use crate::gui::platform::PlatformCallbacks;
+use crate::gui::views::View;
 use crate::node::Node;
 
 i18n!("locales");
@@ -30,12 +35,7 @@ mod node;
 mod wallet;
 
 mod settings;
-pub use settings::Settings;
-
 mod config;
-pub use config::AppConfig;
-use crate::gui::views::View;
-
 pub mod gui;
 
 // Include build information.
@@ -87,8 +87,13 @@ fn android_main(app: AndroidApp) {
 pub fn app_creator<T: 'static>(app: PlatformApp<T>) -> eframe::AppCreator
     where PlatformApp<T>: eframe::App, T: PlatformCallbacks {
     Box::new(|cc| {
+        // Setup images support.
+        egui_extras::install_image_loaders(&cc.egui_ctx);
+        // Setup visuals.
         setup_visuals(&cc.egui_ctx);
+        // Setup fonts.
         setup_fonts(&cc.egui_ctx);
+        // Return app instance.
         Box::new(app)
     })
 }

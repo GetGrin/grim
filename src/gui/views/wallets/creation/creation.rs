@@ -44,10 +44,7 @@ pub struct WalletCreation {
     /// Mnemonic phrase setup content.
     pub(crate) mnemonic_setup: MnemonicSetup,
     /// Network setup content.
-    pub(crate) network_setup: ConnectionSetup,
-
-    /// App logo image.
-    logo: RetainedImage,
+    pub(crate) network_setup: ConnectionSetup
 }
 
 impl Default for WalletCreation {
@@ -59,11 +56,7 @@ impl Default for WalletCreation {
             pass_edit: String::from(""),
             hide_pass: true,
             mnemonic_setup: MnemonicSetup::default(),
-            network_setup: ConnectionSetup::default(),
-            logo: RetainedImage::from_image_bytes(
-                "logo.png",
-                include_bytes!("../../../../../img/logo.png"),
-            ).unwrap()
+            network_setup: ConnectionSetup::default()
         }
     }
 }
@@ -220,7 +213,8 @@ impl WalletCreation {
                 // Show wallet creation message if step is empty.
                 View::center_content(ui, 415.0 + View::get_bottom_inset(), |ui| {
                     ui.add(
-                        egui::Image::new(self.logo.texture_id(ui.ctx()), vec2(200.0, 200.0))
+                        egui::Image::new(egui::include_image!("../../../../../img/logo.png"))
+                            .fit_to_exact_size(vec2(200.0, 200.0))
                     );
                     ui.add_space(-15.0);
                     ui.label(RichText::new("GRIM")

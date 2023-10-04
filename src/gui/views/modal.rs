@@ -15,7 +15,7 @@
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::RwLock;
 
-use egui::{Align2, RichText, Rounding, Stroke, Vec2};
+use egui::{Align2, Rect, RichText, Rounding, Stroke, Vec2};
 use egui::epaint::RectShape;
 use lazy_static::lazy_static;
 
@@ -236,6 +236,8 @@ impl Modal {
             rounding,
             fill: Colors::FILL,
             stroke: Stroke::NONE,
+            fill_texture_id: Default::default(),
+            uv: Rect::ZERO
         };
         let bg_idx = ui.painter().add(bg_shape);
 
@@ -266,6 +268,8 @@ impl Modal {
             },
             fill: Colors::YELLOW,
             stroke: Stroke::NONE,
+            fill_texture_id: Default::default(),
+            uv: Rect::ZERO
         };
         let bg_idx = ui.painter().add(bg_shape);
 

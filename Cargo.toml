@@ -33,9 +33,8 @@ grin_wallet_util = { git = "https://github.com/mimblewimble/grin-wallet", tag = 
 grin_wallet_controller = { git = "https://github.com/mimblewimble/grin-wallet", tag = "v5.2.0-beta.1" }
 
 ## ui
-wgpu = "0.17.0"
-egui = { version = "0.22.0", default-features = false }
-egui_extras = { version = "0.22.0", features = ["image"] }
+egui = { version = "0.23.0", default-features = false }
+egui_extras = { version = "0.23.0", features = ["image"] }
 rust-i18n = "2.1.0"
 
 ## other
@@ -62,7 +61,7 @@ built = { version = "0.6.0", features = ["git2"]}
 [target.'cfg(not(target_os = "android"))'.dependencies]
 env_logger = "0.10.0"
 winit = { version = "0.28" }
-eframe = { version = "0.22.0", features = [ "wgpu" ] }
+eframe = { version = "0.23.0", features = [ "wgpu" ] }
 arboard = "3.2.0"
 
 [target.'cfg(target_os = "android")'.dependencies]
@@ -70,4 +69,4 @@ android_logger = "0.13.1"
 jni = "0.21.1"
 android-activity = "0.4.3"
 winit = { version = "0.28", features = [ "android-game-activity" ] }
-eframe = { version = "0.22.0", features = [ "wgpu", "android-game-activity" ] }
+eframe = { version = "0.23.0", features = [ "wgpu", "android-game-activity" ] }

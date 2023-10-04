@@ -14,7 +14,7 @@
 
 use std::sync::atomic::{AtomicI32, Ordering};
 
-use egui::{Button, CursorIcon, PointerState, Response, RichText, Sense, Spinner, Widget};
+use egui::{Button, CursorIcon, PointerState, Rect, Response, RichText, Sense, Spinner, Widget};
 use egui::epaint::{CircleShape, Color32, FontId, RectShape, Rounding, Stroke};
 use egui::epaint::text::TextWrapping;
 use egui::text::{LayoutJob, TextFormat};
@@ -325,6 +325,8 @@ impl View {
             },
             fill: Colors::TRANSPARENT,
             stroke: Self::ITEM_STROKE,
+            fill_texture_id: Default::default(),
+            uv: Rect::ZERO
         };
         let bg_idx = ui.painter().add(bg_shape);
 
