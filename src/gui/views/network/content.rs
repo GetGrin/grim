@@ -152,7 +152,7 @@ impl NetworkContent {
             // Setup spacing between tabs.
             ui.style_mut().spacing.item_spacing = egui::vec2(4.0, 0.0);
             // Setup vertical padding inside tab button.
-            ui.style_mut().spacing.button_padding = egui::vec2(0.0, 8.0);
+            ui.style_mut().spacing.button_padding = egui::vec2(0.0, 4.0);
 
             // Draw tab buttons.
             let current_type = self.node_tab_content.get_type();
