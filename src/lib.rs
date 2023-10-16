@@ -155,7 +155,7 @@ pub fn setup_fonts(ctx: &Context) {
             scale: 1.0,
             y_offset_factor: -0.30,
             y_offset: 0.0,
-            baseline_offset_factor: 0.30,
+            baseline_offset_factor: 0.50,
         }),
     );
     fonts
