@@ -54,7 +54,7 @@ wallets:
   tx_loading: Загрузка транзакций
   default_account: Стандартный аккаунт
   create_account: Создать аккаунт
-  label: 'Метка:'
+  accounts: Аккаунты
   tx_sent: Отправлено
   tx_received: Получено
   tx_sending: Отправка

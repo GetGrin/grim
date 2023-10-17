@@ -14,13 +14,13 @@
 
 use std::time::Duration;
 
-use egui::{Align, Id, Layout, Margin, RichText, Rounding, TextStyle, Widget};
+use egui::{Align, Id, Layout, Margin, RichText, Rounding, ScrollArea, TextStyle, Widget};
 use grin_chain::SyncStatus;
 use grin_core::core::amount_to_hr_string;
 
 use crate::AppConfig;
 use crate::gui::Colors;
-use crate::gui::icons::{DOWNLOAD, FILE_ARCHIVE, GEAR_FINE, LIST, PACKAGE, PLUS, POWER, REPEAT, UPLOAD, WALLET};
+use crate::gui::icons::{CHECK, CHECK_FAT, CREDIT_CARD, DOWNLOAD, FILE_ARCHIVE, GEAR_FINE, LIST, PACKAGE, PLUS, POWER, REPEAT, UPLOAD, WALLET};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, Root, View};
 use crate::gui::views::types::ModalPosition;
@@ -28,14 +28,17 @@ use crate::gui::views::wallets::{WalletInfo, WalletReceive, WalletSend, WalletSe
 use crate::gui::views::wallets::types::{WalletTab, WalletTabType};
 use crate::node::Node;
 use crate::wallet::{Wallet, WalletConfig};
-use crate::wallet::types::WalletData;
+use crate::wallet::types::{GRIN, WalletAccount, WalletData};
 
 /// Selected and opened wallet content.
 pub struct WalletContent {
+    /// List of wallet accounts for [`Modal`].
+    accounts: Vec<WalletAccount>,
+
     /// Account label [`Modal`] value.
-    pub account_label_edit: String,
+    account_label_edit: String,
     /// Flag to check if error occurred during account creation at [`Modal`].
-    pub account_creation_error: bool,
+    account_creation_error: bool,
 
     /// Current tab content to show.
     pub current_tab: Box<dyn WalletTab>,
@@ -44,6 +47,7 @@ pub struct WalletContent {
 impl Default for WalletContent {
     fn default() -> Self {
         Self {
+            accounts: vec![],
             account_label_edit: "".to_string(),
             account_creation_error: false,
             current_tab: Box::new(WalletInfo::default())
@@ -53,6 +57,8 @@ impl Default for WalletContent {
 
 /// Identifier for account creation [`Modal`].
 const CREATE_ACCOUNT_MODAL: &'static str = "create_account_modal";
+/// Identifier for account list [`Modal`].
+const ACCOUNT_LIST_MODAL: &'static str = "account_list_modal";
 
 impl WalletContent {
     pub fn ui(&mut self,
@@ -90,7 +96,7 @@ impl WalletContent {
                 ui.vertical_centered(|ui| {
                     // Draw wallet tabs.
                     View::max_width_ui(ui, Root::SIDE_PANEL_WIDTH * 1.35, |ui| {
-                        Self::account_ui(ui, data.as_ref().unwrap(), &wallet.config.account, cb);
+                        self.account_ui(ui, wallet, data.unwrap(), cb);
                     });
                 });
             });
@@ -149,6 +155,11 @@ impl WalletContent {
                         Modal::ui(ui.ctx(), |ui, modal| {
                             self.create_account_modal_ui(ui, wallet, modal, cb);
                         });
+                    },
+                    ACCOUNT_LIST_MODAL => {
+                        Modal::ui(ui.ctx(), |ui, modal| {
+                            self.account_list_modal_ui(ui, wallet, modal);
+                        });
                     }
                     _ => {}
                 }
@@ -157,9 +168,10 @@ impl WalletContent {
     }
 
     /// Draw wallet account content.
-    fn account_ui(ui: &mut egui::Ui,
-                  data: &WalletData,
-                  account: &String,
+    fn account_ui(&mut self,
+                  ui: &mut egui::Ui,
+                  wallet: &Wallet,
+                  data: WalletData,
                   cb: &dyn PlatformCallbacks) {
         let mut rect = ui.available_rect_before_wrap();
         rect.set_height(75.0);
@@ -182,8 +194,14 @@ impl WalletContent {
             });
 
             // Draw button to show list of accounts.
-            View::item_button(ui, Rounding::none(), LIST, None, || {
-                //TODO: accounts list modal
+            View::item_button(ui, Rounding::ZERO, LIST, None, || {
+                // Load accounts.
+                self.accounts = wallet.accounts();
+                // Show account list modal.
+                Modal::new(ACCOUNT_LIST_MODAL)
+                    .position(ModalPosition::Center)
+                    .title(t!("wallets.accounts"))
+                    .show();
             });
 
             let layout_size = ui.available_size();
@@ -193,18 +211,19 @@ impl WalletContent {
                     ui.add_space(3.0);
                     // Show spendable amount.
                     let amount = amount_to_hr_string(data.info.amount_currently_spendable, false);
-                    let amount_text = format!("{} ツ", amount);
+                    let amount_text = format!("{} {}", amount, GRIN);
                     ui.label(RichText::new(amount_text).size(18.0).color(Colors::BLACK));
+                    ui.add_space(-2.0);
 
                     // Show account label.
-                    let default_acc_label = &WalletConfig::DEFAULT_ACCOUNT_LABEL.to_string();
+                    let account = wallet.get_config().account;
+                    let default_acc_label = WalletConfig::DEFAULT_ACCOUNT_LABEL.to_string();
                     let acc_label = if account == default_acc_label {
                         t!("wallets.default_account")
                     } else {
                         account.to_owned()
                     };
                     let acc_text = format!("{} {}", FILE_ARCHIVE, acc_label);
-                    ui.add_space(-2.0);
                     View::ellipsize_text(ui, acc_text, 15.0, Colors::TEXT);
 
                     // Show confirmed height.
@@ -212,6 +231,43 @@ impl WalletContent {
                     ui.label(RichText::new(height_text).size(15.0).color(Colors::GRAY));
                 })
             });
+        });
+    }
+
+    /// Draw account list [`Modal`] content.
+    fn account_list_modal_ui(&mut self, ui: &mut egui::Ui, wallet: &mut Wallet, modal: &Modal) {
+        ui.add_space(3.0);
+
+        // Show list of accounts.
+        let size = self.accounts.len();
+        ScrollArea::vertical()
+            .max_height(300.0)
+            .id_source("account_list_modal_scroll")
+            .auto_shrink([true; 2])
+            .show_rows(ui, ACCOUNT_ITEM_HEIGHT, size, |ui, row_range| {
+                for index in row_range {
+                    // Add space before the first item.
+                    if index == 0 {
+                        ui.add_space(4.0);
+                    }
+                    let acc = self.accounts.get(index).unwrap();
+                    account_item_ui(ui, modal, wallet, acc, index, size);
+                    if index == size - 1 {
+                        ui.add_space(4.0);
+                    }
+                }
+            });
+
+        ui.add_space(2.0);
+        View::horizontal_line(ui, Colors::STROKE);
+        ui.add_space(6.0);
+
+        ui.vertical_centered_justified(|ui| {
+            View::button(ui, t!("close"), Colors::WHITE, || {
+                // Close modal.
+                modal.close();
+            });
+            ui.add_space(6.0);
         });
     }
 
@@ -230,7 +286,7 @@ impl WalletContent {
 
             // Draw account name edit.
             let text_edit_resp = egui::TextEdit::singleline(&mut self.account_label_edit)
-                .id(Id::from(modal.id).with(wallet.config.id))
+                .id(Id::from(modal.id).with(wallet.get_config().id))
                 .font(TextStyle::Heading)
                 .desired_width(ui.available_width())
                 .cursor_at_end(true)
@@ -240,15 +296,16 @@ impl WalletContent {
                 cb.show_keyboard();
             }
             ui.add_space(8.0);
+
+            // Show error occurred during account creation..
+            if self.account_creation_error {
+                ui.add_space(2.0);
+                ui.label(RichText::new(t!("error"))
+                    .size(17.0)
+                    .color(Colors::RED));
+            }
         });
 
-        // Show error occurred during account creation..
-        if self.account_creation_error {
-            ui.add_space(2.0);
-            ui.label(RichText::new(t!("error"))
-                .size(17.0)
-                .color(Colors::RED));
-        }
         ui.add_space(12.0);
 
         // Show modal buttons.
@@ -270,12 +327,10 @@ impl WalletContent {
                         if !self.account_label_edit.is_empty() {
                             let label = &self.account_label_edit;
                             match wallet.create_account(label) {
-                                Ok(_) => match wallet.set_active_account(label) {
-                                    Ok(_) => {
-                                        cb.hide_keyboard();
-                                        modal.close();
-                                    }
-                                    Err(_) => self.account_creation_error = true
+                                Ok(_) => {
+                                    let _ = wallet.set_active_account(label);
+                                    cb.hide_keyboard();
+                                    modal.close();
                                 },
                                 Err(_) => self.account_creation_error = true
                             };
@@ -299,7 +354,7 @@ impl WalletContent {
             // Setup spacing between tabs.
             ui.style_mut().spacing.item_spacing = egui::vec2(4.0, 0.0);
             // Setup vertical padding inside tab button.
-            ui.style_mut().spacing.button_padding = egui::vec2(0.0, 8.0);
+            ui.style_mut().spacing.button_padding = egui::vec2(0.0, 4.0);
 
             // Draw tab buttons.
             let current_type = self.current_tab.get_type();
@@ -407,6 +462,7 @@ impl WalletContent {
                 let integrated_node = wallet.get_current_ext_conn_id().is_none();
                 let integrated_node_ready = Node::get_sync_status() == Some(SyncStatus::NoSync);
                 let info_progress = wallet.info_sync_progress();
+
                 if wallet.is_closing() {
                     t!("wallets.wallet_closing")
                 } else if integrated_node && !integrated_node_ready {
@@ -436,4 +492,66 @@ impl WalletContent {
             ui.label(RichText::new(text).size(16.0).color(Colors::INACTIVE_TEXT));
         });
     }
+}
+
+const ACCOUNT_ITEM_HEIGHT: f32 = 75.0;
+
+/// Draw account item.
+fn account_item_ui(ui: &mut egui::Ui,
+                   modal: &Modal,
+                   wallet: &mut Wallet,
+                   acc: &WalletAccount,
+                   index: usize,
+                   size: usize) {
+    // Setup layout size.
+    let mut rect = ui.available_rect_before_wrap();
+    rect.set_height(ACCOUNT_ITEM_HEIGHT);
+
+    // Draw round background.
+    let bg_rect = rect.clone();
+    let item_rounding = View::item_rounding(index, size, false);
+    ui.painter().rect(bg_rect, item_rounding, Colors::FILL, View::ITEM_STROKE);
+
+    ui.vertical(|ui| {
+        ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
+            // Draw button to select account.
+            let is_current_account = wallet.get_config().account == acc.label;
+            if !is_current_account {
+                let button_rounding = View::item_rounding(index, size, true);
+                View::item_button(ui, button_rounding, CHECK, None, || {
+                    let _ = wallet.set_active_account(&acc.label);
+                    modal.close();
+                });
+            } else {
+                ui.add_space(12.0);
+                ui.label(RichText::new(CHECK_FAT).size(20.0).color(Colors::GREEN));
+            }
+
+            let layout_size = ui.available_size();
+            ui.allocate_ui_with_layout(layout_size, Layout::left_to_right(Align::Center), |ui| {
+                ui.add_space(6.0);
+                ui.vertical(|ui| {
+                    ui.add_space(4.0);
+                    // Show spendable amount.
+                    let amount = amount_to_hr_string(acc.spendable_amount, false);
+                    let amount_text = format!("{} {}", amount, GRIN);
+                    ui.label(RichText::new(amount_text).size(18.0).color(Colors::BLACK));
+                    ui.add_space(-2.0);
+
+                    // Show account name.
+                    let default_acc_label = WalletConfig::DEFAULT_ACCOUNT_LABEL.to_string();
+                    let acc_label = if acc.label == default_acc_label {
+                        t!("wallets.default_account")
+                    } else {
+                        acc.label.to_owned()
+                    };
+                    View::ellipsize_text(ui, acc_label, 15.0, Colors::TEXT);
+
+                    // Show account BIP32 derivation path.
+                    ui.label(RichText::new(acc.path.to_owned()).size(15.0).color(Colors::GRAY));
+                    ui.add_space(3.0);
+                });
+            });
+        });
+    });
 }

@@ -19,6 +19,9 @@ use grin_util::Mutex;
 use grin_wallet_impls::{DefaultLCProvider, HTTPNodeClient};
 use grin_wallet_libwallet::{TxLogEntry, WalletInfo, WalletInst};
 
+/// GRIN coin symbol.
+pub const GRIN: &str = "ツ";
+
 /// Mnemonic phrase setup mode.
 #[derive(PartialEq, Clone)]
 pub enum PhraseMode {
@@ -87,11 +90,22 @@ pub type WalletInstance = Arc<
     >,
 >;
 
-/// Contains wallet data to show.
+/// Wallet account data.
+#[derive(Clone)]
+pub struct WalletAccount {
+    /// Spendable balance amount.
+    pub spendable_amount: u64,
+    /// Account label.
+    pub label: String,
+    /// Account BIP32 derivation path.
+    pub path: String
+}
+
+/// Wallet balance and transactions data.
 #[derive(Clone)]
 pub struct WalletData {
-    /// Wallet balance information.
+    /// Balance data for current account.
     pub info: WalletInfo,
-    /// Wallet transactions.
+    /// Transactions data.
     pub txs: Vec<TxLogEntry>
 }

@@ -204,7 +204,7 @@ impl RecoverySetup {
                 ui.allocate_ui_with_layout(layout_size, Layout::left_to_right(Align::Center), |ui| {
                     // Draw current wallet password text edit.
                     let pass_resp = egui::TextEdit::singleline(&mut self.pass_edit)
-                        .id(Id::from(modal.id).with(wallet.config.id).with("recovery_phrase"))
+                        .id(Id::from(modal.id).with(wallet.get_config().id).with("recovery_phrase"))
                         .font(TextStyle::Heading)
                         .desired_width(ui.available_width())
                         .cursor_at_end(true)

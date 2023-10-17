@@ -54,7 +54,7 @@ wallets:
   tx_loading: Loading transactions
   default_account: Default account
   create_account: Create account
-  label: 'Label:'
+  accounts: Accounts
   tx_sent: Sent
   tx_received: Received
   tx_sending: Sending

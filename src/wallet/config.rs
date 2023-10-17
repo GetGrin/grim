@@ -132,10 +132,4 @@ impl WalletConfig {
         let config_path = Self::get_config_file_path(self.chain_type, self.id);
         Settings::write_to_file(self, config_path);
     }
-
-    /// Save account label value.
-    pub fn save_account(&mut self, label: &String) {
-        self.account = label.to_owned();
-        self.save();
-    }
 }

@@ -117,7 +117,7 @@ impl WalletReceive {
         ui.add_space(3.0);
         ScrollArea::vertical()
             .max_height(128.0)
-            .id_source(Id::from("receive_input").with(wallet.config.id))
+            .id_source(Id::from("receive_input").with(wallet.get_config().id))
             .auto_shrink([false; 2])
             .show(ui, |ui| {
                 ui.add_space(7.0);

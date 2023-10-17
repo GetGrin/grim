@@ -40,13 +40,13 @@ use grin_wallet_libwallet::api_impl::owner::{cancel_tx, retrieve_summary_info, r
 
 use crate::node::{Node, NodeConfig};
 use crate::wallet::{ConnectionsConfig, ExternalConnection, WalletConfig};
-use crate::wallet::types::{ConnectionMethod, WalletData, WalletInstance};
+use crate::wallet::types::{ConnectionMethod, WalletAccount, WalletData, WalletInstance};
 
 /// Contains wallet instance, configuration and state, handles wallet commands.
 #[derive(Clone)]
 pub struct Wallet {
     /// Wallet configuration.
-    pub config: WalletConfig,
+    config: Arc<RwLock<WalletConfig>>,
     /// Wallet instance, initializing on wallet opening and clearing on wallet closing.
     instance: Option<WalletInstance>,
     /// [`WalletInstance`] external connection id applied after opening.
@@ -74,7 +74,10 @@ pub struct Wallet {
     /// Transactions loading progress in percents.
     txs_sync_progress: Arc<AtomicU8>,
 
-    /// Wallet data.
+    /// Wallet accounts.
+    accounts: Arc<RwLock<Vec<WalletAccount>>>,
+
+    /// Wallet info to show at ui.
     data: Arc<RwLock<Option<WalletData>>>,
     /// Attempts amount to update wallet data.
     sync_attempts: Arc<AtomicU8>,
@@ -97,7 +100,7 @@ impl Wallet {
     /// Create new [`Wallet`] instance with provided [`WalletConfig`].
     fn new(config: WalletConfig) -> Self {
         Self {
-            config,
+            config: Arc::new(RwLock::new(config)),
             instance: None,
             instance_ext_conn_id: Arc::new(AtomicI64::new(0)),
             sync_thread: Arc::from(RwLock::new(None)),
@@ -109,7 +112,8 @@ impl Wallet {
             sync_error: Arc::from(AtomicBool::new(false)),
             info_sync_progress: Arc::from(AtomicU8::new(0)),
             txs_sync_progress: Arc::from(AtomicU8::new(0)),
-            data: Arc::from(RwLock::new(None)),
+            accounts: Arc::new(RwLock::new(vec![])),
+            data: Arc::new(RwLock::new(None)),
             sync_attempts: Arc::new(AtomicU8::new(0)),
             repair_needed: Arc::new(AtomicBool::new(false)),
             repair_progress: Arc::new(AtomicU8::new(0)),
@@ -201,6 +205,32 @@ impl Wallet {
         Ok(Arc::new(Mutex::new(wallet)))
     }
 
+    /// Get wallet config.
+    pub fn get_config(&self) -> WalletConfig {
+        self.config.read().unwrap().clone()
+    }
+
+    /// Change wallet name.
+    pub fn change_name(&self, name: String) {
+        let mut w_config = self.config.write().unwrap();
+        w_config.name = name;
+        w_config.save();
+    }
+
+    /// Update minimal amount of confirmations.
+    pub fn update_min_confirmations(&self, min_confirmations: u64) {
+        let mut w_config = self.config.write().unwrap();
+        w_config.min_confirmations = min_confirmations;
+        w_config.save();
+    }
+
+    /// Update external connection identifier.
+    pub fn update_ext_conn_id(&self, id: Option<i64>) {
+        let mut w_config = self.config.write().unwrap();
+        w_config.ext_conn_id = id;
+        w_config.save();
+    }
+
     /// Open the wallet and start [`WalletData`] sync at separate thread.
     pub fn open(&mut self, password: String) -> Result<(), Error> {
         if self.is_open() {
@@ -209,9 +239,10 @@ impl Wallet {
 
         // Create new wallet instance if sync thread was stopped or instance was not created.
         if self.sync_thread.write().unwrap().is_none() || self.instance.is_none() {
-            let new_instance = Self::create_wallet_instance(self.config.clone())?;
+            let config = self.get_config();
+            let new_instance = Self::create_wallet_instance(config.clone())?;
             self.instance = Some(new_instance);
-            self.instance_ext_conn_id.store(match self.config.ext_conn_id {
+            self.instance_ext_conn_id.store(match config.ext_conn_id {
                 None => 0,
                 Some(conn_id) => conn_id
             }, Ordering::Relaxed);
@@ -229,7 +260,7 @@ impl Wallet {
 
                 // Set current account.
                 let wallet_inst = lc.wallet_inst()?;
-                let label = self.config.account.to_owned();
+                let label = self.get_config().account.to_owned();
                 wallet_inst.set_parent_key_id_by_name(label.as_str())?;
 
                 // Start new synchronization thread or wake up existing one.
@@ -262,7 +293,7 @@ impl Wallet {
                 Some(ext_conn_id)
             }
         } else {
-            self.config.ext_conn_id
+            self.get_config().ext_conn_id
         }
     }
 
@@ -305,7 +336,7 @@ impl Wallet {
             wallet_close.is_open.store(false, Ordering::Relaxed);
 
             // Wake up thread to exit.
-            wallet_close.refresh();
+            wallet_close.sync();
         });
     }
 
@@ -327,33 +358,33 @@ impl Wallet {
 
     /// Set active account from provided label.
     pub fn set_active_account(&mut self, label: &String) -> Result<(), Error> {
-        let instance = self.instance.clone().unwrap();
-        let mut wallet_lock = instance.lock();
-        let lc = wallet_lock.lc_provider()?;
-        let wallet_inst = lc.wallet_inst()?;
-        wallet_inst.set_parent_key_id_by_name(label.as_str())?;
+        let mut api = Owner::new(self.instance.clone().unwrap(), None);
+        controller::owner_single_use(None, None, Some(&mut api), |api, m| {
+            api.set_active_account(m, label)?;
+            Ok(())
+        })?;
 
         // Save account label into config.
-        self.config.save_account(label);
+        let mut w_config = self.config.write().unwrap();
+        w_config.account = label.to_owned();
+        w_config.save();
 
         // Clear wallet info.
         let mut w_data = self.data.write().unwrap();
         *w_data = None;
 
-        // Refresh wallet data.
-        self.refresh();
+        // Reset progress values.
+        self.info_sync_progress.store(0, Ordering::Relaxed);
+        self.txs_sync_progress.store(0, Ordering::Relaxed);
+
+        // Sync wallet data.
+        self.sync();
         Ok(())
     }
 
     /// Get list of accounts for the wallet.
-    pub fn accounts(&self) -> Vec<AcctPathMapping> {
-        let mut api = Owner::new(self.instance.clone().unwrap(), None);
-        let mut accounts = vec![];
-        let _ = controller::owner_single_use(None, None, Some(&mut api), |api, m| {
-            accounts = api.accounts(m)?;
-            Ok(())
-        });
-        accounts
+    pub fn accounts(&self) -> Vec<WalletAccount> {
+        self.accounts.read().unwrap().clone()
     }
 
     /// Set wallet reopen status.
@@ -414,8 +445,8 @@ impl Wallet {
         r_data.clone()
     }
 
-    /// Wake up wallet thread to refresh wallet info and update statuses.
-    fn refresh(&self) {
+    /// Wake up wallet thread to sync wallet data and update statuses.
+    fn sync(&self) {
         let thread_r = self.sync_thread.read().unwrap();
         if let Some(thread) = thread_r.as_ref() {
             thread.unpark();
@@ -427,9 +458,9 @@ impl Wallet {
         let mut api = Owner::new(self.instance.clone().unwrap(), None);
         match parse_slatepack(&mut api, None, None, Some(message.clone())) {
             Ok((mut slate, _)) => {
+                let config = self.get_config();
                 controller::foreign_single_use(api.wallet_inst.clone(), None, |api| {
-                    let account = self.config.clone().account;
-                    slate = api.receive_tx(&slate, Some(account.as_str()), None)?;
+                    slate = api.receive_tx(&slate, Some(config.account.as_str()), None)?;
                     Ok(())
                 })?;
                 let mut response = "".to_string();
@@ -439,7 +470,7 @@ impl Wallet {
                 })?;
 
                 // Create a directory to which slatepack files will be output.
-                let mut slatepack_dir = self.config.get_slatepacks_path();
+                let mut slatepack_dir = config.get_slatepacks_path();
                 let slatepack_file_name = format!("{}.{}.slatepack", slate.id, slate.state);
                 slatepack_dir.push(slatepack_file_name);
 
@@ -448,8 +479,8 @@ impl Wallet {
                 output.write_all(response.as_bytes())?;
                 output.sync_all()?;
 
-                // Refresh wallet info.
-                self.refresh();
+                // Sync wallet info.
+                self.sync();
 
                 Ok(response)
             }
@@ -477,7 +508,7 @@ impl Wallet {
         thread::spawn(move || {
             let _ = cancel_tx(instance, None, &None, Some(id), None);
             // Refresh wallet info to update statuses.
-            wallet_cancel.refresh();
+            wallet_cancel.sync();
         });
     }
 
@@ -502,7 +533,7 @@ impl Wallet {
     /// Initiate wallet repair by scanning its outputs.
     pub fn repair(&self) {
         self.repair_needed.store(true, Ordering::Relaxed);
-        self.refresh();
+        self.sync();
     }
 
     /// Check if wallet is repairing.
@@ -538,9 +569,7 @@ impl Wallet {
             Self::close_wallet(&instance);
 
             // Remove wallet files.
-            let mut wallet_lock = instance.lock();
-            let _ = wallet_lock.lc_provider().unwrap();
-            let _ = fs::remove_dir_all(wallet_delete.config.get_data_path());
+            let _ = fs::remove_dir_all(wallet_delete.get_config().get_data_path());
 
             // Mark wallet as not opened and deleted.
             wallet_delete.closing.store(false, Ordering::Relaxed);
@@ -548,7 +577,7 @@ impl Wallet {
             wallet_delete.deleted.store(true, Ordering::Relaxed);
 
             // Wake up thread to exit.
-            wallet_delete.refresh();
+            wallet_delete.sync();
         });
     }
 
@@ -616,7 +645,7 @@ fn start_sync(mut wallet: Wallet) -> Thread {
         // Scan outputs if repair is needed or sync data if there is no error.
         if !wallet.sync_error() {
             if wallet.is_repairing() {
-                scan_wallet(&wallet)
+                repair_wallet(&wallet)
             } else {
                 sync_wallet_data(&wallet);
             }
@@ -721,18 +750,22 @@ fn sync_wallet_data(wallet: &Wallet) {
             None,
             &Some(info_tx),
             true,
-            wallet.config.min_confirmations
+            wallet.get_config().min_confirmations
         ) {
             Ok(info) => {
                 // Do not retrieve txs if wallet was closed.
                 if !wallet.is_open() {
                     return;
                 }
-                // Retrieve txs if retrieving info was success.
+
                 if wallet.info_sync_progress() == 100 {
+                    // Retrieve accounts data.
+                    let last_height = info.1.last_confirmed_height;
+                    update_accounts(wallet, last_height, info.1.amount_currently_spendable);
+
+                    // Update txs sync progress at separate thread.
                     let wallet_txs = wallet.clone();
                     let (txs_tx, txs_rx) = mpsc::channel::<StatusMessage>();
-                    // Update txs sync progress at separate thread.
                     thread::spawn(move || {
                         while let Ok(m) = txs_rx.recv() {
                             println!("SYNC TXS MESSAGE");
@@ -828,15 +861,66 @@ fn sync_wallet_data(wallet: &Wallet) {
     }
 }
 
+/// Update wallet accounts data.
+fn update_accounts(wallet: &Wallet, current_height: u64, current_spendable: u64) {
+    // Update only current account if list is not empty.
+    if !wallet.accounts.read().unwrap().is_empty() {
+        let mut accounts = wallet.accounts.read().unwrap().clone();
+        for mut a in accounts.iter_mut() {
+            if a.label == wallet.get_config().account {
+                a.spendable_amount = current_spendable;
+            }
+        }
+        // Save accounts data.
+        let mut w_data = wallet.accounts.write().unwrap();
+        *w_data = accounts;
+    } else {
+        let mut api = Owner::new(wallet.instance.clone().unwrap(), None);
+        let _ = controller::owner_single_use(None, None, Some(&mut api), |api, m| {
+            let mut accounts = vec![];
+            for a in api.accounts(m)? {
+                api.set_active_account(m, a.label.as_str())?;
+                // Calculate wallet account balance.
+                let outputs = api.retrieve_outputs(m, true, false, None)?;
+                let min_confirmations = wallet.get_config().min_confirmations;
+                let mut spendable_amount = 0;
+                for out_mapping in outputs.1 {
+                    let out = out_mapping.output;
+                    if out.status == grin_wallet_libwallet::OutputStatus::Unspent {
+                        if !out.is_coinbase || out.lock_height <= current_height
+                            || out.num_confirmations(current_height) >= min_confirmations {
+                            spendable_amount += out.value;
+                        }
+                    }
+                }
+
+                // Add account to list.
+                accounts.push(WalletAccount {
+                    spendable_amount,
+                    label: a.label,
+                    path: a.path.to_bip_32_string(),
+                })
+            }
+
+            // Save accounts data.
+            let mut w_data = wallet.accounts.write().unwrap();
+            *w_data = accounts;
+
+            // Set current active account from config.
+            api.set_active_account(m, wallet.get_config().account.as_str())?;
+
+            Ok(())
+        });
+    }
+}
+
 /// Scan wallet's outputs, repairing and restoring missing outputs if required.
-fn scan_wallet(wallet: &Wallet) {
-    println!("repair the wallet");
+fn repair_wallet(wallet: &Wallet) {
     let (info_tx, info_rx) = mpsc::channel::<StatusMessage>();
     // Update scan progress at separate thread.
     let wallet_scan = wallet.clone();
     thread::spawn(move || {
         while let Ok(m) = info_rx.recv() {
-            println!("REPAIR WALLET MESSAGE");
             match m {
                 StatusMessage::UpdatingOutputs(_) => {}
                 StatusMessage::UpdatingTransactions(_) => {}
@@ -856,7 +940,6 @@ fn scan_wallet(wallet: &Wallet) {
     let api = Owner::new(wallet.instance.clone().unwrap(), Some(info_tx));
     match api.scan(None, Some(1), false) {
         Ok(()) => {
-            println!("repair was complete");
             // Set sync error if scanning was not complete and wallet is open.
             if wallet.is_open() && wallet.repair_progress.load(Ordering::Relaxed) != 100 {
                 wallet.set_sync_error(true);
@@ -865,7 +948,6 @@ fn scan_wallet(wallet: &Wallet) {
             }
         }
         Err(e) => {
-            println!("error on repair {}", e);
             // Set sync error if wallet is open.
             if wallet.is_open() {
                 wallet.set_sync_error(true);

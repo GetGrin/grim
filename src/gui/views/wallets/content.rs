@@ -145,7 +145,7 @@ impl WalletsContent {
                     let list = self.wallets.mut_list();
                     for wallet in list {
                         // Show content for selected wallet.
-                        if selected_id == Some(wallet.config.id) {
+                        if selected_id == Some(wallet.get_config().id) {
                             // Setup wallet content width.
                             let mut rect = ui.available_rect_before_wrap();
                             let mut width = ui.available_width();
@@ -345,7 +345,7 @@ impl WalletsContent {
                                 // Check if wallet reopen is needed.
                                 if !wallet.is_open() && wallet.reopen_needed() {
                                     wallet.set_reopen(false);
-                                    self.wallets.select(Some(wallet.config.id));
+                                    self.wallets.select(Some(wallet.get_config().id));
                                     self.show_open_wallet_modal(cb);
                                 }
 
@@ -371,7 +371,8 @@ impl WalletsContent {
                       ui: &mut egui::Ui,
                       wallet: &Wallet,
                       cb: &dyn PlatformCallbacks) {
-        let id = wallet.config.id;
+        let config = wallet.get_config();
+        let id = config.id;
         let is_selected = self.wallets.selected_id == Some(id);
         let is_current = wallet.is_open() && is_selected;
 
@@ -422,7 +423,7 @@ impl WalletsContent {
                     ui.add_space(3.0);
                     // Setup wallet name text.
                     let name_color = if is_selected { Colors::BLACK } else { Colors::TITLE };
-                    View::ellipsize_text(ui, wallet.config.name.to_owned(), 18.0, name_color);
+                    View::ellipsize_text(ui, config.name, 18.0, name_color);
 
                     // Setup wallet connection text.
                     let conn_text = if let Some(id) = wallet.get_current_ext_conn_id() {

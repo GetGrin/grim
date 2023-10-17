@@ -133,7 +133,7 @@ impl WalletInfo {
         ui.add_space(3.0);
         ScrollArea::vertical()
             .scroll_bar_visibility(ScrollBarVisibility::AlwaysVisible)
-            .id_source(Id::from("txs_content").with(wallet.config.id))
+            .id_source(Id::from("txs_content").with(wallet.get_config().id))
             .auto_shrink([false; 2])
             .show_rows(ui, TX_ITEM_HEIGHT, txs_size, |ui, row_range| {
                 ui.add_space(4.0);
@@ -244,12 +244,13 @@ fn tx_item_ui(ui: &mut egui::Ui,
                         }
                     } else {
                         let tx_height = tx.kernel_lookup_min_height.unwrap_or(0);
+                        let min_confirmations = wallet.get_config().min_confirmations;
                         match tx.tx_type {
                             TxLogEntryType::ConfirmedCoinbase => {
                                 format!("{} {}", CHECK_CIRCLE, t!("wallets.tx_confirmed"))
                             },
                             TxLogEntryType::TxReceived => {
-                                if last_height - tx_height > wallet.config.min_confirmations {
+                                if last_height - tx_height > min_confirmations {
                                     format!("{} {}", ARROW_CIRCLE_DOWN, t!("wallets.tx_received"))
                                 } else {
                                     format!("{} {}",
@@ -258,7 +259,7 @@ fn tx_item_ui(ui: &mut egui::Ui,
                                 }
                             },
                             TxLogEntryType::TxSent => {
-                                if last_height - tx_height > wallet.config.min_confirmations {
+                                if last_height - tx_height > min_confirmations {
                                     format!("{} {}", ARROW_CIRCLE_DOWN, t!("wallets.tx_sent"))
                                 } else {
                                     format!("{} {}", DOTS_THREE_CIRCLE, t!("wallets.tx_confirming"))

@@ -59,8 +59,8 @@ impl WalletList {
             }
         }
         // Sort wallets by id.
-        main_wallets.sort_by_key(|w| -w.config.id);
-        test_wallets.sort_by_key(|w| -w.config.id);
+        main_wallets.sort_by_key(|w| -w.get_config().id);
+        test_wallets.sort_by_key(|w| -w.get_config().id);
         (main_wallets, test_wallets)
     }
 
@@ -84,7 +84,7 @@ impl WalletList {
 
     /// Add created [`Wallet`] to the list.
     pub fn add(&mut self, wallet: Wallet) {
-        self.selected_id = Some(wallet.config.id);
+        self.selected_id = Some(wallet.get_config().id);
         let list = self.mut_list();
         list.insert(0, wallet);
     }
@@ -93,7 +93,7 @@ impl WalletList {
     pub fn remove(&mut self, id: i64) {
         let list = self.mut_list();
         for (index, wallet) in list.iter().enumerate() {
-            if wallet.config.id == id {
+            if wallet.get_config().id == id {
                 list.remove(index);
                 return;
             }
@@ -108,8 +108,9 @@ impl WalletList {
     /// Get selected [`Wallet`] name.
     pub fn selected_name(&self) -> String {
         for w in self.list() {
-            if Some(w.config.id) == self.selected_id {
-                return w.config.name.to_owned()
+            let config = w.get_config();
+            if Some(config.id) == self.selected_id {
+                return config.name.clone()
             }
         }
         t!("wallets.unlocked")
@@ -118,7 +119,8 @@ impl WalletList {
     /// Check if selected [`Wallet`] is open.
     pub fn is_selected_open(&self) -> bool {
         for w in self.list() {
-            if Some(w.config.id) == self.selected_id {
+            let config = w.get_config();
+            if Some(config.id) == self.selected_id {
                 return w.is_open()
             }
         }
@@ -134,7 +136,7 @@ impl WalletList {
     pub fn open_selected(&mut self, password: String) -> Result<(), Error> {
         let selected_id = self.selected_id.clone();
         for w in self.mut_list() {
-            if Some(w.config.id) == selected_id {
+            if Some(w.get_config().id) == selected_id {
                 return w.open(password.clone());
             }
         }

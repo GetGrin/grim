@@ -103,7 +103,7 @@ impl ConnectionSetup {
         }
 
         // Setup connection value from provided wallet.
-        match wallet.config.ext_conn_id {
+        match wallet.get_config().ext_conn_id {
             None => self.method = ConnectionMethod::Integrated,
             Some(id) => self.method = ConnectionMethod::External(id)
         }
@@ -112,25 +112,25 @@ impl ConnectionSetup {
         self.ui(ui, frame, cb);
 
         // Setup wallet connection value after change.
+        let config = wallet.get_config();
         let changed = match self.method {
             ConnectionMethod::Integrated => {
-                let changed = wallet.config.ext_conn_id.is_some();
+                let changed = config.ext_conn_id.is_some();
                 if changed {
-                    wallet.config.ext_conn_id = None;
+                    wallet.update_ext_conn_id(None);
                 }
                 changed
             }
             ConnectionMethod::External(id) => {
-                let changed = wallet.config.ext_conn_id != Some(id);
+                let changed = config.ext_conn_id != Some(id);
                 if changed {
-                    wallet.config.ext_conn_id = Some(id);
+                    wallet.update_ext_conn_id(Some(id));
                 }
                 changed
             }
         };
 
         if changed {
-            wallet.config.save();
             // Show reopen confirmation modal.
             Modal::new(REOPEN_WALLET_CONFIRMATION_MODAL)
                 .position(ModalPosition::Center)

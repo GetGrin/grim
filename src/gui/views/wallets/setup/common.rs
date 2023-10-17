@@ -75,17 +75,18 @@ impl CommonSetup {
         self.modal_content_ui(ui, wallet, cb);
 
         ui.vertical_centered(|ui| {
+            let wallet_name = wallet.get_config().name;
             // Show wallet name.
             ui.add_space(2.0);
             ui.label(RichText::new(t!("wallets.name")).size(16.0).color(Colors::GRAY));
             ui.add_space(2.0);
-            ui.label(RichText::new(wallet.config.name.clone()).size(16.0).color(Colors::BLACK));
+            ui.label(RichText::new(wallet_name.clone()).size(16.0).color(Colors::BLACK));
             ui.add_space(8.0);
 
             // Show wallet name setup.
             let name_text = format!("{} {}", PENCIL, t!("change"));
             View::button(ui, name_text, Colors::BUTTON, || {
-                self.name_edit = wallet.config.name.clone();
+                self.name_edit = wallet_name;
                 // Show wallet name modal.
                 Modal::new(NAME_EDIT_MODAL)
                     .position(ModalPosition::CenterTop)
@@ -125,9 +126,10 @@ impl CommonSetup {
             ui.add_space(6.0);
 
             // Show minimum amount of confirmations value setup.
-            let min_conf_text = format!("{} {}", CLOCK_COUNTDOWN, wallet.config.min_confirmations);
+            let min_confirmations = wallet.get_config().min_confirmations;
+            let min_conf_text = format!("{} {}", CLOCK_COUNTDOWN, min_confirmations);
             View::button(ui, min_conf_text, Colors::BUTTON, || {
-                self.min_confirmations_edit = wallet.config.min_confirmations.to_string();
+                self.min_confirmations_edit = min_confirmations.to_string();
                 // Show minimum amount of confirmations value modal.
                 Modal::new(MIN_CONFIRMATIONS_EDIT_MODAL)
                     .position(ModalPosition::CenterTop)
@@ -187,7 +189,7 @@ impl CommonSetup {
 
             // Draw wallet name edit.
             let text_edit_resp = egui::TextEdit::singleline(&mut self.name_edit)
-                .id(Id::from(modal.id).with(wallet.config.id))
+                .id(Id::from(modal.id).with(wallet.get_config().id))
                 .font(TextStyle::Heading)
                 .desired_width(ui.available_width())
                 .cursor_at_end(true)
@@ -216,8 +218,7 @@ impl CommonSetup {
                     // Save button callback.
                     let mut on_save = || {
                         if !self.name_edit.is_empty() {
-                            wallet.config.name = self.name_edit.clone();
-                            wallet.config.save();
+                            wallet.change_name(self.name_edit.clone());
                             cb.hide_keyboard();
                             modal.close();
                         }
@@ -240,6 +241,8 @@ impl CommonSetup {
                      wallet: &mut Wallet,
                      modal: &Modal,
                      cb: &dyn PlatformCallbacks) {
+        let wallet_id = wallet.get_config().id;
+
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("wallets.current_pass"))
@@ -260,7 +263,7 @@ impl CommonSetup {
                 ui.allocate_ui_with_layout(layout_size, Layout::left_to_right(Align::Center), |ui| {
                     // Draw current wallet password text edit.
                     let old_pass_resp = egui::TextEdit::singleline(&mut self.current_pass_edit)
-                        .id(Id::from(modal.id).with(wallet.config.id).with("old_pass"))
+                        .id(Id::from(modal.id).with(wallet_id).with("old_pass"))
                         .font(TextStyle::Heading)
                         .desired_width(ui.available_width())
                         .cursor_at_end(true)
@@ -297,7 +300,7 @@ impl CommonSetup {
                 ui.allocate_ui_with_layout(layout_size, Layout::left_to_right(Align::Center), |ui| {
                     // Draw new wallet password text edit.
                     let new_pass_resp = egui::TextEdit::singleline(&mut self.new_pass_edit)
-                        .id(Id::from(modal.id).with(wallet.config.id).with("new_pass"))
+                        .id(Id::from(modal.id).with(wallet_id).with("new_pass"))
                         .font(TextStyle::Heading)
                         .desired_width(ui.available_width())
                         .cursor_at_end(true)
@@ -426,7 +429,7 @@ impl CommonSetup {
                     // Save button callback.
                     let mut on_save = || {
                         if let Ok(min_conf) = self.min_confirmations_edit.parse::<u64>() {
-                            wallet.config.min_confirmations = min_conf;
+                            wallet.update_min_confirmations(min_conf);
                             cb.hide_keyboard();
                             modal.close();
                         }
