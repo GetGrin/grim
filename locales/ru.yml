@@ -111,7 +111,7 @@ sync_status:
   tx_hashset_download_percent: 'Загрузка состояния: %{percent}%'
   tx_hashset_setup_history: 'Подготовка состояния (история): %{percent}%'
   tx_hashset_setup_position: 'Подготовка состояния (позиция): %{percent}%'
-  tx_hashset_setup: Подготовка состояния для проверки
+  tx_hashset_setup: Подготовка состояния
   tx_hashset_range_proofs_validation: 'Проверка доказательств: %{percent}%'
   tx_hashset_kernels_validation: 'Проверка ядер: %{percent}%'
   tx_hashset_save: Сохранение состояния цепи

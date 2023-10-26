@@ -111,7 +111,7 @@ sync_status:
   tx_hashset_download_percent: 'Downloading state: %{percent}%'
   tx_hashset_setup_history: 'Preparing state (history): %{percent}%'
   tx_hashset_setup_position: 'Preparing state (position): %{percent}%'
-  tx_hashset_setup: Preparing state for validation
+  tx_hashset_setup: Preparing state
   tx_hashset_range_proofs_validation: 'Validating state (range proofs): %{percent}%'
   tx_hashset_kernels_validation: 'Validating state (kernels): %{percent}%'
   tx_hashset_save: Finalizing chain state
