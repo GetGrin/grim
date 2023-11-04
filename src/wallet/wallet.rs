@@ -419,6 +419,12 @@ impl Wallet {
 
     /// Set an error for wallet on synchronization.
     fn set_sync_error(&self, error: bool) {
+        // Clear wallet info on error.
+        if error {
+            let mut w_data = self.data.write().unwrap();
+            *w_data = None;
+        }
+
         self.sync_error.store(error, Ordering::Relaxed);
     }
 
@@ -947,7 +953,7 @@ fn repair_wallet(wallet: &Wallet) {
                 wallet.repair_needed.store(false, Ordering::Relaxed);
             }
         }
-        Err(e) => {
+        Err(_) => {
             // Set sync error if wallet is open.
             if wallet.is_open() {
                 wallet.set_sync_error(true);
