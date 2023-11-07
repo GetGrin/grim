@@ -29,6 +29,6 @@ impl PlatformCallbacks for Desktop {
 
     fn get_string_from_buffer(&self) -> String {
         let mut clipboard = arboard::Clipboard::new().unwrap();
-        clipboard.get_text().unwrap()
+        clipboard.get_text().unwrap_or("".to_string())
     }
 }
