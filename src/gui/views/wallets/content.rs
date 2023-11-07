@@ -12,15 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::{Align, Align2, Layout, Margin, RichText, Rounding, ScrollArea, TextStyle, Widget};
-use egui_extras::{Size, StripBuilder};
+use egui::{Align, Align2, Id, Layout, Margin, RichText, Rounding, ScrollArea, Widget};
 
 use crate::AppConfig;
 use crate::gui::Colors;
-use crate::gui::icons::{ARROW_LEFT, CARET_RIGHT, COMPUTER_TOWER, EYE, EYE_SLASH, FOLDER_LOCK, FOLDER_OPEN, GEAR, GLOBE, GLOBE_SIMPLE, LOCK_KEY, PLUS, SIDEBAR_SIMPLE, SPINNER, SUITCASE, WARNING_CIRCLE};
+use crate::gui::icons::{ARROW_LEFT, CARET_RIGHT, COMPUTER_TOWER, FOLDER_LOCK, FOLDER_OPEN, GEAR, GLOBE, GLOBE_SIMPLE, LOCK_KEY, PLUS, SIDEBAR_SIMPLE, SPINNER, SUITCASE, WARNING_CIRCLE};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, Root, TitlePanel, View};
-use crate::gui::views::types::{ModalContainer, ModalPosition, TitleContentType, TitleType};
+use crate::gui::views::types::{ModalContainer, ModalPosition, TextEditOptions, TitleContentType, TitleType};
 use crate::gui::views::wallets::creation::WalletCreation;
 use crate::gui::views::wallets::types::WalletTabType;
 use crate::gui::views::wallets::WalletContent;
@@ -33,8 +32,6 @@ pub struct WalletsContent {
 
     /// Password to open wallet for [`Modal`].
     pass_edit: String,
-    /// Flag to show/hide password at [`egui::TextEdit`] field.
-    hide_pass: bool,
     /// Flag to check if wrong password was entered.
     wrong_pass: bool,
 
@@ -58,7 +55,6 @@ impl Default for WalletsContent {
         Self {
             wallets: WalletList::default(),
             pass_edit: "".to_string(),
-            hide_pass: true,
             wrong_pass: false,
             wallet_content: WalletContent::default(),
             creation_content: WalletCreation::default(),
@@ -407,7 +403,7 @@ impl WalletsContent {
                 // Show button to close opened wallet.
                 if !wallet.is_closing()  {
                     View::item_button(ui, if !is_selected {
-                        Rounding::none()
+                        Rounding::default()
                     } else {
                         View::item_rounding(0, 1, true)
                     }, LOCK_KEY, None, || {
@@ -510,7 +506,6 @@ impl WalletsContent {
     /// Show [`Modal`] to open selected wallet.
     pub fn show_open_wallet_modal(&mut self, cb: &dyn PlatformCallbacks) {
         // Reset modal values.
-        self.hide_pass = true;
         self.pass_edit = String::from("");
         self.wrong_pass = false;
         // Show modal.
@@ -531,42 +526,11 @@ impl WalletsContent {
             ui.label(RichText::new(t!("wallets.pass"))
                 .size(17.0)
                 .color(Colors::GRAY));
-            ui.add_space(10.0);
+            ui.add_space(8.0);
 
-            StripBuilder::new(ui)
-                .size(Size::exact(34.0))
-                .vertical(|mut strip| {
-                    strip.strip(|builder| {
-                        builder
-                            .size(Size::remainder())
-                            .size(Size::exact(48.0))
-                            .horizontal(|mut strip| {
-                                strip.cell(|ui| {
-                                    // Draw wallet password text edit.
-                                    let pass_resp = egui::TextEdit::singleline(&mut self.pass_edit)
-                                        .id(ui.id().with("wallet_pass_edit"))
-                                        .font(TextStyle::Heading)
-                                        .desired_width(ui.available_width())
-                                        .cursor_at_end(true)
-                                        .password(self.hide_pass)
-                                        .ui(ui);
-                                    pass_resp.request_focus();
-                                    if pass_resp.clicked() {
-                                        cb.show_keyboard();
-                                    }
-                                });
-                                strip.cell(|ui| {
-                                    ui.vertical_centered(|ui| {
-                                        // Draw button to show/hide password.
-                                        let eye_icon = if self.hide_pass { EYE } else { EYE_SLASH };
-                                        View::button(ui, eye_icon.to_string(), Colors::WHITE, || {
-                                            self.hide_pass = !self.hide_pass;
-                                        });
-                                    });
-                                });
-                            });
-                    })
-                });
+            // Show password input.
+            let pass_edit_opts = TextEditOptions::new(Id::from(modal.id)).password();
+            View::text_edit(ui, cb, &mut self.pass_edit, pass_edit_opts);
 
             // Show information when password is empty.
             if self.pass_edit.is_empty() {
@@ -607,7 +571,6 @@ impl WalletsContent {
                                 // Clear values.
                                 self.pass_edit = "".to_string();
                                 self.wrong_pass = false;
-                                self.hide_pass = true;
                                 // Close modal.
                                 cb.hide_keyboard();
                                 modal.close();

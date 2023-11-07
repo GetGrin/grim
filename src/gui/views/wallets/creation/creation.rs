@@ -20,7 +20,7 @@ use crate::gui::Colors;
 use crate::gui::icons::{CHECK, EYE, EYE_SLASH, FOLDER_PLUS, SHARE_FAT};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, Root, View};
-use crate::gui::views::types::ModalPosition;
+use crate::gui::views::types::{ModalPosition, TextEditOptions};
 use crate::gui::views::wallets::creation::MnemonicSetup;
 use crate::gui::views::wallets::creation::types::Step;
 use crate::gui::views::wallets::setup::ConnectionSetup;
@@ -32,14 +32,12 @@ pub struct WalletCreation {
     /// Wallet creation step.
     step: Option<Step>,
 
-    /// Flag to check if [`Modal`] just was opened to focus on first field.
+    /// Flag to check if wallet creation [`Modal`] was just opened to focus on first field.
     modal_just_opened: bool,
     /// Wallet name value.
     name_edit: String,
     /// Password to encrypt created wallet.
     pass_edit: String,
-    /// Flag to show/hide password at [`egui::TextEdit`] field.
-    hide_pass: bool,
 
     /// Mnemonic phrase setup content.
     pub(crate) mnemonic_setup: MnemonicSetup,
@@ -54,7 +52,6 @@ impl Default for WalletCreation {
             modal_just_opened: true,
             name_edit: String::from(""),
             pass_edit: String::from(""),
-            hide_pass: true,
             mnemonic_setup: MnemonicSetup::default(),
             network_setup: ConnectionSetup::default()
         }
@@ -313,7 +310,6 @@ impl WalletCreation {
     /// Start wallet creation from showing [`Modal`] to enter name and password.
     pub fn show_name_pass_modal(&mut self, cb: &dyn PlatformCallbacks) {
         // Reset modal values.
-        self.hide_pass = true;
         self.modal_just_opened = true;
         self.name_edit = String::from("");
         self.pass_edit = String::from("");
@@ -338,68 +334,25 @@ impl WalletCreation {
             ui.add_space(8.0);
 
             // Show wallet name text edit.
-            let name_resp = egui::TextEdit::singleline(&mut self.name_edit)
-                .id(Id::from(modal.id).with("wallet_name_edit"))
-                .font(TextStyle::Heading)
-                .desired_width(ui.available_width())
-                .cursor_at_end(true)
-                .ui(ui);
-            ui.add_space(8.0);
-            if name_resp.clicked() {
-                cb.show_keyboard();
-            }
-
-            // Check if modal was just opened to show focus on name text input.
+            let mut name_edit_opts = TextEditOptions::new(Id::from(modal.id).with("name"))
+                .no_focus();
             if self.modal_just_opened {
                 self.modal_just_opened = false;
-                cb.show_keyboard();
-                name_resp.request_focus();
+                name_edit_opts.focus = true;
             }
+            View::text_edit(ui, cb, &mut self.name_edit, name_edit_opts);
+            ui.add_space(8.0);
 
             ui.label(RichText::new(t!("wallets.pass"))
                 .size(17.0)
                 .color(Colors::GRAY));
             ui.add_space(8.0);
 
-            StripBuilder::new(ui)
-                .size(Size::exact(34.0))
-                .vertical(|mut strip| {
-                    strip.strip(|builder| {
-                        builder
-                            .size(Size::remainder())
-                            .size(Size::exact(48.0))
-                            .horizontal(|mut strip| {
-                                strip.cell(|ui| {
-                                    ui.add_space(2.0);
-                                    // Draw wallet password text edit.
-                                    let pass_resp = egui::TextEdit::singleline(&mut self.pass_edit)
-                                        .id(Id::from(modal.id).with("wallet_pass_edit"))
-                                        .font(TextStyle::Heading)
-                                        .desired_width(ui.available_width())
-                                        .cursor_at_end(true)
-                                        .password(self.hide_pass)
-                                        .ui(ui);
-                                    if pass_resp.clicked() {
-                                        cb.show_keyboard();
-                                    }
-
-                                    // Hide keyboard if input fields has no focus.
-                                    if !pass_resp.has_focus() && !name_resp.has_focus() {
-                                        cb.hide_keyboard();
-                                    }
-                                });
-                                strip.cell(|ui| {
-                                    ui.vertical_centered(|ui| {
-                                        // Draw button to show/hide password.
-                                        let eye_icon = if self.hide_pass { EYE } else { EYE_SLASH };
-                                        View::button(ui, eye_icon.to_string(), Colors::WHITE, || {
-                                            self.hide_pass = !self.hide_pass;
-                                        });
-                                    });
-                                });
-                            });
-                    })
-                });
+            // Draw wallet password text edit.
+            let pass_text_edit_opts = TextEditOptions::new(Id::from(modal.id).with("pass"))
+                .password()
+                .no_focus();
+            View::text_edit(ui, cb, &mut self.pass_edit, pass_text_edit_opts);
             ui.add_space(12.0);
         });
 

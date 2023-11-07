@@ -12,15 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::{Align, Id, Layout, RichText, TextStyle, Widget};
+use egui::{Id, RichText, Widget};
 use grin_chain::SyncStatus;
 use grin_util::ZeroingString;
 
 use crate::gui::Colors;
-use crate::gui::icons::{EYE, EYE_SLASH, STETHOSCOPE, TRASH, WRENCH};
+use crate::gui::icons::{EYE, STETHOSCOPE, TRASH, WRENCH};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, View};
-use crate::gui::views::types::ModalPosition;
+use crate::gui::views::types::{ModalPosition, TextEditOptions};
 use crate::node::Node;
 use crate::wallet::Wallet;
 
@@ -30,8 +30,6 @@ pub struct RecoverySetup {
     pass_edit: String,
     /// Flag to check if wrong password was entered.
     wrong_pass: bool,
-    /// Flag to show/hide old password at [`egui::TextEdit`] field.
-    hide_pass: bool,
 
     /// Recovery phrase value.
     recovery_phrase: Option<ZeroingString>,
@@ -46,7 +44,6 @@ impl Default for RecoverySetup {
     fn default() -> Self {
         Self {
             wrong_pass: false,
-            hide_pass: false,
             pass_edit: "".to_string(),
             recovery_phrase: None,
         }
@@ -153,7 +150,6 @@ impl RecoverySetup {
         // Setup modal values.
         self.pass_edit = "".to_string();
         self.wrong_pass = false;
-        self.hide_pass = true;
         self.recovery_phrase = None;
         // Show recovery phrase modal.
         Modal::new(RECOVERY_PHRASE_MODAL)
@@ -176,7 +172,7 @@ impl RecoverySetup {
                     .size(17.0)
                     .color(Colors::BLACK));
             });
-            ui.add_space(6.0);
+            ui.add_space(10.0);
             ui.vertical_centered_justified(|ui| {
                 View::button(ui, t!("close"), Colors::WHITE, || {
                     self.recovery_phrase = None;
@@ -188,50 +184,29 @@ impl RecoverySetup {
                 ui.label(RichText::new(t!("wallets.pass"))
                     .size(17.0)
                     .color(Colors::GRAY));
-                ui.add_space(6.0);
+                ui.add_space(8.0);
             });
 
-            let mut rect = ui.available_rect_before_wrap();
-            rect.set_height(34.0);
-            ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
-                // Draw button to show/hide current password.
-                let eye_icon = if self.hide_pass { EYE } else { EYE_SLASH };
-                View::button(ui, eye_icon.to_string(), Colors::WHITE, || {
-                    self.hide_pass = !self.hide_pass;
-                });
-
-                let layout_size = ui.available_size();
-                ui.allocate_ui_with_layout(layout_size, Layout::left_to_right(Align::Center), |ui| {
-                    // Draw current wallet password text edit.
-                    let pass_resp = egui::TextEdit::singleline(&mut self.pass_edit)
-                        .id(Id::from(modal.id).with(wallet.get_config().id).with("recovery_phrase"))
-                        .font(TextStyle::Heading)
-                        .desired_width(ui.available_width())
-                        .cursor_at_end(true)
-                        .password(self.hide_pass)
-                        .ui(ui);
-                    if pass_resp.clicked() {
-                        cb.show_keyboard();
-                    }
-                    pass_resp.request_focus();
-                });
-            });
+            // Draw current wallet password text edit.
+            let pass_edit_id = Id::from(modal.id).with(wallet.get_config().id);
+            let pass_edit_opts = TextEditOptions::new(pass_edit_id).password();
+            View::text_edit(ui, cb, &mut self.pass_edit, pass_edit_opts);
 
             // Show information when password is empty.
             ui.vertical_centered(|ui| {
                 if self.pass_edit.is_empty() {
-                    ui.add_space(8.0);
+                    ui.add_space(10.0);
                     ui.label(RichText::new(t!("wallets.pass_empty"))
                         .size(17.0)
                         .color(Colors::INACTIVE_TEXT));
                 } else if self.wrong_pass {
-                    ui.add_space(8.0);
+                    ui.add_space(10.0);
                     ui.label(RichText::new(t!("wallets.wrong_pass"))
                         .size(17.0)
                         .color(Colors::RED));
                 }
-                ui.add_space(10.0);
             });
+            ui.add_space(12.0);
 
             // Show modal buttons.
             ui.scope(|ui| {
@@ -277,7 +252,7 @@ impl RecoverySetup {
                 .size(17.0)
                 .color(Colors::TEXT));
         });
-        ui.add_space(10.0);
+        ui.add_space(12.0);
 
         // Show modal buttons.
         ui.scope(|ui| {

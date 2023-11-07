@@ -69,3 +69,62 @@ pub trait ModalContainer {
         }
     }
 }
+
+/// Options for [`egui::TextEdit`] view.
+pub struct TextEditOptions {
+    /// View identifier.
+    pub id: egui::Id,
+    /// Flag to check if horizontal centering is needed.
+    pub h_center: bool,
+    /// Flag to check if initial focus on field is needed.
+    pub focus: bool,
+    /// Flag to hide letters and draw button to show/hide letters.
+    pub password: bool,
+    /// Flag to show copy button.
+    pub copy: bool,
+    /// Flag to show paste button.
+    pub paste: bool
+}
+
+impl TextEditOptions {
+    pub fn new(id: egui::Id) -> Self {
+        Self {
+            id,
+            h_center: false,
+            focus: true,
+            password: false,
+            copy: false,
+            paste: false,
+        }
+    }
+
+    /// Center text horizontally.
+    pub fn h_center(mut self) -> Self {
+        self.h_center = true;
+        self
+    }
+
+    /// Disable initial focus.
+    pub fn no_focus(mut self) -> Self {
+        self.focus = false;
+        self
+    }
+
+    /// Hide letters and draw button to show/hide letters.
+    pub fn password(mut self) -> Self {
+        self.password = true;
+        self
+    }
+
+    /// Show button to copy text.
+    pub fn copy(mut self) -> Self {
+        self.copy = true;
+        self
+    }
+
+    /// Show button to paste text.
+    pub fn paste(mut self) -> Self {
+        self.paste = true;
+        self
+    }
+}

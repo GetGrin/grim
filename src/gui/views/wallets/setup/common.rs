@@ -18,7 +18,7 @@ use crate::gui::Colors;
 use crate::gui::icons::{CLOCK_COUNTDOWN, EYE, EYE_SLASH, PASSWORD, PENCIL};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, View};
-use crate::gui::views::types::ModalPosition;
+use crate::gui::views::types::{ModalPosition, TextEditOptions};
 use crate::wallet::Wallet;
 
 /// Common wallet setup content.
@@ -31,13 +31,9 @@ pub struct CommonSetup {
     /// Flag to check if wrong password was entered.
     wrong_pass: bool,
     /// Current wallet password [`Modal`] value.
-    current_pass_edit: String,
-    /// Flag to show/hide old password at [`egui::TextEdit`] field.
-    hide_current_pass: bool,
+    old_pass_edit: String,
     /// New wallet password [`Modal`] value.
     new_pass_edit: String,
-    /// Flag to show/hide new password at [`egui::TextEdit`] field.
-    hide_new_pass: bool,
 
     /// Minimum confirmations number value.
     min_confirmations_edit: String
@@ -56,10 +52,8 @@ impl Default for CommonSetup {
             name_edit: "".to_string(),
             first_edit_pass_opening: true,
             wrong_pass: false,
-            current_pass_edit: "".to_string(),
-            hide_current_pass: true,
+            old_pass_edit: "".to_string(),
             new_pass_edit: "".to_string(),
-            hide_new_pass: true,
             min_confirmations_edit: "".to_string()
         }
     }
@@ -106,10 +100,8 @@ impl CommonSetup {
             View::button(ui, pass_text, Colors::BUTTON, || {
                 // Setup modal values.
                 self.first_edit_pass_opening = true;
-                self.current_pass_edit = "".to_string();
+                self.old_pass_edit = "".to_string();
                 self.new_pass_edit = "".to_string();
-                self.hide_current_pass = true;
-                self.hide_new_pass = true;
                 self.wrong_pass = false;
                 // Show wallet password modal.
                 Modal::new(PASS_EDIT_MODAL)
@@ -187,17 +179,10 @@ impl CommonSetup {
                 .color(Colors::GRAY));
             ui.add_space(8.0);
 
-            // Draw wallet name edit.
-            let text_edit_resp = egui::TextEdit::singleline(&mut self.name_edit)
-                .id(Id::from(modal.id).with(wallet.get_config().id))
-                .font(TextStyle::Heading)
-                .desired_width(ui.available_width())
-                .cursor_at_end(true)
-                .ui(ui);
-            text_edit_resp.request_focus();
-            if text_edit_resp.clicked() {
-                cb.show_keyboard();
-            }
+            // Show wallet name text edit.
+            let name_edit_id = Id::from(modal.id).with(wallet.get_config().id);
+            let name_edit_opts = TextEditOptions::new(name_edit_id);
+            View::text_edit(ui, cb, &mut self.name_edit, name_edit_opts);
             ui.add_space(12.0);
         });
 
@@ -248,83 +233,41 @@ impl CommonSetup {
             ui.label(RichText::new(t!("wallets.current_pass"))
                 .size(17.0)
                 .color(Colors::GRAY));
-            ui.add_space(6.0);
+            ui.add_space(8.0);
 
-            let mut rect = ui.available_rect_before_wrap();
-            rect.set_height(34.0);
-            ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
-                // Draw button to show/hide current password.
-                let eye_icon = if self.hide_current_pass { EYE } else { EYE_SLASH };
-                View::button(ui, eye_icon.to_string(), Colors::WHITE, || {
-                    self.hide_current_pass = !self.hide_current_pass;
-                });
-
-                let layout_size = ui.available_size();
-                ui.allocate_ui_with_layout(layout_size, Layout::left_to_right(Align::Center), |ui| {
-                    // Draw current wallet password text edit.
-                    let old_pass_resp = egui::TextEdit::singleline(&mut self.current_pass_edit)
-                        .id(Id::from(modal.id).with(wallet_id).with("old_pass"))
-                        .font(TextStyle::Heading)
-                        .desired_width(ui.available_width())
-                        .cursor_at_end(true)
-                        .password(self.hide_current_pass)
-                        .ui(ui);
-                    if old_pass_resp.clicked() {
-                        cb.show_keyboard();
-                    }
-
-                    // Setup focus on input field on first modal opening.
-                    if self.first_edit_pass_opening {
-                        self.first_edit_pass_opening = false;
-                        old_pass_resp.request_focus();
-                    }
-                });
-            });
-            ui.add_space(6.0);
+            // Draw old password text edit.
+            let pass_edit_id = Id::from(modal.id).with(wallet_id).with("old_pass");
+            let mut pass_edit_opts = TextEditOptions::new(pass_edit_id).password().no_focus();
+            if self.first_edit_pass_opening {
+                self.first_edit_pass_opening = false;
+                pass_edit_opts.focus = true;
+            }
+            View::text_edit(ui, cb, &mut self.old_pass_edit, pass_edit_opts);
+            ui.add_space(8.0);
 
             ui.label(RichText::new(t!("wallets.new_pass"))
                 .size(17.0)
                 .color(Colors::GRAY));
-            ui.add_space(6.0);
+            ui.add_space(8.0);
 
-            let mut new_rect = ui.available_rect_before_wrap();
-            new_rect.set_height(34.0);
-            ui.allocate_ui_with_layout(new_rect.size(), Layout::right_to_left(Align::Center), |ui| {
-                // Draw button to show/hide new password.
-                let eye_icon = if self.hide_new_pass { EYE } else { EYE_SLASH };
-                View::button(ui, eye_icon.to_string(), Colors::WHITE, || {
-                    self.hide_new_pass = !self.hide_new_pass;
-                });
-
-                let layout_size = ui.available_size();
-                ui.allocate_ui_with_layout(layout_size, Layout::left_to_right(Align::Center), |ui| {
-                    // Draw new wallet password text edit.
-                    let new_pass_resp = egui::TextEdit::singleline(&mut self.new_pass_edit)
-                        .id(Id::from(modal.id).with(wallet_id).with("new_pass"))
-                        .font(TextStyle::Heading)
-                        .desired_width(ui.available_width())
-                        .cursor_at_end(true)
-                        .password(self.hide_new_pass)
-                        .ui(ui);
-                    if new_pass_resp.clicked() {
-                        cb.show_keyboard();
-                    }
-                });
-            });
+            // Draw new password text edit.
+            let new_pass_edit_id = Id::from(modal.id).with(wallet_id).with("new_pass");
+            let new_pass_edit_opts = TextEditOptions::new(new_pass_edit_id).password().no_focus();
+            View::text_edit(ui, cb, &mut self.new_pass_edit, new_pass_edit_opts);
 
             // Show information when password is empty.
-            if self.current_pass_edit.is_empty() || self.new_pass_edit.is_empty() {
-                ui.add_space(8.0);
+            if self.old_pass_edit.is_empty() || self.new_pass_edit.is_empty() {
+                ui.add_space(10.0);
                 ui.label(RichText::new(t!("wallets.pass_empty"))
                     .size(17.0)
                     .color(Colors::INACTIVE_TEXT));
             } else if self.wrong_pass {
-                ui.add_space(8.0);
+                ui.add_space(10.0);
                 ui.label(RichText::new(t!("wallets.wrong_pass"))
                     .size(17.0)
                     .color(Colors::RED));
             }
-            ui.add_space(10.0);
+            ui.add_space(12.0);
         });
 
         // Show modal buttons.
@@ -346,17 +289,13 @@ impl CommonSetup {
                         if self.new_pass_edit.is_empty() {
                             return;
                         }
-                        let old_pass = self.current_pass_edit.clone();
+                        let old_pass = self.old_pass_edit.clone();
                         let new_pass = self.new_pass_edit.clone();
                         match wallet.change_password(old_pass, new_pass) {
                             Ok(_) => {
-                                // Clear values.
-                                self.first_edit_pass_opening = true;
-                                self.current_pass_edit = "".to_string();
+                                // Clear password values.
+                                self.old_pass_edit = "".to_string();
                                 self.new_pass_edit = "".to_string();
-                                self.hide_current_pass = true;
-                                self.hide_new_pass = true;
-                                self.wrong_pass = false;
                                 // Close modal.
                                 cb.hide_keyboard();
                                 modal.close();
@@ -391,16 +330,8 @@ impl CommonSetup {
             ui.add_space(8.0);
 
             // Minimum amount of confirmations text edit.
-            let text_edit_resp = egui::TextEdit::singleline(&mut self.min_confirmations_edit)
-                .id(Id::from(modal.id))
-                .font(TextStyle::Heading)
-                .desired_width(48.0)
-                .cursor_at_end(true)
-                .ui(ui);
-            text_edit_resp.request_focus();
-            if text_edit_resp.clicked() {
-                cb.show_keyboard();
-            }
+            let text_edit_opts = TextEditOptions::new(Id::from(modal.id)).h_center();
+            View::text_edit(ui, cb, &mut self.min_confirmations_edit, text_edit_opts);
 
             // Show error when specified value is not valid or reminder to restart enabled node.
             if self.min_confirmations_edit.parse::<u64>().is_err() {

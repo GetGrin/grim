@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::{Id, RichText, TextStyle, Widget};
+use egui::{Id, RichText};
 
 use crate::gui::Colors;
 use crate::gui::icons::{BEZIER_CURVE, BOUNDING_BOX, CHART_SCATTER, CIRCLES_THREE, CLOCK_COUNTDOWN, HAND_COINS};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, View};
 use crate::gui::views::network::settings::NetworkSettings;
-use crate::gui::views::types::{ModalContainer, ModalPosition};
+use crate::gui::views::types::{ModalContainer, ModalPosition, TextEditOptions};
 use crate::node::NodeConfig;
 
 /// Memory pool setup section content.
@@ -169,16 +169,8 @@ impl PoolSetup {
             ui.add_space(8.0);
 
             // Draw fee base text edit.
-            let text_edit_resp = egui::TextEdit::singleline(&mut self.fee_base_edit)
-                .id(Id::from(modal.id))
-                .font(TextStyle::Heading)
-                .desired_width(84.0)
-                .cursor_at_end(true)
-                .ui(ui);
-            text_edit_resp.request_focus();
-            if text_edit_resp.clicked() {
-                cb.show_keyboard();
-            }
+            let fee_base_edit_opts = TextEditOptions::new(Id::from(modal.id)).h_center();
+            View::text_edit(ui, cb, &mut self.fee_base_edit, fee_base_edit_opts);
 
             // Show error when specified value is not valid or reminder to restart enabled node.
             if self.fee_base_edit.parse::<u64>().is_err() {
@@ -254,16 +246,8 @@ impl PoolSetup {
             ui.add_space(8.0);
 
             // Draw reorg period text edit.
-            let text_edit_resp = egui::TextEdit::singleline(&mut self.reorg_period_edit)
-                .id(Id::from(modal.id))
-                .font(TextStyle::Heading)
-                .desired_width(42.0)
-                .cursor_at_end(true)
-                .ui(ui);
-            text_edit_resp.request_focus();
-            if text_edit_resp.clicked() {
-                cb.show_keyboard();
-            }
+            let reorg_period_edit_opts = TextEditOptions::new(Id::from(modal.id)).h_center();
+            View::text_edit(ui, cb, &mut self.reorg_period_edit, reorg_period_edit_opts);
 
             // Show error when specified value is not valid or reminder to restart enabled node.
             if self.reorg_period_edit.parse::<u32>().is_err() {
@@ -339,16 +323,8 @@ impl PoolSetup {
             ui.add_space(8.0);
 
             // Draw pool size text edit.
-            let text_edit_resp = egui::TextEdit::singleline(&mut self.pool_size_edit)
-                .id(Id::from(modal.id))
-                .font(TextStyle::Heading)
-                .desired_width(72.0)
-                .cursor_at_end(true)
-                .ui(ui);
-            text_edit_resp.request_focus();
-            if text_edit_resp.clicked() {
-                cb.show_keyboard();
-            }
+            let pool_size_edit_opts = TextEditOptions::new(Id::from(modal.id)).h_center();
+            View::text_edit(ui, cb, &mut self.pool_size_edit, pool_size_edit_opts);
 
             // Show error when specified value is not valid or reminder to restart enabled node.
             if self.pool_size_edit.parse::<usize>().is_err() {
@@ -424,16 +400,8 @@ impl PoolSetup {
             ui.add_space(8.0);
 
             // Draw stempool size text edit.
-            let text_edit_resp = egui::TextEdit::singleline(&mut self.stempool_size_edit)
-                .id(Id::from(modal.id))
-                .font(TextStyle::Heading)
-                .desired_width(72.0)
-                .cursor_at_end(true)
-                .ui(ui);
-            text_edit_resp.request_focus();
-            if text_edit_resp.clicked() {
-                cb.show_keyboard();
-            }
+            let stem_pool_edit_opts = TextEditOptions::new(Id::from(modal.id)).h_center();
+            View::text_edit(ui, cb, &mut self.stempool_size_edit, stem_pool_edit_opts);
 
             // Show error when specified value is not valid or reminder to restart enabled node.
             if self.stempool_size_edit.parse::<usize>().is_err() {
@@ -509,16 +477,8 @@ impl PoolSetup {
             ui.add_space(8.0);
 
             // Draw tx weight text edit.
-            let text_edit_resp = egui::TextEdit::singleline(&mut self.max_weight_edit)
-                .id(Id::from(modal.id))
-                .font(TextStyle::Heading)
-                .desired_width(72.0)
-                .cursor_at_end(true)
-                .ui(ui);
-            text_edit_resp.request_focus();
-            if text_edit_resp.clicked() {
-                cb.show_keyboard();
-            }
+            let mac_weight_edit_opts = TextEditOptions::new(Id::from(modal.id)).h_center();
+            View::text_edit(ui, cb, &mut self.max_weight_edit, mac_weight_edit_opts);
 
             // Show error when specified value is not valid or reminder to restart enabled node.
             if self.max_weight_edit.parse::<u64>().is_err() {

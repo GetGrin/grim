@@ -12,17 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::{Id, RichText, TextStyle, Widget};
-use egui_extras::{Size, StripBuilder};
+use egui::{Id, RichText};
 use grin_core::global::ChainTypes;
 
 use crate::AppConfig;
 use crate::gui::Colors;
-use crate::gui::icons::{CLIPBOARD_TEXT, CLOCK_CLOCKWISE, COMPUTER_TOWER, COPY, PLUG, POWER, SHIELD, SHIELD_SLASH};
+use crate::gui::icons::{CLOCK_CLOCKWISE, COMPUTER_TOWER, PLUG, POWER, SHIELD, SHIELD_SLASH};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, NetworkContent, View};
 use crate::gui::views::network::settings::NetworkSettings;
-use crate::gui::views::types::{ModalContainer, ModalPosition};
+use crate::gui::views::types::{ModalContainer, ModalPosition, TextEditOptions};
 use crate::node::{Node, NodeConfig};
 
 /// Integrated node general setup section content.
@@ -286,15 +285,8 @@ impl NodeSetup {
             ui.add_space(6.0);
 
             // Draw API port text edit.
-            let text_edit_resp = egui::TextEdit::singleline(&mut self.api_port_edit)
-                .font(TextStyle::Heading)
-                .desired_width(64.0)
-                .cursor_at_end(true)
-                .ui(ui);
-            text_edit_resp.request_focus();
-            if text_edit_resp.clicked() {
-                cb.show_keyboard();
-            }
+            let api_port_edit_opts = TextEditOptions::new(Id::from(modal.id)).h_center();
+            View::text_edit(ui, cb, &mut self.api_port_edit, api_port_edit_opts);
 
             // Show error when specified port is unavailable or reminder to restart enabled node.
             if !self.api_port_available_edit {
@@ -390,49 +382,11 @@ impl NodeSetup {
             };
             ui.label(RichText::new(description).size(17.0).color(Colors::GRAY));
             ui.add_space(8.0);
-            StripBuilder::new(ui)
-                .size(Size::exact(42.0))
-                .vertical(|mut strip| {
-                    strip.strip(|builder| {
-                        builder
-                            .size(Size::remainder())
-                            .size(Size::exact(48.0))
-                            .size(Size::exact(48.0))
-                            .horizontal(|mut strip| {
-                                strip.cell(|ui| {
-                                    ui.add_space(2.0);
-                                    // Draw API secret token value text edit.
-                                    let edit = egui::TextEdit::singleline(&mut self.secret_edit)
-                                        .id(Id::from(modal.id))
-                                        .font(TextStyle::Button)
-                                        .cursor_at_end(true)
-                                        .ui(ui);
-                                    edit.request_focus();
-                                    if edit.clicked() {
-                                        cb.show_keyboard();
-                                    }
-                                });
-                                strip.cell(|ui| {
-                                    ui.vertical_centered(|ui| {
-                                        // Draw copy button.
-                                        let copy_icon = COPY.to_string();
-                                        View::button(ui, copy_icon, Colors::WHITE, || {
-                                            cb.copy_string_to_buffer(self.secret_edit.clone());
-                                        });
-                                    });
-                                });
-                                strip.cell(|ui| {
-                                    ui.vertical_centered(|ui| {
-                                        // Draw paste button.
-                                        let paste_icon = CLIPBOARD_TEXT.to_string();
-                                        View::button(ui, paste_icon, Colors::WHITE, || {
-                                            self.secret_edit = cb.get_string_from_buffer();
-                                        });
-                                    });
-                                });
-                            });
-                    })
-                });
+
+            // Draw API secret token value text edit.
+            let secret_edit_opts = TextEditOptions::new(Id::from(modal.id)).copy().paste();
+            View::text_edit(ui, cb, &mut self.secret_edit, secret_edit_opts);
+            ui.add_space(6.0);
 
             // Show reminder to restart enabled node.
             if Node::is_running() {
@@ -440,7 +394,7 @@ impl NodeSetup {
                     .size(16.0)
                     .color(Colors::GREEN)
                 );
-                ui.add_space(8.0);
+                ui.add_space(6.0);
             }
             ui.add_space(4.0);
         });
@@ -516,16 +470,8 @@ impl NodeSetup {
             ui.add_space(8.0);
 
             // Draw ftl value text edit.
-            let text_edit_resp = egui::TextEdit::singleline(&mut self.ftl_edit)
-                .id(Id::from(modal.id))
-                .font(TextStyle::Heading)
-                .desired_width(52.0)
-                .cursor_at_end(true)
-                .ui(ui);
-            text_edit_resp.request_focus();
-            if text_edit_resp.clicked() {
-                cb.show_keyboard();
-            }
+            let ftl_edit_opts = TextEditOptions::new(Id::from(modal.id)).h_center();
+            View::text_edit(ui, cb, &mut self.ftl_edit, ftl_edit_opts);
 
             // Show error when specified value is not valid or reminder to restart enabled node.
             if self.ftl_edit.parse::<u64>().is_err() {

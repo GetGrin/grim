@@ -12,17 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::{Align, Id, Layout, RichText, TextStyle, Widget};
-use egui_extras::{Size, StripBuilder};
+use egui::{Align, Id, Layout, RichText};
 use grin_core::global::ChainTypes;
 
 use crate::AppConfig;
 use crate::gui::Colors;
-use crate::gui::icons::{ARROW_FAT_LINE_UP, ARROW_FAT_LINES_DOWN, ARROW_FAT_LINES_UP, CLIPBOARD_TEXT, GLOBE_SIMPLE, HANDSHAKE, PLUG, PLUS_CIRCLE, PROHIBIT_INSET, TRASH};
+use crate::gui::icons::{ARROW_FAT_LINE_UP, ARROW_FAT_LINES_DOWN, ARROW_FAT_LINES_UP, GLOBE_SIMPLE, HANDSHAKE, PLUG, PLUS_CIRCLE, PROHIBIT_INSET, TRASH};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, View};
 use crate::gui::views::network::settings::NetworkSettings;
-use crate::gui::views::types::{ModalContainer, ModalPosition};
+use crate::gui::views::types::{ModalContainer, ModalPosition, TextEditOptions};
 use crate::node::{NodeConfig, PeersConfig};
 
 /// Type of peer.
@@ -283,16 +282,8 @@ impl P2PSetup {
             ui.add_space(8.0);
 
             // Draw p2p port text edit.
-            let text_edit_resp = egui::TextEdit::singleline(&mut self.port_edit)
-                .id(Id::from(modal.id))
-                .font(TextStyle::Heading)
-                .desired_width(64.0)
-                .cursor_at_end(true)
-                .ui(ui);
-            text_edit_resp.request_focus();
-            if text_edit_resp.clicked() {
-                cb.show_keyboard();
-            }
+            let text_edit_opts = TextEditOptions::new(Id::from(modal.id)).h_center();
+            View::text_edit(ui, cb, &mut self.port_edit, text_edit_opts);
 
             // Show error when specified port is unavailable.
             if !self.port_available_edit {
@@ -389,6 +380,7 @@ impl P2PSetup {
             };
             View::button(ui, add_text, Colors::BUTTON, || {
                 // Setup values for modal.
+                self.is_correct_address_edit = true;
                 self.peer_edit = "".to_string();
                 // Select modal id.
                 let modal_id = match peer_type {
@@ -425,50 +417,19 @@ impl P2PSetup {
             };
             ui.label(RichText::new(label_text).size(17.0).color(Colors::GRAY));
             ui.add_space(8.0);
-            StripBuilder::new(ui)
-                .size(Size::exact(42.0))
-                .vertical(|mut strip| {
-                    strip.strip(|builder| {
-                        builder
-                            .size(Size::remainder())
-                            .size(Size::exact(48.0))
-                            .horizontal(|mut strip| {
-                                strip.cell(|ui| {
-                                    ui.add_space(2.0);
-                                    // Draw peer address text edit.
-                                    let text_edit = egui::TextEdit::singleline(&mut self.peer_edit)
-                                        .id(Id::from(modal.id))
-                                        .font(TextStyle::Button)
-                                        .desired_width(ui.available_width())
-                                        .cursor_at_end(true)
-                                        .ui(ui);
-                                    text_edit.request_focus();
-                                    if text_edit.clicked() {
-                                        cb.show_keyboard();
-                                    }
-                                });
-                                strip.cell(|ui| {
-                                    ui.vertical_centered(|ui| {
-                                        // Draw paste button.
-                                        let paste_icon = CLIPBOARD_TEXT.to_string();
-                                        View::button(ui, paste_icon, Colors::WHITE, || {
-                                            self.peer_edit = cb.get_string_from_buffer();
-                                        });
-                                    });
-                                });
-                            });
-                    })
-                });
+
+            // Draw peer address text edit.
+            let peer_text_edit_opts = TextEditOptions::new(Id::from(modal.id)).paste();
+            View::text_edit(ui, cb, &mut self.peer_edit, peer_text_edit_opts);
 
             // Show error when specified address is incorrect.
             if !self.is_correct_address_edit {
+                ui.add_space(10.0);
                 ui.label(RichText::new(t!("network_settings.peer_address_error"))
                     .size(16.0)
                     .color(Colors::RED));
-                ui.add_space(6.0);
             }
-
-            ui.add_space(4.0);
+            ui.add_space(12.0);
 
             // Show modal buttons.
             ui.scope(|ui| {
@@ -572,16 +533,8 @@ impl P2PSetup {
             ui.add_space(8.0);
 
             // Draw ban window text edit.
-            let text_edit_resp = egui::TextEdit::singleline(&mut self.ban_window_edit)
-                .id(Id::from(modal.id))
-                .font(TextStyle::Heading)
-                .desired_width(84.0)
-                .cursor_at_end(true)
-                .ui(ui);
-            text_edit_resp.request_focus();
-            if text_edit_resp.clicked() {
-                cb.show_keyboard();
-            }
+            let text_edit_opts = TextEditOptions::new(Id::from(modal.id)).h_center();
+            View::text_edit(ui, cb, &mut self.ban_window_edit, text_edit_opts);
 
             // Show error when specified value is not valid or reminder to restart enabled node.
             if self.ban_window_edit.parse::<i64>().is_err() {
@@ -658,16 +611,8 @@ impl P2PSetup {
             ui.add_space(8.0);
 
             // Draw maximum number of inbound peers text edit.
-            let text_edit_resp = egui::TextEdit::singleline(&mut self.max_inbound_count)
-                .id(Id::from(modal.id))
-                .font(TextStyle::Heading)
-                .desired_width(42.0)
-                .cursor_at_end(true)
-                .ui(ui);
-            text_edit_resp.request_focus();
-            if text_edit_resp.clicked() {
-                cb.show_keyboard();
-            }
+            let text_edit_opts = TextEditOptions::new(Id::from(modal.id)).h_center();
+            View::text_edit(ui, cb, &mut self.max_inbound_count, text_edit_opts);
 
             // Show error when specified value is not valid or reminder to restart enabled node.
             if self.max_inbound_count.parse::<u32>().is_err() {
@@ -744,16 +689,8 @@ impl P2PSetup {
             ui.add_space(8.0);
 
             // Draw maximum number of outbound peers text edit.
-            let text_edit_resp = egui::TextEdit::singleline(&mut self.max_outbound_count)
-                .id(Id::from(modal.id))
-                .font(TextStyle::Heading)
-                .desired_width(42.0)
-                .cursor_at_end(true)
-                .ui(ui);
-            text_edit_resp.request_focus();
-            if text_edit_resp.clicked() {
-                cb.show_keyboard();
-            }
+            let text_edit_opts = TextEditOptions::new(Id::from(modal.id)).h_center();
+            View::text_edit(ui, cb, &mut self.max_outbound_count, text_edit_opts);
 
             // Show error when specified value is not valid or reminder to restart enabled node.
             if self.max_outbound_count.parse::<u32>().is_err() {
@@ -834,16 +771,8 @@ impl P2PSetup {
             ui.add_space(8.0);
 
             // Draw maximum number of outbound peers text edit.
-            let text_edit_resp = egui::TextEdit::singleline(&mut self.min_outbound_count)
-                .id(Id::from(modal.id))
-                .font(TextStyle::Heading)
-                .desired_width(42.0)
-                .cursor_at_end(true)
-                .ui(ui);
-            text_edit_resp.request_focus();
-            if text_edit_resp.clicked() {
-                cb.show_keyboard();
-            }
+            let text_edit_opts = TextEditOptions::new(Id::from(modal.id)).h_center();
+            View::text_edit(ui, cb, &mut self.min_outbound_count, text_edit_opts);
 
             // Show error when specified value is not valid or reminder to restart enabled node.
             if self.min_outbound_count.parse::<u32>().is_err() {

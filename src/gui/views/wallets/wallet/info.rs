@@ -192,7 +192,7 @@ fn tx_item_ui(ui: &mut egui::Ui,
 
             if !is_cancelling && !tx.confirmed && tx.tx_type != TxLogEntryType::TxReceivedCancelled
                 && tx.tx_type != TxLogEntryType::TxSentCancelled {
-                View::item_button(ui, Rounding::none(), PROHIBIT, Some(Colors::RED), || {
+                View::item_button(ui, Rounding::default(), PROHIBIT, Some(Colors::RED), || {
                     wallet.cancel(tx.id);
                     //TODO: Cancel tx
                 });

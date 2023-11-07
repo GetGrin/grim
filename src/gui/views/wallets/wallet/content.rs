@@ -14,16 +14,16 @@
 
 use std::time::Duration;
 
-use egui::{Align, Id, Layout, Margin, RichText, Rounding, ScrollArea, TextStyle, Widget};
+use egui::{Align, Id, Layout, Margin, RichText, Rounding, ScrollArea, Widget};
 use grin_chain::SyncStatus;
 use grin_core::core::amount_to_hr_string;
 
 use crate::AppConfig;
 use crate::gui::Colors;
-use crate::gui::icons::{CHECK, CHECK_FAT, CREDIT_CARD, DOWNLOAD, FILE_ARCHIVE, GEAR_FINE, LIST, PACKAGE, PLUS, POWER, REPEAT, UPLOAD, WALLET};
+use crate::gui::icons::{CHECK, CHECK_FAT, DOWNLOAD, FILE_ARCHIVE, GEAR_FINE, LIST, PACKAGE, PLUS, POWER, REPEAT, UPLOAD, WALLET};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, Root, View};
-use crate::gui::views::types::ModalPosition;
+use crate::gui::views::types::{ModalPosition, TextEditOptions};
 use crate::gui::views::wallets::{WalletInfo, WalletReceive, WalletSend, WalletSettings};
 use crate::gui::views::wallets::types::{WalletTab, WalletTabType};
 use crate::node::Node;
@@ -285,28 +285,19 @@ impl WalletContent {
             ui.add_space(8.0);
 
             // Draw account name edit.
-            let text_edit_resp = egui::TextEdit::singleline(&mut self.account_label_edit)
-                .id(Id::from(modal.id).with(wallet.get_config().id))
-                .font(TextStyle::Heading)
-                .desired_width(ui.available_width())
-                .cursor_at_end(true)
-                .ui(ui);
-            text_edit_resp.request_focus();
-            if text_edit_resp.clicked() {
-                cb.show_keyboard();
-            }
-            ui.add_space(8.0);
+            let text_edit_id = Id::from(modal.id).with(wallet.get_config().id);
+            let text_edit_opts = TextEditOptions::new(text_edit_id);
+            View::text_edit(ui, cb, &mut self.account_label_edit, text_edit_opts);
 
             // Show error occurred during account creation..
             if self.account_creation_error {
-                ui.add_space(2.0);
+                ui.add_space(12.0);
                 ui.label(RichText::new(t!("error"))
                     .size(17.0)
                     .color(Colors::RED));
             }
+            ui.add_space(12.0);
         });
-
-        ui.add_space(12.0);
 
         // Show modal buttons.
         ui.scope(|ui| {

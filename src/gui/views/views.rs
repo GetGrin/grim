@@ -14,14 +14,16 @@
 
 use std::sync::atomic::{AtomicI32, Ordering};
 
-use egui::{Button, CursorIcon, PointerState, Rect, Response, RichText, Sense, Spinner, Widget};
+use egui::{Align, Button, CursorIcon, Layout, PointerState, Rect, Response, RichText, Sense, Spinner, TextStyle, Vec2, Widget};
 use egui::epaint::{CircleShape, Color32, FontId, RectShape, Rounding, Stroke};
 use egui::epaint::text::TextWrapping;
 use egui::text::{LayoutJob, TextFormat};
 use lazy_static::lazy_static;
 
 use crate::gui::Colors;
-use crate::gui::icons::{CHECK_SQUARE, SQUARE};
+use crate::gui::icons::{CHECK_SQUARE, CLIPBOARD_TEXT, COPY, EYE, EYE_SLASH, SQUARE};
+use crate::gui::platform::PlatformCallbacks;
+use crate::gui::views::types::TextEditOptions;
 
 pub struct View;
 
@@ -129,8 +131,8 @@ impl View {
             ui.style_mut().visuals.widgets.hovered.bg_stroke = Self::HOVER_STROKE;
             ui.style_mut().visuals.widgets.active.bg_stroke = Self::DEFAULT_STROKE;
             // Disable rounding.
-            ui.style_mut().visuals.widgets.hovered.rounding = Rounding::none();
-            ui.style_mut().visuals.widgets.active.rounding = Rounding::none();
+            ui.style_mut().visuals.widgets.hovered.rounding = Rounding::default();
+            ui.style_mut().visuals.widgets.active.rounding = Rounding::default();
             // Disable expansion.
             ui.style_mut().visuals.widgets.hovered.expansion = 0.0;
             ui.style_mut().visuals.widgets.active.expansion = 0.0;
@@ -273,6 +275,87 @@ impl View {
             if Self::touched(ui, br) {
                 (action)();
             }
+        });
+    }
+
+    /// Default height of [`egui::TextEdit`] view.
+    const TEXT_EDIT_HEIGHT: f32 = 37.0;
+
+    /// Draw [`egui::TextEdit`] widget.
+    pub fn text_edit(ui: &mut egui::Ui,
+                     cb: &dyn PlatformCallbacks,
+                     value: &mut String,
+                     options: TextEditOptions) {
+        let mut layout_rect = ui.available_rect_before_wrap();
+        layout_rect.set_height(Self::TEXT_EDIT_HEIGHT);
+        ui.allocate_ui_with_layout(layout_rect.size(), Layout::right_to_left(Align::Center), |ui| {
+            // Setup password button.
+            let mut show_pass = false;
+            if options.password {
+                // Set password button state value.
+                let show_pass_id = egui::Id::new(options.id).with("_show_pass");
+                show_pass = ui.data(|data| {
+                    data.get_temp(show_pass_id)
+                }).unwrap_or(true);
+                // Draw button to show/hide current password.
+                let eye_icon = if show_pass { EYE } else { EYE_SLASH };
+                let mut changed = false;
+                View::button(ui, eye_icon.to_string(), Colors::WHITE, || {
+                    show_pass = !show_pass;
+                    changed = true;
+                });
+                // Save state if changed.
+                if changed {
+                    ui.data_mut(|data| {
+                        data.insert_temp(show_pass_id, show_pass);
+                    });
+                }
+                ui.add_space(8.0);
+            }
+
+            // Setup copy button.
+            if options.copy {
+                let copy_icon = COPY.to_string();
+                View::button(ui, copy_icon, Colors::WHITE, || {
+                    cb.copy_string_to_buffer(value.clone());
+                });
+                ui.add_space(8.0);
+            }
+
+            // Setup paste button.
+            if options.paste {
+                let paste_icon = CLIPBOARD_TEXT.to_string();
+                View::button(ui, paste_icon, Colors::WHITE, || {
+                    *value = cb.get_string_from_buffer();
+                });
+                ui.add_space(8.0);
+            }
+
+            let layout_size = ui.available_size();
+            ui.allocate_ui_with_layout(layout_size, Layout::left_to_right(Align::Center), |ui| {
+                // Setup text edit size.
+                let mut edit_rect = ui.available_rect_before_wrap();
+                edit_rect.set_height(Self::TEXT_EDIT_HEIGHT);
+                // Show text edit.
+                let text_edit_resp = egui::TextEdit::singleline(value)
+                    .id(options.id)
+                    .margin(Vec2::new(2.0, 0.0))
+                    .font(TextStyle::Heading)
+                    .min_size(edit_rect.size())
+                    .horizontal_align(if options.h_center { Align::Center } else { Align::Min })
+                    .vertical_align(Align::Center)
+                    .password(show_pass)
+                    .ui(ui);
+                // Show keyboard on click.
+                if text_edit_resp.clicked() {
+                    cb.show_keyboard();
+                }
+                // Setup focus on input field.
+                if options.focus {
+                    text_edit_resp.request_focus();
+                    cb.show_keyboard();
+                }
+            });
         });
     }
 

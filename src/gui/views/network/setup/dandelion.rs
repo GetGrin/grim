@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::{Id, RichText, TextStyle, Widget};
+use egui::{Id, RichText};
 
 use crate::gui::Colors;
 use crate::gui::icons::{CLOCK_COUNTDOWN, GRAPH, TIMER, WATCH};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, View};
 use crate::gui::views::network::settings::NetworkSettings;
-use crate::gui::views::types::{ModalContainer, ModalPosition};
+use crate::gui::views::types::{ModalContainer, ModalPosition, TextEditOptions};
 use crate::node::NodeConfig;
 
 /// Dandelion server setup section content.
@@ -165,16 +165,8 @@ impl DandelionSetup {
             ui.add_space(8.0);
 
             // Draw epoch text edit.
-            let text_edit_resp = egui::TextEdit::singleline(&mut self.epoch_edit)
-                .id(Id::from(modal.id))
-                .font(TextStyle::Heading)
-                .desired_width(52.0)
-                .cursor_at_end(true)
-                .ui(ui);
-            text_edit_resp.request_focus();
-            if text_edit_resp.clicked() {
-                cb.show_keyboard();
-            }
+            let epoch_edit_opts = TextEditOptions::new(Id::from(modal.id)).h_center();
+            View::text_edit(ui, cb, &mut self.epoch_edit, epoch_edit_opts);
 
             // Show error when specified value is not valid or reminder to restart enabled node.
             if self.epoch_edit.parse::<u16>().is_err() {
@@ -250,16 +242,8 @@ impl DandelionSetup {
             ui.add_space(8.0);
 
             // Draw embargo text edit.
-            let text_edit_resp = egui::TextEdit::singleline(&mut self.embargo_edit)
-                .id(Id::from(modal.id))
-                .font(TextStyle::Heading)
-                .desired_width(52.0)
-                .cursor_at_end(true)
-                .ui(ui);
-            text_edit_resp.request_focus();
-            if text_edit_resp.clicked() {
-                cb.show_keyboard();
-            }
+            let embargo_edit_opts = TextEditOptions::new(Id::from(modal.id)).h_center();
+            View::text_edit(ui, cb, &mut self.embargo_edit, embargo_edit_opts);
 
             // Show error when specified value is not valid or reminder to restart enabled node.
             if self.embargo_edit.parse::<u16>().is_err() {
@@ -335,16 +319,8 @@ impl DandelionSetup {
             ui.add_space(8.0);
 
             // Draw aggregation period text edit.
-            let text_edit_resp = egui::TextEdit::singleline(&mut self.aggregation_edit)
-                .id(Id::from(modal.id))
-                .font(TextStyle::Heading)
-                .desired_width(42.0)
-                .cursor_at_end(true)
-                .ui(ui);
-            text_edit_resp.request_focus();
-            if text_edit_resp.clicked() {
-                cb.show_keyboard();
-            }
+            let aggregation_edit_opts = TextEditOptions::new(Id::from(modal.id)).h_center();
+            View::text_edit(ui, cb, &mut self.aggregation_edit, aggregation_edit_opts);
 
             // Show error when specified value is not valid or reminder to restart enabled node.
             if self.aggregation_edit.parse::<u16>().is_err() {
@@ -420,16 +396,8 @@ impl DandelionSetup {
             ui.add_space(8.0);
 
             // Draw stem phase probability text edit.
-            let text_edit_resp = egui::TextEdit::singleline(&mut self.stem_prob_edit)
-                .id(Id::from(modal.id))
-                .font(TextStyle::Heading)
-                .desired_width(42.0)
-                .cursor_at_end(true)
-                .ui(ui);
-            text_edit_resp.request_focus();
-            if text_edit_resp.clicked() {
-                cb.show_keyboard();
-            }
+            let stem_prob_edit_opts = TextEditOptions::new(Id::from(modal.id)).h_center();
+            View::text_edit(ui, cb, &mut self.stem_prob_edit, stem_prob_edit_opts);
 
             // Show error when specified value is not valid or reminder to restart enabled node.
             if self.stem_prob_edit.parse::<u8>().is_err() {

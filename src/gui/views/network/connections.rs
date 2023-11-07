@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::{Align, Id, Layout, RichText, Rounding, TextStyle, Widget};
+use egui::{Align, Id, Layout, RichText, Rounding};
 use url::Url;
 
 use crate::AppConfig;
@@ -20,7 +20,7 @@ use crate::gui::Colors;
 use crate::gui::icons::{CARET_RIGHT, CHECK_CIRCLE, COMPUTER_TOWER, DOTS_THREE_CIRCLE, PENCIL, POWER, TRASH, X_CIRCLE};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, NodeSetup, View};
-use crate::gui::views::types::{ModalContainer, ModalPosition};
+use crate::gui::views::types::{ModalContainer, ModalPosition, TextEditOptions};
 use crate::node::{Node, NodeConfig};
 use crate::wallet::{ConnectionsConfig, ExternalConnection};
 
@@ -133,12 +133,12 @@ impl ConnectionsContent {
 
             if !Node::is_running() {
                 // Draw button to start integrated node.
-                View::item_button(ui, Rounding::none(), POWER, Some(Colors::GREEN), || {
+                View::item_button(ui, Rounding::default(), POWER, Some(Colors::GREEN), || {
                     Node::start();
                 });
             } else if !Node::is_starting() && !Node::is_stopping() && !Node::is_restarting() {
                 // Draw button to open closed wallet.
-                View::item_button(ui, Rounding::none(), POWER, Some(Colors::RED), || {
+                View::item_button(ui, Rounding::default(), POWER, Some(Colors::RED), || {
                     Node::stop(false);
                 });
             }
@@ -197,7 +197,7 @@ impl ConnectionsContent {
                     View::item_button(ui, button_rounding, TRASH, None, || {
                         ConnectionsConfig::remove_ext_conn(conn.id);
                     });
-                    View::item_button(ui, Rounding::none(), PENCIL, None, || {
+                    View::item_button(ui, Rounding::default(), PENCIL, None, || {
                         self.show_add_ext_conn_modal(Some(conn), cb);
                     });
                 }
@@ -267,20 +267,13 @@ impl ConnectionsContent {
             ui.add_space(8.0);
 
             // Draw node URL text edit.
-            let url_edit_resp = egui::TextEdit::singleline(&mut self.ext_node_url_edit)
-                .id(Id::from(modal.id).with(self.ext_conn_id_edit))
-                .font(TextStyle::Heading)
-                .desired_width(ui.available_width())
-                .cursor_at_end(true)
-                .ui(ui);
-            ui.add_space(8.0);
+            let url_edit_id = Id::from(modal.id).with(self.ext_conn_id_edit);
+            let mut url_edit_opts = TextEditOptions::new(url_edit_id).paste().no_focus();
             if self.first_modal_launch {
                 self.first_modal_launch = false;
-                url_edit_resp.request_focus();
+                url_edit_opts.focus = true;
             }
-            if url_edit_resp.clicked() {
-                cb.show_keyboard();
-            }
+            View::text_edit(ui, cb, &mut self.ext_node_url_edit, url_edit_opts);
 
             ui.label(RichText::new(t!("wallets.node_secret"))
                 .size(17.0)
@@ -288,20 +281,13 @@ impl ConnectionsContent {
             ui.add_space(8.0);
 
             // Draw node API secret text edit.
-            let secret_edit_resp = egui::TextEdit::singleline(&mut self.ext_node_secret_edit)
-                .id(Id::from(modal.id).with("node_secret_edit"))
-                .font(TextStyle::Heading)
-                .desired_width(ui.available_width())
-                .cursor_at_end(true)
-                .ui(ui);
-            ui.add_space(8.0);
-            if secret_edit_resp.clicked() {
-                cb.show_keyboard();
-            }
+            let secret_edit_id = Id::from(modal.id).with(self.ext_conn_id_edit).with("node_secret");
+            let secret_edit_opts = TextEditOptions::new(secret_edit_id).paste().no_focus();
+            View::text_edit(ui, cb, &mut self.ext_node_secret_edit, secret_edit_opts);
 
             // Show error when specified URL is not valid.
             if self.ext_node_url_error {
-                ui.add_space(2.0);
+                ui.add_space(12.0);
                 ui.label(RichText::new(t!("wallets.invalid_url"))
                     .size(17.0)
                     .color(Colors::RED));
