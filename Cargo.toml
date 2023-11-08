@@ -43,7 +43,7 @@ dirs = "5.0.1"
 sys-locale = "0.3.0"
 chrono = "0.4.23"
 lazy_static = "1.4.0"
-toml = "0.7.4"
+toml = "0.8.2"
 serde = "1.0.170"
 pnet = "0.34.0"
 url = "2.4.0"
@@ -56,7 +56,7 @@ tokio-util = { version = "0.7.8", features = ["codec"] }
 rand = "0.8.5"
 
 [build-dependencies]
-built = { version = "0.6.0", features = ["git2"]}
+built = { version = "0.7.0", features = ["git2"]}
 
 [target.'cfg(not(target_os = "android"))'.dependencies]
 env_logger = "0.10.0"
