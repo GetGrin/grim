@@ -283,7 +283,7 @@ impl Wallet {
     }
 
     /// Get external connection id applied to [`WalletInstance`]
-    /// after opening if sync is running or take it from config.
+    /// after wallet opening if sync is running or get it from config.
     pub fn get_current_ext_conn_id(&self) -> Option<i64> {
         if self.sync_thread.read().unwrap().is_some() {
             let ext_conn_id = self.instance_ext_conn_id.load(Ordering::Relaxed);
@@ -412,19 +412,8 @@ impl Wallet {
         self.sync_error.load(Ordering::Relaxed)
     }
 
-    /// Retry synchronization on error.
-    pub fn retry_sync(&self) {
-        self.set_sync_error(false);
-    }
-
     /// Set an error for wallet on synchronization.
-    fn set_sync_error(&self, error: bool) {
-        // Clear wallet info on error.
-        if error {
-            let mut w_data = self.data.write().unwrap();
-            *w_data = None;
-        }
-
+    pub fn set_sync_error(&self, error: bool) {
         self.sync_error.store(error, Ordering::Relaxed);
     }
 
@@ -452,7 +441,7 @@ impl Wallet {
     }
 
     /// Wake up wallet thread to sync wallet data and update statuses.
-    fn sync(&self) {
+    pub fn sync(&self) {
         let thread_r = self.sync_thread.read().unwrap();
         if let Some(thread) = thread_r.as_ref() {
             thread.unpark();
@@ -623,10 +612,17 @@ fn start_sync(mut wallet: Wallet) -> Thread {
             return;
         }
 
-        // Set an error when required integrated node is not enabled
-        // and skip cycle when node sync is not finished.
+        // Check integrated node state.
         if wallet.get_current_ext_conn_id().is_none() {
-            wallet.set_sync_error(!Node::is_running() || Node::is_stopping());
+            let not_enabled = !Node::is_running() || Node::is_stopping();
+            if not_enabled {
+                // Reset loading progress.
+                wallet.info_sync_progress.store(0, Ordering::Relaxed);
+                wallet.txs_sync_progress.store(0, Ordering::Relaxed);
+            }
+            // Set an error when required integrated node is not enabled.
+            wallet.set_sync_error(not_enabled);
+            // Skip cycle when node sync is not finished.
             if !Node::is_running() || Node::get_sync_status() != Some(SyncStatus::NoSync) {
                 println!("integrated node wait");
                 thread::park_timeout(Duration::from_millis(1000));

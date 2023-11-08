@@ -426,7 +426,7 @@ impl WalletContent {
             ui.add_space(8.0);
             let retry_text = format!("{} {}", REPEAT, t!("retry"));
             View::button(ui, retry_text, Colors::GOLD, || {
-                wallet.retry_sync();
+                wallet.set_sync_error(false);
             });
         });
     }
