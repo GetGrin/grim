@@ -25,10 +25,10 @@ use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, Root, View};
 use crate::gui::views::types::{ModalPosition, TextEditOptions};
 use crate::gui::views::wallets::{WalletInfo, WalletReceive, WalletSend, WalletSettings};
-use crate::gui::views::wallets::types::{WalletTab, WalletTabType};
+use crate::gui::views::wallets::types::{GRIN, WalletTab, WalletTabType};
 use crate::node::Node;
 use crate::wallet::{Wallet, WalletConfig};
-use crate::wallet::types::{GRIN, WalletAccount, WalletData};
+use crate::wallet::types::{WalletAccount, WalletData};
 
 /// Selected and opened wallet content.
 pub struct WalletContent {

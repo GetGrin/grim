@@ -274,6 +274,7 @@ impl ConnectionsContent {
                 url_edit_opts.focus = true;
             }
             View::text_edit(ui, cb, &mut self.ext_node_url_edit, url_edit_opts);
+            ui.add_space(8.0);
 
             ui.label(RichText::new(t!("wallets.node_secret"))
                 .size(17.0)

@@ -158,7 +158,7 @@ impl WalletInfo {
 }
 
 /// Height of transaction list item.
-const TX_ITEM_HEIGHT: f32 = 75.0;
+const TX_ITEM_HEIGHT: f32 = 76.0;
 
 /// Draw transaction item.
 fn tx_item_ui(ui: &mut egui::Ui,
@@ -194,7 +194,6 @@ fn tx_item_ui(ui: &mut egui::Ui,
                 && tx.tx_type != TxLogEntryType::TxSentCancelled {
                 View::item_button(ui, Rounding::default(), PROHIBIT, Some(Colors::RED), || {
                     wallet.cancel(tx.id);
-                    //TODO: Cancel tx
                 });
             }
 
@@ -289,12 +288,7 @@ fn tx_item_ui(ui: &mut egui::Ui,
                     ui.label(RichText::new(status_text).size(15.0).color(status_color));
 
                     // Setup transaction time.
-                    let tx_ts = if tx.confirmed && tx.confirmation_ts.is_some() {
-                        tx.confirmation_ts.unwrap()
-                    } else {
-                        tx.creation_ts
-                    }.timestamp();
-                    let tx_time = View::format_time(tx_ts);
+                    let tx_time = View::format_time(tx.creation_ts.timestamp());
                     let tx_time_text = format!("{} {}", CALENDAR_CHECK, tx_time);
                     ui.label(RichText::new(tx_time_text).size(15.0).color(Colors::GRAY));
                 });
