@@ -19,9 +19,6 @@ use grin_util::Mutex;
 use grin_wallet_impls::{DefaultLCProvider, HTTPNodeClient};
 use grin_wallet_libwallet::{TxLogEntry, WalletInfo, WalletInst};
 
-/// GRIN coin symbol.
-pub const GRIN: &str = "ツ";
-
 /// Mnemonic phrase setup mode.
 #[derive(PartialEq, Clone)]
 pub enum PhraseMode {
