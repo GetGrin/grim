@@ -1,3 +1,5 @@
+<img height="80" src="https://github.com/ardocrat/grim/blob/master/img/logo.png?raw=true">
+
 # Grim
 
 Cross-platform GUI for [Grin](https://github.com/mimblewimble/grin) on [Rust](https://stackoverflow.blog/2020/01/20/what-is-rust-and-why-is-it-so-popular/) with focus on usability and availability to be used by anyone, anywhere.
