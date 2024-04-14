@@ -22,21 +22,11 @@ cargo build release
 ### Android
 #### Set up the environment
 
-Install Android SDK / NDK / Platform Tools
-```
-brew cask install android-sdk android-ndk android-platform-tools
-```
-
-Add to your `.bashprofile` or `.zshrc`:
-```
-export ANDROID_HOME="$(brew --prefix)/share/android-sdk"
-export PATH=$PATH:$ANDROID_HOME/emulator:$ANDROID_HOME/tools:$ANDROID_HOME/tools/bin:$ANDROID_HOME/platform-tools
-export ANDROID_NDK_HOME="$(brew --prefix)/share/android-ndk"
-```
+Install Android SDK / NDK / Platform Tools for your OS according to this [FAQ](https://github.com/codepath/android_guides/wiki/installing-android-sdk-tools).
 
 #### Build the project
 Run Android emulator or connect a real device. Command `adb devices` should show at least one device.
-In the root of the repo run `./build_run_android.sh release {arch}`, where is `arch` is `v7` or `v8` based on device CPU architecture.
+In the root of the repo run `./build_run_android.sh release arch`, where is `arch` is `v7` or `v8` based on device CPU architecture.
 
 ## License
 
