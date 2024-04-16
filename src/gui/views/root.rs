@@ -13,7 +13,6 @@
 // limitations under the License.
 
 use std::sync::atomic::{AtomicBool, Ordering};
-
 use egui::os::OperatingSystem;
 use egui::RichText;
 use lazy_static::lazy_static;
@@ -70,11 +69,11 @@ impl ModalContainer for Root {
 
     fn modal_ui(&mut self,
                 ui: &mut egui::Ui,
-                frame: &mut eframe::Frame,
+                _: &mut eframe::Frame,
                 modal: &Modal,
                 _: &dyn PlatformCallbacks) {
         match modal.id {
-            Self::EXIT_MODAL_ID => self.exit_modal_content(ui, frame, modal),
+            Self::EXIT_MODAL_ID => self.exit_modal_content(ui, modal),
             _ => {}
         }
     }
@@ -91,7 +90,7 @@ impl Root {
         // Draw modal content for current ui container.
         self.current_modal_ui(ui, frame, cb);
 
-        let (is_panel_open, panel_width) = Self::network_panel_state_width(frame);
+        let (is_panel_open, panel_width) = Self::network_panel_state_width(ui);
         // Show network content.
         egui::SidePanel::left("network_panel")
             .resizable(false)
@@ -103,7 +102,8 @@ impl Root {
             .show_animated_inside(ui, is_panel_open, |ui| {
                 // Set content height as window height.
                 let mut rect = ui.available_rect_before_wrap();
-                rect.set_height(frame.info().window_info.size.y);
+                let window_size = View::window_size(ui);
+                rect.set_height(window_size.1);
                 ui.allocate_ui_at_rect(rect, |ui| {
                     self.network.ui(ui, frame, cb);
                 });
@@ -118,7 +118,8 @@ impl Root {
             .show_inside(ui, |ui| {
                 // Set content height as window height.
                 let mut rect = ui.available_rect_before_wrap();
-                rect.set_height(frame.info().window_info.size.y);
+                let window_size = View::window_size(ui);
+                rect.set_height(window_size.1);
                 ui.allocate_ui_at_rect(rect, |ui| {
                     self.wallets.ui(ui, frame, cb);
                 });
@@ -126,21 +127,20 @@ impl Root {
     }
 
     /// Get [`NetworkContent`] panel state and width.
-    fn network_panel_state_width(frame: &mut eframe::Frame) -> (bool, f32) {
-        let dual_panel_mode = Self::is_dual_panel_mode(frame);
+    fn network_panel_state_width(ui: &mut egui::Ui) -> (bool, f32) {
+        let dual_panel_mode = Self::is_dual_panel_mode(ui);
         let is_panel_open = dual_panel_mode || Self::is_network_panel_open();
         let panel_width = if dual_panel_mode {
             Self::SIDE_PANEL_WIDTH + View::get_left_inset()
         } else {
-            frame.info().window_info.size.x
+            View::window_size(ui).0
         };
         (is_panel_open, panel_width)
     }
 
     /// Check if ui can show [`NetworkContent`] and [`WalletsContent`] at same time.
-    pub fn is_dual_panel_mode(frame: &mut eframe::Frame) -> bool {
-        let w = frame.info().window_info.size.x;
-        let h = frame.info().window_info.size.y;
+    pub fn is_dual_panel_mode(ui: &mut egui::Ui) -> bool {
+        let (w, h) = View::window_size(ui);
         // Screen is wide if width is greater than height or just 20% smaller.
         let is_wide_screen = w > h || w + (w * 0.2) >= h;
         // Dual panel mode is available when window is wide and its width is at least 2 times
@@ -168,10 +168,11 @@ impl Root {
     }
 
     /// Draw exit confirmation modal content.
-    fn exit_modal_content(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame, modal: &Modal) {
+    fn exit_modal_content(&mut self, ui: &mut egui::Ui, modal: &Modal) {
         if self.show_exit_progress {
             if !Node::is_running() {
-                self.exit(frame);
+                self.exit_allowed = true;
+                ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
                 modal.close();
             }
             ui.add_space(16.0);
@@ -199,9 +200,10 @@ impl Root {
 
                 ui.columns(2, |columns| {
                     columns[0].vertical_centered_justified(|ui| {
-                        View::button(ui, t!("modal_exit.exit"), Colors::WHITE, || {
+                        View::button_ui(ui, t!("modal_exit.exit"), Colors::WHITE, |ui| {
                             if !Node::is_running() {
-                                self.exit(frame);
+                                self.exit_allowed = true;
+                                ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
                                 modal.close();
                             } else {
                                 Node::stop(true);
@@ -219,12 +221,6 @@ impl Root {
                 ui.add_space(6.0);
             });
         }
-    }
-
-    /// Exit from the application.
-    fn exit(&mut self, frame: &mut eframe::Frame) {
-        self.exit_allowed = true;
-        frame.close();
     }
 
     /// Handle Back key event.

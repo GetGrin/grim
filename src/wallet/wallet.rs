@@ -27,7 +27,7 @@ use futures::channel::oneshot;
 use grin_api::{ApiServer, Router};
 use grin_chain::SyncStatus;
 use grin_core::global;
-use grin_keychain::{ExtKeychain, Keychain};
+use grin_keychain::{ExtKeychain, Identifier, Keychain};
 use grin_util::Mutex;
 use grin_util::types::ZeroingString;
 use grin_wallet_api::Owner;
@@ -35,7 +35,7 @@ use grin_wallet_controller::command::parse_slatepack;
 use grin_wallet_controller::controller;
 use grin_wallet_controller::controller::ForeignAPIHandlerV2;
 use grin_wallet_impls::{DefaultLCProvider, DefaultWalletImpl, HTTPNodeClient};
-use grin_wallet_libwallet::{AcctPathMapping, Error, NodeClient, StatusMessage, TxLogEntryType, WalletInst, WalletLCProvider};
+use grin_wallet_libwallet::{Error, InitTxArgs, IssueInvoiceTxArgs, NodeClient, RetrieveTxQueryArgs, Slate, StatusMessage, TxLogEntry, TxLogEntryType, WalletInst, WalletLCProvider};
 use grin_wallet_libwallet::api_impl::owner::{cancel_tx, retrieve_summary_info, retrieve_txs};
 
 use crate::node::{Node, NodeConfig};
@@ -205,6 +205,15 @@ impl Wallet {
         Ok(Arc::new(Mutex::new(wallet)))
     }
 
+    /// Get parent key identifier for current account.
+    pub fn get_parent_key_id(&self) -> Result<Identifier, Error> {
+        let instance = self.instance.clone().unwrap();
+        let mut w_lock = instance.lock();
+        let lc = w_lock.lc_provider()?;
+        let w_inst = lc.wallet_inst()?;
+        Ok(w_inst.parent_key_id())
+    }
+
     /// Get wallet config.
     pub fn get_config(&self) -> WalletConfig {
         self.config.read().unwrap().clone()
@@ -238,7 +247,7 @@ impl Wallet {
         }
 
         // Create new wallet instance if sync thread was stopped or instance was not created.
-        if self.sync_thread.write().unwrap().is_none() || self.instance.is_none() {
+        if self.sync_thread.read().unwrap().is_none() || self.instance.is_none() {
             let config = self.get_config();
             let new_instance = Self::create_wallet_instance(config.clone())?;
             self.instance = Some(new_instance);
@@ -352,6 +361,9 @@ impl Wallet {
         let mut api = Owner::new(self.instance.clone().unwrap(), None);
         controller::owner_single_use(None, None, Some(&mut api), |api, m| {
             api.create_account_path(m, label)?;
+
+            // Sync wallet data.
+            self.sync();
             Ok(())
         })
     }
@@ -448,7 +460,28 @@ impl Wallet {
         }
     }
 
-    /// Receive transaction via Slatepack Message.
+    /// Create Slatepack message from provided slate.
+    fn create_slatepack_message(&self, slate: Slate) -> Result<String, Error> {
+        let mut message = "".to_string();
+        let mut api = Owner::new(self.instance.clone().unwrap(), None);
+        controller::owner_single_use(None, None, Some(&mut api), |api, m| {
+            message = api.create_slatepack_message(m, &slate, Some(0), vec![])?;
+            Ok(())
+        })?;
+
+        // Create a directory to which slatepack files will be output.
+        let mut slatepack_dir = self.get_config().get_slatepacks_path();
+        let slatepack_file_name = format!("{}.{}.slatepack", slate.id, slate.state);
+        slatepack_dir.push(slatepack_file_name);
+
+        // Write Slatepack response into the file.
+        let mut output = File::create(slatepack_dir)?;
+        output.write_all(message.as_bytes())?;
+        output.sync_all()?;
+        Ok(message)
+    }
+
+    /// Receive transaction via Slatepack message, return response to sender.
     pub fn receive(&self, message: String) -> Result<String, Error> {
         let mut api = Owner::new(self.instance.clone().unwrap(), None);
         match parse_slatepack(&mut api, None, None, Some(message.clone())) {
@@ -458,21 +491,37 @@ impl Wallet {
                     slate = api.receive_tx(&slate, Some(config.account.as_str()), None)?;
                     Ok(())
                 })?;
-                let mut response = "".to_string();
-                controller::owner_single_use(None, None, Some(&mut api), |api, m| {
-                    response = api.create_slatepack_message(m, &slate, Some(0), vec![])?;
-                    Ok(())
-                })?;
+                // Create Slatepack message response.
+                let response = self.create_slatepack_message(slate)?;
 
-                // Create a directory to which slatepack files will be output.
-                let mut slatepack_dir = config.get_slatepacks_path();
-                let slatepack_file_name = format!("{}.{}.slatepack", slate.id, slate.state);
-                slatepack_dir.push(slatepack_file_name);
+                // Sync wallet info.
+                self.sync();
+                Ok(response)
+            }
+            Err(_) => {
+                Err(Error::GenericError("Parsing error".to_string()))
+            }
+        }
+    }
 
-                // Write Slatepack response into the file.
-                let mut output = File::create(slatepack_dir)?;
-                output.write_all(response.as_bytes())?;
-                output.sync_all()?;
+    /// S transaction via Slatepack message and return response to sender.
+    pub fn pay(&self, message: String) -> Result<String, Error> {
+        let mut api = Owner::new(self.instance.clone().unwrap(), None);
+        match parse_slatepack(&mut api, None, None, Some(message.clone())) {
+            Ok((mut slate, _)) => {
+                let config = self.get_config();
+                let args = InitTxArgs {
+                    src_acct_name: None,
+                    amount: slate.amount,
+                    minimum_confirmations: config.min_confirmations,
+                    selection_strategy_is_use_all: false,
+                    ..Default::default()
+                };
+                let mut api = Owner::new(self.instance.clone().unwrap(), None);
+                let slate = api.process_invoice_tx(None, &slate, args)?;
+
+                // Create Slatepack message response.
+                let response = self.create_slatepack_message(slate)?;
 
                 // Sync wallet info.
                 self.sync();
@@ -483,6 +532,25 @@ impl Wallet {
                 Err(Error::GenericError("Parsing error".to_string()))
             }
         }
+    }
+
+    /// Initialize an invoice transaction.
+    pub fn issue_invoice(&self, amount: u64) -> Result<String, Error> {
+        let args = IssueInvoiceTxArgs {
+            dest_acct_name: None,
+            amount,
+            target_slate_version: None,
+        };
+        let mut api = Owner::new(self.instance.clone().unwrap(), None);
+        let slate = api.issue_invoice_tx(None, args)?;
+
+        // Create Slatepack message response.
+        let response = self.create_slatepack_message(slate)?;
+
+        // Sync wallet info.
+        self.sync();
+
+        Ok(response)
     }
 
     pub fn send(&self) {
@@ -513,6 +581,7 @@ impl Wallet {
         cancelling_r.contains(id)
     }
 
+    /// Finalize transaction from provided Slatepack message.
     pub fn finalize(&self) {
 
     }
@@ -571,7 +640,7 @@ impl Wallet {
             wallet_delete.is_open.store(false, Ordering::Relaxed);
             wallet_delete.deleted.store(true, Ordering::Relaxed);
 
-            // Wake up thread to exit.
+            // Start sync to exit.
             wallet_delete.sync();
         });
     }
@@ -786,16 +855,13 @@ fn sync_wallet_data(wallet: &Wallet) {
                         }
                     });
 
-                    // Retrieve txs.
-                    match retrieve_txs(
-                        instance.clone(),
-                        None,
-                        &Some(txs_tx),
-                        true,
-                        None,
-                        None,
-                        None
-                    ) {
+                    match retrieve_txs(instance.clone(),
+                                 None,
+                                 &Some(txs_tx),
+                                 true,
+                                 None,
+                                 None,
+                                 None) {
                         Ok(txs) => {
                             // Do not sync data if wallet was closed.
                             if !wallet.is_open() {
@@ -807,9 +873,20 @@ fn sync_wallet_data(wallet: &Wallet) {
                                 wallet.reset_sync_attempts();
 
                                 // Setup transactions.
-                                let mut txs = txs.1;
+                                let mut sort_txs = txs.1;
                                 // Sort txs by creation date.
-                                txs.sort_by_key(|tx| -tx.creation_ts.timestamp());
+                                sort_txs.sort_by_key(|tx| -tx.creation_ts.timestamp());
+                                // Filter txs by current wallet account.
+                                let mut txs = sort_txs.iter().map(|v| v.clone()).filter(|tx| {
+                                    match wallet.get_parent_key_id() {
+                                        Ok(key) => {
+                                            tx.parent_key_id == key
+                                        }
+                                        Err(_) => {
+                                            true
+                                        }
+                                    }
+                                }).collect::<Vec<TxLogEntry>>();
                                 // Update txs statuses.
                                 for tx in &txs {
                                     if tx.tx_type == TxLogEntryType::TxSentCancelled

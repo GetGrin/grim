@@ -64,11 +64,18 @@ wallets:
   tx_canceled: Canceled
   tx_confirmed: Confirmed
   manually: Manually
-  receive_paste_slatepack: 'Enter Slatepack message received from the sender to create a response:'
-  receive_send_slatepack: 'Send response to the sender to finalize the transaction:'
-  receive_slatepack_err: An error occurred during creation of the response, check input data.
-  response_copied: Response copied to the clipboard.
+  receive_slatepack_desc: 'Enter Slatepack message received from the sender to create response or finalize the transaction:'
+  receive_send_slatepack: 'Send Slatepack message to the sender to finalize the transaction:'
+  receive_slatepack_err: 'An error occurred during creation of the response, check input data:'
   create_response: Create response
+  invoice: Invoice
+  issue_invoice: Issue invoice
+  issue_invoice_desc: 'Create a request to receive funds by entering the required amount:'
+  invoice_desc: 'You have created a request to receive %{amount} ツ. Send Slatepack message to the sender:'
+  invoice_slatepack_err: An error occurred during issuing of the invoice, check input data.
+  finalize_slatepack_err: 'An error occurred during finalization of the transaction, check input data:'
+  finalize: Finalize
+  enter_amount: 'Enter amount:'
   recovery: Recovery
   repair_wallet: Repair wallet
   repair_desc: Check a wallet, repairing and restoring missing outputs if required. This operation will take time.

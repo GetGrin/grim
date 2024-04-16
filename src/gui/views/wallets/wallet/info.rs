@@ -37,10 +37,10 @@ impl WalletTab for WalletInfo {
 
     fn ui(&mut self,
           ui: &mut egui::Ui,
-          frame: &mut eframe::Frame,
+          _: &mut eframe::Frame,
           wallet: &mut Wallet,
           _: &dyn PlatformCallbacks) {
-        if WalletContent::sync_ui(ui, frame, wallet) {
+        if WalletContent::sync_ui(ui, wallet) {
             return;
         }
 

@@ -30,11 +30,41 @@ impl Android {
 
 impl PlatformCallbacks for Android {
     fn show_keyboard(&self) {
-        self.android_app.show_soft_input(true);
+        // Disable NDK soft input show call before fix for egui.
+        // self.android_app.show_soft_input(false);
+
+        use jni::objects::{JObject};
+
+        let vm = unsafe { jni::JavaVM::from_raw(self.android_app.vm_as_ptr() as _) }.unwrap();
+        let mut env = vm.attach_current_thread().unwrap();
+        let activity = unsafe {
+            JObject::from_raw(self.android_app.activity_as_ptr() as jni::sys::jobject)
+        };
+        let _ = env.call_method(
+            activity,
+            "showKeyboard",
+            "()V",
+            &[]
+        ).unwrap();
     }
 
     fn hide_keyboard(&self) {
-        self.android_app.hide_soft_input(true);
+        // Disable NDK soft input hide call before fix for egui.
+        // self.android_app.hide_soft_input(false);
+
+        use jni::objects::{JObject};
+
+        let vm = unsafe { jni::JavaVM::from_raw(self.android_app.vm_as_ptr() as _) }.unwrap();
+        let mut env = vm.attach_current_thread().unwrap();
+        let activity = unsafe {
+            JObject::from_raw(self.android_app.activity_as_ptr() as jni::sys::jobject)
+        };
+        let _ = env.call_method(
+            activity,
+            "hideKeyboard",
+            "()V",
+            &[]
+        ).unwrap();
     }
 
     fn copy_string_to_buffer(&self, data: String) {

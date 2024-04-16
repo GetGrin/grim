@@ -13,7 +13,7 @@
 // limitations under the License.
 
 /// Wallet creation step.
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone)]
 pub enum Step {
     /// Mnemonic phrase input.
     EnterMnemonic,

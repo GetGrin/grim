@@ -31,6 +31,9 @@ fn real_main() {
     use grim::gui::PlatformApp;
 
     let platform = Desktop::default();
-    let options = eframe::NativeOptions::default();
+    let options = eframe::NativeOptions {
+        viewport: egui::ViewportBuilder::default().with_inner_size([1200.0, 720.0]),
+        ..Default::default()
+    };
     grim::start(options, grim::app_creator(PlatformApp::new(platform)));
 }

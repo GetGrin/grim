@@ -185,22 +185,20 @@ impl RecoverySetup {
                     .size(17.0)
                     .color(Colors::GRAY));
                 ui.add_space(8.0);
-            });
 
-            // Draw current wallet password text edit.
-            let pass_edit_id = Id::from(modal.id).with(wallet.get_config().id);
-            let pass_edit_opts = TextEditOptions::new(pass_edit_id).password();
-            View::text_edit(ui, cb, &mut self.pass_edit, pass_edit_opts);
+                // Draw current wallet password text edit.
+                let pass_edit_id = Id::from(modal.id).with(wallet.get_config().id);
+                let pass_edit_opts = TextEditOptions::new(pass_edit_id).password();
+                View::text_edit(ui, cb, &mut self.pass_edit, pass_edit_opts);
 
-            // Show information when password is empty.
-            ui.vertical_centered(|ui| {
+                // Show information when password is empty or wrong.
                 if self.pass_edit.is_empty() {
-                    ui.add_space(10.0);
+                    ui.add_space(12.0);
                     ui.label(RichText::new(t!("wallets.pass_empty"))
                         .size(17.0)
                         .color(Colors::INACTIVE_TEXT));
                 } else if self.wrong_pass {
-                    ui.add_space(10.0);
+                    ui.add_space(12.0);
                     ui.label(RichText::new(t!("wallets.wrong_pass"))
                         .size(17.0)
                         .color(Colors::RED));

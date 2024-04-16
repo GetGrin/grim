@@ -12,8 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::{RichText, ScrollArea, Stroke};
-use egui::style::Margin;
+use egui::{Margin, RichText, ScrollArea, Stroke};
 
 use crate::AppConfig;
 use crate::gui::Colors;
@@ -57,7 +56,7 @@ impl NetworkContent {
                 fill: Colors::FILL,
                 inner_margin: Margin {
                     left: View::get_left_inset() + 4.0,
-                    right: View::far_right_inset_margin(ui, frame) + 4.0,
+                    right: View::far_right_inset_margin(ui) + 4.0,
                     top: 4.0,
                     bottom: View::get_bottom_inset() + 4.0,
                 },
@@ -82,7 +81,7 @@ impl NetworkContent {
                         stroke: View::DEFAULT_STROKE,
                         inner_margin: Margin {
                             left: View::get_left_inset() + 4.0,
-                            right: View::far_right_inset_margin(ui, frame) + 4.0,
+                            right: View::far_right_inset_margin(ui) + 4.0,
                             top: 3.0,
                             bottom: 4.0,
                         },
@@ -108,7 +107,7 @@ impl NetworkContent {
                         0.0
                     },
                     right: if show_connections {
-                        View::far_right_inset_margin(ui, frame) + 4.0
+                        View::far_right_inset_margin(ui) + 4.0
                     } else {
                         0.0
                     },
@@ -128,7 +127,7 @@ impl NetworkContent {
                     .show(ui, |ui| {
                         ui.add_space(1.0);
                         ui.vertical_centered(|ui| {
-                            let max_width = if !Root::is_dual_panel_mode(frame) {
+                            let max_width = if !Root::is_dual_panel_mode(ui) {
                                 Root::SIDE_PANEL_WIDTH * 1.3
                             } else {
                                 ui.available_width()
@@ -212,7 +211,7 @@ impl NetworkContent {
                 });
             }
         }, |ui, frame| {
-            if !Root::is_dual_panel_mode(frame) {
+            if !Root::is_dual_panel_mode(ui) {
                 View::title_button(ui, CARDHOLDER, || {
                     Root::toggle_network_panel();
                 });

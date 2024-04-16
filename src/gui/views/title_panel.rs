@@ -12,8 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::{Color32, Id, lerp, Rgba};
-use egui::style::Margin;
+use egui::{Margin, Color32, Id, lerp, Rgba};
 use egui_extras::{Size, Strip, StripBuilder};
 
 use crate::gui::Colors;
@@ -59,7 +58,7 @@ impl TitlePanel {
             .resizable(false)
             .exact_height(Self::DEFAULT_HEIGHT)
             .frame(egui::Frame {
-                inner_margin: Self::inner_margin(ui, frame),
+                inner_margin: Self::inner_margin(ui),
                 fill: Colors::YELLOW,
                 ..Default::default()
             })
@@ -132,10 +131,10 @@ impl TitlePanel {
     }
 
     /// Calculate inner margin based on display insets (cutouts).
-    fn inner_margin(ui: &mut egui::Ui, frame: &mut eframe::Frame) -> Margin {
+    fn inner_margin(ui: &mut egui::Ui) -> Margin {
         Margin {
             left: View::far_left_inset_margin(ui),
-            right: View::far_right_inset_margin(ui, frame),
+            right: View::far_right_inset_margin(ui),
             top: View::get_top_inset(),
             bottom: 0.0,
         }

@@ -24,6 +24,7 @@ use grin_core::global::ChainTypes;
 use grin_p2p::{PeerAddr, Seeding};
 use grin_p2p::msg::PeerAddrs;
 use grin_servers::common::types::ChainValidationMode;
+use local_ip_address::list_afinet_netifas;
 use serde::{Deserialize, Serialize};
 
 use crate::{AppConfig, Settings};
@@ -244,10 +245,11 @@ impl NodeConfig {
     /// List of available IP addresses.
     pub fn get_ip_addrs() -> Vec<String> {
         let mut ip_addrs = Vec::new();
-        for net_if in pnet::datalink::interfaces() {
-            for ip in net_if.ips {
+        let network_interfaces = list_afinet_netifas();
+        if let Ok(network_interfaces) = network_interfaces {
+            for (_, ip) in network_interfaces.iter() {
                 if ip.is_ipv4() {
-                    ip_addrs.push(ip.ip().to_string());
+                    ip_addrs.push(ip.to_string());
                 }
             }
         }

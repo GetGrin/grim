@@ -12,13 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::ops::Add;
 use std::sync::atomic::{AtomicI32, Ordering};
+use std::sync::{Arc, RwLock};
+use lazy_static::lazy_static;
 
-use egui::{Align, Button, CursorIcon, Layout, PointerState, Rect, Response, RichText, Sense, Spinner, TextStyle, Vec2, Widget};
+use egui::{Align, Button, CursorIcon, Layout, PointerState, Rect, Response, RichText, Sense, Spinner, TextBuffer, TextStyle, Widget};
 use egui::epaint::{CircleShape, Color32, FontId, RectShape, Rounding, Stroke};
 use egui::epaint::text::TextWrapping;
+use egui::os::OperatingSystem;
 use egui::text::{LayoutJob, TextFormat};
-use lazy_static::lazy_static;
+use egui::text_edit::TextEditState;
 
 use crate::gui::Colors;
 use crate::gui::icons::{CHECK_SQUARE, CLIPBOARD_TEXT, COPY, EYE, EYE_SLASH, SQUARE};
@@ -54,6 +58,21 @@ impl View {
         });
     }
 
+    /// Get width and height of app window.
+    pub fn window_size(ui: &mut egui::Ui) -> (f32, f32) {
+        ui.ctx().input(|i| {
+            return match i.viewport().inner_rect {
+                None => {
+                    let size = i.viewport().monitor_size.unwrap();
+                    (size.x, size.y)
+                }
+                Some(rect) => {
+                    (rect.width(), rect.height())
+                }
+            };
+        })
+    }
+
     /// Callback on Enter key press event.
     pub fn on_enter_key(ui: &mut egui::Ui, cb: impl FnOnce()) {
         if ui.ctx().input(|i| i.key_pressed(egui::Key::Enter)) {
@@ -71,9 +90,10 @@ impl View {
     }
 
     /// Calculate margin for far left view based on display insets (cutouts).
-    pub fn far_right_inset_margin(ui: &mut egui::Ui, frame: &mut eframe::Frame) -> f32 {
+    pub fn far_right_inset_margin(ui: &mut egui::Ui) -> f32 {
         let container_width = ui.available_rect_before_wrap().max.x as i32;
-        let display_width = frame.info().window_info.size.x as i32;
+        let window_size = Self::window_size(ui);
+        let display_width = window_size.0 as i32;
         // Means end of the screen.
         if container_width == display_width {
             Self::get_right_inset()
@@ -195,6 +215,19 @@ impl View {
             .on_hover_cursor(CursorIcon::PointingHand);
         if Self::touched(ui, br) {
             (action)();
+        }
+    }
+
+    /// Draw [`Button`] with specified background fill color.
+    pub fn button_ui(ui: &mut egui::Ui, text: String, fill: Color32, action: impl FnOnce(&mut egui::Ui)) {
+        let button_text = Self::ellipsize(text.to_uppercase(), 17.0, Colors::TEXT_BUTTON);
+        let br = Button::new(button_text)
+            .stroke(Self::DEFAULT_STROKE)
+            .fill(fill)
+            .ui(ui)
+            .on_hover_cursor(CursorIcon::PointingHand);
+        if Self::touched(ui, br) {
+            (action)(ui);
         }
     }
 
@@ -336,15 +369,17 @@ impl View {
                 // Setup text edit size.
                 let mut edit_rect = ui.available_rect_before_wrap();
                 edit_rect.set_height(Self::TEXT_EDIT_HEIGHT);
+
                 // Show text edit.
                 let text_edit_resp = egui::TextEdit::singleline(value)
                     .id(options.id)
-                    .margin(Vec2::new(2.0, 0.0))
+                    .margin(egui::Vec2::new(2.0, 0.0))
                     .font(TextStyle::Heading)
                     .min_size(edit_rect.size())
                     .horizontal_align(if options.h_center { Align::Center } else { Align::Min })
                     .vertical_align(Align::Center)
                     .password(show_pass)
+                    .cursor_at_end(true)
                     .ui(ui);
                 // Show keyboard on click.
                 if text_edit_resp.clicked() {
@@ -354,6 +389,42 @@ impl View {
                 if options.focus {
                     text_edit_resp.request_focus();
                     cb.show_keyboard();
+                }
+                // Apply text from input on Android as temporary fix for egui.
+                let os = OperatingSystem::from_target_os();
+                if os == OperatingSystem::Android && text_edit_resp.has_focus() {
+                    let mut w_input = LAST_SOFT_KEYBOARD_INPUT.write().unwrap();
+
+                    if !w_input.is_empty() {
+                        let mut state = TextEditState::load(ui.ctx(), options.id).unwrap();
+                        match state.cursor.char_range() {
+                            None => {}
+                            Some(range) => {
+                                let mut r = range.clone();
+
+                                let mut index = r.primary.index;
+                                println!("insert_str {} {}", index, w_input.as_str());
+
+                                value.insert_text(w_input.as_str(), index);
+                                index = index + 1;
+
+                                println!("12345 {} {}", value, r.primary.index);
+
+                                if index == 0 {
+                                    r.primary.index = value.len();
+                                    r.secondary.index = r.primary.index;
+                                } else {
+                                    r.primary.index = index;
+                                    r.secondary.index = r.primary.index;
+                                }
+                                state.cursor.set_char_range(Some(r));
+                                TextEditState::store(state, ui.ctx(), options.id);
+                            }
+                        }
+                    }
+
+                    *w_input = "".to_string();
+                    ui.ctx().request_repaint();
                 }
             });
         });
@@ -571,4 +642,33 @@ pub extern "C" fn Java_mw_gri_android_MainActivity_onDisplayInsets(
     RIGHT_DISPLAY_INSET.store(array[1], Ordering::Relaxed);
     BOTTOM_DISPLAY_INSET.store(array[2], Ordering::Relaxed);
     LEFT_DISPLAY_INSET.store(array[3], Ordering::Relaxed);
+}
+
+lazy_static! {
+    static ref LAST_SOFT_KEYBOARD_INPUT: Arc<RwLock<String>> = Arc::new(RwLock::new("".to_string()));
+}
+
+#[allow(dead_code)]
+#[cfg(target_os = "android")]
+#[allow(non_snake_case)]
+#[no_mangle]
+/// Callback from Java code with last entered character from soft keyboard.
+pub extern "C" fn Java_mw_gri_android_MainActivity_onInput(
+    _env: jni::JNIEnv,
+    _class: jni::objects::JObject,
+    char: jni::sys::jstring
+) {
+    use jni::objects::{JString};
+
+    unsafe {
+        let j_obj = JString::from_raw(char);
+        let j_str = _env.get_string_unchecked(j_obj.as_ref()).unwrap();
+        match j_str.to_str() {
+            Ok(str) => {
+                let mut w_input = LAST_SOFT_KEYBOARD_INPUT.write().unwrap();
+                *w_input = w_input.clone().add(str);
+            }
+            Err(_) => {}
+        }
+    }
 }

@@ -62,6 +62,38 @@ impl PhraseSize {
             PhraseSize::Words24 => 32
         }
     }
+
+    pub fn type_for_value(count: usize) -> Option<PhraseSize> {
+        if Self::is_correct_count(count) {
+            match count {
+                12 => {
+                    Some(PhraseSize::Words12)
+                }
+                15 => {
+                    Some(PhraseSize::Words15)
+                }
+                18 => {
+                    Some(PhraseSize::Words18)
+                }
+                21 => {
+                    Some(PhraseSize::Words21)
+                }
+                24 => {
+                    Some(PhraseSize::Words24)
+                }
+                _ => {
+                    None
+                }
+            }
+        } else {
+            None
+        }
+    }
+
+    /// Check if correct word count provided.
+    pub fn is_correct_count(count: usize) -> bool {
+        count == 12 || count == 15 || count == 18 || count == 21 || count == 24
+    }
 }
 
 /// Wallet connection method.

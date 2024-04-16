@@ -375,7 +375,7 @@ impl WalletContent {
     }
 
     /// Draw content when wallet is syncing and not ready to use, returns `true` at this case.
-    pub fn sync_ui(ui: &mut egui::Ui, frame: &mut eframe::Frame, wallet: &Wallet) -> bool {
+    pub fn sync_ui(ui: &mut egui::Ui, wallet: &Wallet) -> bool {
         if wallet.is_repairing() && !wallet.sync_error() {
             Self::sync_progress_ui(ui, wallet);
             return true;
@@ -384,7 +384,7 @@ impl WalletContent {
             return true;
         } else if wallet.get_current_ext_conn_id().is_none() {
             if !Node::is_running() || Node::is_stopping() {
-                let dual_panel_root = Root::is_dual_panel_mode(frame);
+                let dual_panel_root = Root::is_dual_panel_mode(ui);
                 View::center_content(ui, 108.0, |ui| {
                     let text = t!("wallets.enable_node", "settings" => GEAR_FINE);
                     ui.label(RichText::new(text).size(16.0).color(Colors::INACTIVE_TEXT));

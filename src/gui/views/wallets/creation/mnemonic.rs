@@ -167,13 +167,13 @@ impl MnemonicSetup {
             let words = match self.mnemonic.mode {
                 PhraseMode::Generate => {
                     if edit_words {
-                        self.mnemonic.confirm_words.clone()
+                        &self.mnemonic.confirm_words
                     } else {
-                        self.mnemonic.words.clone()
+                        &self.mnemonic.words
                     }
                 }
-                PhraseMode::Import => self.mnemonic.words.clone()
-            };
+                PhraseMode::Import => &self.mnemonic.words
+            }.clone();
 
             let mut word_number = 0;
             let cols = list_columns_count(ui);

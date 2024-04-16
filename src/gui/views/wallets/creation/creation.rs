@@ -17,7 +17,7 @@ use egui_extras::{RetainedImage, Size, StripBuilder};
 
 use crate::built_info;
 use crate::gui::Colors;
-use crate::gui::icons::{CHECK, EYE, EYE_SLASH, FOLDER_PLUS, SHARE_FAT};
+use crate::gui::icons::{CHECK, CLIPBOARD_TEXT, COPY, EYE, EYE_SLASH, FOLDER_PLUS, SHARE_FAT};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, Root, View};
 use crate::gui::views::types::{ModalPosition, TextEditOptions};
@@ -86,7 +86,7 @@ impl WalletCreation {
                     ui.vertical_centered(|ui| {
                         ui.vertical_centered(|ui| {
                             View::max_width_ui(ui, Root::SIDE_PANEL_WIDTH * 2.0, |ui| {
-                                self.step_control_ui(ui, on_create);
+                                self.step_control_ui(ui, on_create, cb);
                             });
                         });
 
@@ -130,17 +130,12 @@ impl WalletCreation {
             });
     }
 
-    /// Reset wallet creation to default values.
-    fn reset(&mut self) {
-        self.step = None;
-        self.name_edit = String::from("");
-        self.pass_edit = String::from("");
-        self.mnemonic_setup.reset();
-    }
-
     /// Draw [`Step`] description and confirmation control.
-    fn step_control_ui(&mut self, ui: &mut egui::Ui, on_create: impl FnOnce(Wallet)) {
-        if let Some(step) = &self.step {
+    fn step_control_ui(&mut self,
+                       ui: &mut egui::Ui,
+                       on_create: impl FnOnce(Wallet),
+                       cb: &dyn PlatformCallbacks) {
+        if let Some(step) = self.step.clone() {
             // Setup step description text and availability.
             let (step_text, mut step_available) = match step {
                 Step::EnterMnemonic => {
@@ -179,25 +174,119 @@ impl WalletCreation {
                     .color(Colors::RED));
                 ui.add_space(2.0);
             }
-
-            // Show next step button if there are no empty words.
-            if step_available {
-                // Setup button text.
-                let (next_text, color) = if step == &Step::SetupConnection {
-                    (format!("{} {}", CHECK, t!("complete")), Colors::GOLD)
+            if step == Step::EnterMnemonic {
+                ui.add_space(4.0);
+                if !step_available {
+                    self.copy_or_paste_button_ui(ui, cb);
                 } else {
-                    let text = format!("{} {}", SHARE_FAT, t!("continue"));
-                    (text, Colors::WHITE)
-                };
+                    // Setup spacing between buttons.
+                    ui.spacing_mut().item_spacing = egui::Vec2::new(6.0, 0.0);
 
-                ui.add_space(4.0);
-                // Show button.
-                View::button(ui, next_text.to_uppercase(), color, || {
-                    self.forward(on_create);
+                    ui.columns(2, |columns| {
+                        // Show copy or paste button for mnemonic phrase step.
+                        columns[0].vertical_centered_justified(|ui| {
+                            self.copy_or_paste_button_ui(ui, cb);
+                        });
+
+                        // Show next step button if there are no empty words.
+                        if step_available {
+                            columns[1].vertical_centered_justified(|ui| {
+                                self.next_step_button_ui(ui, step, on_create);
+                            });
+                        }
+                    });
+                }
+            } else {
+                if step_available {
+                    ui.add_space(4.0);
+                    self.next_step_button_ui(ui, step, on_create);
+                }
+            }
+            ui.add_space(4.0);
+        }
+    }
+
+    /// Draw copy or paste button at [`Step::EnterMnemonic`].
+    fn copy_or_paste_button_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
+        match self.mnemonic_setup.mnemonic.mode {
+            PhraseMode::Generate => {
+                // Show copy button.
+                let c_t = format!("{} {}", COPY, t!("copy").to_uppercase());
+                View::button(ui, c_t.to_uppercase(), Colors::WHITE, || {
+                    cb.copy_string_to_buffer(self.mnemonic_setup.mnemonic.get_phrase());
                 });
-                ui.add_space(4.0);
+            }
+            PhraseMode::Import => {
+                // Show paste button.
+                let p_t = format!("{} {}", CLIPBOARD_TEXT, t!("paste").to_uppercase());
+                View::button(ui, p_t, Colors::WHITE, || {
+                    self.mnemonic_setup.mnemonic.import_text(cb.get_string_from_buffer());
+                });
             }
         }
+    }
+
+    /// Draw button to go to next [`Step`].
+    fn next_step_button_ui(&mut self,
+                           ui: &mut egui::Ui,
+                           step: Step,
+                           on_create: impl FnOnce(Wallet)) {
+        // Setup button text.
+        let (next_text, color) = if step == Step::SetupConnection {
+            (format!("{} {}", CHECK, t!("complete")), Colors::GOLD)
+        } else {
+            let text = format!("{} {}", SHARE_FAT, t!("continue"));
+            (text, Colors::WHITE)
+        };
+
+
+        // Show next step button.
+        View::button(ui, next_text.to_uppercase(), color, || {
+            self.step = if let Some(step) = &self.step {
+                match step {
+                    Step::EnterMnemonic => {
+                        if self.mnemonic_setup.mnemonic.mode == PhraseMode::Generate {
+                            Some(Step::ConfirmMnemonic)
+                        } else {
+                            // Check if entered phrase was valid.
+                            if self.mnemonic_setup.valid_phrase {
+                                Some(Step::SetupConnection)
+                            } else {
+                                Some(Step::EnterMnemonic)
+                            }
+                        }
+                    }
+                    Step::ConfirmMnemonic => {
+                        // Check external connections availability on connection setup.
+                        ExternalConnection::start_ext_conn_availability_check();
+                        Some(Step::SetupConnection)
+                    },
+                    Step::SetupConnection => {
+                        // Create wallet at last step.
+                        let name = self.name_edit.clone();
+                        let pass = self.pass_edit.clone();
+                        let phrase = self.mnemonic_setup.mnemonic.get_phrase();
+                        let conn_method = &self.network_setup.method;
+                        let mut wallet = Wallet::create(name,
+                                                        pass.clone(),
+                                                        phrase,
+                                                        conn_method).unwrap();
+                        // Open created wallet.
+                        wallet.open(pass).unwrap();
+                        // Pass created wallet to callback.
+                        (on_create)(wallet);
+                        // Reset input data.
+                        self.step = None;
+                        self.name_edit = String::from("");
+                        self.pass_edit = String::from("");
+                        self.mnemonic_setup.reset();
+                        None
+                    }
+                }
+            } else {
+                Some(Step::EnterMnemonic)
+            };
+        });
     }
 
     /// Draw wallet creation [`Step`] content.
@@ -256,55 +345,17 @@ impl WalletCreation {
             None => {}
             Some(step) => {
                 match step {
-                    Step::EnterMnemonic => self.reset(),
+                    Step::EnterMnemonic => {
+                        self.step = None;
+                        self.name_edit = String::from("");
+                        self.pass_edit = String::from("");
+                        self.mnemonic_setup.reset();
+                    },
                     Step::ConfirmMnemonic => self.step = Some(Step::EnterMnemonic),
                     Step::SetupConnection => self.step = Some(Step::EnterMnemonic)
                 }
             }
         }
-    }
-
-    /// Go to the next wallet creation [`Step`].
-    fn forward(&mut self, on_create: impl FnOnce(Wallet)) {
-        self.step = if let Some(step) = &self.step {
-            match step {
-                Step::EnterMnemonic => {
-                    if self.mnemonic_setup.mnemonic.mode == PhraseMode::Generate {
-                        Some(Step::ConfirmMnemonic)
-                    } else {
-                        // Check if entered phrase was valid.
-                        if self.mnemonic_setup.valid_phrase {
-                            Some(Step::SetupConnection)
-                        } else {
-                            Some(Step::EnterMnemonic)
-                        }
-                    }
-                }
-                Step::ConfirmMnemonic => {
-                    // Check external connections availability on connection setup.
-                    ExternalConnection::start_ext_conn_availability_check();
-                    Some(Step::SetupConnection)
-                },
-                Step::SetupConnection => {
-                    // Create wallet at last step.
-                    let name = self.name_edit.clone();
-                    let pass = self.pass_edit.clone();
-                    let phrase = self.mnemonic_setup.mnemonic.get_phrase();
-                    let conn_method = &self.network_setup.method;
-                    let mut wallet
-                        = Wallet::create(name, pass.clone(), phrase, conn_method).unwrap();
-                    // Open created wallet.
-                    wallet.open(pass).unwrap();
-                    // Pass created wallet to callback.
-                    (on_create)(wallet);
-                    // Reset input data.
-                    self.reset();
-                    None
-                }
-            }
-        } else {
-            Some(Step::EnterMnemonic)
-        };
     }
 
     /// Start wallet creation from showing [`Modal`] to enter name and password.

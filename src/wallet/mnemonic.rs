@@ -103,4 +103,22 @@ impl Mnemonic {
         }
         words
     }
+
+    /// Set words from provided text if possible.
+    pub fn import_text(&mut self, text: String) {
+        if self.mode != PhraseMode::Import {
+            return;
+        }
+        let words_split = text.trim().split(" ");
+        let count = words_split.clone().count();
+        if PhraseSize::is_correct_count(count) {
+            if self.size == PhraseSize::type_for_value(count).unwrap() {
+                let mut words = vec![];
+                words_split.enumerate().for_each(|(i, word)| {
+                    words.insert(i, word.to_string())
+                });
+                self.words = words;
+            }
+        }
+    }
 }

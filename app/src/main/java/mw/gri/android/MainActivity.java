@@ -7,6 +7,7 @@ import android.system.ErrnoException;
 import android.system.Os;
 import android.view.KeyEvent;
 import android.view.View;
+import android.view.inputmethod.InputMethodManager;
 import androidx.core.graphics.Insets;
 import androidx.core.view.DisplayCutoutCompat;
 import androidx.core.view.ViewCompat;
@@ -80,12 +81,33 @@ public class MainActivity extends GameActivity {
         });
     }
 
+    @Override
+    public boolean dispatchKeyEvent(KeyEvent event) {
+        // To support non-english input.
+        if (event.getAction() == KeyEvent.ACTION_MULTIPLE && event.getKeyCode() == KeyEvent.KEYCODE_UNKNOWN) {
+            if (!event.getCharacters().isEmpty()) {
+                onInput(event.getCharacters());
+                return false;
+            }
+        // Pass any other input values into native code.
+        } else if (event.getAction() == KeyEvent.ACTION_UP &&
+                event.getKeyCode() != KeyEvent.KEYCODE_ENTER &&
+                event.getKeyCode() != KeyEvent.KEYCODE_BACK) {
+            onInput(String.valueOf((char)event.getUnicodeChar()));
+            return false;
+        }
+        return super.dispatchKeyEvent(event);
+    }
+
+    // Provide last entered character from soft keyboard into native code.
+    public native void onInput(String character);
+
     // Implemented into native code to handle display insets change.
     native void onDisplayInsets(int[] cutouts);
 
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
-        if (keyCode == KeyEvent.KEYCODE_BACK)   {
+        if (keyCode == KeyEvent.KEYCODE_BACK) {
             onBack();
             return true;
         }
@@ -145,5 +167,15 @@ public class MainActivity extends GameActivity {
             text = item.getText().toString();
         }
         return text;
+    }
+
+    public void showKeyboard() {
+        InputMethodManager imm = (InputMethodManager )getSystemService(Context.INPUT_METHOD_SERVICE);
+        imm.showSoftInput(getWindow().getDecorView(), InputMethodManager.SHOW_IMPLICIT);
+    }
+
+    public void hideKeyboard() {
+        InputMethodManager imm = (InputMethodManager )getSystemService(Context.INPUT_METHOD_SERVICE);
+        imm.hideSoftInputFromWindow(getWindow().getDecorView().getWindowToken(), 0);
     }
 }

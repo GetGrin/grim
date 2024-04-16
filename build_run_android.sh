@@ -29,6 +29,10 @@ type=$1
 [[ $2 == "v7" ]] && platform+=(armv7-linux-androideabi)
 [[ $2 == "v8" ]] && platform+=(aarch64-linux-android)
 
+# Install platform
+[[ $2 == "v7" ]] && rustup target install armv7-linux-androideabi
+[[ $2 == "v8" ]] && rustup target install aarch64-linux-android
+
 export CPPFLAGS="-DMDB_USE_ROBUST=0" && export CFLAGS="-DMDB_USE_ROBUST=0" \
 && cargo ndk -t ${arch} build ${release_param[@]}
 

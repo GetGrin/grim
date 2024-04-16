@@ -16,7 +16,7 @@
 extern crate rust_i18n;
 
 use eframe::wgpu;
-use egui::{Context, Stroke};
+use egui::{Context, Stroke, vec2};
 
 #[cfg(target_os = "android")]
 use winit::platform::android::activity::AndroidApp;
@@ -61,16 +61,21 @@ fn android_main(app: AndroidApp) {
     use gui::PlatformApp;
 
     let platform = Android::new(app.clone());
-
     use winit::platform::android::EventLoopBuilderExtAndroid;
-    let mut options = eframe::NativeOptions::default();
+
+    let width = app.config().screen_width_dp().unwrap() as f32;
+    let height = app.config().screen_height_dp().unwrap() as f32;
+    let mut options = eframe::NativeOptions {
+        viewport: egui::ViewportBuilder::default().with_inner_size(vec2(width, height)),
+        ..Default::default()
+    };
     // Setup limits that are guaranteed to be compatible with Android devices.
     options.wgpu_options.device_descriptor = std::sync::Arc::new(|adapter| {
         let base_limits = wgpu::Limits::downlevel_webgl2_defaults();
         wgpu::DeviceDescriptor {
             label: Some("egui wgpu device"),
-            features: wgpu::Features::default(),
-            limits: wgpu::Limits {
+            required_features: wgpu::Features::default(),
+            required_limits: wgpu::Limits {
                 max_texture_dimension_2d: 8192,
                 ..base_limits
             },
@@ -102,7 +107,6 @@ pub fn app_creator<T: 'static>(app: PlatformApp<T>) -> eframe::AppCreator
 pub fn start(mut options: eframe::NativeOptions, app_creator: eframe::AppCreator) {
     options.default_theme = eframe::Theme::Light;
     options.renderer = eframe::Renderer::Wgpu;
-    options.initial_window_size = Some(egui::Vec2::new(1200.0, 720.0));
     // Setup translations.
     setup_i18n();
     // Start integrated node if needed.
@@ -119,7 +123,7 @@ pub fn setup_visuals(ctx: &Context) {
     // Setup spacing for buttons.
     style.spacing.button_padding = egui::vec2(12.0, 8.0);
     // Make scroll-bar thinner.
-    style.spacing.scroll_bar_width = 4.0;
+    style.spacing.scroll.bar_width = 4.0;
     // Disable spacing between items.
     style.spacing.item_spacing = egui::vec2(0.0, 0.0);
     // Setup radio button/checkbox size and spacing.

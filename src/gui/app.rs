@@ -45,12 +45,21 @@ impl<Platform: PlatformCallbacks> eframe::App for PlatformApp<Platform> {
         // Handle Esc keyboard key event and platform Back button key event.
         let back_button_pressed = BACK_BUTTON_PRESSED.load(Ordering::Relaxed);
         if ctx.input_mut(|i| i.consume_key(Modifiers::NONE, egui::Key::Escape)) || back_button_pressed {
-            if back_button_pressed {
-                BACK_BUTTON_PRESSED.store(false, Ordering::Relaxed);
-            }
             self.root.on_back();
             // Request repaint to update previous content.
             ctx.request_repaint();
+
+            if back_button_pressed {
+                BACK_BUTTON_PRESSED.store(false, Ordering::Relaxed);
+            }
+        }
+
+        // Handle Close event (on desktop).
+        if ctx.input(|i| i.viewport().close_requested()) {
+            if !self.root.exit_allowed {
+                ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
+                Root::show_exit_modal();
+            }
         }
 
         // Show main content.
@@ -62,14 +71,6 @@ impl<Platform: PlatformCallbacks> eframe::App for PlatformApp<Platform> {
             .show(ctx, |ui| {
                 self.root.ui(ui, frame, &self.platform);
             });
-    }
-
-    fn on_close_event(&mut self) -> bool {
-        let exit =  self.root.exit_allowed;
-        if !exit {
-            Root::show_exit_modal();
-        }
-        exit
     }
 }
 
