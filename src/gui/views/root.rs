@@ -22,6 +22,7 @@ use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, NetworkContent, View, WalletsContent};
 use crate::gui::views::types::ModalContainer;
 use crate::node::Node;
+use crate::AppConfig;
 
 lazy_static! {
     /// Global state to check if [`NetworkContent`] panel is open.
@@ -200,6 +201,11 @@ impl Root {
 
                 ui.columns(2, |columns| {
                     columns[0].vertical_centered_justified(|ui| {
+                        View::button(ui, t!("modal.cancel"), Colors::WHITE, || {
+                            modal.close();
+                        });
+                    });
+                    columns[1].vertical_centered_justified(|ui| {
                         View::button_ui(ui, t!("modal_exit.exit"), Colors::WHITE, |ui| {
                             if !Node::is_running() {
                                 self.exit_allowed = true;
@@ -210,11 +216,6 @@ impl Root {
                                 modal.disable_closing();
                                 self.show_exit_progress = true;
                             }
-                        });
-                    });
-                    columns[1].vertical_centered_justified(|ui| {
-                        View::button(ui, t!("modal.cancel"), Colors::WHITE, || {
-                            modal.close();
                         });
                     });
                 });

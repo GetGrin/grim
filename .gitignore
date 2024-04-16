@@ -9,6 +9,8 @@
 .cxx
 local.properties
 *.so
+keystore
+keystore.properties
 
 # Added by cargo
 /target

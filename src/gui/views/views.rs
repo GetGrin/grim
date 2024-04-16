@@ -18,7 +18,7 @@ use std::sync::{Arc, RwLock};
 use lazy_static::lazy_static;
 
 use egui::{Align, Button, CursorIcon, Layout, PointerState, Rect, Response, RichText, Sense, Spinner, TextBuffer, TextStyle, Widget};
-use egui::epaint::{CircleShape, Color32, FontId, RectShape, Rounding, Stroke};
+use egui::epaint::{Color32, FontId, RectShape, Rounding, Stroke};
 use egui::epaint::text::TextWrapping;
 use egui::os::OperatingSystem;
 use egui::text::{LayoutJob, TextFormat};
@@ -271,46 +271,6 @@ impl View {
         });
     }
 
-    /// Draw circle [`Button`] with icon.
-    pub fn circle_button(ui: &mut egui::Ui, icon: &'static str, action: impl FnOnce()) {
-        ui.scope(|ui| {
-            // Setup colors.
-            ui.visuals_mut().widgets.inactive.bg_fill = Colors::GOLD;
-            ui.visuals_mut().widgets.hovered.bg_fill = Colors::GOLD;
-            ui.visuals_mut().widgets.active.bg_fill = Colors::YELLOW;
-
-            // Setup radius.
-            let mut r = 44.0 * 0.5;
-            let size = egui::Vec2::splat(2.0 * r + 5.0);
-            let (rect, mut br) = ui.allocate_at_least(size, Sense::click_and_drag());
-            br = br.on_hover_cursor(CursorIcon::PointingHand);
-
-            let mut icon_color = Colors::TEXT;
-
-            // Increase radius and change icon size and color on-hover.
-            if br.hovered() {
-                r = r * 1.04;
-                icon_color = Colors::TITLE;
-            }
-
-            let visuals = ui.style().interact(&br);
-            ui.painter().add(CircleShape {
-                center: rect.center(),
-                radius: r,
-                fill: visuals.bg_fill,
-                stroke: Self::DEFAULT_STROKE
-            });
-            ui.allocate_ui_at_rect(rect, |ui| {
-                ui.centered_and_justified(|ui| {
-                    ui.label(RichText::new(icon).color(icon_color).size(25.0));
-                });
-            });
-            if Self::touched(ui, br) {
-                (action)();
-            }
-        });
-    }
-
     /// Default height of [`egui::TextEdit`] view.
     const TEXT_EDIT_HEIGHT: f32 = 37.0;
 
@@ -524,7 +484,7 @@ impl View {
     pub fn center_content(ui: &mut egui::Ui, height: f32, content: impl FnOnce(&mut egui::Ui)) {
         ui.vertical_centered(|ui| {
             let mut rect = ui.available_rect_before_wrap();
-            let side_margin = 24.0;
+            let side_margin = 28.0;
             rect.min += egui::emath::vec2(side_margin, ui.available_height() / 2.0 - height / 2.0);
             rect.max -= egui::emath::vec2(side_margin, 0.0);
             ui.allocate_ui_at_rect(rect, |ui| {

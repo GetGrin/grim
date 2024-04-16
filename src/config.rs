@@ -18,11 +18,11 @@ use crate::node::NodeConfig;
 use crate::Settings;
 use crate::wallet::ConnectionsConfig;
 
-/// Application configuration.
+/// Application configuration, stored at toml file.
 #[derive(Serialize, Deserialize)]
 pub struct AppConfig {
     /// Run node server on startup.
-    pub auto_start_node: bool,
+    pub(crate) auto_start_node: bool,
     /// Chain type for node and wallets.
     pub(crate) chain_type: ChainTypes,
 
@@ -30,7 +30,18 @@ pub struct AppConfig {
     show_wallets_at_dual_panel: bool,
     /// Flag to show all connections at network panel or integrated node info.
     show_connections_network_panel: bool,
+
+    /// Width of the desktop window.
+    width: f32,
+    /// Height of the desktop window.
+    height: f32,
+
+    /// Position of the desktop window.
+    x: Option<f32>, y: Option<f32>
 }
+
+pub const DEFAULT_WIDTH: f32 = 1200.0;
+pub const DEFAULT_HEIGHT: f32 = 720.0;
 
 impl Default for AppConfig {
     fn default() -> Self {
@@ -39,6 +50,10 @@ impl Default for AppConfig {
             chain_type: ChainTypes::default(),
             show_wallets_at_dual_panel: false,
             show_connections_network_panel: false,
+            width: DEFAULT_WIDTH,
+            height: DEFAULT_HEIGHT,
+            x: None,
+            y: None,
         }
     }
 }
@@ -123,5 +138,36 @@ impl AppConfig {
         let mut w_app_config = Settings::app_config_to_update();
         w_app_config.show_connections_network_panel = !show;
         w_app_config.save();
+    }
+
+    /// Save desktop window width and height.
+    pub fn save_window_size(w: f32, h: f32) {
+        let mut w_app_config = Settings::app_config_to_update();
+        w_app_config.width = w;
+        w_app_config.height = h;
+        w_app_config.save();
+    }
+
+    /// Get desktop window width and height.
+    pub fn window_size() -> (f32, f32) {
+        let r_config = Settings::app_config_to_read();
+        (r_config.width, r_config.height)
+    }
+
+    /// Save desktop window position.
+    pub fn save_window_pos(x: f32, y: f32) {
+        let mut w_app_config = Settings::app_config_to_update();
+        w_app_config.x = Some(x);
+        w_app_config.y = Some(y);
+        w_app_config.save();
+    }
+
+    /// Get desktop window position.
+    pub fn window_pos() -> Option<(f32, f32)> {
+        let r_config = Settings::app_config_to_read();
+        if r_config.x.is_some() && r_config.y.is_some() {
+            return Some((r_config.x.unwrap(), r_config.y.unwrap()))
+        }
+        None
     }
 }

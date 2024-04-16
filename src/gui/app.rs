@@ -17,6 +17,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use egui::{Context, Modifiers};
 use lazy_static::lazy_static;
 
+use crate::AppConfig;
 use crate::gui::Colors;
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::Root;
@@ -59,6 +60,15 @@ impl<Platform: PlatformCallbacks> eframe::App for PlatformApp<Platform> {
             if !self.root.exit_allowed {
                 ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
                 Root::show_exit_modal();
+            } else {
+                ctx.input(|i| {
+                    if let Some(rect) = i.viewport().inner_rect {
+                        AppConfig::save_window_size(rect.width(), rect.height());
+                    }
+                    if let Some(rect) = i.viewport().outer_rect {
+                        AppConfig::save_window_pos(rect.left(), rect.top());
+                    }
+                });
             }
         }
 

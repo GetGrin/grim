@@ -210,7 +210,7 @@ impl WalletContent {
                 ui.vertical(|ui| {
                     ui.add_space(3.0);
                     // Show spendable amount.
-                    let amount = amount_to_hr_string(data.info.amount_currently_spendable, false);
+                    let amount = amount_to_hr_string(data.info.amount_currently_spendable, true);
                     let amount_text = format!("{} {}", amount, GRIN);
                     ui.label(RichText::new(amount_text).size(18.0).color(Colors::BLACK));
                     ui.add_space(-2.0);

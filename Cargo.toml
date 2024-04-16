@@ -47,8 +47,9 @@ toml = "0.8.2"
 serde = "1.0.170"
 local-ip-address = "0.6.1"
 url = "2.4.0"
+image = "0.25.1"
 
-# stratum server
+## stratum server
 serde_derive = "1.0.197"
 serde_json = "1.0.115"
 tokio = {version = "1.29.1", features = ["full"] }

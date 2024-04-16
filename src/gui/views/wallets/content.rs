@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::{Align, Align2, Id, Layout, Margin, RichText, Rounding, ScrollArea, Widget};
+use egui::{Align, Id, Layout, Margin, RichText, Rounding, ScrollArea, Widget};
 
 use crate::AppConfig;
 use crate::gui::Colors;
@@ -159,13 +159,43 @@ impl WalletsContent {
                 }
             });
 
+        // Flag to check if wallet list is hidden on the screen.
+        let list_hidden = content_width == 0.0
+            || (dual_panel && show_wallet && !self.show_wallets_at_dual_panel)
+            || (!dual_panel && show_wallet);
+
+        // Setup flag to show wallets bottom panel if wallet is not showing
+        // at non-dual panel mode and network is no open or showing at dual panel mode.
+        let show_bottom_panel =
+            (!show_wallet && !dual_panel && !Root::is_network_panel_open()) ||
+                (dual_panel && show_wallet);
+
+        // Show wallets bottom panel.
+        egui::TopBottomPanel::bottom("wallets_bottom_panel")
+            .frame(egui::Frame {
+                fill: Colors::FILL,
+                stroke: View::DEFAULT_STROKE,
+                inner_margin: Margin {
+                    left: View::get_left_inset() + 4.0,
+                    right: View::far_right_inset_margin(ui) + 4.0,
+                    top: 4.0,
+                    bottom: View::get_bottom_inset() + 4.0,
+                },
+                ..Default::default()
+            })
+            .show_animated_inside(ui, !list_hidden && show_bottom_panel, |ui| {
+                // Setup vertical padding inside buttons.
+                ui.style_mut().spacing.button_padding = egui::vec2(10.0, 4.0);
+
+                ui.vertical_centered(|ui| {
+                    View::tab_button(ui, PLUS, false, || {
+                        self.creation_content.show_name_pass_modal(cb);
+                    });
+                });
+            });
+
         // Show non-empty list if wallet is not creating.
         if !empty_list && !create_wallet {
-            // Flag to check if wallet list is hidden on the screen.
-            let list_hidden = content_width == 0.0
-                || (dual_panel && show_wallet && !self.show_wallets_at_dual_panel)
-                || (!dual_panel && show_wallet);
-
             // Show wallet list panel.
             egui::CentralPanel::default()
                 .frame(egui::Frame {
@@ -192,23 +222,8 @@ impl WalletsContent {
                     if list_hidden {
                         return;
                     }
-
-                    // Setup flag to show wallet creation button if wallet is not showing
-                    // at non-dual panel mode or showing at dual panel mode.
-                    let show_creation_button
-                        = (!show_wallet && !dual_panel) || (dual_panel && show_wallet);
-
                     // Show list of wallets.
-                    let scroll =
-                        self.wallet_list_ui(ui, dual_panel, show_creation_button, cb);
-
-                    if show_creation_button {
-                        // Setup right margin for button.
-                        let mut right_margin = if dual_panel { wallet_panel_width } else { 0.0 };
-                        if scroll { right_margin += 6.0 }
-                        // Show wallet creation button.
-                        self.create_wallet_btn_ui(ui, right_margin, cb);
-                    }
+                    self.wallet_list_ui(ui, dual_panel, cb);
                 });
         }
     }
@@ -309,13 +324,11 @@ impl WalletsContent {
         }
     }
 
-    /// Draw list of wallets. Returns `true` if scroller is showing.
+    /// Draw list of wallets.
     fn wallet_list_ui(&mut self,
                       ui: &mut egui::Ui,
                       dual_panel: bool,
-                      show_creation_btn: bool,
-                      cb: &dyn PlatformCallbacks) -> bool {
-        let mut scroller_showing = false;
+                      cb: &dyn PlatformCallbacks) {
         ui.scope(|ui| {
             // Setup scroll bar color.
             ui.style_mut().visuals.widgets.inactive.bg_fill = Colors::ITEM_HOVER;
@@ -344,22 +357,14 @@ impl WalletsContent {
                                     self.wallets.select(Some(wallet.get_config().id));
                                     self.show_open_wallet_modal(cb);
                                 }
-
                                 // Draw wallet list item.
                                 self.wallet_item_ui(ui, wallet, cb);
                                 ui.add_space(5.0);
                             }
-                            // Add space for wallet creation button.
-                            if show_creation_btn {
-                                ui.add_space(52.0);
-                            }
                         });
                     });
                 });
-            // Scroller is showing if content size is larger than content on the screen.
-            scroller_showing = scroll.content_size.y > scroll.inner_rect.size().y;
         });
-        scroller_showing
     }
 
     /// Draw wallet list item.
@@ -485,24 +490,6 @@ impl WalletsContent {
         });
     }
 
-    /// Draw floating button to show wallet creation [`Modal`].
-    fn create_wallet_btn_ui(&mut self,
-                            ui: &mut egui::Ui,
-                            right_margin: f32,
-                            cb: &dyn PlatformCallbacks) {
-        egui::Window::new("create_wallet_button")
-            .title_bar(false)
-            .resizable(false)
-            .collapsible(false)
-            .anchor(Align2::RIGHT_BOTTOM, egui::Vec2::new(-6.0 - right_margin, -6.0))
-            .frame(egui::Frame::default())
-            .show(ui.ctx(), |ui| {
-                View::circle_button(ui, PLUS, || {
-                    self.creation_content.show_name_pass_modal(cb);
-                });
-            });
-    }
-
     /// Show [`Modal`] to open selected wallet.
     pub fn show_open_wallet_modal(&mut self, cb: &dyn PlatformCallbacks) {
         // Reset modal values.
@@ -599,8 +586,14 @@ impl WalletsContent {
         let can_go_back = self.creation_content.can_go_back();
         if can_go_back {
             self.creation_content.back();
+            return false
+        } else {
+            if self.wallets.is_selected_open() {
+                self.wallets.select(None);
+                return false
+            }
         }
-        !can_go_back
+        true
     }
 }
 

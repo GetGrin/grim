@@ -48,6 +48,7 @@ wallets:
   loading: Loading
   closing: Closing
   checking: Checking
+  default_wallet: Default wallet
   wallet_loading: Loading wallet
   wallet_closing: Closing wallet
   wallet_checking: Checking wallet

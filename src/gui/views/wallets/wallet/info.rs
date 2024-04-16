@@ -79,7 +79,7 @@ impl WalletInfo {
 
             // Show non-zero awaiting confirmation amount.
             if amount_awaiting_conf != 0 {
-                let awaiting_conf = amount_to_hr_string(amount_awaiting_conf, false);
+                let awaiting_conf = amount_to_hr_string(amount_awaiting_conf, true);
                 let rounding = if amount_awaiting_fin != 0 || amount_locked != 0 {
                     [false, false, false, false]
                 } else {
@@ -93,7 +93,7 @@ impl WalletInfo {
 
             // Show non-zero awaiting finalization amount.
             if amount_awaiting_fin != 0 {
-                let awaiting_conf = amount_to_hr_string(amount_awaiting_fin, false);
+                let awaiting_conf = amount_to_hr_string(amount_awaiting_fin, true);
                 let rounding = if amount_locked != 0 {
                     [false, false, false, false]
                 } else {
@@ -107,7 +107,7 @@ impl WalletInfo {
 
             // Show non-zero locked amount.
             if amount_locked != 0 {
-                let awaiting_conf = amount_to_hr_string(amount_locked, false);
+                let awaiting_conf = amount_to_hr_string(amount_locked, true);
                 View::rounded_box(ui,
                                   format!("{} ツ", awaiting_conf),
                                   t!("wallets.locked_amount"),

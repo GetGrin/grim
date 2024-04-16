@@ -48,6 +48,7 @@ wallets:
   loading: Загружается
   closing: Закрывается
   checking: Проверяется
+  default_wallet: Стандартный кошелёк
   wallet_loading: Загрузка кошелька
   wallet_closing: Закрытие кошелька
   wallet_checking: Проверка кошелька

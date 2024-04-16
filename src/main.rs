@@ -12,6 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::sync::Arc;
+use egui::{IconData, pos2};
+use grim::AppConfig;
+
 pub fn main() {
     #[allow(dead_code)]
     #[cfg(not(target_os = "android"))]
@@ -31,8 +35,29 @@ fn real_main() {
     use grim::gui::PlatformApp;
 
     let platform = Desktop::default();
+
+    // Desktop window size.
+    let (width, height) = AppConfig::window_size();
+
+    // Setup an icon.
+    let icon = image::open("img/icon.png").expect("Failed to open icon path").to_rgba8();
+    let (icon_width, icon_height) = icon.dimensions();
+
+    let mut viewport = egui::ViewportBuilder::default()
+        .with_inner_size([width, height])
+        .with_icon(Arc::new(IconData {
+            rgba: icon.into_raw(),
+            width: icon_width,
+            height: icon_height,
+        }));
+
+    // Desktop window position.
+    if let Some((x, y)) = AppConfig::window_pos() {
+        viewport = viewport.with_position(pos2(x, y));
+    }
+
     let options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default().with_inner_size([1200.0, 720.0]),
+        viewport,
         ..Default::default()
     };
     grim::start(options, grim::app_creator(PlatformApp::new(platform)));

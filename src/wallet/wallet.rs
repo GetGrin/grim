@@ -62,7 +62,7 @@ pub struct Wallet {
     reopen: Arc<AtomicBool>,
     /// Flag to check if wallet is open.
     is_open: Arc<AtomicBool>,
-    /// Flag to check if wallet is loading.
+    /// Flag to check if wallet is closing.
     closing: Arc<AtomicBool>,
     /// Flag to check if wallet was deleted to remove it from the list.
     deleted: Arc<AtomicBool>,
@@ -306,7 +306,7 @@ impl Wallet {
         }
     }
 
-    /// Check if wallet was open.
+    /// Check if wallet is open.
     pub fn is_open(&self) -> bool {
         self.is_open.load(Ordering::Relaxed)
     }

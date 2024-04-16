@@ -75,8 +75,8 @@ impl WalletCreation {
                     stroke: View::DEFAULT_STROKE,
                     fill: Colors::FILL_DARK,
                     inner_margin: Margin {
-                        left: View::far_left_inset_margin(ui) + 4.0,
-                        right: View::get_right_inset() + 4.0,
+                        left: View::far_left_inset_margin(ui) + 6.0,
+                        right: View::get_right_inset() + 6.0,
                         top: 4.0,
                         bottom: View::get_bottom_inset() + 4.0,
                     },
@@ -180,7 +180,7 @@ impl WalletCreation {
                     self.copy_or_paste_button_ui(ui, cb);
                 } else {
                     // Setup spacing between buttons.
-                    ui.spacing_mut().item_spacing = egui::Vec2::new(6.0, 0.0);
+                    ui.spacing_mut().item_spacing = egui::Vec2::new(8.0, 0.0);
 
                     ui.columns(2, |columns| {
                         // Show copy or paste button for mnemonic phrase step.
@@ -239,7 +239,6 @@ impl WalletCreation {
             (text, Colors::WHITE)
         };
 
-
         // Show next step button.
         View::button(ui, next_text.to_uppercase(), color, || {
             self.step = if let Some(step) = &self.step {
@@ -297,10 +296,10 @@ impl WalletCreation {
         match &self.step {
             None => {
                 // Show wallet creation message if step is empty.
-                View::center_content(ui, 415.0 + View::get_bottom_inset(), |ui| {
+                View::center_content(ui, 350.0 + View::get_bottom_inset(), |ui| {
                     ui.add(
                         egui::Image::new(egui::include_image!("../../../../../img/logo.png"))
-                            .fit_to_exact_size(vec2(200.0, 200.0))
+                            .fit_to_exact_size(vec2(180.0, 180.0))
                     );
                     ui.add_space(-15.0);
                     ui.label(RichText::new("GRIM")
@@ -362,7 +361,7 @@ impl WalletCreation {
     pub fn show_name_pass_modal(&mut self, cb: &dyn PlatformCallbacks) {
         // Reset modal values.
         self.modal_just_opened = true;
-        self.name_edit = String::from("");
+        self.name_edit = t!("wallets.default_wallet");
         self.pass_edit = String::from("");
         // Show modal.
         Modal::new(Self::NAME_PASS_MODAL)

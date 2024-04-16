@@ -122,8 +122,10 @@ pub fn setup_visuals(ctx: &Context) {
     let mut style = (*ctx.style()).clone();
     // Setup spacing for buttons.
     style.spacing.button_padding = egui::vec2(12.0, 8.0);
-    // Make scroll-bar thinner.
+    // Make scroll-bar thinner and lighter.
     style.spacing.scroll.bar_width = 4.0;
+    style.spacing.scroll.bar_outer_margin = -2.0;
+    style.spacing.scroll.foreground_color = false;
     // Disable spacing between items.
     style.spacing.item_spacing = egui::vec2(0.0, 0.0);
     // Setup radio button/checkbox size and spacing.
