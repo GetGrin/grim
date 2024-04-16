@@ -104,7 +104,7 @@ impl WalletContent {
         // Show wallet tabs panel.
         egui::TopBottomPanel::bottom("wallet_tabs")
             .frame(egui::Frame {
-                stroke: View::DEFAULT_STROKE,
+                stroke: View::ITEM_STROKE,
                 fill: Colors::FILL,
                 inner_margin: Margin {
                     left: View::far_left_inset_margin(ui) + 4.0,

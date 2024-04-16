@@ -173,8 +173,8 @@ impl WalletsContent {
         // Show wallets bottom panel.
         egui::TopBottomPanel::bottom("wallets_bottom_panel")
             .frame(egui::Frame {
+                stroke: View::ITEM_STROKE,
                 fill: Colors::FILL,
-                stroke: View::DEFAULT_STROKE,
                 inner_margin: Margin {
                     left: View::get_left_inset() + 4.0,
                     right: View::far_right_inset_margin(ui) + 4.0,
