@@ -90,9 +90,6 @@ impl ExternalConnection {
                     || chain_type != AppConfig::chain_type() {
                     break;
                 }
-
-                // Pause checking for delay value.
-                std::thread::sleep(Self::AV_CHECK_DELAY);
             }
         });
     }

@@ -256,8 +256,6 @@ impl WalletCreation {
                         }
                     }
                     Step::ConfirmMnemonic => {
-                        // Check external connections availability on connection setup.
-                        ExternalConnection::start_ext_conn_availability_check();
                         Some(Step::SetupConnection)
                     },
                     Step::SetupConnection => {
@@ -285,6 +283,11 @@ impl WalletCreation {
             } else {
                 Some(Step::EnterMnemonic)
             };
+
+            // Check external connections availability on connection setup.
+            if self.step == Some(Step::SetupConnection) {
+                ExternalConnection::start_ext_conn_availability_check();
+            }
         });
     }
 
