@@ -183,7 +183,7 @@ impl WalletsContent {
                 },
                 ..Default::default()
             })
-            .show_animated_inside(ui, !list_hidden && show_bottom_panel, |ui| {
+            .show_animated_inside(ui, !create_wallet && !list_hidden && show_bottom_panel, |ui| {
                 // Setup vertical padding inside buttons.
                 ui.style_mut().spacing.button_padding = egui::vec2(10.0, 4.0);
 
