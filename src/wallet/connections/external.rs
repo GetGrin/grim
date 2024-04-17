@@ -73,24 +73,12 @@ impl ExternalConnection {
         });
     }
 
-    /// Start external connections availability check at another thread.
+    /// Check external connections availability at another thread.
     pub fn start_ext_conn_availability_check() {
-        std::thread::spawn(move || {
-            let chain_type = AppConfig::chain_type();
-            loop {
-                // Check external connections URLs availability.
-                let conn_list = ConnectionsConfig::ext_conn_list();
-                for conn in conn_list {
-                    // Check every connection at separate thread.
-                    conn.check_conn_availability();
-                }
-
-                // Stop checking if connections are not showing or network type was changed.
-                if !AppConfig::show_connections_network_panel()
-                    || chain_type != AppConfig::chain_type() {
-                    break;
-                }
-            }
-        });
+        let conn_list = ConnectionsConfig::ext_conn_list();
+        for conn in conn_list {
+            // Check every connection at separate thread.
+            conn.check_conn_availability();
+        }
     }
 }
