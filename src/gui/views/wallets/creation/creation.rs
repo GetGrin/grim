@@ -73,12 +73,12 @@ impl WalletCreation {
             egui::TopBottomPanel::bottom("wallet_creation_step_panel")
                 .frame(egui::Frame {
                     stroke: View::DEFAULT_STROKE,
-                    fill: Colors::FILL_DARK,
+                    fill: Colors::FILL,
                     inner_margin: Margin {
-                        left: View::far_left_inset_margin(ui) + 6.0,
-                        right: View::get_right_inset() + 6.0,
+                        left: View::far_left_inset_margin(ui) + 4.0,
+                        right: View::get_right_inset() + 4.0,
                         top: 4.0,
-                        bottom: View::get_bottom_inset() + 4.0,
+                        bottom: View::get_bottom_inset(),
                     },
                     ..Default::default()
                 })
@@ -164,8 +164,9 @@ impl WalletCreation {
                 Step::SetupConnection => (t!("wallets.setup_conn_desc"), true)
             };
             // Show step description.
+            ui.add_space(2.0);
             ui.label(RichText::new(step_text).size(16.0).color(Colors::GRAY));
-
+            ui.add_space(2.0);
             // Show error if entered phrase is not valid.
             if !self.mnemonic_setup.valid_phrase {
                 step_available = false;
@@ -178,9 +179,10 @@ impl WalletCreation {
                 ui.add_space(4.0);
                 if !step_available {
                     self.copy_or_paste_button_ui(ui, cb);
+                    ui.add_space(4.0);
                 } else {
                     // Setup spacing between buttons.
-                    ui.spacing_mut().item_spacing = egui::Vec2::new(8.0, 0.0);
+                    ui.spacing_mut().item_spacing = egui::Vec2::new(6.0, 0.0);
 
                     ui.columns(2, |columns| {
                         // Show copy or paste button for mnemonic phrase step.
@@ -200,6 +202,7 @@ impl WalletCreation {
                 if step_available {
                     ui.add_space(4.0);
                     self.next_step_button_ui(ui, step, on_create);
+                    ui.add_space(4.0);
                 }
             }
             ui.add_space(4.0);

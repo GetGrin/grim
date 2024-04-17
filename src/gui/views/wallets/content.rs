@@ -188,7 +188,8 @@ impl WalletsContent {
                 ui.style_mut().spacing.button_padding = egui::vec2(10.0, 4.0);
 
                 ui.vertical_centered(|ui| {
-                    View::tab_button(ui, PLUS, false, || {
+                    let pressed = Modal::opened() == Some(WalletCreation::NAME_PASS_MODAL);
+                    View::tab_button(ui, PLUS, pressed, || {
                         self.creation_content.show_name_pass_modal(cb);
                     });
                 });
