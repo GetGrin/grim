@@ -37,6 +37,7 @@ use grin_wallet_controller::controller::ForeignAPIHandlerV2;
 use grin_wallet_impls::{DefaultLCProvider, DefaultWalletImpl, HTTPNodeClient};
 use grin_wallet_libwallet::{Error, InitTxArgs, IssueInvoiceTxArgs, NodeClient, Slate, SlatepackAddress, StatusMessage, TxLogEntry, TxLogEntryType, WalletInst, WalletLCProvider};
 use grin_wallet_libwallet::api_impl::owner::{cancel_tx, retrieve_summary_info, retrieve_txs};
+use crate::AppConfig;
 
 use crate::node::{Node, NodeConfig};
 use crate::wallet::{ConnectionsConfig, ExternalConnection, WalletConfig};
@@ -704,6 +705,12 @@ fn start_sync(mut wallet: Wallet) -> Thread {
     println!("create new thread");
     thread::spawn(move || loop {
         println!("start new cycle");
+
+        // Close wallet on chain type change.
+        if wallet.get_config().chain_type != AppConfig::chain_type() {
+            wallet.close();
+        }
+
         // Stop syncing if wallet was closed.
         if !wallet.is_open() {
             println!("finishing thread at start");
