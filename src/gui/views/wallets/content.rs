@@ -523,6 +523,7 @@ impl WalletsContent {
 
             // Show information when password is empty.
             if self.pass_edit.is_empty() {
+                self.wrong_pass = false;
                 ui.add_space(10.0);
                 ui.label(RichText::new(t!("wallets.pass_empty"))
                     .size(17.0)
