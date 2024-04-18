@@ -18,7 +18,7 @@ use grin_core::core::amount_to_hr_string;
 use grin_wallet_libwallet::{TxLogEntry, TxLogEntryType};
 
 use crate::gui::Colors;
-use crate::gui::icons::{ARROW_CIRCLE_DOWN, ARROW_CIRCLE_UP, CALENDAR_CHECK, CHECK_CIRCLE, DOTS_THREE_CIRCLE, DOWNLOAD, FILE_TEXT, GEAR_FINE, PROHIBIT, UPLOAD, X_CIRCLE};
+use crate::gui::icons::{ARROW_CIRCLE_DOWN, ARROW_CIRCLE_UP, BRIDGE, CALENDAR_CHECK, CHAT_CIRCLE_TEXT, CHECK_CIRCLE, DOTS_THREE_CIRCLE, FILE_TEXT, GEAR_FINE, PROHIBIT, X_CIRCLE};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Root, View};
 use crate::gui::views::wallets::types::WalletTab;
@@ -119,8 +119,8 @@ impl WalletInfo {
                 View::center_content(ui, 96.0, |ui| {
                     let empty_text = t!(
                             "wallets.txs_empty",
-                            "receive" => DOWNLOAD,
-                            "send" => UPLOAD,
+                            "message" => CHAT_CIRCLE_TEXT,
+                            "transport" => BRIDGE,
                             "settings" => GEAR_FINE
                         );
                     ui.label(RichText::new(empty_text).size(16.0).color(Colors::INACTIVE_TEXT));
