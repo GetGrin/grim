@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::time::Duration;
 use egui::{Align, Id, Layout, Margin, RichText, Rounding, ScrollArea, Widget};
 
 use crate::AppConfig;
@@ -219,6 +220,10 @@ impl WalletsContent {
                     ..Default::default()
                 })
                 .show_inside(ui, |ui| {
+                    // Update ui after 1 sec at single panel mode.
+                    if !dual_panel {
+                        ui.ctx().request_repaint_after(Duration::from_millis(1000));
+                    }
                     // Show list of wallets.
                     self.wallet_list_ui(ui, dual_panel, cb);
                 });
