@@ -33,9 +33,9 @@ pub trait WalletTab {
 /// Type of [`WalletTab`] content.
 #[derive(PartialEq)]
 pub enum WalletTabType {
-    Info,
-    Receive,
-    Send,
+    Txs,
+    Messages,
+    Transport,
     Settings
 }
 
@@ -43,9 +43,9 @@ impl WalletTabType {
     /// Name of wallet tab to show at ui.
     pub fn name(&self) -> String {
         match *self {
-            WalletTabType::Info => t!("wallets.wallet"),
-            WalletTabType::Receive => t!("wallets.receive"),
-            WalletTabType::Send => t!("wallets.send"),
+            WalletTabType::Txs => t!("wallets.txs"),
+            WalletTabType::Messages => t!("wallets.messages"),
+            WalletTabType::Transport => t!("wallets.transport"),
             WalletTabType::Settings => t!("wallets.settings")
         }
     }

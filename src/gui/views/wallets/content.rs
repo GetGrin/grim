@@ -160,15 +160,15 @@ impl WalletsContent {
             });
 
         // Flag to check if wallet list is hidden on the screen.
-        let list_hidden = content_width == 0.0
+        let list_hidden = content_width == 0.0 || empty_list || create_wallet
             || (dual_panel && show_wallet && !self.show_wallets_at_dual_panel)
             || (!dual_panel && show_wallet);
 
         // Setup flag to show wallets bottom panel if wallet is not showing
         // at non-dual panel mode and network is no open or showing at dual panel mode.
-        let show_bottom_panel =
-            (!show_wallet && !dual_panel && !Root::is_network_panel_open()) ||
-                (dual_panel && show_wallet);
+        let show_bottom_panel = !list_hidden &&
+            ((!show_wallet && !dual_panel && !Root::is_network_panel_open()) ||
+                (dual_panel && show_wallet));
 
         // Show wallets bottom panel.
         egui::TopBottomPanel::bottom("wallets_bottom_panel")
@@ -183,7 +183,7 @@ impl WalletsContent {
                 },
                 ..Default::default()
             })
-            .show_animated_inside(ui, !create_wallet && !list_hidden && show_bottom_panel, |ui| {
+            .show_animated_inside(ui, show_bottom_panel, |ui| {
                 // Setup vertical padding inside buttons.
                 ui.style_mut().spacing.button_padding = egui::vec2(10.0, 4.0);
 
@@ -195,8 +195,8 @@ impl WalletsContent {
                 });
             });
 
-        // Show non-empty list if wallet is not creating.
-        if !empty_list && !create_wallet {
+        // Show non-empty list if wallet is not creating and list not hidden.
+        if !list_hidden {
             // Show wallet list panel.
             egui::CentralPanel::default()
                 .frame(egui::Frame {
@@ -219,10 +219,6 @@ impl WalletsContent {
                     ..Default::default()
                 })
                 .show_inside(ui, |ui| {
-                    // Do not draw content when list is hidden.
-                    if list_hidden {
-                        return;
-                    }
                     // Show list of wallets.
                     self.wallet_list_ui(ui, dual_panel, cb);
                 });
@@ -336,7 +332,7 @@ impl WalletsContent {
             ui.style_mut().visuals.widgets.hovered.bg_fill = Colors::STROKE;
 
             // Draw list of wallets.
-            let scroll = ScrollArea::vertical()
+            ScrollArea::vertical()
                 .id_source("wallet_list")
                 .auto_shrink([false; 2])
                 .show(ui, |ui| {

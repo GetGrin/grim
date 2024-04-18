@@ -20,11 +20,11 @@ use grin_core::core::amount_to_hr_string;
 
 use crate::AppConfig;
 use crate::gui::Colors;
-use crate::gui::icons::{CHECK, CHECK_FAT, DOWNLOAD, FILE_ARCHIVE, GEAR_FINE, LIST, PACKAGE, PLUS, POWER, REPEAT, UPLOAD, WALLET};
+use crate::gui::icons::{BRIDGE, CHAT_CIRCLE_TEXT, CHECK, CHECK_FAT, FILE_ARCHIVE, GEAR_FINE, LIST, PACKAGE, PLUS, POWER, REPEAT, WALLET};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, Root, View};
 use crate::gui::views::types::{ModalPosition, TextEditOptions};
-use crate::gui::views::wallets::{WalletInfo, WalletReceive, WalletSend, WalletSettings};
+use crate::gui::views::wallets::{WalletInfo, WalletMessages, WalletTransport, WalletSettings};
 use crate::gui::views::wallets::types::{GRIN, WalletTab, WalletTabType};
 use crate::node::Node;
 use crate::wallet::{Wallet, WalletConfig};
@@ -351,18 +351,18 @@ impl WalletContent {
             let current_type = self.current_tab.get_type();
             ui.columns(4, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
-                    View::tab_button(ui, WALLET, current_type == WalletTabType::Info, || {
+                    View::tab_button(ui, WALLET, current_type == WalletTabType::Txs, || {
                         self.current_tab = Box::new(WalletInfo::default());
                     });
                 });
                 columns[1].vertical_centered_justified(|ui| {
-                    View::tab_button(ui, DOWNLOAD, current_type == WalletTabType::Receive, || {
-                        self.current_tab = Box::new(WalletReceive::default());
+                    View::tab_button(ui, CHAT_CIRCLE_TEXT, current_type == WalletTabType::Messages, || {
+                        self.current_tab = Box::new(WalletMessages::default());
                     });
                 });
                 columns[2].vertical_centered_justified(|ui| {
-                    View::tab_button(ui, UPLOAD, current_type == WalletTabType::Send, || {
-                        self.current_tab = Box::new(WalletSend::default());
+                    View::tab_button(ui, BRIDGE, current_type == WalletTabType::Transport, || {
+                        self.current_tab = Box::new(WalletTransport::default());
                     });
                 });
                 columns[3].vertical_centered_justified(|ui| {

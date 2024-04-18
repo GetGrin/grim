@@ -32,7 +32,7 @@ pub struct WalletInfo;
 
 impl WalletTab for WalletInfo {
     fn get_type(&self) -> WalletTabType {
-        WalletTabType::Info
+        WalletTabType::Txs
     }
 
     fn ui(&mut self,
@@ -203,11 +203,12 @@ fn tx_item_ui(ui: &mut egui::Ui,
                 ui.vertical(|ui| {
                     // Setup transaction amount.
                     ui.add_space(3.0);
-                    let amount = amount_to_hr_string(tx.amount_credited - tx.amount_debited, true);
                     let amount_text = if tx.amount_credited > tx.amount_debited {
-                        format!("+{}", amount)
+                        format!("+{}",
+                                amount_to_hr_string(tx.amount_credited - tx.amount_debited, true))
                     } else {
-                        amount
+                        format!("-{}",
+                                amount_to_hr_string(tx.amount_debited - tx.amount_credited, true))
                     };
 
                     // Setup amount color.
@@ -254,17 +255,17 @@ fn tx_item_ui(ui: &mut egui::Ui,
                                 } else {
                                     format!("{} {}",
                                             DOTS_THREE_CIRCLE,
-                                            t!("wallets.tx_awaiting_conf"))
+                                            t!("wallets.tx_confirming"))
                                 }
                             },
                             TxLogEntryType::TxSent => {
                                 if last_height - tx_height > min_confirmations {
-                                    format!("{} {}", ARROW_CIRCLE_DOWN, t!("wallets.tx_sent"))
+                                    format!("{} {}", ARROW_CIRCLE_UP, t!("wallets.tx_sent"))
                                 } else {
                                     format!("{} {}", DOTS_THREE_CIRCLE, t!("wallets.tx_confirming"))
                                 }
                             },
-                            _ => format!("{} {}", ARROW_CIRCLE_UP, t!("wallets.canceled"))
+                            _ => format!("{} {}", X_CIRCLE, t!("wallets.canceled"))
                         }
                     };
 

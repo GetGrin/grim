@@ -22,8 +22,8 @@ use std::sync::{Arc, mpsc, RwLock};
 use std::sync::atomic::{AtomicBool, AtomicI64, AtomicU8, Ordering};
 use std::thread::Thread;
 use std::time::Duration;
-
 use futures::channel::oneshot;
+
 use grin_api::{ApiServer, Router};
 use grin_chain::SyncStatus;
 use grin_core::global;
@@ -35,7 +35,7 @@ use grin_wallet_controller::command::parse_slatepack;
 use grin_wallet_controller::controller;
 use grin_wallet_controller::controller::ForeignAPIHandlerV2;
 use grin_wallet_impls::{DefaultLCProvider, DefaultWalletImpl, HTTPNodeClient};
-use grin_wallet_libwallet::{Error, InitTxArgs, IssueInvoiceTxArgs, NodeClient, RetrieveTxQueryArgs, Slate, StatusMessage, TxLogEntry, TxLogEntryType, WalletInst, WalletLCProvider};
+use grin_wallet_libwallet::{Error, InitTxArgs, IssueInvoiceTxArgs, NodeClient, Slate, SlatepackAddress, StatusMessage, TxLogEntry, TxLogEntryType, WalletInst, WalletLCProvider};
 use grin_wallet_libwallet::api_impl::owner::{cancel_tx, retrieve_summary_info, retrieve_txs};
 
 use crate::node::{Node, NodeConfig};
@@ -223,6 +223,13 @@ impl Wallet {
     pub fn change_name(&self, name: String) {
         let mut w_config = self.config.write().unwrap();
         w_config.name = name;
+        w_config.save();
+    }
+
+    /// Update usage of Dandelion to broadcast transactions.
+    pub fn update_use_dandelion(&self, use_dandelion: bool) {
+        let mut w_config = self.config.write().unwrap();
+        w_config.use_dandelion = Some(use_dandelion);
         w_config.save();
     }
 
@@ -460,6 +467,19 @@ impl Wallet {
         }
     }
 
+    /// Parse Slatepack message into [`Slate`].
+    pub fn parse_slatepack(&self, message: String) -> Result<Slate, Error> {
+        let mut api = Owner::new(self.instance.clone().unwrap(), None);
+        return match parse_slatepack(&mut api, None, None, Some(message.clone())) {
+            Ok((slate, _)) => {
+                Ok(slate)
+            }
+            Err(_) => {
+                Err(Error::SlatepackDeser("Slatepack parse error".to_string()))
+            }
+        }
+    }
+
     /// Create Slatepack message from provided slate.
     fn create_slatepack_message(&self, slate: Slate) -> Result<String, Error> {
         let mut message = "".to_string();
@@ -481,60 +501,33 @@ impl Wallet {
         Ok(message)
     }
 
-    /// Receive transaction via Slatepack message, return response to sender.
-    pub fn receive(&self, message: String) -> Result<String, Error> {
+    /// Initialize a transaction to send amount, return request for funds receiver.
+    pub fn send(&self, amount: u64) -> Result<String, Error> {
+        let config = self.get_config();
+        let args = InitTxArgs {
+            src_acct_name: Some(config.account),
+            amount,
+            minimum_confirmations: config.min_confirmations,
+            num_change_outputs: 1,
+            selection_strategy_is_use_all: false,
+            ..Default::default()
+        };
         let mut api = Owner::new(self.instance.clone().unwrap(), None);
-        match parse_slatepack(&mut api, None, None, Some(message.clone())) {
-            Ok((mut slate, _)) => {
-                let config = self.get_config();
-                controller::foreign_single_use(api.wallet_inst.clone(), None, |api| {
-                    slate = api.receive_tx(&slate, Some(config.account.as_str()), None)?;
-                    Ok(())
-                })?;
-                // Create Slatepack message response.
-                let response = self.create_slatepack_message(slate)?;
+        let slate = api.init_send_tx(None, args)?;
 
-                // Sync wallet info.
-                self.sync();
-                Ok(response)
-            }
-            Err(_) => {
-                Err(Error::GenericError("Parsing error".to_string()))
-            }
-        }
+        // Lock outputs to for this transaction.
+        api.tx_lock_outputs(None, &slate)?;
+
+        // Create Slatepack message response.
+        let response = self.create_slatepack_message(slate)?;
+
+        // Sync wallet info.
+        self.sync();
+
+        Ok(response)
     }
 
-    /// S transaction via Slatepack message and return response to sender.
-    pub fn pay(&self, message: String) -> Result<String, Error> {
-        let mut api = Owner::new(self.instance.clone().unwrap(), None);
-        match parse_slatepack(&mut api, None, None, Some(message.clone())) {
-            Ok((mut slate, _)) => {
-                let config = self.get_config();
-                let args = InitTxArgs {
-                    src_acct_name: None,
-                    amount: slate.amount,
-                    minimum_confirmations: config.min_confirmations,
-                    selection_strategy_is_use_all: false,
-                    ..Default::default()
-                };
-                let mut api = Owner::new(self.instance.clone().unwrap(), None);
-                let slate = api.process_invoice_tx(None, &slate, args)?;
-
-                // Create Slatepack message response.
-                let response = self.create_slatepack_message(slate)?;
-
-                // Sync wallet info.
-                self.sync();
-
-                Ok(response)
-            }
-            Err(_) => {
-                Err(Error::GenericError("Parsing error".to_string()))
-            }
-        }
-    }
-
-    /// Initialize an invoice transaction.
+    /// Initialize an invoice transaction to receive amount, return request for funds sender.
     pub fn issue_invoice(&self, amount: u64) -> Result<String, Error> {
         let args = IssueInvoiceTxArgs {
             dest_acct_name: None,
@@ -553,8 +546,57 @@ impl Wallet {
         Ok(response)
     }
 
-    pub fn send(&self) {
+    /// Handle message from the invoice issuer to send founds, return response for funds receiver.
+    pub fn pay(&self, message: String) -> Result<String, Error> {
+        let slate = self.parse_slatepack(message)?;
+        let config = self.get_config();
+        let args = InitTxArgs {
+            src_acct_name: None,
+            amount: slate.amount,
+            minimum_confirmations: config.min_confirmations,
+            selection_strategy_is_use_all: false,
+            ..Default::default()
+        };
+        let mut api = Owner::new(self.instance.clone().unwrap(), None);
+        let slate = api.process_invoice_tx(None, &slate, args)?;
+        api.tx_lock_outputs(None, &slate)?;
 
+        // Create Slatepack message response.
+        let response = self.create_slatepack_message(slate)?;
+
+        // Sync wallet info.
+        self.sync();
+
+        Ok(response)
+    }
+
+    /// Handle message to receive funds, return response to sender.
+    pub fn receive(&self, message: String) -> Result<String, Error> {
+        let mut slate = self.parse_slatepack(message)?;
+        let mut api = Owner::new(self.instance.clone().unwrap(), None);
+        controller::foreign_single_use(api.wallet_inst.clone(), None, |api| {
+            slate = api.receive_tx(&slate, Some(self.get_config().account.as_str()), None)?;
+            Ok(())
+        })?;
+        // Create Slatepack message response.
+        let response = self.create_slatepack_message(slate)?;
+
+        // Sync wallet info.
+        self.sync();
+
+        Ok(response)
+    }
+
+    /// Finalize transaction from provided message as sender or invoice issuer with Dandelion.
+    pub fn finalize(&self, message: String, dandelion: bool) -> Result<Slate, Error> {
+        let mut slate = self.parse_slatepack(message)?;
+        let mut api = Owner::new(self.instance.clone().unwrap(), None);
+        slate = api.finalize_tx(None, &slate)?;
+        api.post_tx(None, &slate, dandelion)?;
+        // Sync wallet info.
+        self.sync();
+
+        Ok(slate)
     }
 
     /// Cancel transaction.
@@ -579,11 +621,6 @@ impl Wallet {
     pub fn is_cancelling(&self, id: &u32) -> bool {
         let cancelling_r = self.cancel_txs.read().unwrap();
         cancelling_r.contains(id)
-    }
-
-    /// Finalize transaction from provided Slatepack message.
-    pub fn finalize(&self) {
-
     }
 
     /// Change wallet password.
@@ -889,6 +926,7 @@ fn sync_wallet_data(wallet: &Wallet) {
                                 }).collect::<Vec<TxLogEntry>>();
                                 // Update txs statuses.
                                 for tx in &txs {
+                                    println!("{}", serde_json::to_string(tx).unwrap());
                                     if tx.tx_type == TxLogEntryType::TxSentCancelled
                                         || tx.tx_type == TxLogEntryType::TxReceivedCancelled {
                                         // Remove cancelling status.
@@ -903,15 +941,11 @@ fn sync_wallet_data(wallet: &Wallet) {
                                 return;
                             }
                         }
-                        Err(e) => {
-                            println!("error on retrieve_txs {}", e);
-                        }
+                        Err(e) => println!("error on retrieve_txs {}", e),
                     }
                 }
             }
-            Err(e) => {
-                println!("error on retrieve_summary_info {}", e);
-            }
+            Err(e) => println!("error on retrieve_summary_info {}", e),
         }
     }
 

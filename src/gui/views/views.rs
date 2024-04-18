@@ -363,12 +363,9 @@ impl View {
                                 let mut r = range.clone();
 
                                 let mut index = r.primary.index;
-                                println!("insert_str {} {}", index, w_input.as_str());
 
                                 value.insert_text(w_input.as_str(), index);
                                 index = index + 1;
-
-                                println!("12345 {} {}", value, r.primary.index);
 
                                 if index == 0 {
                                     r.primary.index = value.len();

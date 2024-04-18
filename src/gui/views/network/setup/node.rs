@@ -243,7 +243,9 @@ impl NodeSetup {
 
         if saved_chain_type != selected_chain_type {
             AppConfig::change_chain_type(&selected_chain_type);
-            NetworkSettings::show_node_restart_required_modal();
+            if Node::is_running() {
+                Node::restart();
+            }
         }
     }
 
@@ -520,7 +522,9 @@ impl NodeSetup {
         let validate = NodeConfig::is_full_chain_validation();
         View::checkbox(ui, validate, t!("network_settings.full_validation"), || {
             NodeConfig::toggle_full_chain_validation();
-            NetworkSettings::show_node_restart_required_modal();
+            if Node::is_running() {
+                Node::restart();
+            }
         });
         ui.add_space(4.0);
         ui.label(RichText::new(t!("network_settings.full_validation_description"))
@@ -534,7 +538,9 @@ impl NodeSetup {
         let archive_mode = NodeConfig::is_archive_mode();
         View::checkbox(ui, archive_mode, t!("network_settings.archive_mode"), || {
             NodeConfig::toggle_archive_mode();
-            NetworkSettings::show_node_restart_required_modal();
+            if Node::is_running() {
+                Node::restart();
+            }
         });
         ui.add_space(4.0);
         ui.label(RichText::new(t!("network_settings.archive_mode_desc"))

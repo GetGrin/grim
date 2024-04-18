@@ -64,19 +64,27 @@ wallets:
   tx_cancelling: Cancelling
   tx_canceled: Canceled
   tx_confirmed: Confirmed
-  manually: Manually
-  receive_slatepack_desc: 'Enter Slatepack message received from the sender to create response or finalize the transaction:'
-  receive_send_slatepack: 'Send Slatepack message to the sender to finalize the transaction:'
-  receive_slatepack_err: 'An error occurred during creation of the response, check input data:'
-  create_response: Create response
-  invoice: Invoice
-  issue_invoice: Issue invoice
-  issue_invoice_desc: 'Create a request to receive funds by entering the required amount:'
-  invoice_desc: 'You have created a request to receive %{amount} ツ. Send Slatepack message to the sender:'
+  txs: Transactions
+  messages: Messages
+  transport: Transport
+  input_slatepack_desc: 'Enter received message to create a response or finalize the transaction:'
+  send_slatepack_desc: 'Send message to the receiver to finalize the transaction:'
+  parse_slatepack_err: 'An error occurred during handling of the message, check input data:'
+  parse_i1_slatepack_desc: 'To pay %{amount} ツ send message to the receiver:'
+  parse_i2_slatepack_desc: 'Finalize transaction to receive %{amount} ツ'
+  parse_s1_slatepack_desc: 'To receive %{amount} ツ send message to the sender:'
+  parse_s2_slatepack_desc: 'Finalize transaction to send %{amount} ツ'
+  response_slatepack_err: 'An error occurred during creation of the response, check input data:'
+  create_request_desc: 'Create a request to send or receive the funds:'
+  send_request_desc: 'You have created a request to send %{amount} ツ. Send message to the receiver of the funds:'
+  send_slatepack_err: An error occurred during creation of request to send funds, check input data.
+  invoice_desc: 'You have created a request to receive %{amount} ツ. Send message to the sender of the funds:'
   invoice_slatepack_err: An error occurred during issuing of the invoice, check input data.
-  finalize_slatepack_err: 'An error occurred during finalization of the transaction, check input data:'
+  finalize_slatepack_err: 'An error occurred during finalization, check input data:'
   finalize: Finalize
-  enter_amount: 'Enter amount:'
+  use_dandelion: Use Dandelion
+  enter_amount_send: 'You have %{amount} ツ. Enter amount to send:'
+  enter_amount_receive: 'Enter amount to receive:'
   recovery: Recovery
   repair_wallet: Repair wallet
   repair_desc: Check a wallet, repairing and restoring missing outputs if required. This operation will take time.

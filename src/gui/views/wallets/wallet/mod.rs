@@ -14,14 +14,14 @@
 
 pub mod types;
 
-mod info;
-pub use info::WalletInfo;
+mod txs;
+pub use txs::WalletInfo;
 
-mod receive;
-pub use receive::WalletReceive;
+mod messages;
+pub use messages::WalletMessages;
 
-mod send;
-pub use send::WalletSend;
+mod transport;
+pub use transport::WalletTransport;
 
 mod settings;
 pub use settings::WalletSettings;

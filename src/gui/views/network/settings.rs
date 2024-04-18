@@ -40,8 +40,6 @@ pub struct NetworkSettings {
     modal_ids: Vec<&'static str>
 }
 
-/// Identifier for node restart confirmation [`Modal`].
-pub const NODE_RESTART_REQUIRED_MODAL: &'static str = "node_restart_required";
 /// Identifier for settings reset confirmation [`Modal`].
 pub const RESET_SETTINGS_MODAL: &'static str = "reset_settings";
 
@@ -54,7 +52,6 @@ impl Default for NetworkSettings {
             pool: PoolSetup::default(),
             dandelion: DandelionSetup::default(),
             modal_ids: vec![
-                NODE_RESTART_REQUIRED_MODAL,
                 RESET_SETTINGS_MODAL
             ]
         }
@@ -72,7 +69,6 @@ impl ModalContainer for NetworkSettings {
                 modal: &Modal,
                 _: &dyn PlatformCallbacks) {
         match modal.id {
-            NODE_RESTART_REQUIRED_MODAL => node_restart_required_modal(ui, modal),
             RESET_SETTINGS_MODAL  => reset_settings_confirmation_modal(ui, modal),
             _ => {}
         }
@@ -147,17 +143,6 @@ impl NetworkSettings {
         }
     }
 
-    /// Show [`Modal`] to ask node restart if setting is changed on enabled node.
-    pub fn show_node_restart_required_modal() {
-        if Node::is_running() {
-            // Show modal to apply changes by node restart.
-            Modal::new(NODE_RESTART_REQUIRED_MODAL)
-                .position(ModalPosition::Center)
-                .title(t!("network.settings"))
-                .show();
-        }
-    }
-
     /// Draw IP addresses as radio buttons.
     pub fn ip_addrs_ui(ui: &mut egui::Ui,
                        saved_ip: &String,
@@ -207,38 +192,6 @@ impl NetworkSettings {
             ui.add_space(6.0);
         });
     }
-}
-
-/// Node restart reminder modal content.
-fn node_restart_required_modal(ui: &mut egui::Ui, modal: &Modal) {
-    ui.add_space(6.0);
-    ui.vertical_centered(|ui| {
-        ui.label(RichText::new(t!("network_settings.restart_node_required"))
-            .size(17.0)
-            .color(Colors::GRAY));
-        ui.add_space(8.0);
-    });
-
-    // Show modal buttons.
-    ui.scope(|ui| {
-        // Setup spacing between buttons.
-        ui.spacing_mut().item_spacing = egui::Vec2::new(6.0, 0.0);
-
-        ui.columns(2, |columns| {
-            columns[0].vertical_centered_justified(|ui| {
-                View::button(ui, t!("network_settings.restart"), Colors::WHITE, || {
-                    Node::restart();
-                    modal.close();
-                });
-            });
-            columns[1].vertical_centered_justified(|ui| {
-                View::button(ui, t!("modal.cancel"), Colors::WHITE, || {
-                    modal.close();
-                });
-            });
-        });
-        ui.add_space(6.0);
-    });
 }
 
 /// Draw button to reset integrated node settings to default values.

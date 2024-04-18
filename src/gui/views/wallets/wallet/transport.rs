@@ -22,11 +22,11 @@ use crate::wallet::Wallet;
 
 /// Sending tab content.
 #[derive(Default)]
-pub struct WalletSend;
+pub struct WalletTransport;
 
-impl WalletTab for WalletSend {
+impl WalletTab for WalletTransport {
     fn get_type(&self) -> WalletTabType {
-        WalletTabType::Send
+        WalletTabType::Transport
     }
 
     fn ui(&mut self,
@@ -38,7 +38,7 @@ impl WalletTab for WalletSend {
             return;
         }
 
-        // Show sending content panel.
+        // Show transport content panel.
         egui::CentralPanel::default()
             .frame(egui::Frame {
                 stroke: View::ITEM_STROKE,
@@ -52,14 +52,14 @@ impl WalletTab for WalletSend {
                 ..Default::default()
             })
             .show_inside(ui, |ui| {
-                self.send_ui(ui, wallet);
+                self.transport_ui(ui, wallet);
             });
     }
 }
 
-impl WalletSend {
-    /// Draw sending content.
-    pub fn send_ui(&self, ui: &mut egui::Ui, wallet: &mut Wallet) {
+impl WalletTransport {
+    /// Draw transport content.
+    pub fn transport_ui(&self, ui: &mut egui::Ui, wallet: &mut Wallet) {
 
     }
 }

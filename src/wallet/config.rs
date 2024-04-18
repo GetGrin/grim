@@ -36,7 +36,9 @@ pub struct WalletConfig {
     /// External connection identifier.
     pub ext_conn_id: Option<i64>,
     /// Minimal amount of confirmations.
-    pub min_confirmations: u64
+    pub min_confirmations: u64,
+    /// Flag to use Dandelion to broadcast transactions.
+    pub use_dandelion: Option<bool>
 }
 
 /// Base wallets directory name.
@@ -69,7 +71,8 @@ impl WalletConfig {
                 ConnectionMethod::Integrated => None,
                 ConnectionMethod::External(id) => Some(*id)
             },
-            min_confirmations: MIN_CONFIRMATIONS_DEFAULT
+            min_confirmations: MIN_CONFIRMATIONS_DEFAULT,
+            use_dandelion: Some(true),
         };
         Settings::write_to_file(&config, config_path);
         config
