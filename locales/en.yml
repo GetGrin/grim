@@ -67,14 +67,16 @@ wallets:
   txs: Transactions
   messages: Messages
   transport: Transport
-  input_slatepack_desc: 'Enter received message to create a response or finalize the transaction:'
+  input_slatepack_desc: 'Enter received Slatepack message to create a response or finalize the transaction:'
   send_slatepack_desc: 'Send message to the receiver to finalize the transaction:'
   parse_slatepack_err: 'An error occurred during handling of the message, check input data:'
+  pay_balance_error: 'Account balance is insufficient to pay %{amount} ツ and network fee.'
   parse_i1_slatepack_desc: 'To pay %{amount} ツ send message to the receiver:'
   parse_i2_slatepack_desc: 'Finalize transaction to receive %{amount} ツ'
   parse_s1_slatepack_desc: 'To receive %{amount} ツ send message to the sender:'
   parse_s2_slatepack_desc: 'Finalize transaction to send %{amount} ツ'
   response_slatepack_err: 'An error occurred during creation of the response, check input data:'
+  response_exists_err: 'Such transaction already exists:'
   create_request_desc: 'Create a request to send or receive the funds:'
   send_request_desc: 'You have created a request to send %{amount} ツ. Send message to the receiver of the funds:'
   send_slatepack_err: An error occurred during creation of request to send funds, check input data.

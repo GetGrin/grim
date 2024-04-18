@@ -214,6 +214,6 @@ fn setup_i18n() {
         locale.as_str()
     };
     if _rust_i18n_available_locales().contains(&locale_str) {
-        rust_i18n::set_locale(DEFAULT_LOCALE);
+        rust_i18n::set_locale(locale_str);
     }
 }

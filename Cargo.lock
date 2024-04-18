@@ -2553,6 +2553,7 @@ dependencies = [
  "serde_derive",
  "serde_json",
  "sys-locale",
+ "thiserror",
  "tokio 1.37.0",
  "tokio-util 0.7.10",
  "toml 0.8.12",

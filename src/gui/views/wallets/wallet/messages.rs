@@ -16,6 +16,7 @@ use egui::{Id, Margin, RichText, ScrollArea};
 use egui::scroll_area::ScrollBarVisibility;
 use grin_core::core::{amount_from_hr_string, amount_to_hr_string};
 use grin_wallet_libwallet::{Slate, SlateState, TxLogEntry};
+use log::error;
 
 use crate::gui::Colors;
 use crate::gui::icons::{BROOM, CLIPBOARD_TEXT, COPY, DOWNLOAD, UPLOAD};
@@ -26,23 +27,42 @@ use crate::gui::views::wallets::wallet::types::{SLATEPACK_MESSAGE_HINT, WalletTa
 use crate::gui::views::wallets::wallet::WalletContent;
 use crate::wallet::Wallet;
 
+#[derive(Clone, Eq, PartialEq, Debug, thiserror::Error)]
+enum MessageError {
+    #[error("{0}")]
+    Response(String),
+    #[error("{0}")]
+    Parse(String),
+    #[error("{0}")]
+    Finalize(String),
+    #[error("{0}")]
+    Other(String),
+}
+
+impl MessageError {
+    pub fn text(&self) -> &String {
+        match self {
+            MessageError::Response(text) => text,
+            MessageError::Parse(text) => text,
+            MessageError::Finalize(text) => text,
+            MessageError::Other(text) => text
+        }
+    }
+}
+
 /// Slatepacks messages interaction tab content.
 pub struct WalletMessages {
-    /// Flag to check if send or receive request was opened.
+    /// Flag to check if send or invoice request was opened.
     send_request: bool,
 
     /// Slatepack message to create response message.
     message_edit: String,
     /// Parsed Slatepack message.
     message_slate: Option<Slate>,
-    /// Flag to check if there is an error happened on response creation.
-    parse_error: bool,
+    /// Slatepack error on finalization, parse and response creation.
+    message_error: Option<MessageError>,
     /// Generated Slatepack response message.
     response_edit: String,
-    /// Flag to check if there is an error happened on response creation.
-    response_error: bool,
-    /// Flag to check if there is an error happened on transaction finalization.
-    finalize_error: bool,
     /// Flag to check if Dandelion is needed to finalize transaction.
     use_dandelion: Option<bool>,
 
@@ -51,7 +71,7 @@ pub struct WalletMessages {
     /// Generated Slatepack message as request to send or receive funds.
     request_edit: String,
     /// Flag to check if there is an error happened on invoice creation.
-    request_error: bool,
+    request_error: Option<MessageError>,
 }
 
 /// Identifier for invoice amount [`Modal`].
@@ -63,14 +83,12 @@ impl Default for WalletMessages {
             send_request: false,
             message_edit: "".to_string(),
             message_slate: None,
-            parse_error: false,
+            message_error: None,
             response_edit: "".to_string(),
-            response_error: false,
-            finalize_error: false,
             use_dandelion: None,
             amount_edit: "".to_string(),
             request_edit: "".to_string(),
-            request_error: false,
+            request_error: None,
         }
     }
 }
@@ -169,18 +187,8 @@ impl WalletMessages {
                       cb: &dyn PlatformCallbacks) {
         // Setup description.
         let response_empty = self.response_edit.is_empty();
-        if self.parse_error {
-            ui.label(RichText::new(t!("wallets.parse_slatepack_err"))
-                .size(16.0)
-                .color(Colors::RED));
-        } else if self.response_error {
-            ui.label(RichText::new(t!("wallets.response_slatepack_err"))
-                .size(16.0)
-                .color(Colors::RED));
-        } else if self.finalize_error {
-            ui.label(RichText::new(t!("wallets.finalize_slatepack_err"))
-                .size(16.0)
-                .color(Colors::RED));
+        if let Some(err) = &self.message_error {
+            ui.label(RichText::new(err.text()).size(16.0).color(Colors::RED));
         } else {
             let desc_text = if response_empty && self.message_slate.is_none() {
                 t!("wallets.input_slatepack_desc")
@@ -194,16 +202,12 @@ impl WalletMessages {
                     SlateState::Standard2 => {
                         t!("wallets.parse_s2_slatepack_desc","amount" => amount)
                     }
-                    SlateState::Standard3 => {t!("wallets.input_slatepack_desc")}
                     SlateState::Invoice1 => {
-                        let a_f = u64::from(slate.fee_fields) + slate.amount;
-                        let a = amount_to_hr_string(a_f, true);
-                        t!("wallets.parse_i1_slatepack_desc","amount" => a)
+                        t!("wallets.parse_i1_slatepack_desc","amount" => amount)
                     }
                     SlateState::Invoice2 => {
                         t!("wallets.parse_i2_slatepack_desc","amount" => amount)
                     }
-                    SlateState::Invoice3 => {t!("wallets.input_slatepack_desc")}
                     _ => {
                         t!("wallets.input_slatepack_desc")
                     }
@@ -227,7 +231,12 @@ impl WalletMessages {
         ui.add_space(3.0);
         ScrollArea::vertical()
             .max_height(128.0)
-            .id_source(Id::from("receive_input").with(wallet.get_config().id))
+            .id_source(Id::from(
+                if response_empty {
+                    "message_input"
+                } else {
+                    "response_input"
+                }).with(wallet.get_config().id))
             .auto_shrink([false; 2])
             .show(ui, |ui| {
                 ui.add_space(7.0);
@@ -254,7 +263,7 @@ impl WalletMessages {
 
             ui.columns(columns_num, |columns| {
                 let first_column_content = |ui: &mut egui::Ui| {
-                    if self.message_slate.is_some() && !self.response_error && !self.parse_error {
+                    if self.message_slate.is_some() && self.message_error.is_none() {
                         self.clear_message_button_ui(ui);
                     } else {
                         let paste_text = format!("{} {}", CLIPBOARD_TEXT, t!("paste"));
@@ -268,7 +277,7 @@ impl WalletMessages {
                 } else {
                     columns[0].vertical_centered_justified(first_column_content);
                     columns[1].vertical_centered_justified(|ui| {
-                        if self.finalize_error || self.response_error || self.parse_error {
+                        if self.message_error.is_some() {
                             self.clear_message_button_ui(ui);
                         } else if !self.response_edit.is_empty() {
                             let copy_text = format!("{} {}", COPY, t!("copy"));
@@ -279,15 +288,15 @@ impl WalletMessages {
                             show_dandelion = true;
                             View::button(ui, t!("wallets.finalize"), Colors::GOLD, || {
                                 let message = self.message_edit.clone();
-                                match wallet.finalize(message, self.use_dandelion.unwrap()) {
-                                    Ok(_) => {
-                                        self.message_edit.clear();
-                                        self.message_slate = None;
-                                    },
-                                    Err(e) => {
-                                        println!("error {}", e);
-                                        self.finalize_error = true
-                                    }
+                                let use_dandelion = self.use_dandelion.unwrap();
+                                if let Ok(_) = wallet.finalize(message, use_dandelion) {
+                                    self.message_edit.clear();
+                                    self.message_slate = None;
+
+                                } else {
+                                    self.message_error = Some(
+                                        MessageError::Finalize(t!("wallets.finalize_slatepack_err"))
+                                    );
                                 }
                             });
                         }
@@ -312,73 +321,97 @@ impl WalletMessages {
             });
         }
 
-        // Parse Slatepack message if input field was changed to setup response input.
         message = if response_empty {
             &mut self.message_edit
         } else {
             &mut self.response_edit
         };
+
+        // Parse Slatepack message if input field was changed, resetting message error.
         if &message_before != message {
-            if message.is_empty() {
-                self.message_slate = None;
-            }
+            self.message_error = None;
+            self.parse_message(wallet);
+        }
+    }
 
-            self.response_error = false;
-            self.parse_error = false;
-            if !self.message_edit.is_empty() {
-                match wallet.parse_slatepack(self.message_edit.clone()) {
-                    Ok(mut slate) => {
-                        // Try to get amount from transaction by id.
-                        if slate.amount == 0 {
-                            let _ = wallet.get_data().unwrap().txs.clone().iter().map(|tx| {
-                                if tx.tx_slate_id == Some(slate.id) {
-                                    slate.amount = if tx.amount_debited > tx.amount_credited {
-                                        tx.amount_debited - tx.amount_credited
-                                    } else {
-                                        tx.amount_credited - tx.amount_debited
-                                    }
-                                }
-                                tx
-                            }).collect::<Vec<&TxLogEntry>>();
+    /// Parse message input into [`Slate`], making operations like receive or pay to confirm.
+    fn parse_message(&mut self, wallet: &mut Wallet) {
+        if self.message_edit.is_empty() {
+           return;
+        }
+        if let Ok(mut slate) = wallet.parse_slatepack(self.message_edit.clone()) {
+            println!("parse_message: {}", slate);
+            // Make operation based on incoming state status.
+            match slate.state {
+                SlateState::Standard1 => {
+                    if let Ok(resp) = wallet.receive(self.message_edit.clone()) {
+                        self.response_edit = resp;
+                    } else {
+                        // Check if tx with same slate id already exists.
+                        let mut exists_tx = false;
+                        let _ = wallet.get_data().unwrap().txs.clone().iter().map(|tx| {
+                            if tx.tx_slate_id == Some(slate.id) {
+                                exists_tx= true;
+                                self.message_error = Some(
+                                    MessageError::Response(t!("wallets.response_exists_err"))
+                                );
+                            }
+                            tx
+                        }).collect::<Vec<&TxLogEntry>>();
+                        if exists_tx {
+                            return;
                         }
-                        println!("SLATE: {}", slate);
-                        self.message_slate = Some(slate.clone());
-                        match slate.state {
-                            SlateState::Unknown => {}
-                            SlateState::Standard1 => {
-                                match wallet.receive(self.message_edit.clone()) {
-                                    Ok(resp) => {
-                                        self.response_edit = resp;
-                                    }
-                                    Err(_) => {
-                                        self.response_error = true;
-                                    }
-                                }
-                            }
-                            SlateState::Standard2 => {}
-                            SlateState::Standard3 => {}
-                            SlateState::Invoice1 => {
-                                match wallet.pay(self.message_edit.clone()) {
-                                    Ok(resp) => {
-                                        self.response_edit = resp;
-                                    }
-                                    Err(_) => {
-                                        self.response_error = true;
-                                    }
-                                }
-                            }
-                            SlateState::Invoice2 => {
 
-                            }
-                            SlateState::Invoice3 => {}
-                        }
-                    }
-                    Err(_) => {
-                        self.message_slate = None;
-                        self.parse_error = true;
+                        // Set default response error message.
+                        self.message_error = Some(
+                            MessageError::Response(t!("wallets.response_slatepack_err"))
+                        );
                     }
                 }
+                SlateState::Invoice1 => {
+                    match wallet.pay(self.message_edit.clone()) {
+                        Ok(resp) => {
+                            self.response_edit = resp;
+                        }
+                        Err(err) => {
+                            match err {
+                                grin_wallet_libwallet::Error::NotEnoughFunds {..} => {
+                                    let amount = amount_to_hr_string(slate.amount, true);
+                                    let a_t = t!("wallets.pay_balance_error", "amount" => amount);
+                                    self.message_error = Some(MessageError::Other(a_t));
+                                }
+                                _ => {
+                                    self.message_error = Some(
+                                        MessageError::Response(t!("wallets.response_slatepack_err"))
+                                    );
+                                }
+                            }
+                        }
+                    }
+                }
+                _ => {}
             }
+
+            // Try to get amount  from transaction by id.
+            if slate.amount == 0 {
+                let _ = wallet.get_data().unwrap().txs.clone().iter().map(|tx| {
+                    if tx.tx_slate_id == Some(slate.id) {
+                        if slate.amount == 0 {
+                            let amount = if tx.amount_debited > tx.amount_credited {
+                                tx.amount_debited - tx.amount_credited
+                            } else {
+                                tx.amount_credited - tx.amount_debited
+                            };
+                            slate.amount = amount;
+                        }
+                    }
+                    tx
+                }).collect::<Vec<&TxLogEntry>>();
+            }
+            self.message_slate = Some(slate.clone());
+        } else {
+            self.message_slate = None;
+            self.message_error = Some(MessageError::Parse(t!("wallets.response_slatepack_err")));
         }
     }
 
@@ -386,9 +419,7 @@ impl WalletMessages {
     fn clear_message_button_ui(&mut self, ui: &mut egui::Ui) {
         let clear_text = format!("{} {}", BROOM, t!("clear"));
         View::button(ui, clear_text, Colors::BUTTON, || {
-            self.response_error = false;
-            self.parse_error = false;
-            self.finalize_error = false;
+            self.message_error = None;
             self.message_edit.clear();
             self.response_edit.clear();
             self.message_slate = None;
@@ -415,7 +446,7 @@ impl WalletMessages {
                     // Setup modal values.
                     self.send_request = true;
                     self.amount_edit = "".to_string();
-                    self.request_error = false;
+                    self.request_error = None;
                     // Show send amount modal.
                     Modal::new(AMOUNT_MODAL)
                         .position(ModalPosition::CenterTop)
@@ -431,7 +462,7 @@ impl WalletMessages {
                     // Setup modal values.
                     self.send_request = false;
                     self.amount_edit = "".to_string();
-                    self.request_error = false;
+                    self.request_error = None;
                     // Show receive amount modal.
                     Modal::new(AMOUNT_MODAL)
                         .position(ModalPosition::CenterTop)
@@ -468,24 +499,38 @@ impl WalletMessages {
             // Draw invoice amount text edit.
             let amount_edit_id = Id::from(modal.id).with(wallet.get_config().id);
             let amount_edit_opts = TextEditOptions::new(amount_edit_id).h_center();
-            let mut amount_edit = self.amount_edit.clone();
-            View::text_edit(ui, cb, &mut amount_edit, amount_edit_opts);
-            if amount_edit != self.amount_edit {
-                self.request_error = false;
-                match amount_from_hr_string(amount_edit.as_str()) {
-                    Ok(_) => {
-                        self.amount_edit = amount_edit;
+            let mut amount_edit_before = self.amount_edit.clone();
+            View::text_edit(ui, cb, &mut amount_edit_before, amount_edit_opts);
+
+            // Check value if input was changed.
+            if amount_edit_before != self.amount_edit {
+                self.request_error = None;
+                match amount_from_hr_string(amount_edit_before.as_str()) {
+                    Ok(a) => {
+                        if a <= 0 {
+                            return;
+                        }
+                        // Do not input amount more than balance in sending.
+                        if self.send_request {
+                            let b = wallet.get_data().unwrap().info.amount_currently_spendable;
+                            if b < a {
+                                return;
+                            }
+                        }
+                        self.amount_edit = amount_edit_before;
                     }
                     Err(_) => {}
                 }
             }
 
             // Show invoice creation error.
-            if self.request_error {
+            if self.request_error.is_some() {
                 ui.add_space(12.0);
-                ui.label(RichText::new(t!("wallets.invoice_slatepack_err"))
-                    .size(17.0)
-                    .color(Colors::RED));
+                ui.vertical_centered(|ui| {
+                    ui.label(RichText::new(self.request_error.clone().unwrap().text())
+                        .size(17.0)
+                        .color(Colors::RED));
+                });
             }
 
             // Show modal buttons.
@@ -498,33 +543,44 @@ impl WalletMessages {
                     columns[0].vertical_centered_justified(|ui| {
                         View::button(ui, t!("modal.cancel"), Colors::WHITE, || {
                             self.amount_edit = "".to_string();
-                            self.request_error = false;
+                            self.request_error = None;
                             modal.close();
                         });
                     });
                     columns[1].vertical_centered_justified(|ui| {
                         // Button to create Slatepack message for request.
                         View::button(ui, t!("continue"), Colors::WHITE, || {
-                            match amount_from_hr_string(self.amount_edit.as_str()) {
-                                Ok(amount) => {
-                                    let message = if self.send_request {
-                                        wallet.send(amount)
-                                    } else {
-                                        wallet.issue_invoice(amount)
-                                    };
-                                    match message {
-                                        Ok(message) => {
-                                            self.request_edit = message;
-                                            cb.hide_keyboard();
-                                        }
-                                        Err(_) => {
-                                            self.request_error = true;
+                            if let Ok(a) = amount_from_hr_string(self.amount_edit.as_str()) {
+                                let message = if self.send_request {
+                                    wallet.send(a)
+                                } else {
+                                    wallet.issue_invoice(a)
+                                };
+                                match message {
+                                    Ok(message) => {
+                                        self.request_edit = message;
+                                        cb.hide_keyboard();
+                                    }
+                                    Err(err) => {
+                                        match err {
+                                            grin_wallet_libwallet::Error::NotEnoughFunds { .. } => {
+                                                let m = t!(
+                                                    "wallets.pay_balance_error",
+                                                    "amount" => self.amount_edit
+                                                );
+                                                self.request_error = Some(MessageError::Other(m));
+                                            }
+                                            _ => {
+                                                let m = t!("wallets.invoice_slatepack_err");
+                                                self.request_error = Some(MessageError::Other(m));
+                                            }
                                         }
                                     }
                                 }
-                                Err(_) => {
-                                    self.request_error = true;
-                                }
+                            } else {
+                                self.request_error = Some(
+                                    MessageError::Other(t!("wallets.invoice_slatepack_err"))
+                                );
                             }
                         });
                     });
