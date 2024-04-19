@@ -522,9 +522,6 @@ impl NodeSetup {
         let validate = NodeConfig::is_full_chain_validation();
         View::checkbox(ui, validate, t!("network_settings.full_validation"), || {
             NodeConfig::toggle_full_chain_validation();
-            if Node::is_running() {
-                Node::restart();
-            }
         });
         ui.add_space(4.0);
         ui.label(RichText::new(t!("network_settings.full_validation_description"))
@@ -538,9 +535,6 @@ impl NodeSetup {
         let archive_mode = NodeConfig::is_archive_mode();
         View::checkbox(ui, archive_mode, t!("network_settings.archive_mode"), || {
             NodeConfig::toggle_archive_mode();
-            if Node::is_running() {
-                Node::restart();
-            }
         });
         ui.add_space(4.0);
         ui.label(RichText::new(t!("network_settings.archive_mode_desc"))
