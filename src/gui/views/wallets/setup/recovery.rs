@@ -136,7 +136,7 @@ impl RecoverySetup {
                     }
                     DELETE_CONFIRMATION_MODAL => {
                         Modal::ui(ui.ctx(), |ui, modal| {
-                            self.deletion_modal_ui(ui, wallet, modal, cb);
+                            self.deletion_modal_ui(ui, wallet, modal);
                         });
                     }
                     _ => {}
@@ -242,8 +242,7 @@ impl RecoverySetup {
     fn deletion_modal_ui(&mut self,
                          ui: &mut egui::Ui,
                          wallet: &mut Wallet,
-                         modal: &Modal,
-                         cb: &dyn PlatformCallbacks) {
+                         modal: &Modal) {
         ui.add_space(8.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("wallets.delete_conf"))
@@ -265,9 +264,8 @@ impl RecoverySetup {
                 });
                 columns[1].vertical_centered_justified(|ui| {
                     View::button(ui, t!("delete"), Colors::WHITE, || {
-                        modal.disable_closing();
-                        wallet.set_reopen(true);
                         wallet.delete_wallet();
+                        modal.close();
                     });
                 });
             });
