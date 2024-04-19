@@ -75,8 +75,8 @@ impl WalletCreation {
                     stroke: View::DEFAULT_STROKE,
                     fill: Colors::FILL,
                     inner_margin: Margin {
-                        left: View::far_left_inset_margin(ui) + 4.0,
-                        right: View::get_right_inset() + 4.0,
+                        left: View::far_left_inset_margin(ui) + 8.0,
+                        right: View::get_right_inset() + 8.0,
                         top: 4.0,
                         bottom: View::get_bottom_inset(),
                     },
@@ -182,7 +182,7 @@ impl WalletCreation {
                     ui.add_space(4.0);
                 } else {
                     // Setup spacing between buttons.
-                    ui.spacing_mut().item_spacing = egui::Vec2::new(6.0, 0.0);
+                    ui.spacing_mut().item_spacing = egui::Vec2::new(8.0, 0.0);
 
                     ui.columns(2, |columns| {
                         // Show copy or paste button for mnemonic phrase step.
@@ -197,6 +197,7 @@ impl WalletCreation {
                             });
                         }
                     });
+                    ui.add_space(4.0);
                 }
             } else {
                 if step_available {

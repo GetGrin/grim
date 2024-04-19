@@ -136,7 +136,7 @@ impl View {
         if drag_resp.dragged() && !ui.rect_contains_pointer(drag_resp.rect) {
             ui.input_mut(|i| i.pointer = PointerState::default());
         }
-        if drag_resp.drag_released() || drag_resp.clicked() {
+        if drag_resp.drag_stopped() || drag_resp.clicked() || drag_resp.secondary_clicked() {
             return true;
         }
         false
