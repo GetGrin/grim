@@ -140,8 +140,8 @@ impl NetworkContent {
                     });
             });
 
-        // Redraw after delay if node is not syncing to update stats.
-        if Node::not_syncing() {
+        // Redraw after delay if node is syncing to update stats.
+        if Node::is_running() {
             ui.ctx().request_repaint_after(Node::STATS_UPDATE_DELAY);
         }
     }

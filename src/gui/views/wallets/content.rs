@@ -377,14 +377,17 @@ impl WalletsContent {
         let config = wallet.get_config();
         let id = config.id;
         let is_selected = self.wallets.selected_id == Some(id);
-        let is_current = wallet.is_open() && is_selected;
-
+        let current = is_selected && wallet.is_open();
         // Draw round background.
         let mut rect = ui.available_rect_before_wrap();
         rect.set_height(78.0);
         let rounding = View::item_rounding(0, 1, false);
-        let bg_color = if is_current { Colors::ITEM_CURRENT } else { Colors::FILL };
-        ui.painter().rect(rect, rounding, bg_color, View::HOVER_STROKE);
+        let bg = if current {
+            egui::Color32::from_gray(234)
+        } else {
+            Colors::FILL
+        };
+        ui.painter().rect(rect, rounding, bg, View::HOVER_STROKE);
 
         ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
             // Setup padding for item buttons.
