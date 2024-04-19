@@ -99,7 +99,7 @@ wallets:
   send: Send
   receive: Receive
   settings: Wallet settings
-  change_server_confirmation: To apply change of connection settings, it is necessary to reopen the wallet. Reopen it now?
+  change_server_confirmation: To apply change of connection settings, you need to re-open your wallet. Reopen it now?
 network:
   self: Network
   type: 'Network type:'
