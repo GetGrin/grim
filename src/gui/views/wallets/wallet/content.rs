@@ -384,20 +384,22 @@ impl WalletContent {
             return true;
         } else if wallet.get_current_ext_conn_id().is_none() {
             if !Node::is_running() || Node::is_stopping() {
-                let dual_panel_root = Root::is_dual_panel_mode(ui);
                 View::center_content(ui, 108.0, |ui| {
-                    let text = t!("wallets.enable_node", "settings" => GEAR_FINE);
-                    ui.label(RichText::new(text).size(16.0).color(Colors::INACTIVE_TEXT));
-                    ui.add_space(8.0);
-                    // Show button to enable integrated node at non-dual root panel mode
-                    // or when network connections are not showing and node is not stopping
-                    if (!dual_panel_root || AppConfig::show_connections_network_panel())
-                        && !Node::is_stopping() {
-                        let enable_node_text = format!("{} {}", POWER, t!("network.enable_node"));
-                        View::button(ui, enable_node_text, Colors::GOLD, || {
-                            Node::start();
-                        });
-                    }
+                    View::max_width_ui(ui, Root::SIDE_PANEL_WIDTH * 1.5, |ui| {
+                        let text = t!("wallets.enable_node", "settings" => GEAR_FINE);
+                        ui.label(RichText::new(text).size(16.0).color(Colors::INACTIVE_TEXT));
+                        ui.add_space(8.0);
+                        // Show button to enable integrated node at non-dual root panel mode
+                        // or when network connections are not showing and node is not stopping
+                        let dual_panel_root = Root::is_dual_panel_mode(ui);
+                        if (!dual_panel_root || AppConfig::show_connections_network_panel())
+                            && !Node::is_stopping() {
+                            let enable_text = format!("{} {}", POWER, t!("network.enable_node"));
+                            View::button(ui, enable_text, Colors::GOLD, || {
+                                Node::start();
+                            });
+                        }
+                    });
                 });
                 return true
             } else if wallet.sync_error()
@@ -446,41 +448,43 @@ impl WalletContent {
     /// Draw wallet sync progress content.
     pub fn sync_progress_ui(ui: &mut egui::Ui, wallet: &Wallet) {
         View::center_content(ui, 162.0, |ui| {
-            View::big_loading_spinner(ui);
-            ui.add_space(18.0);
-            // Setup sync progress text.
-            let text = {
-                let integrated_node = wallet.get_current_ext_conn_id().is_none();
-                let integrated_node_ready = Node::get_sync_status() == Some(SyncStatus::NoSync);
-                let info_progress = wallet.info_sync_progress();
+            View::max_width_ui(ui, Root::SIDE_PANEL_WIDTH * 1.5, |ui| {
+                View::big_loading_spinner(ui);
+                ui.add_space(18.0);
+                // Setup sync progress text.
+                let text = {
+                    let integrated_node = wallet.get_current_ext_conn_id().is_none();
+                    let integrated_node_ready = Node::get_sync_status() == Some(SyncStatus::NoSync);
+                    let info_progress = wallet.info_sync_progress();
 
-                if wallet.is_closing() {
-                    t!("wallets.wallet_closing")
-                } else if integrated_node && !integrated_node_ready {
-                    t!("wallets.node_loading", "settings" => GEAR_FINE)
-                } else if wallet.is_repairing() {
-                    let repair_progress = wallet.repairing_progress();
-                    if repair_progress == 0 {
-                        t!("wallets.wallet_checking")
+                    if wallet.is_closing() {
+                        t!("wallets.wallet_closing")
+                    } else if integrated_node && !integrated_node_ready {
+                        t!("wallets.node_loading", "settings" => GEAR_FINE)
+                    } else if wallet.is_repairing() {
+                        let repair_progress = wallet.repairing_progress();
+                        if repair_progress == 0 {
+                            t!("wallets.wallet_checking")
+                        } else {
+                            format!("{}: {}%", t!("wallets.wallet_checking"), repair_progress)
+                        }
+                    } else if info_progress != 100 {
+                        if info_progress == 0 {
+                            t!("wallets.wallet_loading")
+                        } else {
+                            format!("{}: {}%", t!("wallets.wallet_loading"), info_progress)
+                        }
                     } else {
-                        format!("{}: {}%", t!("wallets.wallet_checking"), repair_progress)
+                        let tx_progress = wallet.txs_sync_progress();
+                        if tx_progress == 0 {
+                            t!("wallets.tx_loading")
+                        } else {
+                            format!("{}: {}%", t!("wallets.tx_loading"), tx_progress)
+                        }
                     }
-                } else if info_progress != 100 {
-                    if info_progress == 0 {
-                        t!("wallets.wallet_loading")
-                    } else {
-                        format!("{}: {}%", t!("wallets.wallet_loading"), info_progress)
-                    }
-                } else {
-                    let tx_progress = wallet.txs_sync_progress();
-                    if tx_progress == 0 {
-                        t!("wallets.tx_loading")
-                    } else {
-                        format!("{}: {}%", t!("wallets.tx_loading"), tx_progress)
-                    }
-                }
-            };
-            ui.label(RichText::new(text).size(16.0).color(Colors::INACTIVE_TEXT));
+                };
+                ui.label(RichText::new(text).size(16.0).color(Colors::INACTIVE_TEXT));
+            });
         });
     }
 }
