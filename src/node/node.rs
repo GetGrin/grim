@@ -79,7 +79,7 @@ impl Default for Node {
 
 impl Node {
     /// Delay for thread to update the stats.
-    pub const STATS_UPDATE_DELAY: Duration = Duration::from_millis(250);
+    pub const STATS_UPDATE_DELAY: Duration = Duration::from_millis(1000);
 
     /// Stop the [`Server`] and setup exit flag after if needed.
     pub fn stop(exit_after_stop: bool) {
@@ -212,15 +212,13 @@ impl Node {
                     let mut first_start = true;
                     loop {
                         if Self::is_restarting() {
-                            // Stop the server.
                             server.stop();
-
+                            thread::sleep(Duration::from_millis(5000));
                             // Reset stratum stats
                             {
                                 let mut w_stratum_stats = NODE_STATE.stratum_stats.write();
                                 *w_stratum_stats = StratumStats::default();
                             }
-
                             // Create new server.
                             match start_node_server() {
                                 Ok(s) => {
