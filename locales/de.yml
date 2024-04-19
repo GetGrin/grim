@@ -1,0 +1,239 @@
+copy: Kopieren
+paste: Einfügen
+continue: Weiter
+complete: Fertig
+error: Error
+retry: Erneut versuchen
+close: Schließen
+change: Ändern
+show: Zeigen
+delete: Löschen
+clear: Clear
+create: Erstellen
+wallets:
+  await_conf_amount: Erwarte Bestätigung
+  await_fin_amount: Warten auf die Fertigstellung
+  locked_amount: Gesperrt
+  txs_empty: 'Um Geld manuell oder per Transport zu empfangen oder zu senden, verwenden Sie die Schaltflächen %{message} oder %{transport} unten auf dem Bildschirm. Um die Wallet-Einstellungen zu ändern, drücken Sie %{settings}.'
+  title: Wallets
+  create_desc: Erstellen oder importieren Sie ein bestehendes Wallet mit dem Seed-Phrase.
+  add: Wallet hinzufügen
+  name: 'Name:'
+  pass: 'Passwort:'
+  pass_empty: Wallet Passwort eingeben
+  current_pass: 'Aktuelles Passwort:'
+  new_pass: 'Neues Passwort:'
+  min_tx_conf_count: 'Mindestanzahl an Bestätigungen für Transaktionen:'
+  recover: Wiederherstellen
+  recovery_phrase: Wiederherstellungssatz
+  words_count: 'Wortanzahl:'
+  enter_word: 'Wort #%{number} eingeben:'
+  not_valid_word: Das eingegebene Wort ist ungültig
+  not_valid_phrase: Der eingegebene Satz ist ungültig
+  create_phrase_desc: Schreiben Sie Ihre Wiederherstellungsphrase sicher auf und speichern Sie sie.
+  restore_phrase_desc: Geben Sie Wörter aus Ihrer gespeicherten Wiederherstellungsphrase ein.
+  setup_conn_desc: Wählen Sie aus, wie Ihr Wallet eine Verbindung zum Netzwerk herstellt.
+  conn_method: Verbindungsmethode
+  ext_conn: 'Externe Verbindungen:'
+  add_node: Node hinzufügen
+  node_url: 'Node URL:'
+  node_secret: 'API Secret (optional):'
+  invalid_url: Die eingegebene URL ist ungültig
+  open: Wallet öffnen
+  wrong_pass: Das eingegebene Passwort ist falsch
+  locked: Gesperrt
+  unlocked: Entsperrt
+  enable_node: 'Aktivieren Sie die integrierte Node, um das Wallet zu verwenden, oder ändern Sie die Verbindungseinstellungen, indem Sie unten auf dem Bildschirm %{settings} auswählen.'
+  node_loading: 'Das Wallet wird nach der synchronisation der integrierten Node geladen. Sie können die Verbindungseinstellungen ändern, indem Sie unten auf dem Bildschirm %{settings} auswählen.'
+  loading: Wird geladen
+  closing: Schließen
+  checking: Überprüfung
+  default_wallet: Standard-Wallet
+  wallet_loading: Wallet wird geladen
+  wallet_closing: Wallet schließen
+  wallet_checking: Wallet prüfen
+  tx_loading: Laden von Transaktionen
+  default_account: Standardaccount
+  create_account: Account erstellen
+  accounts: Accounts
+  tx_sent: Gesendet
+  tx_received: Erhalten
+  tx_sending: Senden
+  tx_receiving: Erhalten
+  tx_confirming: Erwarte Bestätigung
+  tx_cancelling: Abbrechen
+  tx_canceled: Abgebrochen
+  tx_confirmed: Bestätigt
+  txs: Transaktionen
+  messages: Nachrichten
+  transport: Transport
+  input_slatepack_desc: 'Geben Sie eine Nachricht ein, um eine Antwort zu erstellen oder die Transaktion abzuschließen:'
+  send_slatepack_desc: 'Senden Sie eine Nachricht an den Empfänger, um die Transaktion abzuschließen:'
+  parse_slatepack_err: 'Bei der Verarbeitung der Nachricht ist ein Fehler aufgetreten. Überprüfen Sie die Eingabedaten:'
+  pay_balance_error: 'Der Kontostand reicht nicht aus, um %{amount} ツ und die Netzwerkgebühr zu bezahlen.'
+  parse_i1_slatepack_desc: 'Um %{amount} zu zahlen, senden Sie diese Nachricht an den Empfänger:'
+  parse_i2_slatepack_desc: 'Schließen Sie die Transaktion ab, um %{amount} ツ zu erhalten'
+  parse_s1_slatepack_desc: 'Um %{amount} zu erhalten, senden Sie diese Nachricht an den Absender:'
+  parse_s2_slatepack_desc: 'Schließen Sie die Transaktion ab, um %{amount} ツ zu senden'
+  response_slatepack_err: 'Beim Erstellen der Antwort ist ein Fehler aufgetreten. Überprüfen Sie die Eingabedaten:'
+  response_exists_err: 'Eine solche Transaktion existiert bereits:'
+  create_request_desc: 'Erstellen Sie eine Anfrage zum Senden oder Empfangen der Gelder:'
+  send_request_desc: 'Sie haben eine Anfrage zum Senden von %{amount} ツ erstellt. Senden Sie diese Nachricht an den Empfänger:'
+  send_slatepack_err: Beim Erstellen der Anfrage zum Senden von Geldern ist ein Fehler aufgetreten. Überprüfen Sie die Eingabedaten.
+  invoice_desc: 'Sie haben eine Anfrage zum Erhalt von %{amount} ツ erstellt. Senden Sie diese Nachricht an den Absender der Gelder:'
+  invoice_slatepack_err: Bei der Rechnungsstellung ist ein Fehler aufgetreten, überprüfen Sie die Eingabedaten.
+  finalize_slatepack_err: 'Bei der Finalisierung ist ein Fehler aufgetreten. Überprüfen Sie die Eingabedaten:'
+  finalize: Abschließen
+  use_dandelion: Dandelion verwenden
+  enter_amount_send: 'Sie haben %{amount} ツ. Geben Sie den zu sendenden Betrag ein:'
+  enter_amount_receive: 'Geben Sie den zu erhaltenden Betrag ein:'
+  recovery: Wiederherstellung
+  repair_wallet: Wallet reparieren
+  repair_desc: Überprüfen Sie ein Wallet und reparieren und stellen Sie bei Bedarf fehlende Ausgaben wieder her. Dieser Vorgang wird einige Zeit dauern.
+  repair_unavailable: Sie benötigen eine aktive Verbindung zum Knoten und eine abgeschlossene Wallet-Synchronisierung.
+  delete: Wallet löschen
+  delete_conf: Sind Sie sicher, dass Sie das Wallet löschen möchten?
+  delete_desc: Stellen Sie sicher, dass Sie Ihre Wiederherstellungsphrase gespeichert haben, um auf Gelder zugreifen zu können.
+  wallet_loading_err: 'Bei der Synchronisierung des Wallets ist ein Fehler aufgetreten. Sie können es erneut versuchen oder die Verbindungseinstellungen ändern, indem Sie unten auf dem Bildschirm %{settings} auswählen.'
+  wallet: Wallet
+  send: Senden
+  receive: Empfangen
+  settings: Wallet Einstellungen
+  change_server_confirmation: Um die Änderung der Verbindungseinstellungen zu übernehmen, müssen Sie Ihr Wallet erneut öffnen. Jetzt wieder öffnen?
+network:
+  self: Netzwerk
+  type: 'Netzwerk Typ:'
+  connections: Verbindungen
+  node: Integrierte Node
+  metrics: Metriken
+  mining: Mining
+  settings: Node Einstellungen
+  enable_node: Node aktivieren
+  autorun: Autorun
+  disabled_server: 'Aktivieren Sie die integrierte Node oder fügen Sie eine weitere Verbindungsmethode hinzu, indem Sie oben links auf dem Bildschirm auf %{dots} drücken.'
+  no_ips: Auf Ihrem System sind keine IP-Adressen verfügbar. Der Server kann nicht gestartet werden. Überprüfen Sie Ihre Netzwerkkonnektivität.
+  available: Verfügbar
+  not_available: Nicht verfügbar
+  availability_check: Verfügbarkeitsprüfung
+sync_status:
+  node_restarting: Node wird neu gestartet
+  node_down: Node ist ausgefallen
+  initial: Node startet
+  no_sync: Node läuft
+  awaiting_peers: Warten auf Peers
+  header_sync: Header werden heruntergeladen
+  header_sync_percent: 'Header werden heruntergeladen: %{percent}%'
+  tx_hashset_pibd: Downloadstatus (PIBD)
+  tx_hashset_pibd_percent: 'Downloadstatus (PIBD): %{percent}%'
+  tx_hashset_download: Downloadstatus
+  tx_hashset_download_percent: 'Downloadstatus: %{percent}%'
+  tx_hashset_setup_history: 'Vorbereitungsstatus (Verlauf): %{percent}%'
+  tx_hashset_setup_position: 'Vorbereitungsstatus (Position): %{percent}%'
+  tx_hashset_setup: Vorbereitungszustand
+  tx_hashset_range_proofs_validation: 'Validierungsstatus (range proofs): %{percent}%'
+  tx_hashset_kernels_validation: 'Validierungsstatus (Kernel): %{percent}%'
+  tx_hashset_save: Finalisierender Chainstatus
+  body_sync: Blöcke herunterladen
+  body_sync_percent: 'Blöcke herunterladen: %{percent}%'
+  shutdown: Node wird heruntergefahren
+network_node:
+  header: Header
+  block: Block
+  hash: Hash
+  height: Höhe
+  difficulty: Schwierigkeit
+  time: Zeit
+  main_pool: Hauptpool
+  stem_pool: Stem-Pool
+  data: Daten
+  size: Größe (GB)
+  peers: Peers
+network_metrics:
+  loading: Metriken werden nach der Synchronisierung verfügbar sein
+  emission: Emission
+  inflation: Inflation
+  supply: Supply
+  block_time: Blockzeit
+  reward: Belohnung
+  difficulty_window: 'Schwierigkeitsfenster %{size}'
+network_mining:
+  loading: Mining wird nach der Synchronisierung verfügbar sein
+  info: 'Mining-Server aktiviert ist, können Sie seine Einstellungen ändern, indem Sie unten auf dem Bildschirm %{settings} wählen. Die Daten werden aktualisiert, wenn Geräte angeschlossen sind.'
+  restart_server_required: Ein Neustart des Servers ist erforderlich, um die Änderungen zu übernehmen.
+  rewards_wallet: Brieftasche für Belohnungen
+  server: Stratum Server
+  address: Addresse
+  miners: Miner
+  devices: Geräte
+  blocks_found: Gefundene Blöcke
+  hashrate: 'Hashrate (C%{bits})'
+  connected: Verbunden
+  disconnected: Getrennt
+network_settings:
+  change_value: Wert ändern
+  stratum_ip: 'Stratum IP Addresse:'
+  stratum_port: 'Stratum Port:'
+  port_unavailable: Der angegebene Port ist nicht verfügbar
+  restart_node_required: Ein Neustart der Node ist erforderlich, um die Änderungen zu übernehmen.
+  enable: Aktivieren
+  disable: Deaktivieren
+  restart: Neustarten
+  server: Server
+  api_ip: 'API IP Addresse:'
+  api_port: 'API Port:'
+  api_secret: 'Rest API and V2 Owner API token:'
+  foreign_api_secret: 'Fremdes API token:'
+  disabled: Deaktiviert
+  enabled: Aktiviert
+  ftl: 'Das Future Time Limit (FTL):'
+  ftl_description: Begrenzung, wie weit in der Zukunft, relativ zur lokalen Zeit eines Knotens in Sekunden, der Zeitstempel eines neuen Blocks liegen darf, damit der Block akzeptiert wird.
+  not_valid_value: Eingegebener Wert ist nicht gültig
+  full_validation: Vollständige Validierung
+  full_validation_description: Ob bei der Verarbeitung jedes Blocks eine vollständige Kettenvalidierung durchgeführt werden soll (außer bei der Synchronisierung).
+  archive_mode: Archiv Modus
+  archive_mode_desc: Führen Sie den Knoten im vollständigen Archivmodus aus (für die Synchronisierung wird mehr Speicherplatz und Zeit benötigt).
+  attempt_time: 'Zeit des Miningsversuches (in Sekunden):'
+  attempt_time_desc: Die Zeitspanne, in der versucht wird, eine bestimmte Kopfzeile abzubauen, bevor der Abbau gestoppt und die Transaktionen erneut aus dem Pool gesammelt werden
+  min_share_diff: 'Der Mindestschwierigkeitsgrad des Shares:'
+  reset_settings_desc: Nodeeinstellungen auf Standardwerte zurücksetzen
+  reset_settings: Einstellungen zurücksetzen
+  reset: zurücksetzen
+  tx_pool: Transaktionspool
+  pool_fee: 'Grundgebühr, die in den Pool aufgenommen wird:'
+  reorg_period: 'Aufbewahrungsdauer des Reorg-Caches (in Minuten):'
+  max_tx_pool: 'Maximale Anzahl von Transaktionen im Pool:'
+  max_tx_stempool: 'Maximale Anzahl von Transaktionen im Stamm-Pool:'
+  max_tx_weight: 'Maximales Gesamtgewicht der Transaktionen, die zur Bildung eines Blocks ausgewählt werden können:'
+  epoch_duration: 'Epochendauer (in Sekunden):'
+  embargo_timer: 'Embargo-Timer (in Sekunden):'
+  aggregation_period: 'Aggregationszeitraum (in Sekunden):'
+  stem_probability: 'Wahrscheinlichkeit der Stem-Phase:'
+  stem_txs: Stem Transaktionen
+  p2p_server: P2P Server
+  p2p_port: 'P2P port:'
+  add_seed: DNS-Seed hinzufügen
+  seed_address: 'DNS Seed Addresse:'
+  add_peer: Peer hinzufügen
+  peer_address: 'Peer Addresse:'
+  peer_address_error: 'Geben Sie die IP-Adresse oder den DNS-Namen (stellen Sie sicher, dass der angegebene Host verfügbar ist) im richtigen Format ein, z. B: 192.168.0.1:1234 oder example.com:5678'
+  default: Standardeinstellung
+  allow_list: Erlaubt-Liste
+  allow_list_desc: Nur mit diesen Peers verbinden
+  deny_list: Ablehnungsliste
+  deny_list_desc: Niemals mit diesen Peers verbinden
+  favourites: Favoriten
+  favourites_desc: Eine Liste der bevorzugten Peers, mit denen eine Verbindung hergestellt werden soll.
+  ban_window: 'Wie viel Zeit (in Sekunden) ein gesperrter Peer gesperrt bleiben soll:'
+  ban_window_desc: Die Entscheidung über das Verbot trifft der Knoten auf der Grundlage der Korrektheit der von der Gegenstelle erhaltenen Daten.
+  max_inbound_count: 'Maximale Anzahl der eingehenden Peer-Verbindungen:'
+  max_outbound_count: 'Maximale Anzahl von ausgehenden Peer-Verbindungen:'
+  min_outbound_count: 'Mindestanzahl von ausgehenden Peer-Verbindungen:'
+  min_outbound_desc: Der Node-Server wird aktiv versuchen, weitere Peers hinzuzufügen, bis er mindestens diese Anzahl erreicht hat.
+modal:
+  cancel: Abbrechen
+  save: Speichern
+  confirmation: Bestätigung
+  add: Hinzufügen
+modal_exit:
+  description: Sind Sie sicher, dass Sie die Anwendung beenden wollen?
+  exit: Schließen
