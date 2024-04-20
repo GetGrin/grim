@@ -191,10 +191,10 @@ impl WalletMessages {
         if let Some(err) = &self.message_error {
             ui.label(RichText::new(err.text()).size(16.0).color(Colors::RED));
         } else {
-            let desc_text = if response_empty && self.message_slate.is_none() {
+            let desc_text = if self.message_slate.is_none() {
                 t!("wallets.input_slatepack_desc")
             } else {
-                let slate = self.message_slate.as_ref().unwrap();
+                let mut slate = self.message_slate.clone().unwrap();
                 let amount = amount_to_hr_string(slate.amount, true);
                 match slate.state {
                     SlateState::Standard1 => {
@@ -386,51 +386,8 @@ impl WalletMessages {
         }
         if let Ok(mut slate) = wallet.parse_slatepack(self.message_edit.clone()) {
             println!("parse_message: {}", slate);
-            // Make operation based on incoming state status.
-            match slate.state {
-                SlateState::Standard1 => {
-                    if let Ok(resp) = wallet.receive(self.message_edit.clone()) {
-                        self.response_edit = resp;
-                    } else {
-                        // Check if tx with same slate id already exists.
-                        let exists_tx = wallet.tx_by_slate(&slate).is_some();
-                        if exists_tx {
-                            return;
-                        }
 
-                        // Set default response error message.
-                        self.message_error = Some(
-                            MessageError::Response(t!("wallets.response_slatepack_err"))
-                        );
-                    }
-                }
-                SlateState::Invoice1 => {
-                    match wallet.pay(self.message_edit.clone()) {
-                        Ok(resp) => {
-                            self.response_edit = resp;
-                        }
-                        Err(err) => {
-                            match err {
-                                grin_wallet_libwallet::Error::NotEnoughFunds {..} => {
-                                    let amount = amount_to_hr_string(slate.amount, true);
-                                    let a_t = t!("wallets.pay_balance_error", "amount" => amount);
-                                    self.message_error = Some(MessageError::Other(a_t));
-                                }
-                                _ => {
-                                    self.message_error = Some(
-                                        MessageError::Response(t!("wallets.response_slatepack_err"))
-                                    );
-                                }
-                            }
-                        }
-                    }
-                }
-                _ => {
-                    self.response_edit = "".to_string();
-                }
-            }
-
-            // Try to get amount  from transaction by id.
+            // Try to setup empty amount from transaction by id.
             if slate.amount == 0 {
                 let _ = wallet.get_data().unwrap().txs.clone().iter().map(|tx| {
                     if tx.data.tx_slate_id == Some(slate.id) {
@@ -441,10 +398,91 @@ impl WalletMessages {
                     tx
                 }).collect::<Vec<&WalletTransaction>>();
             }
-            self.message_slate = Some(slate.clone());
+
+            if slate.amount == 0 {
+                self.message_error = Some(
+                    MessageError::Response(t!("wallets.resp_slatepack_err"))
+                );
+                return;
+            }
+
+            // Make operation based on incoming state status.
+            match slate.state {
+                SlateState::Standard1 | SlateState::Invoice1 => {
+                    let resp = if slate.state == SlateState::Standard1 {
+                        wallet.receive(self.message_edit.clone())
+                    } else {
+                        wallet.pay(self.message_edit.clone())
+                    };
+                    if resp.is_ok() {
+                        self.response_edit = resp.unwrap();
+                    } else {
+                        // Check if tx with same slate id already exists.
+                        let exists_tx = wallet.tx_by_slate(&slate).is_some();
+                        if exists_tx {
+                            let mut sl = slate.clone();
+                            sl.state = if sl.state == SlateState::Standard1 {
+                                SlateState::Standard2
+                            } else {
+                                SlateState::Invoice2
+                            };
+                            match wallet.read_slatepack(&sl) {
+                                None => {
+                                    self.message_error = Some(
+                                        MessageError::Response(t!("wallets.resp_slatepack_err"))
+                                    );
+                                }
+                                Some(sp) => {
+                                    self.message_slate = Some(slate);
+                                    self.response_edit = sp;
+                                }
+                            }
+                            return;
+                        }
+
+                        // Set default response error message.
+                        self.message_error = Some(
+                            MessageError::Response(t!("wallets.resp_slatepack_err"))
+                        );
+                    }
+                }
+                SlateState::Standard2 | SlateState::Invoice2 => {
+                    // Check if slatepack with same id and state already exists.
+                    let mut sl = slate.clone();
+                    sl.state = if sl.state == SlateState::Standard2 {
+                        SlateState::Standard1
+                    } else {
+                        SlateState::Invoice1
+                    };
+                    match wallet.read_slatepack(&sl) {
+                        None => {
+                            match wallet.read_slatepack(&slate) {
+                                None => {
+                                    self.message_error = Some(
+                                        MessageError::Response(t!("wallets.resp_slatepack_err"))
+                                    );
+                                }
+                                Some(sp) => {
+                                    self.message_slate = Some(sl);
+                                    self.response_edit = sp;
+                                    return;
+                                }
+                            }
+                        }
+                        Some(_) => {
+                            self.message_slate = Some(slate.clone());
+                            return;
+                        }
+                    }
+                }
+                _ => {
+                    self.response_edit = "".to_string();
+                }
+            }
+            self.message_slate = Some(slate);
         } else {
             self.message_slate = None;
-            self.message_error = Some(MessageError::Parse(t!("wallets.response_slatepack_err")));
+            self.message_error = Some(MessageError::Parse(t!("wallets.resp_slatepack_err")));
         }
     }
 

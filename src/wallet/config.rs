@@ -17,7 +17,7 @@ use std::path::PathBuf;
 use std::string::ToString;
 
 use grin_core::global::ChainTypes;
-use grin_wallet_libwallet::{SlateState};
+use grin_wallet_libwallet::{Slate};
 use serde_derive::{Deserialize, Serialize};
 
 use crate::{AppConfig, Settings};
@@ -122,13 +122,13 @@ impl WalletConfig {
     }
 
     /// Get Slatepacks data path for current wallet.
-    pub fn get_slatepack_path(&self, id: String, state: &SlateState) -> PathBuf {
+    pub fn get_slatepack_path(&self, slate: &Slate) -> PathBuf {
         let mut slatepack_dir = PathBuf::from(self.get_data_path());
         slatepack_dir.push(SLATEPACKS_DIR_NAME);
         if !slatepack_dir.exists() {
             let _ = fs::create_dir_all(slatepack_dir.clone());
         }
-        let slatepack_file_name = format!("{}.{}.slatepack", id, state);
+        let slatepack_file_name = format!("{}.{}.slatepack", slate.id, slate.state);
         slatepack_dir.push(slatepack_file_name);
         slatepack_dir
     }

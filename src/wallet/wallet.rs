@@ -479,11 +479,20 @@ impl Wallet {
         })?;
 
         // Save slatepack.
-        let slatepack_dir = self.get_config().get_slatepack_path(slate.id.to_string(), &slate.state);
+        let slatepack_dir = self.get_config().get_slatepack_path(&slate);
         let mut output = File::create(slatepack_dir)?;
         output.write_all(message.as_bytes())?;
         output.sync_all()?;
         Ok(message)
+    }
+
+    /// Read slatepack from file.
+    pub fn read_slatepack(&self, slate: &Slate) -> Option<String> {
+        let slatepack_path = self.get_config().get_slatepack_path(slate);
+        match fs::read_to_string(slatepack_path) {
+            Ok(s) => Some(s),
+            Err(_) => None
+        }
     }
 
     /// Get transaction by slate id.
@@ -956,17 +965,17 @@ fn sync_wallet_data(wallet: &Wallet) {
                                 tx.amount_credited - tx.amount_debited
                             };
 
-                            // Setup transaction broadcasting flag based on slate state.
+                            // Setup transaction posting flag based on slate state.
                             let posting = if (tx.tx_type == TxLogEntryType::TxSent ||
                                 tx.tx_type == TxLogEntryType::TxReceived) &&
                                 !tx.confirmed && tx.tx_slate_id.is_some() {
-                                let sl_id = tx.tx_slate_id.unwrap().to_string();
-                                let state = match tx.tx_type {
+                                let mut slate = Slate::blank(1, false);
+                                slate.id = tx.tx_slate_id.unwrap();
+                                slate.state = match tx.tx_type {
                                     TxLogEntryType::TxReceived => SlateState::Invoice3,
                                     _ => SlateState::Standard3
                                 };
-                                let slatepack_path = config.get_slatepack_path(sl_id, &state);
-                                fs::read_to_string(slatepack_path).is_ok()
+                                wallet.read_slatepack(&slate).is_some()
                             } else {
                                 false
                             };

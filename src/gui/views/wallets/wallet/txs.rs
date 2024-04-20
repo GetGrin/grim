@@ -230,8 +230,9 @@ fn tx_item_ui(ui: &mut egui::Ui,
                             || tx.data.tx_type == TxLogEntryType::TxReceivedCancelled;
                         if is_canceled {
                             format!("{} {}", X_CIRCLE, t!("wallets.tx_canceled"))
-                        } else if tx.data.kernel_excess.is_some() &&
-                            tx.data.tx_type == TxLogEntryType::TxReceived {
+                        } else if tx.posting || (tx.data.kernel_excess.is_some() &&
+                            (tx.data.tx_type == TxLogEntryType::TxReceived ||
+                            tx.data.tx_type == TxLogEntryType::TxSent)) {
                             format!("{} {}", DOTS_THREE_CIRCLE, t!("wallets.tx_finalizing"))
                         } else {
                             match tx.data.tx_type {
@@ -253,7 +254,7 @@ fn tx_item_ui(ui: &mut egui::Ui,
                                 format!("{} {}", CHECK_CIRCLE, t!("wallets.tx_confirmed"))
                             },
                             TxLogEntryType::TxSent | TxLogEntryType::TxReceived => {
-                                if data.info.last_confirmed_height - tx_height > min_conf {
+                                if data.info.last_confirmed_height - tx_height > min_conf + 1 {
                                     let text = if tx.data.tx_type == TxLogEntryType::TxSent {
                                         t!("wallets.tx_sent")
                                     } else {
