@@ -51,7 +51,7 @@ impl NetworkTab for NetworkNode {
             .id_source("integrated_node")
             .auto_shrink([false; 2])
             .show(ui, |ui| {
-                ui.add_space(1.0);
+                ui.add_space(2.0);
 
                 // Show header info.
                 View::sub_title(ui, format!("{} {}", FLOW_ARROW, t!("network_node.header")));
@@ -85,7 +85,7 @@ impl NetworkTab for NetworkNode {
                                           [false, false, false, true]);
                     });
                 });
-                ui.add_space(4.0);
+                ui.add_space(5.0);
 
                 // Show block info.
                 View::sub_title(ui, format!("{} {}", CUBE, t!("network_node.block")));
@@ -119,7 +119,7 @@ impl NetworkTab for NetworkNode {
                                           [false, false, false, true]);
                     });
                 });
-                ui.add_space(4.0);
+                ui.add_space(5.0);
 
                 // Show data info.
                 View::sub_title(ui, format!("{} {}", SHARE_NETWORK, t!("network_node.data")));
@@ -161,7 +161,7 @@ impl NetworkTab for NetworkNode {
                                           [false, false, false, true]);
                     });
                 });
-                ui.add_space(4.0);
+                ui.add_space(5.0);
 
                 // Show peer stats when available.
                 if stats.peer_count > 0 {

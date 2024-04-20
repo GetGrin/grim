@@ -61,8 +61,8 @@ wallets:
   tx_sending: Sending
   tx_receiving: Receiving
   tx_confirming: Awaiting confirmation
-  tx_cancelling: Cancelling
   tx_canceled: Canceled
+  tx_finalizing: Finalizing
   tx_confirmed: Confirmed
   txs: Transactions
   messages: Messages
@@ -73,8 +73,10 @@ wallets:
   pay_balance_error: 'Account balance is insufficient to pay %{amount} ツ and network fee.'
   parse_i1_slatepack_desc: 'To pay %{amount} ツ send this message to the receiver:'
   parse_i2_slatepack_desc: 'Finalize transaction to receive %{amount} ツ'
+  parse_i3_slatepack_desc: 'Post transaction to finalize receiving of %{amount} ツ'
   parse_s1_slatepack_desc: 'To receive %{amount} ツ send this message to the sender:'
   parse_s2_slatepack_desc: 'Finalize transaction to send %{amount} ツ'
+  parse_s3_slatepack_desc: 'Post transaction to finalize sending of %{amount} ツ'
   response_slatepack_err: 'An error occurred during creation of the response, check input data:'
   response_exists_err: 'Such transaction already exists:'
   create_request_desc: 'Create request to send or receive the funds:'

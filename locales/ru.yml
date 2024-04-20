@@ -61,8 +61,8 @@ wallets:
   tx_sending: Отправка
   tx_receiving: Получение
   tx_confirming: Ожидает подтверждения
-  tx_cancelling: Отмена
   tx_canceled: Отменено
+  tx_finalizing: Завершение
   tx_confirmed: Подтверждено
   txs: Транзакции
   messages: Сообщения
@@ -73,8 +73,10 @@ wallets:
   pay_balance_error: 'Средств на аккаунте недостаточно для оплаты %{amount} ツ и комиссии сети.'
   parse_i1_slatepack_desc: 'Для оплаты %{amount} ツ отправьте это сообщение получателю:'
   parse_i2_slatepack_desc: 'Завершите транзакцию для получения %{amount} ツ'
+  parse_i3_slatepack_desc: 'Опубликуйте транзакцию для завершения получения %{amount} ツ'
   parse_s1_slatepack_desc: 'Для получения %{amount} ツ отправьте это сообщение отправителю:'
   parse_s2_slatepack_desc: 'Завершите транзакцию для отправки %{amount} ツ'
+  parse_s3_slatepack_desc: 'Опубликуйте транзакцию для завершения отправки %{amount} ツ'
   response_slatepack_err: 'Во время создания ответа произошла ошибка, проверьте входные данные:'
   response_exists_err: 'Такая транзакция уже существует:'
   create_request_desc: 'Cоздать запрос на получение или отправку средств:'

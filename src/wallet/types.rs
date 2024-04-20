@@ -136,5 +136,16 @@ pub struct WalletData {
     /// Balance data for current account.
     pub info: WalletInfo,
     /// Transactions data.
-    pub txs: Vec<TxLogEntry>
+    pub txs: Vec<WalletTransaction>
+}
+
+/// Wallet transaction data.
+#[derive(Clone)]
+pub struct WalletTransaction {
+    /// Transaction information.
+    pub data: TxLogEntry,
+    /// Calculated total transaction amount.
+    pub amount: u64,
+    /// Flag to check if transaction is posting after finalizing.
+    pub posting: bool
 }

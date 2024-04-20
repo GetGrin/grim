@@ -15,16 +15,18 @@
 use egui::{Align, Id, Layout, Margin, RichText, Rounding, ScrollArea};
 use egui::scroll_area::ScrollBarVisibility;
 use grin_core::core::amount_to_hr_string;
-use grin_wallet_libwallet::{TxLogEntry, TxLogEntryType};
+use grin_wallet_libwallet::{TxLogEntryType};
 
 use crate::gui::Colors;
-use crate::gui::icons::{ARROW_CIRCLE_DOWN, ARROW_CIRCLE_UP, BRIDGE, CALENDAR_CHECK, CHAT_CIRCLE_TEXT, CHECK_CIRCLE, DOTS_THREE_CIRCLE, FILE_TEXT, GEAR_FINE, PROHIBIT, X_CIRCLE};
+use crate::gui::icons::{ARROW_CIRCLE_DOWN, BRIDGE, CALENDAR_CHECK, CHAT_CIRCLE_TEXT, CHECK_CIRCLE, DOTS_THREE_CIRCLE, FILE_TEXT, GEAR_FINE, PROHIBIT, X_CIRCLE};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Root, View};
 use crate::gui::views::wallets::types::WalletTab;
-use crate::gui::views::wallets::wallet::types::WalletTabType;
+use crate::gui::views::wallets::wallet::types::{GRIN, WalletTabType};
 use crate::gui::views::wallets::wallet::WalletContent;
+use crate::wallet::types::{WalletData, WalletTransaction};
 use crate::wallet::Wallet;
+
 
 /// Wallet info tab content.
 #[derive(Default)]
@@ -69,6 +71,7 @@ impl WalletInfo {
     /// Draw transactions content.
     fn txs_ui(&self, ui: &mut egui::Ui, wallet: &mut Wallet) {
         let data = wallet.get_data().unwrap();
+        let config = wallet.get_config();
         let txs_size = data.txs.len();
 
         // Show transactions info.
@@ -133,7 +136,7 @@ impl WalletInfo {
         ui.add_space(3.0);
         ScrollArea::vertical()
             .scroll_bar_visibility(ScrollBarVisibility::AlwaysVisible)
-            .id_source(Id::from("txs_content").with(wallet.get_config().id))
+            .id_source(Id::from("txs_content").with(config.id))
             .auto_shrink([false; 2])
             .show_rows(ui, TX_ITEM_HEIGHT, txs_size, |ui, row_range| {
                 ui.add_space(4.0);
@@ -143,17 +146,11 @@ impl WalletInfo {
                         // Setup item rounding.
                         let item_rounding = View::item_rounding(index, txs_size, false);
                         // Show transaction item.
-                        tx_item_ui(ui, tx, item_rounding, data.info.last_confirmed_height, wallet);
+                        tx_item_ui(ui, tx, item_rounding, config.min_confirmations, &data, wallet);
                     }
                 });
                 ui.add_space(2.0);
             });
-
-        // for tx in &data.txs {
-        //     if tx.tx_type != TxLogEntryType::TxReceivedCancelled && tx.tx_type != TxLogEntryType::TxSentCancelled {
-        //         println!("tx: {}", serde_json::to_string::<TxLogEntry>(tx).unwrap());
-        //     }
-        // }
     }
 }
 
@@ -162,9 +159,10 @@ const TX_ITEM_HEIGHT: f32 = 76.0;
 
 /// Draw transaction item.
 fn tx_item_ui(ui: &mut egui::Ui,
-              tx: &TxLogEntry,
+              tx: &WalletTransaction,
               mut rounding: Rounding,
-              last_height: u64,
+              min_conf: u64,
+              data: &WalletData,
               wallet: &mut Wallet) {
     // Setup layout size.
     let mut rect = ui.available_rect_before_wrap();
@@ -174,11 +172,6 @@ fn tx_item_ui(ui: &mut egui::Ui,
     // Draw round background.
     let bg_rect = rect.clone();
     ui.painter().rect(bg_rect, rounding, Colors::BUTTON, View::ITEM_STROKE);
-
-    // Setup transaction flags.
-    let is_canceled = tx.tx_type == TxLogEntryType::TxSentCancelled
-        || tx.tx_type == TxLogEntryType::TxReceivedCancelled;
-    let is_cancelling = wallet.is_cancelling(&tx.id);
 
     ui.vertical(|ui| {
         ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
@@ -190,10 +183,11 @@ fn tx_item_ui(ui: &mut egui::Ui,
                 //TODO: Show tx info
             });
 
-            if !is_cancelling && !tx.confirmed && tx.tx_type != TxLogEntryType::TxReceivedCancelled
-                && tx.tx_type != TxLogEntryType::TxSentCancelled {
+            if !tx.posting && !tx.data.confirmed &&
+                tx.data.tx_type != TxLogEntryType::TxReceivedCancelled
+                && tx.data.tx_type != TxLogEntryType::TxSentCancelled {
                 View::item_button(ui, Rounding::default(), PROHIBIT, Some(Colors::RED), || {
-                    wallet.cancel(tx.id);
+                    wallet.cancel(tx.data.id);
                 });
             }
 
@@ -201,18 +195,25 @@ fn tx_item_ui(ui: &mut egui::Ui,
             ui.allocate_ui_with_layout(layout_size, Layout::left_to_right(Align::Center), |ui| {
                 ui.add_space(12.0);
                 ui.vertical(|ui| {
-                    // Setup transaction amount.
                     ui.add_space(3.0);
-                    let amount_text = if tx.amount_credited > tx.amount_debited {
-                        format!("+{}",
-                                amount_to_hr_string(tx.amount_credited - tx.amount_debited, true))
+
+                    // Setup transaction amount.
+                    let mut amount_text = if tx.data.tx_type == TxLogEntryType::TxSent ||
+                        tx.data.tx_type == TxLogEntryType::TxSentCancelled {
+                        "-"
+                    } else if tx.data.tx_type == TxLogEntryType::TxReceived ||
+                        tx.data.tx_type == TxLogEntryType::TxReceivedCancelled {
+                        "+"
                     } else {
-                        format!("-{}",
-                                amount_to_hr_string(tx.amount_debited - tx.amount_credited, true))
-                    };
+                        ""
+                    }.to_string();
+                    amount_text = format!("{}{} {}",
+                                          amount_text,
+                                          amount_to_hr_string(tx.amount, true),
+                                          GRIN);
 
                     // Setup amount color.
-                    let amount_color = match tx.tx_type {
+                    let amount_color = match tx.data.tx_type {
                         TxLogEntryType::ConfirmedCoinbase => Colors::BLACK,
                         TxLogEntryType::TxReceived => Colors::BLACK,
                         TxLogEntryType::TxSent => Colors::BLACK,
@@ -224,13 +225,16 @@ fn tx_item_ui(ui: &mut egui::Ui,
                     ui.add_space(-2.0);
 
                     // Setup transaction status text.
-                    let status_text = if !tx.confirmed {
-                        if wallet.is_cancelling(&tx.id) {
-                            format!("{} {}", DOTS_THREE_CIRCLE, t!("wallets.tx_cancelling"))
-                        } else if is_canceled {
+                    let status_text = if !tx.data.confirmed {
+                        let is_canceled = tx.data.tx_type == TxLogEntryType::TxSentCancelled
+                            || tx.data.tx_type == TxLogEntryType::TxReceivedCancelled;
+                        if is_canceled {
                             format!("{} {}", X_CIRCLE, t!("wallets.tx_canceled"))
+                        } else if tx.data.kernel_excess.is_some() &&
+                            tx.data.tx_type == TxLogEntryType::TxReceived {
+                            format!("{} {}", DOTS_THREE_CIRCLE, t!("wallets.tx_finalizing"))
                         } else {
-                            match tx.tx_type {
+                            match tx.data.tx_type {
                                 TxLogEntryType::TxReceived => {
                                     format!("{} {}", DOTS_THREE_CIRCLE, t!("wallets.tx_receiving"))
                                 },
@@ -238,31 +242,37 @@ fn tx_item_ui(ui: &mut egui::Ui,
                                     format!("{} {}", DOTS_THREE_CIRCLE, t!("wallets.tx_sending"))
                                 },
                                 _ => {
-                                    format!("{} {}", DOTS_THREE_CIRCLE, t!("wallets.tx_confirming"))
+                                    format!("{} {}", DOTS_THREE_CIRCLE, t!("wallets.tx_confirmed"))
                                 }
                             }
                         }
                     } else {
-                        let tx_height = tx.kernel_lookup_min_height.unwrap_or(0);
-                        let min_confirmations = wallet.get_config().min_confirmations;
-                        match tx.tx_type {
+                        let tx_height = tx.data.kernel_lookup_min_height.unwrap_or(0);
+                        match tx.data.tx_type {
                             TxLogEntryType::ConfirmedCoinbase => {
                                 format!("{} {}", CHECK_CIRCLE, t!("wallets.tx_confirmed"))
                             },
-                            TxLogEntryType::TxReceived => {
-                                if last_height - tx_height > min_confirmations {
-                                    format!("{} {}", ARROW_CIRCLE_DOWN, t!("wallets.tx_received"))
+                            TxLogEntryType::TxSent | TxLogEntryType::TxReceived => {
+                                if data.info.last_confirmed_height - tx_height > min_conf {
+                                    let text = if tx.data.tx_type == TxLogEntryType::TxSent {
+                                        t!("wallets.tx_sent")
+                                    } else {
+                                        t!("wallets.tx_received")
+                                    };
+                                    format!("{} {}", ARROW_CIRCLE_DOWN, text)
                                 } else {
-                                    format!("{} {}",
+                                    let h = data.info.last_confirmed_height;
+                                    let left_conf = h - tx_height;
+                                    let conf_info = if h >= tx_height && left_conf <= min_conf {
+                                        format!("{}/{}", left_conf, min_conf)
+                                    } else {
+                                        "".to_string()
+                                    };
+                                    format!("{} {} {}",
                                             DOTS_THREE_CIRCLE,
-                                            t!("wallets.tx_confirming"))
-                                }
-                            },
-                            TxLogEntryType::TxSent => {
-                                if last_height - tx_height > min_confirmations {
-                                    format!("{} {}", ARROW_CIRCLE_UP, t!("wallets.tx_sent"))
-                                } else {
-                                    format!("{} {}", DOTS_THREE_CIRCLE, t!("wallets.tx_confirming"))
+                                            t!("wallets.tx_confirming"),
+                                            conf_info
+                                    )
                                 }
                             },
                             _ => format!("{} {}", X_CIRCLE, t!("wallets.canceled"))
@@ -270,14 +280,14 @@ fn tx_item_ui(ui: &mut egui::Ui,
                     };
 
                     // Setup status text color.
-                    let status_color = match tx.tx_type {
+                    let status_color = match tx.data.tx_type {
                         TxLogEntryType::ConfirmedCoinbase => Colors::TEXT,
-                        TxLogEntryType::TxReceived => if tx.confirmed {
+                        TxLogEntryType::TxReceived => if tx.data.confirmed {
                             Colors::GREEN
                         } else {
                             Colors::TEXT
                         },
-                        TxLogEntryType::TxSent => if tx.confirmed {
+                        TxLogEntryType::TxSent => if tx.data.confirmed {
                             Colors::RED
                         } else {
                             Colors::TEXT
@@ -289,7 +299,7 @@ fn tx_item_ui(ui: &mut egui::Ui,
                     ui.label(RichText::new(status_text).size(15.0).color(status_color));
 
                     // Setup transaction time.
-                    let tx_time = View::format_time(tx.creation_ts.timestamp());
+                    let tx_time = View::format_time(tx.data.creation_ts.timestamp());
                     let tx_time_text = format!("{} {}", CALENDAR_CHECK, tx_time);
                     ui.label(RichText::new(tx_time_text).size(15.0).color(Colors::GRAY));
                 });

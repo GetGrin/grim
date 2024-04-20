@@ -544,7 +544,7 @@ impl View {
     pub fn format_time(ts: i64) -> String {
         let utc_offset = chrono::Local::now().offset().local_minus_utc();
         let utc_time = ts + utc_offset as i64;
-        let tx_time = chrono::NaiveDateTime::from_timestamp_opt(utc_time, 0).unwrap();
+        let tx_time = chrono::DateTime::from_timestamp(utc_time, 0).unwrap();
         tx_time.format("%d/%m/%Y %H:%M:%S").to_string()
     }
 

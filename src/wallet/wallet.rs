@@ -31,17 +31,16 @@ use grin_keychain::{ExtKeychain, Identifier, Keychain};
 use grin_util::Mutex;
 use grin_util::types::ZeroingString;
 use grin_wallet_api::Owner;
-use grin_wallet_controller::command::parse_slatepack;
 use grin_wallet_controller::controller;
 use grin_wallet_controller::controller::ForeignAPIHandlerV2;
 use grin_wallet_impls::{DefaultLCProvider, DefaultWalletImpl, HTTPNodeClient};
-use grin_wallet_libwallet::{Error, InitTxArgs, IssueInvoiceTxArgs, NodeClient, Slate, SlatepackAddress, StatusMessage, TxLogEntry, TxLogEntryType, WalletInst, WalletLCProvider};
+use grin_wallet_libwallet::{Error, InitTxArgs, IssueInvoiceTxArgs, NodeClient, RetrieveTxQueryArgs, RetrieveTxQuerySortField, RetrieveTxQuerySortOrder, Slate, SlateState, StatusMessage, TxLogEntry, TxLogEntryType, WalletInst, WalletLCProvider};
 use grin_wallet_libwallet::api_impl::owner::{cancel_tx, retrieve_summary_info, retrieve_txs};
 use crate::AppConfig;
 
 use crate::node::{Node, NodeConfig};
 use crate::wallet::{ConnectionsConfig, ExternalConnection, WalletConfig};
-use crate::wallet::types::{ConnectionMethod, WalletAccount, WalletData, WalletInstance};
+use crate::wallet::types::{ConnectionMethod, WalletAccount, WalletData, WalletInstance, WalletTransaction};
 
 /// Contains wallet instance, configuration and state, handles wallet commands.
 #[derive(Clone)]
@@ -86,10 +85,7 @@ pub struct Wallet {
     /// Flag to check if wallet repairing and restoring missing outputs is needed.
     repair_needed: Arc<AtomicBool>,
     /// Wallet repair progress in percents.
-    repair_progress: Arc<AtomicU8>,
-
-    /// Identifiers for transactions to cancel.
-    cancel_txs: Arc<RwLock<BTreeSet<u32>>>
+    repair_progress: Arc<AtomicU8>
 }
 
 /// Default Foreign API server host.
@@ -117,8 +113,7 @@ impl Wallet {
             data: Arc::new(RwLock::new(None)),
             sync_attempts: Arc::new(AtomicU8::new(0)),
             repair_needed: Arc::new(AtomicBool::new(false)),
-            repair_progress: Arc::new(AtomicU8::new(0)),
-            cancel_txs: Arc::new(RwLock::new(BTreeSet::new())),
+            repair_progress: Arc::new(AtomicU8::new(0))
         }
     }
 
@@ -470,15 +465,8 @@ impl Wallet {
 
     /// Parse Slatepack message into [`Slate`].
     pub fn parse_slatepack(&self, message: String) -> Result<Slate, Error> {
-        let mut api = Owner::new(self.instance.clone().unwrap(), None);
-        return match parse_slatepack(&mut api, None, None, Some(message.clone())) {
-            Ok((slate, _)) => {
-                Ok(slate)
-            }
-            Err(_) => {
-                Err(Error::SlatepackDeser("Slatepack parse error".to_string()))
-            }
-        }
+        let api = Owner::new(self.instance.clone().unwrap(), None);
+        api.slate_from_slatepack_message(None, message, vec![])
     }
 
     /// Create Slatepack message from provided slate.
@@ -490,16 +478,27 @@ impl Wallet {
             Ok(())
         })?;
 
-        // Create a directory to which slatepack files will be output.
-        let mut slatepack_dir = self.get_config().get_slatepacks_path();
-        let slatepack_file_name = format!("{}.{}.slatepack", slate.id, slate.state);
-        slatepack_dir.push(slatepack_file_name);
-
-        // Write Slatepack response into the file.
+        // Save slatepack.
+        let slatepack_dir = self.get_config().get_slatepack_path(slate.id.to_string(), &slate.state);
         let mut output = File::create(slatepack_dir)?;
         output.write_all(message.as_bytes())?;
         output.sync_all()?;
         Ok(message)
+    }
+
+    /// Get transaction by slate id.
+    pub fn tx_by_slate(&self, slate: &Slate) -> Option<WalletTransaction> {
+        if let Some(data) = self.get_data() {
+            let txs = data.txs.clone().iter().map(|tx| tx.clone()).filter(|tx| {
+                tx.data.tx_slate_id == Some(slate.id)
+            }).collect::<Vec<WalletTransaction>>();
+            return if let Some(tx) = txs.get(0) {
+                Some(tx.clone())
+            } else {
+                None
+            }
+        }
+        None
     }
 
     /// Initialize a transaction to send amount, return request for funds receiver.
@@ -513,7 +512,7 @@ impl Wallet {
             selection_strategy_is_use_all: false,
             ..Default::default()
         };
-        let mut api = Owner::new(self.instance.clone().unwrap(), None);
+        let api = Owner::new(self.instance.clone().unwrap(), None);
         let slate = api.init_send_tx(None, args)?;
 
         // Lock outputs to for this transaction.
@@ -535,7 +534,7 @@ impl Wallet {
             amount,
             target_slate_version: None,
         };
-        let mut api = Owner::new(self.instance.clone().unwrap(), None);
+        let api = Owner::new(self.instance.clone().unwrap(), None);
         let slate = api.issue_invoice_tx(None, args)?;
 
         // Create Slatepack message response.
@@ -558,7 +557,7 @@ impl Wallet {
             selection_strategy_is_use_all: false,
             ..Default::default()
         };
-        let mut api = Owner::new(self.instance.clone().unwrap(), None);
+        let api = Owner::new(self.instance.clone().unwrap(), None);
         let slate = api.process_invoice_tx(None, &slate, args)?;
         api.tx_lock_outputs(None, &slate)?;
 
@@ -574,7 +573,7 @@ impl Wallet {
     /// Handle message to receive funds, return response to sender.
     pub fn receive(&self, message: String) -> Result<String, Error> {
         let mut slate = self.parse_slatepack(message)?;
-        let mut api = Owner::new(self.instance.clone().unwrap(), None);
+        let api = Owner::new(self.instance.clone().unwrap(), None);
         controller::foreign_single_use(api.wallet_inst.clone(), None, |api| {
             slate = api.receive_tx(&slate, Some(self.get_config().account.as_str()), None)?;
             Ok(())
@@ -591,37 +590,50 @@ impl Wallet {
     /// Finalize transaction from provided message as sender or invoice issuer with Dandelion.
     pub fn finalize(&self, message: String, dandelion: bool) -> Result<Slate, Error> {
         let mut slate = self.parse_slatepack(message)?;
-        let mut api = Owner::new(self.instance.clone().unwrap(), None);
+        let api = Owner::new(self.instance.clone().unwrap(), None);
         slate = api.finalize_tx(None, &slate)?;
+        // Create Slatepack message.
+        let _ = self.create_slatepack_message(slate.clone())?;
+        // Post transaction to blockchain.
         api.post_tx(None, &slate, dandelion)?;
         // Sync wallet info.
         self.sync();
-
         Ok(slate)
+    }
+
+    /// Post transaction to blockchain.
+    pub fn post(&self, slate: &Slate, dandelion: bool) -> Result<(), Error> {
+        // Post transaction to blockchain.
+        let api = Owner::new(self.instance.clone().unwrap(), None);
+        api.post_tx(None, slate, dandelion)?;
+        // Sync wallet info.
+        self.sync();
+        Ok(())
     }
 
     /// Cancel transaction.
     pub fn cancel(&mut self, id: u32) {
+        let instance = self.instance.clone().unwrap();
+        let _ = cancel_tx(instance, None, &None, Some(id), None);
         // Set cancelling status.
         {
-            let mut cancelling_w = self.cancel_txs.write().unwrap();
-            cancelling_w.insert(id);
+            let mut w_data = self.data.write().unwrap();
+            let mut data = w_data.clone().unwrap();
+            let txs = data.txs.iter_mut().map(|tx| {
+                if tx.data.id == id {
+                    tx.data.tx_type = if tx.data.tx_type == TxLogEntryType::TxReceived {
+                        TxLogEntryType::TxReceivedCancelled
+                    } else {
+                        TxLogEntryType::TxSentCancelled
+                    };
+                }
+                tx.clone()
+            }).collect::<Vec<WalletTransaction>>();
+            data.txs = txs;
+            *w_data = Some(data);
         }
-
-        // Launch tx cancelling at separate thread.
-        let wallet_cancel = self.clone();
-        let instance = wallet_cancel.instance.clone().unwrap();
-        thread::spawn(move || {
-            let _ = cancel_tx(instance, None, &None, Some(id), None);
-            // Refresh wallet info to update statuses.
-            wallet_cancel.sync();
-        });
-    }
-
-    /// Check if transaction is cancelling.
-    pub fn is_cancelling(&self, id: &u32) -> bool {
-        let cancelling_r = self.cancel_txs.read().unwrap();
-        cancelling_r.contains(id)
+        // Refresh wallet info to update statuses.
+        self.sync();
     }
 
     /// Change wallet password.
@@ -858,101 +870,121 @@ fn sync_wallet_data(wallet: &Wallet) {
         }
     });
 
+    let config = wallet.get_config();
+
     // Retrieve wallet info.
     if let Some(instance) = &wallet.instance {
-        match retrieve_summary_info(
+        if let Ok(info) = retrieve_summary_info(
             instance.clone(),
             None,
             &Some(info_tx),
             true,
-            wallet.get_config().min_confirmations
+            config.min_confirmations
         ) {
-            Ok(info) => {
-                // Do not retrieve txs if wallet was closed.
-                if !wallet.is_open() {
-                    return;
-                }
+            // Do not retrieve txs if wallet was closed.
+            if !wallet.is_open() {
+                return;
+            }
 
-                if wallet.info_sync_progress() == 100 {
-                    // Retrieve accounts data.
-                    let last_height = info.1.last_confirmed_height;
-                    update_accounts(wallet, last_height, info.1.amount_currently_spendable);
+            if wallet.info_sync_progress() == 100 {
+                // Retrieve accounts data.
+                let last_height = info.1.last_confirmed_height;
+                update_accounts(wallet, last_height, info.1.amount_currently_spendable);
 
-                    // Update txs sync progress at separate thread.
-                    let wallet_txs = wallet.clone();
-                    let (txs_tx, txs_rx) = mpsc::channel::<StatusMessage>();
-                    thread::spawn(move || {
-                        while let Ok(m) = txs_rx.recv() {
-                            println!("SYNC TXS MESSAGE");
-                            match m {
-                                StatusMessage::UpdatingOutputs(_) => {}
-                                StatusMessage::UpdatingTransactions(_) => {}
-                                StatusMessage::FullScanWarn(_) => {}
-                                StatusMessage::Scanning(_, progress) => {
-                                    wallet_txs.txs_sync_progress.store(progress, Ordering::Relaxed);
-                                }
-                                StatusMessage::ScanningComplete(_) => {
-                                    wallet_txs.txs_sync_progress.store(100, Ordering::Relaxed);
-                                }
-                                StatusMessage::UpdateWarning(_) => {}
+                // Update txs sync progress at separate thread.
+                let wallet_txs = wallet.clone();
+                let (txs_tx, txs_rx) = mpsc::channel::<StatusMessage>();
+                thread::spawn(move || {
+                    while let Ok(m) = txs_rx.recv() {
+                        println!("SYNC TXS MESSAGE");
+                        match m {
+                            StatusMessage::UpdatingOutputs(_) => {}
+                            StatusMessage::UpdatingTransactions(_) => {}
+                            StatusMessage::FullScanWarn(_) => {}
+                            StatusMessage::Scanning(_, progress) => {
+                                wallet_txs.txs_sync_progress.store(progress, Ordering::Relaxed);
                             }
+                            StatusMessage::ScanningComplete(_) => {
+                                wallet_txs.txs_sync_progress.store(100, Ordering::Relaxed);
+                            }
+                            StatusMessage::UpdateWarning(_) => {}
                         }
-                    });
+                    }
+                });
 
-                    match retrieve_txs(instance.clone(),
-                                 None,
-                                 &Some(txs_tx),
-                                 true,
-                                 None,
-                                 None,
-                                 None) {
-                        Ok(txs) => {
-                            // Do not sync data if wallet was closed.
-                            if !wallet.is_open() {
-                                return;
-                            }
-                            // Save data if loading was completed.
-                            if wallet.txs_sync_progress() == 100 {
-                                // Reset attempts.
-                                wallet.reset_sync_attempts();
+                let txs_args = RetrieveTxQueryArgs {
+                    exclude_cancelled: Some(true),
+                    sort_field: Some(RetrieveTxQuerySortField::CreationTimestamp),
+                    sort_order: Some(RetrieveTxQuerySortOrder::Desc),
+                    ..Default::default()
+                };
+                if let Ok(txs) = retrieve_txs(instance.clone(),
+                                              None,
+                                              &Some(txs_tx),
+                                              true,
+                                              None,
+                                              None,
+                                              Some(txs_args)) {
+                    // Do not sync data if wallet was closed.
+                    if !wallet.is_open() {
+                        return;
+                    }
+                    // Save data if loading was completed.
+                    if wallet.txs_sync_progress() == 100 {
+                        // Reset attempts.
+                        wallet.reset_sync_attempts();
 
-                                // Setup transactions.
-                                let mut sort_txs = txs.1;
-                                // Sort txs by creation date.
-                                sort_txs.sort_by_key(|tx| -tx.creation_ts.timestamp());
-                                // Filter txs by current wallet account.
-                                let mut txs = sort_txs.iter().map(|v| v.clone()).filter(|tx| {
-                                    match wallet.get_parent_key_id() {
-                                        Ok(key) => {
-                                            tx.parent_key_id == key
-                                        }
-                                        Err(_) => {
-                                            true
-                                        }
-                                    }
-                                }).collect::<Vec<TxLogEntry>>();
-                                // Update txs statuses.
-                                for tx in &txs {
-                                    println!("{}", serde_json::to_string(tx).unwrap());
-                                    if tx.tx_type == TxLogEntryType::TxSentCancelled
-                                        || tx.tx_type == TxLogEntryType::TxReceivedCancelled {
-                                        // Remove cancelling status.
-                                        let mut cancel_w = wallet.cancel_txs.write().unwrap();
-                                        cancel_w.remove(&tx.id);
-                                    }
+                        // Filter transactions for current account.
+                        let filter_txs = txs.1.iter().map(|v| v.clone()).filter(|tx| {
+                            match wallet.get_parent_key_id() {
+                                Ok(key) => {
+                                    tx.parent_key_id == key
                                 }
-
-                                // Update wallet data.
-                                let mut w_data = wallet.data.write().unwrap();
-                                *w_data = Some(WalletData { info: info.1, txs });
-                                return;
+                                Err(_) => {
+                                    true
+                                }
                             }
+                        }).collect::<Vec<TxLogEntry>>();
+
+                        // Create wallet txs.
+                        let mut txs = vec![];
+                        for tx in &filter_txs {
+                            println!("{}", serde_json::to_string(tx).unwrap());
+                            let amount = if tx.amount_debited > tx.amount_credited {
+                                tx.amount_debited - tx.amount_credited
+                            } else {
+                                tx.amount_credited - tx.amount_debited
+                            };
+
+                            // Setup transaction broadcasting flag based on slate state.
+                            let posting = if (tx.tx_type == TxLogEntryType::TxSent ||
+                                tx.tx_type == TxLogEntryType::TxReceived) &&
+                                !tx.confirmed && tx.tx_slate_id.is_some() {
+                                let sl_id = tx.tx_slate_id.unwrap().to_string();
+                                let state = match tx.tx_type {
+                                    TxLogEntryType::TxReceived => SlateState::Invoice3,
+                                    _ => SlateState::Standard3
+                                };
+                                let slatepack_path = config.get_slatepack_path(sl_id, &state);
+                                fs::read_to_string(slatepack_path).is_ok()
+                            } else {
+                                false
+                            };
+
+                            txs.push(WalletTransaction {
+                                data: tx.clone(),
+                                amount,
+                                posting,
+                            })
                         }
-                        Err(e) => println!("error on retrieve_txs {}", e),
+
+                        // Update wallet data.
+                        let mut w_data = wallet.data.write().unwrap();
+                        *w_data = Some(WalletData { info: info.1, txs });
+                        return;
                     }
                 }
             }
-            Err(e) => println!("error on retrieve_summary_info {}", e),
         }
     }
 

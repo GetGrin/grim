@@ -118,7 +118,7 @@ impl WalletContent {
                 ui.vertical_centered(|ui| {
                     // Draw wallet tabs.
                     View::max_width_ui(ui, Root::SIDE_PANEL_WIDTH * 1.3, |ui| {
-                        self.tabs_ui(ui);
+                        self.tabs_ui(ui, wallet);
                     });
                 });
             });
@@ -340,7 +340,7 @@ impl WalletContent {
     }
 
     /// Draw tab buttons in the bottom of the screen.
-    fn tabs_ui(&mut self, ui: &mut egui::Ui) {
+    fn tabs_ui(&mut self, ui: &mut egui::Ui, wallet: &Wallet) {
         ui.scope(|ui| {
             // Setup spacing between tabs.
             ui.style_mut().spacing.item_spacing = egui::vec2(4.0, 0.0);
@@ -356,8 +356,10 @@ impl WalletContent {
                     });
                 });
                 columns[1].vertical_centered_justified(|ui| {
-                    View::tab_button(ui, CHAT_CIRCLE_TEXT, current_type == WalletTabType::Messages, || {
-                        self.current_tab = Box::new(WalletMessages::default());
+                    let is_messages = current_type == WalletTabType::Messages;
+                    View::tab_button(ui, CHAT_CIRCLE_TEXT, is_messages, || {
+                        let dandelion = wallet.get_config().use_dandelion.unwrap_or(true);
+                        self.current_tab = Box::new(WalletMessages::new(dandelion));
                     });
                 });
                 columns[2].vertical_centered_justified(|ui| {
