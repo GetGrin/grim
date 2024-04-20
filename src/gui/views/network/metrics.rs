@@ -85,7 +85,7 @@ impl NetworkTab for NetworkMetrics {
                                   [false, true, false, true]);
             });
         });
-        ui.add_space(4.0);
+        ui.add_space(5.0);
 
         // Show difficulty adjustment window info.
         let difficulty_title = t!(
@@ -151,6 +151,7 @@ fn block_item_ui(ui: &mut egui::Ui, db: &DiffBlock, rounding: Rounding) {
             ui.vertical(|ui| {
                 // Draw round background.
                 rect.min += vec2(8.0, 0.0);
+                rect.max -= vec2(8.0, 0.0);
                 ui.painter().rect(rect, rounding, Colors::WHITE, View::ITEM_STROKE);
 
                 ui.add_space(2.0);
@@ -187,6 +188,7 @@ fn block_item_ui(ui: &mut egui::Ui, db: &DiffBlock, rounding: Rounding) {
 
                 ui.add_space(2.0);
             });
+            ui.add_space(8.0);
         });
     });
 }
