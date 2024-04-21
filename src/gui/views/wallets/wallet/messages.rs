@@ -671,7 +671,7 @@ impl WalletMessages {
                 } else {
                     t!("wallets.invoice_desc","amount" => amount_format)
                 };
-                ui.label(RichText::new(desc_text).size(16.0).color(Colors::INACTIVE_TEXT));
+                ui.label(RichText::new(desc_text).size(16.0).color(Colors::GRAY));
                 ui.add_space(6.0);
                 View::horizontal_line(ui, Colors::ITEM_STROKE);
                 ui.add_space(3.0);
@@ -699,12 +699,37 @@ impl WalletMessages {
                     });
                 ui.add_space(2.0);
                 View::horizontal_line(ui, Colors::ITEM_STROKE);
-                ui.add_space(10.0);
+            });
 
-                // Draw copy button.
-                let copy_text = format!("{} {}", COPY, t!("copy"));
-                View::button(ui, copy_text, Colors::BUTTON, || {
-                    cb.copy_string_to_buffer(self.request_edit.clone());
+            // Show modal buttons.
+            ui.add_space(12.0);
+            // Setup spacing between buttons.
+            ui.spacing_mut().item_spacing = egui::Vec2::new(6.0, 0.0);
+
+            ui.columns(2, |columns| {
+                columns[0].vertical_centered_justified(|ui| {
+                    // Button to cancel transaction.
+                    let clear_text = format!("{} {}", PROHIBIT, t!("modal.cancel"));
+                    View::button(ui, clear_text, Colors::BUTTON, || {
+                        if let Ok(slate) = wallet.parse_slatepack(self.request_edit.clone()) {
+                            if let Some(tx) = wallet.tx_by_slate(&slate) {
+                                wallet.cancel(tx.data.id);
+                            }
+                        }
+                        self.amount_edit = "".to_string();
+                        self.request_edit = "".to_string();
+                        modal.close();
+                    });
+                });
+                columns[1].vertical_centered_justified(|ui| {
+                    // Draw copy button.
+                    let copy_text = format!("{} {}", COPY, t!("copy"));
+                    View::button(ui, copy_text, Colors::BUTTON, || {
+                        cb.copy_string_to_buffer(self.request_edit.clone());
+                        self.amount_edit = "".to_string();
+                        self.request_edit = "".to_string();
+                        modal.close();
+                    });
                 });
             });
 

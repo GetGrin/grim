@@ -15,10 +15,10 @@
 use egui::{Align, Id, Layout, Margin, RichText, Rounding, ScrollArea};
 use egui::scroll_area::ScrollBarVisibility;
 use grin_core::core::amount_to_hr_string;
-use grin_wallet_libwallet::{TxLogEntryType};
+use grin_wallet_libwallet::{Slate, SlateState, TxLogEntryType};
 
 use crate::gui::Colors;
-use crate::gui::icons::{ARROW_CIRCLE_DOWN, BRIDGE, CALENDAR_CHECK, CHAT_CIRCLE_TEXT, CHECK_CIRCLE, DOTS_THREE_CIRCLE, FILE_TEXT, GEAR_FINE, PROHIBIT, X_CIRCLE};
+use crate::gui::icons::{ARROW_CIRCLE_DOWN, ARROWS_CLOCKWISE, BRIDGE, CALENDAR_CHECK, CHAT_CIRCLE_TEXT, CHECK_CIRCLE, DOTS_THREE_CIRCLE, FILE_TEXT, GEAR_FINE, PROHIBIT, X_CIRCLE};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Root, View};
 use crate::gui::views::wallets::types::WalletTab;
@@ -183,11 +183,40 @@ fn tx_item_ui(ui: &mut egui::Ui,
                 //TODO: Show tx info
             });
 
-            if !tx.posting && !tx.data.confirmed &&
+            // Setup flag to repost unconfirmed posting transaction after min confirmation time.
+            let last_height = data.info.last_confirmed_height;
+            let min_conf = data.info.minimum_confirmations;
+            let can_repost = tx.posting && tx.repost_height.is_some() &&
+                    last_height - tx.repost_height.unwrap() > min_conf;
+
+            // Draw cancel button for txs to repost or also non-cancelled, non-posting.
+            if can_repost || (!tx.posting && !tx.data.confirmed &&
                 tx.data.tx_type != TxLogEntryType::TxReceivedCancelled
-                && tx.data.tx_type != TxLogEntryType::TxSentCancelled {
+                && tx.data.tx_type != TxLogEntryType::TxSentCancelled) {
                 View::item_button(ui, Rounding::default(), PROHIBIT, Some(Colors::RED), || {
                     wallet.cancel(tx.data.id);
+                });
+            }
+
+            // Draw button to repost transaction.
+            if can_repost {
+                View::item_button(ui,
+                                  Rounding::default(),
+                                  ARROWS_CLOCKWISE,
+                                  Some(Colors::GREEN), || {
+                    // Create slate to check existing file.
+                    let mut slate = Slate::blank(1, false);
+                    slate.id = tx.data.tx_slate_id.unwrap();
+                    slate.state = match tx.data.tx_type {
+                        TxLogEntryType::TxReceived => SlateState::Invoice3,
+                        _ => SlateState::Standard3
+                    };
+                    // Post tx after getting slate from slatepack file.
+                    if let Some(sp) = wallet.read_slatepack(&slate) {
+                        if let Ok(s) = wallet.parse_slatepack(sp) {
+                            let _ = wallet.post(&s, wallet.can_use_dandelion());
+                        }
+                    }
                 });
             }
 
@@ -230,9 +259,7 @@ fn tx_item_ui(ui: &mut egui::Ui,
                             || tx.data.tx_type == TxLogEntryType::TxReceivedCancelled;
                         if is_canceled {
                             format!("{} {}", X_CIRCLE, t!("wallets.tx_canceled"))
-                        } else if tx.posting || (tx.data.kernel_excess.is_some() &&
-                            (tx.data.tx_type == TxLogEntryType::TxReceived ||
-                            tx.data.tx_type == TxLogEntryType::TxSent)) {
+                        } else if tx.posting {
                             format!("{} {}", DOTS_THREE_CIRCLE, t!("wallets.tx_finalizing"))
                         } else {
                             match tx.data.tx_type {
@@ -254,7 +281,7 @@ fn tx_item_ui(ui: &mut egui::Ui,
                                 format!("{} {}", CHECK_CIRCLE, t!("wallets.tx_confirmed"))
                             },
                             TxLogEntryType::TxSent | TxLogEntryType::TxReceived => {
-                                if data.info.last_confirmed_height - tx_height > min_conf + 1 {
+                                if data.info.last_confirmed_height - tx_height > min_conf {
                                     let text = if tx.data.tx_type == TxLogEntryType::TxSent {
                                         t!("wallets.tx_sent")
                                     } else {

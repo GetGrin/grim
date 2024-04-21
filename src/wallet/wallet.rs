@@ -13,7 +13,6 @@
 // limitations under the License.
 
 use std::{fs, thread};
-use std::collections::BTreeSet;
 use std::fs::File;
 use std::io::Write;
 use std::net::{SocketAddr, TcpListener};
@@ -64,6 +63,7 @@ pub struct Wallet {
     is_open: Arc<AtomicBool>,
     /// Flag to check if wallet is closing.
     closing: Arc<AtomicBool>,
+
     /// Flag to check if wallet was deleted to remove it from the list.
     deleted: Arc<AtomicBool>,
 
@@ -222,7 +222,13 @@ impl Wallet {
         w_config.save();
     }
 
-    /// Update usage of Dandelion to broadcast transactions.
+    /// Check if Dandelion usage is needed to post transactions.
+    pub fn can_use_dandelion(&self) -> bool {
+        let r_config = self.config.read().unwrap();
+        r_config.use_dandelion.unwrap_or(false)
+    }
+
+    /// Update usage of Dandelion to post transactions.
     pub fn update_use_dandelion(&self, use_dandelion: bool) {
         let mut w_config = self.config.write().unwrap();
         w_config.use_dandelion = Some(use_dandelion);
@@ -470,7 +476,7 @@ impl Wallet {
     }
 
     /// Create Slatepack message from provided slate.
-    fn create_slatepack_message(&self, slate: Slate) -> Result<String, Error> {
+    fn create_slatepack_message(&self, slate: &Slate) -> Result<String, Error> {
         let mut message = "".to_string();
         let mut api = Owner::new(self.instance.clone().unwrap(), None);
         controller::owner_single_use(None, None, Some(&mut api), |api, m| {
@@ -528,7 +534,7 @@ impl Wallet {
         api.tx_lock_outputs(None, &slate)?;
 
         // Create Slatepack message response.
-        let response = self.create_slatepack_message(slate)?;
+        let response = self.create_slatepack_message(&slate)?;
 
         // Sync wallet info.
         self.sync();
@@ -547,7 +553,7 @@ impl Wallet {
         let slate = api.issue_invoice_tx(None, args)?;
 
         // Create Slatepack message response.
-        let response = self.create_slatepack_message(slate)?;
+        let response = self.create_slatepack_message(&slate)?;
 
         // Sync wallet info.
         self.sync();
@@ -571,7 +577,7 @@ impl Wallet {
         api.tx_lock_outputs(None, &slate)?;
 
         // Create Slatepack message response.
-        let response = self.create_slatepack_message(slate)?;
+        let response = self.create_slatepack_message(&slate)?;
 
         // Sync wallet info.
         self.sync();
@@ -588,7 +594,7 @@ impl Wallet {
             Ok(())
         })?;
         // Create Slatepack message response.
-        let response = self.create_slatepack_message(slate)?;
+        let response = self.create_slatepack_message(&slate)?;
 
         // Sync wallet info.
         self.sync();
@@ -601,10 +607,9 @@ impl Wallet {
         let mut slate = self.parse_slatepack(message)?;
         let api = Owner::new(self.instance.clone().unwrap(), None);
         slate = api.finalize_tx(None, &slate)?;
-        // Create Slatepack message.
-        let _ = self.create_slatepack_message(slate.clone())?;
         // Post transaction to blockchain.
-        api.post_tx(None, &slate, dandelion)?;
+        let _ = self.create_slatepack_message(&slate)?;
+        let _ = self.post(&slate, dandelion);
         // Sync wallet info.
         self.sync();
         Ok(slate)
@@ -615,6 +620,24 @@ impl Wallet {
         // Post transaction to blockchain.
         let api = Owner::new(self.instance.clone().unwrap(), None);
         api.post_tx(None, slate, dandelion)?;
+        // Setup transaction repost height and posting flag.
+        let mut slate = slate.clone();
+        if slate.state == SlateState::Invoice2 {
+            slate.state = SlateState::Invoice3
+        } else if slate.state == SlateState::Standard2 {
+            slate.state = SlateState::Standard3
+        };
+        if let Some(tx) = self.tx_by_slate(&slate) {
+            let mut w_data = self.data.write().unwrap();
+            let mut data = w_data.clone().unwrap();
+            for t in &mut data.txs {
+                if t.data.id == tx.data.id {
+                    t.repost_height = Some(data.info.last_confirmed_height);
+                    t.posting = true;
+                }
+            }
+            *w_data = Some(data);
+        }
         // Sync wallet info.
         self.sync();
         Ok(())
@@ -922,7 +945,7 @@ fn sync_wallet_data(wallet: &Wallet) {
                 });
 
                 let txs_args = RetrieveTxQueryArgs {
-                    exclude_cancelled: Some(true),
+                    exclude_cancelled: Some(false),
                     sort_field: Some(RetrieveTxQuerySortField::CreationTimestamp),
                     sort_order: Some(RetrieveTxQuerySortOrder::Desc),
                     ..Default::default()
@@ -956,9 +979,10 @@ fn sync_wallet_data(wallet: &Wallet) {
                         }).collect::<Vec<TxLogEntry>>();
 
                         // Create wallet txs.
-                        let mut txs: Vec<WalletTransaction> = vec![];
+                        let mut new_txs: Vec<WalletTransaction> = vec![];
                         for tx in &filter_txs {
                             println!("{}", serde_json::to_string(tx).unwrap());
+                            // Setup transaction amount.
                             let amount = if tx.amount_debited > tx.amount_credited {
                                 tx.amount_debited - tx.amount_credited
                             } else {
@@ -979,7 +1003,7 @@ fn sync_wallet_data(wallet: &Wallet) {
 
                                 // Setup posting status if we have other tx with same slate id.
                                 let mut same_tx_posting = false;
-                                for t in &mut txs {
+                                for t in &mut new_txs {
                                     if t.data.tx_slate_id == tx.tx_slate_id &&
                                         tx.tx_type != t.data.tx_type {
                                         same_tx_posting = t.posting ||
@@ -995,16 +1019,30 @@ fn sync_wallet_data(wallet: &Wallet) {
                                 false
                             };
 
-                            txs.push(WalletTransaction {
+                            // Setup reposting height.
+                            let mut repost_height = None;
+                            if posting {
+                                if let Some(mut data) = wallet.get_data() {
+                                    for t in data.txs {
+                                        if t.data.id == tx.id {
+                                            repost_height = t.repost_height;
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+
+                            new_txs.push(WalletTransaction {
                                 data: tx.clone(),
                                 amount,
                                 posting,
+                                repost_height,
                             })
                         }
 
                         // Update wallet data.
                         let mut w_data = wallet.data.write().unwrap();
-                        *w_data = Some(WalletData { info: info.1, txs });
+                        *w_data = Some(WalletData { info: info.1, txs: new_txs });
                         return;
                     }
                 }

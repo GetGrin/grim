@@ -28,7 +28,7 @@ pub enum PhraseMode {
     Import
 }
 
-/// Mnemonic phrase size based on words count.
+/// Mnemonic phrase size based on entropy.
 #[derive(PartialEq, Clone)]
 pub enum PhraseSize { Words12, Words15, Words18, Words21, Words24 }
 
@@ -41,7 +41,7 @@ impl PhraseSize {
         PhraseSize::Words24
     ];
 
-    /// Gen words count number.
+    /// Get entropy value.
     pub fn value(&self) -> usize {
         match *self {
             PhraseSize::Words12 => 12,
@@ -52,7 +52,7 @@ impl PhraseSize {
         }
     }
 
-    /// Gen entropy size for current phrase size.
+    /// Get entropy size for current phrase size.
     pub fn entropy_size(&self) -> usize {
         match *self {
             PhraseSize::Words12 => 16,
@@ -63,6 +63,7 @@ impl PhraseSize {
         }
     }
 
+    /// Get phrase type for entropy size.
     pub fn type_for_value(count: usize) -> Option<PhraseSize> {
         if Self::is_correct_count(count) {
             match count {
@@ -90,7 +91,7 @@ impl PhraseSize {
         }
     }
 
-    /// Check if correct word count provided.
+    /// Check if correct entropy size was provided.
     pub fn is_correct_count(count: usize) -> bool {
         count == 12 || count == 15 || count == 18 || count == 21 || count == 24
     }
@@ -144,8 +145,10 @@ pub struct WalletData {
 pub struct WalletTransaction {
     /// Transaction information.
     pub data: TxLogEntry,
-    /// Calculated total transaction amount.
+    /// Calculated transaction amount between debited and credited amount.
     pub amount: u64,
-    /// Flag to check if transaction is posting after finalizing.
-    pub posting: bool
+    /// Flag to check if transaction is posting after finalization.
+    pub posting: bool,
+    /// Last wallet block height of transaction reposting.
+    pub repost_height: Option<u64>
 }

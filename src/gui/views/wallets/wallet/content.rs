@@ -358,8 +358,9 @@ impl WalletContent {
                 columns[1].vertical_centered_justified(|ui| {
                     let is_messages = current_type == WalletTabType::Messages;
                     View::tab_button(ui, CHAT_CIRCLE_TEXT, is_messages, || {
-                        let dandelion = wallet.get_config().use_dandelion.unwrap_or(true);
-                        self.current_tab = Box::new(WalletMessages::new(dandelion));
+                        self.current_tab = Box::new(
+                            WalletMessages::new(wallet.can_use_dandelion())
+                        );
                     });
                 });
                 columns[2].vertical_centered_justified(|ui| {
