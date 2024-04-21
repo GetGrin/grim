@@ -80,9 +80,9 @@ wallets:
   resp_slatepack_err: 'An error occurred during creation of the response, check input data:'
   resp_exists_err: 'Such transaction already exists.'
   create_request_desc: 'Create request to send or receive the funds:'
-  send_request_desc: 'You have created a request to send %{amount} ツ. Send this message to the receiver of funds:'
+  send_request_desc: 'You have created a request to send %{amount} ツ. Send this message to the receiver:'
   send_slatepack_err: An error occurred during creation of request to send funds, check input data.
-  invoice_desc: 'You have created request to receive %{amount} ツ. Send this message to the sender of funds:'
+  invoice_desc: 'You have created request to receive %{amount} ツ. Send this message to the sender:'
   invoice_slatepack_err: An error occurred during issuing of the invoice, check input data.
   finalize_slatepack_err: 'An error occurred during finalization, check input data:'
   finalize: Finalize
