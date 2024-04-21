@@ -956,7 +956,7 @@ fn sync_wallet_data(wallet: &Wallet) {
                         }).collect::<Vec<TxLogEntry>>();
 
                         // Create wallet txs.
-                        let mut txs = vec![];
+                        let mut txs: Vec<WalletTransaction> = vec![];
                         for tx in &filter_txs {
                             println!("{}", serde_json::to_string(tx).unwrap());
                             let amount = if tx.amount_debited > tx.amount_credited {
@@ -969,13 +969,28 @@ fn sync_wallet_data(wallet: &Wallet) {
                             let posting = if (tx.tx_type == TxLogEntryType::TxSent ||
                                 tx.tx_type == TxLogEntryType::TxReceived) &&
                                 !tx.confirmed && tx.tx_slate_id.is_some() {
+                                // Create slate to check existing file.
                                 let mut slate = Slate::blank(1, false);
                                 slate.id = tx.tx_slate_id.unwrap();
                                 slate.state = match tx.tx_type {
                                     TxLogEntryType::TxReceived => SlateState::Invoice3,
                                     _ => SlateState::Standard3
                                 };
-                                wallet.read_slatepack(&slate).is_some()
+
+                                // Setup posting status if we have other tx with same slate id.
+                                let mut same_tx_posting = false;
+                                for t in &mut txs {
+                                    if t.data.tx_slate_id == tx.tx_slate_id &&
+                                        tx.tx_type != t.data.tx_type {
+                                        same_tx_posting = t.posting ||
+                                            wallet.read_slatepack(&slate).is_some();
+                                        if same_tx_posting && !t.posting {
+                                            t.posting = true;
+                                        }
+                                        break;
+                                    }
+                                }
+                                same_tx_posting || wallet.read_slatepack(&slate).is_some()
                             } else {
                                 false
                             };
