@@ -1,16 +1,15 @@
 *.iml
-.gradle
-/local.properties
+android/.gradle
+android/local.properties
+android/keystore
+android/keystore.properties
 /.idea
 .DS_Store
 /build
 /captures
 .externalNativeBuild
 .cxx
-local.properties
 *.so
-keystore
-keystore.properties
 
 # Added by cargo
 /target

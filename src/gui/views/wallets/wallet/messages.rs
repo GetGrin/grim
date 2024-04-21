@@ -619,6 +619,7 @@ impl WalletMessages {
                         View::button(ui, t!("modal.cancel"), Colors::WHITE, || {
                             self.amount_edit = "".to_string();
                             self.request_error = None;
+                            cb.hide_keyboard();
                             modal.close();
                         });
                     });
@@ -718,6 +719,7 @@ impl WalletMessages {
                         }
                         self.amount_edit = "".to_string();
                         self.request_edit = "".to_string();
+                        cb.hide_keyboard();
                         modal.close();
                     });
                 });

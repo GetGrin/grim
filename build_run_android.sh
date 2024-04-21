@@ -38,7 +38,8 @@ export CPPFLAGS="-DMDB_USE_ROBUST=0" && export CFLAGS="-DMDB_USE_ROBUST=0" \
 
 if [ $? -eq 0 ]
 then
-  yes | mkdir -p app/src/main/jniLibs/${arch} && cp -f target/${platform}/${type}/libgrim.so app/src/main/jniLibs/${arch}
+  yes | mkdir -p android/app/src/main/jniLibs/${arch} && cp -f target/${platform}/${type}/libgrim.so android/app/src/main/jniLibs/${arch}
+  cd android
   ./gradlew clean
   ./gradlew build
   # Install on several devices
