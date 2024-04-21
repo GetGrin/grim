@@ -194,7 +194,7 @@ impl WalletMessages {
             let desc_text = if self.message_slate.is_none() {
                 t!("wallets.input_slatepack_desc")
             } else {
-                let mut slate = self.message_slate.clone().unwrap();
+                let slate = self.message_slate.clone().unwrap();
                 let amount = amount_to_hr_string(slate.amount, true);
                 match slate.state {
                     SlateState::Standard1 => {
@@ -285,8 +285,8 @@ impl WalletMessages {
                                 self.message_slate = None;
                             });
                         } else {
-                            let clear_text = format!("{} {}", PROHIBIT, t!("modal.cancel"));
-                            View::button(ui, clear_text, Colors::BUTTON, || {
+                            let cancel = format!("{} {}", PROHIBIT, t!("modal.cancel"));
+                            View::colored_text_button(ui, cancel, Colors::RED, Colors::BUTTON, || {
                                 let slate = self.message_slate.clone().unwrap();
                                 if let Some(tx) = wallet.tx_by_slate(&slate) {
                                     wallet.cancel(tx.data.id);
@@ -297,8 +297,8 @@ impl WalletMessages {
                             });
                         }
                     } else {
-                        let paste_text = format!("{} {}", CLIPBOARD_TEXT, t!("paste"));
-                        View::button(ui, paste_text, Colors::BUTTON, || {
+                        let paste = format!("{} {}", CLIPBOARD_TEXT, t!("paste"));
+                        View::button(ui, paste, Colors::BUTTON, || {
                             let buf = cb.get_string_from_buffer();
                             let previous = self.message_edit.clone();
                             self.message_edit = buf.clone();
@@ -366,6 +366,19 @@ impl WalletMessages {
                     });
                 }
             });
+
+            ui.add_space(12.0);
+
+            // Draw clear button on response.
+            if !self.response_edit.is_empty() && self.message_slate.is_some() {
+                let clear_text = format!("{} {}", BROOM, t!("clear"));
+                View::button(ui, clear_text, Colors::BUTTON, || {
+                    self.message_error = None;
+                    self.message_edit.clear();
+                    self.response_edit.clear();
+                    self.message_slate = None;
+                });
+            }
         });
 
         // Draw setup of ability to post transaction with Dandelion.
@@ -502,7 +515,7 @@ impl WalletMessages {
             columns[0].vertical_centered_justified(|ui| {
                 // Draw send request creation button.
                 let send_text = format!("{} {}", UPLOAD, t!("wallets.send"));
-                View::button(ui, send_text.clone(), Colors::BUTTON, || {
+                View::button(ui, send_text, Colors::BUTTON, || {
                     // Setup modal values.
                     self.send_request = true;
                     self.amount_edit = "".to_string();
@@ -518,7 +531,7 @@ impl WalletMessages {
             columns[1].vertical_centered_justified(|ui| {
                 // Draw invoice request creation button.
                 let receive_text = format!("{} {}", DOWNLOAD, t!("wallets.receive"));
-                View::button(ui, receive_text.clone(), Colors::BUTTON, || {
+                View::button(ui, receive_text, Colors::BUTTON, || {
                     // Setup modal values.
                     self.send_request = false;
                     self.amount_edit = "".to_string();
@@ -608,57 +621,55 @@ impl WalletMessages {
                 });
             }
 
-            // Show modal buttons.
             ui.add_space(12.0);
-            ui.scope(|ui| {
-                // Setup spacing between buttons.
-                ui.spacing_mut().item_spacing = egui::Vec2::new(6.0, 0.0);
 
-                ui.columns(2, |columns| {
-                    columns[0].vertical_centered_justified(|ui| {
-                        View::button(ui, t!("modal.cancel"), Colors::WHITE, || {
-                            self.amount_edit = "".to_string();
-                            self.request_error = None;
-                            cb.hide_keyboard();
-                            modal.close();
-                        });
+            // Setup spacing between buttons.
+            ui.spacing_mut().item_spacing = egui::Vec2::new(6.0, 0.0);
+
+            ui.columns(2, |columns| {
+                columns[0].vertical_centered_justified(|ui| {
+                    View::button(ui, t!("modal.cancel"), Colors::WHITE, || {
+                        self.amount_edit = "".to_string();
+                        self.request_error = None;
+                        cb.hide_keyboard();
+                        modal.close();
                     });
-                    columns[1].vertical_centered_justified(|ui| {
-                        // Button to create Slatepack message for request.
-                        View::button(ui, t!("continue"), Colors::WHITE, || {
-                            if let Ok(a) = amount_from_hr_string(self.amount_edit.as_str()) {
-                                let message = if self.send_request {
-                                    wallet.send(a)
-                                } else {
-                                    wallet.issue_invoice(a)
-                                };
-                                match message {
-                                    Ok(message) => {
-                                        self.request_edit = message;
-                                        cb.hide_keyboard();
-                                    }
-                                    Err(err) => {
-                                        match err {
-                                            grin_wallet_libwallet::Error::NotEnoughFunds { .. } => {
-                                                let m = t!(
+                });
+                columns[1].vertical_centered_justified(|ui| {
+                    // Button to create Slatepack message for request.
+                    View::button(ui, t!("continue"), Colors::WHITE, || {
+                        if let Ok(a) = amount_from_hr_string(self.amount_edit.as_str()) {
+                            let message = if self.send_request {
+                                wallet.send(a)
+                            } else {
+                                wallet.issue_invoice(a)
+                            };
+                            match message {
+                                Ok(message) => {
+                                    self.request_edit = message;
+                                    cb.hide_keyboard();
+                                }
+                                Err(err) => {
+                                    match err {
+                                        grin_wallet_libwallet::Error::NotEnoughFunds { .. } => {
+                                            let m = t!(
                                                     "wallets.pay_balance_error",
                                                     "amount" => self.amount_edit
                                                 );
-                                                self.request_error = Some(MessageError::Other(m));
-                                            }
-                                            _ => {
-                                                let m = t!("wallets.invoice_slatepack_err");
-                                                self.request_error = Some(MessageError::Other(m));
-                                            }
+                                            self.request_error = Some(MessageError::Other(m));
+                                        }
+                                        _ => {
+                                            let m = t!("wallets.invoice_slatepack_err");
+                                            self.request_error = Some(MessageError::Other(m));
                                         }
                                     }
                                 }
-                            } else {
-                                self.request_error = Some(
-                                    MessageError::Other(t!("wallets.invoice_slatepack_err"))
-                                );
                             }
-                        });
+                        } else {
+                            self.request_error = Some(
+                                MessageError::Other(t!("wallets.invoice_slatepack_err"))
+                            );
+                        }
                     });
                 });
             });
@@ -702,16 +713,16 @@ impl WalletMessages {
                 View::horizontal_line(ui, Colors::ITEM_STROKE);
             });
 
-            // Show modal buttons.
             ui.add_space(12.0);
+
             // Setup spacing between buttons.
             ui.spacing_mut().item_spacing = egui::Vec2::new(6.0, 0.0);
 
             ui.columns(2, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
                     // Button to cancel transaction.
-                    let clear_text = format!("{} {}", PROHIBIT, t!("modal.cancel"));
-                    View::button(ui, clear_text, Colors::BUTTON, || {
+                    let cancel = format!("{} {}", PROHIBIT, t!("modal.cancel"));
+                    View::colored_text_button(ui, cancel, Colors::RED, Colors::BUTTON, || {
                         if let Ok(slate) = wallet.parse_slatepack(self.request_edit.clone()) {
                             if let Some(tx) = wallet.tx_by_slate(&slate) {
                                 wallet.cancel(tx.data.id);

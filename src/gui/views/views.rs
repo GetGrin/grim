@@ -205,21 +205,41 @@ impl View {
         });
     }
 
-    /// Draw [`Button`] with specified background fill color.
-    pub fn button(ui: &mut egui::Ui, text: String, fill: Color32, action: impl FnOnce()) {
-        let button_text = Self::ellipsize(text.to_uppercase(), 17.0, Colors::TEXT_BUTTON);
-        let br = Button::new(button_text)
+    /// Draw [`Button`] with specified background fill and text color.
+    fn button_resp(ui: &mut egui::Ui, text: String, text_color: Color32, bg: Color32) -> Response {
+        let button_text = Self::ellipsize(text.to_uppercase(), 17.0, text_color);
+        Button::new(button_text)
             .stroke(Self::DEFAULT_STROKE)
-            .fill(fill)
+            .fill(bg)
             .ui(ui)
-            .on_hover_cursor(CursorIcon::PointingHand);
+            .on_hover_cursor(CursorIcon::PointingHand)
+    }
+
+    /// Draw [`Button`] with specified background fill color and default text color.
+    pub fn button(ui: &mut egui::Ui, text: String, fill: Color32, action: impl FnOnce()) {
+        let br = Self::button_resp(ui, text, Colors::TEXT_BUTTON, fill);
         if Self::touched(ui, br) {
             (action)();
         }
     }
 
-    /// Draw [`Button`] with specified background fill color.
-    pub fn button_ui(ui: &mut egui::Ui, text: String, fill: Color32, action: impl FnOnce(&mut egui::Ui)) {
+    /// Draw [`Button`] with specified background fill color and text color.
+    pub fn colored_text_button(ui: &mut egui::Ui,
+                               text: String,
+                               text_color: Color32,
+                               fill: Color32,
+                               action: impl FnOnce()) {
+        let br = Self::button_resp(ui, text, text_color, fill);
+        if Self::touched(ui, br) {
+            (action)();
+        }
+    }
+
+    /// Draw [`Button`] with specified background fill color and ui at callback.
+    pub fn button_ui(ui: &mut egui::Ui,
+                     text: String,
+                     fill: Color32,
+                     action: impl FnOnce(&mut egui::Ui)) {
         let button_text = Self::ellipsize(text.to_uppercase(), 17.0, Colors::TEXT_BUTTON);
         let br = Button::new(button_text)
             .stroke(Self::DEFAULT_STROKE)
