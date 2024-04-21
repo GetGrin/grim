@@ -18,7 +18,7 @@ use grin_core::core::amount_to_hr_string;
 use grin_wallet_libwallet::{Slate, SlateState, TxLogEntryType};
 
 use crate::gui::Colors;
-use crate::gui::icons::{ARROW_CIRCLE_DOWN, ARROWS_CLOCKWISE, BRIDGE, CALENDAR_CHECK, CHAT_CIRCLE_TEXT, CHECK_CIRCLE, DOTS_THREE_CIRCLE, FILE_TEXT, GEAR_FINE, PROHIBIT, X_CIRCLE};
+use crate::gui::icons::{ARROW_CIRCLE_DOWN, ARROW_CIRCLE_UP, ARROWS_CLOCKWISE, BRIDGE, CALENDAR_CHECK, CHAT_CIRCLE_TEXT, CHECK_CIRCLE, DOTS_THREE_CIRCLE, FILE_TEXT, GEAR_FINE, PROHIBIT, X_CIRCLE};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Root, View};
 use crate::gui::views::wallets::types::WalletTab;
@@ -282,12 +282,12 @@ fn tx_item_ui(ui: &mut egui::Ui,
                             },
                             TxLogEntryType::TxSent | TxLogEntryType::TxReceived => {
                                 if data.info.last_confirmed_height - tx_height > min_conf {
-                                    let text = if tx.data.tx_type == TxLogEntryType::TxSent {
-                                        t!("wallets.tx_sent")
+                                    let (icon, text) = if tx.data.tx_type == TxLogEntryType::TxSent {
+                                        (ARROW_CIRCLE_UP, t!("wallets.tx_sent"))
                                     } else {
-                                        t!("wallets.tx_received")
+                                        (ARROW_CIRCLE_DOWN, t!("wallets.tx_received"))
                                     };
-                                    format!("{} {}", ARROW_CIRCLE_DOWN, text)
+                                    format!("{} {}", icon, text)
                                 } else {
                                     let h = data.info.last_confirmed_height;
                                     let left_conf = h - tx_height;
