@@ -71,7 +71,6 @@ impl WalletInfo {
     /// Draw transactions content.
     fn txs_ui(&self, ui: &mut egui::Ui, wallet: &mut Wallet) {
         let data = wallet.get_data().unwrap();
-        let config = wallet.get_config();
         let txs_size = data.txs.len();
 
         // Show transactions info.
@@ -136,7 +135,7 @@ impl WalletInfo {
         ui.add_space(3.0);
         ScrollArea::vertical()
             .scroll_bar_visibility(ScrollBarVisibility::AlwaysVisible)
-            .id_source(Id::from("txs_content").with(config.id))
+            .id_source(Id::from("txs_content").with(wallet.get_config().id))
             .auto_shrink([false; 2])
             .show_rows(ui, TX_ITEM_HEIGHT, txs_size, |ui, row_range| {
                 ui.add_space(4.0);
@@ -146,7 +145,7 @@ impl WalletInfo {
                         // Setup item rounding.
                         let item_rounding = View::item_rounding(index, txs_size, false);
                         // Show transaction item.
-                        tx_item_ui(ui, tx, item_rounding, config.min_confirmations, &data, wallet);
+                        tx_item_ui(ui, tx, item_rounding, &data, wallet);
                     }
                 });
                 ui.add_space(2.0);
@@ -161,12 +160,12 @@ const TX_ITEM_HEIGHT: f32 = 76.0;
 fn tx_item_ui(ui: &mut egui::Ui,
               tx: &WalletTransaction,
               mut rounding: Rounding,
-              min_conf: u64,
               data: &WalletData,
               wallet: &mut Wallet) {
     // Setup layout size.
     let mut rect = ui.available_rect_before_wrap();
-    rect.min += egui::vec2(6.0, 0.0);
+    rect.min += egui::vec2(5.0, 0.0);
+    rect.max -= egui::vec2(4.0, 0.0);
     rect.set_height(TX_ITEM_HEIGHT);
 
     // Draw round background.
@@ -175,7 +174,7 @@ fn tx_item_ui(ui: &mut egui::Ui,
 
     ui.vertical(|ui| {
         ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
-            ui.add_space(-6.0);
+            ui.add_space(-5.0);
             // Draw button to show transaction info.
             rounding.nw = 0.0;
             rounding.sw = 0.0;
