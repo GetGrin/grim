@@ -19,7 +19,7 @@ use grin_wallet_libwallet::{Slate, SlateState};
 use log::error;
 
 use crate::gui::Colors;
-use crate::gui::icons::{BROOM, CLIPBOARD_TEXT, COPY, DOWNLOAD, PROHIBIT, UPLOAD};
+use crate::gui::icons::{BROOM, CLIPBOARD_TEXT, COPY, DOWNLOAD_SIMPLE, PROHIBIT, UPLOAD_SIMPLE};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, Root, View};
 use crate::gui::views::types::{ModalPosition, TextEditOptions};
@@ -514,7 +514,7 @@ impl WalletMessages {
         ui.columns(2, |columns| {
             columns[0].vertical_centered_justified(|ui| {
                 // Draw send request creation button.
-                let send_text = format!("{} {}", UPLOAD, t!("wallets.send"));
+                let send_text = format!("{} {}", UPLOAD_SIMPLE, t!("wallets.send"));
                 View::button(ui, send_text, Colors::BUTTON, || {
                     // Setup modal values.
                     self.send_request = true;
@@ -530,7 +530,7 @@ impl WalletMessages {
             });
             columns[1].vertical_centered_justified(|ui| {
                 // Draw invoice request creation button.
-                let receive_text = format!("{} {}", DOWNLOAD, t!("wallets.receive"));
+                let receive_text = format!("{} {}", DOWNLOAD_SIMPLE, t!("wallets.receive"));
                 View::button(ui, receive_text, Colors::BUTTON, || {
                     // Setup modal values.
                     self.send_request = false;

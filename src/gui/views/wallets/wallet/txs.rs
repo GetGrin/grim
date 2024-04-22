@@ -18,7 +18,7 @@ use grin_core::core::amount_to_hr_string;
 use grin_wallet_libwallet::{Slate, SlateState, TxLogEntryType};
 
 use crate::gui::Colors;
-use crate::gui::icons::{ARROW_CIRCLE_DOWN, ARROW_CIRCLE_UP, ARROWS_CLOCKWISE, BRIDGE, CALENDAR_CHECK, CHAT_CIRCLE_TEXT, CHECK_CIRCLE, DOTS_THREE_CIRCLE, FILE_TEXT, GEAR_FINE, PROHIBIT, X_CIRCLE};
+use crate::gui::icons::{ARROW_CIRCLE_DOWN, ARROW_CIRCLE_UP, ARROW_CLOCKWISE, ARROWS_CLOCKWISE, BRIDGE, CALENDAR_CHECK, CHAT_CIRCLE_TEXT, CHECK_CIRCLE, DOTS_THREE_CIRCLE, FILE_TEXT, GEAR_FINE, PROHIBIT, X_CIRCLE};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Root, View};
 use crate::gui::views::wallets::types::WalletTab;
@@ -201,7 +201,7 @@ fn tx_item_ui(ui: &mut egui::Ui,
             if can_repost {
                 View::item_button(ui,
                                   Rounding::default(),
-                                  ARROWS_CLOCKWISE,
+                                  ARROW_CLOCKWISE,
                                   Some(Colors::GREEN), || {
                     // Create slate to check existing file.
                     let mut slate = Slate::blank(1, false);

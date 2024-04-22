@@ -19,7 +19,7 @@ use grin_core::core::amount_to_hr_string;
 
 use crate::AppConfig;
 use crate::gui::Colors;
-use crate::gui::icons::{BRIDGE, CHECK, CHECK_FAT, ENVELOPE_OPEN, FILES, FOLDER_USER, GEAR_FINE, HASH, PACKAGE, POWER, QR_CODE, REPEAT, USERS_THREE};
+use crate::gui::icons::{BRIDGE, CHAT_CIRCLE_TEXT, CHECK, CHECK_FAT, FOLDER_USER, GEAR_FINE, GRAPH, PACKAGE, PATH, POWER, QR_CODE, REPEAT, USERS_THREE};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, Root, View};
 use crate::gui::views::types::{ModalPosition, TextEditOptions};
@@ -351,13 +351,13 @@ impl WalletContent {
             let current_type = self.current_tab.get_type();
             ui.columns(4, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
-                    View::tab_button(ui, FILES, current_type == WalletTabType::Txs, || {
+                    View::tab_button(ui, GRAPH, current_type == WalletTabType::Txs, || {
                         self.current_tab = Box::new(WalletInfo::default());
                     });
                 });
                 columns[1].vertical_centered_justified(|ui| {
                     let is_messages = current_type == WalletTabType::Messages;
-                    View::tab_button(ui, ENVELOPE_OPEN, is_messages, || {
+                    View::tab_button(ui, CHAT_CIRCLE_TEXT, is_messages, || {
                         self.current_tab = Box::new(
                             WalletMessages::new(wallet.can_use_dandelion())
                         );
@@ -531,7 +531,7 @@ fn account_item_ui(ui: &mut egui::Ui,
                 ui.vertical(|ui| {
                     ui.add_space(4.0);
                     // Show spendable amount.
-                    let amount = amount_to_hr_string(acc.spendable_amount, false);
+                    let amount = amount_to_hr_string(acc.spendable_amount, true);
                     let amount_text = format!("{} {}", amount, GRIN);
                     ui.label(RichText::new(amount_text).size(18.0).color(Colors::BLACK));
                     ui.add_space(-2.0);
@@ -547,7 +547,7 @@ fn account_item_ui(ui: &mut egui::Ui,
                     View::ellipsize_text(ui, acc_name, 15.0, Colors::TEXT);
 
                     // Show account BIP32 derivation path.
-                    let acc_path = format!("{} {}", HASH, acc.path);
+                    let acc_path = format!("{} {}", PATH, acc.path);
                     ui.label(RichText::new(acc_path).size(15.0).color(Colors::GRAY));
                     ui.add_space(3.0);
                 });
