@@ -105,6 +105,8 @@ wallets:
 network:
   self: Network
   type: 'Network type:'
+  mainnet: Main
+  testnet: Test
   connections: Connections
   node: Integrated node
   metrics: Metrics

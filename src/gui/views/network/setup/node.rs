@@ -232,11 +232,11 @@ impl NodeSetup {
         ui.columns(2, |columns| {
             columns[0].vertical_centered(|ui| {
                 let main_type = ChainTypes::Mainnet;
-                View::radio_value(ui, &mut selected_chain_type, main_type, "Mainnet".to_string());
+                View::radio_value(ui, &mut selected_chain_type, main_type, t!("network.mainnet"));
             });
             columns[1].vertical_centered(|ui| {
                 let test_type = ChainTypes::Testnet;
-                View::radio_value(ui, &mut selected_chain_type, test_type, "Testnet".to_string());
+                View::radio_value(ui, &mut selected_chain_type, test_type, t!("network.testnet"));
             })
         });
         ui.add_space(8.0);
