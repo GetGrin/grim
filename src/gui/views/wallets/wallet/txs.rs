@@ -74,7 +74,7 @@ impl WalletInfo {
         let txs_size = data.txs.len();
 
         // Show transactions info.
-        View::max_width_ui(ui, Root::SIDE_PANEL_WIDTH * 1.35, |ui| {
+        View::max_width_ui(ui, Root::SIDE_PANEL_WIDTH * 1.25, |ui| {
             let amount_awaiting_conf = data.info.amount_awaiting_confirmation;
             let amount_awaiting_fin = data.info.amount_awaiting_finalization;
             let amount_locked = data.info.amount_locked;
