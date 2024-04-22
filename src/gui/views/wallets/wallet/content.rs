@@ -95,7 +95,7 @@ impl WalletContent {
             .show_animated_inside(ui, show_balance, |ui| {
                 ui.vertical_centered(|ui| {
                     // Draw account info.
-                    View::max_width_ui(ui, Root::SIDE_PANEL_WIDTH * 1.25, |ui| {
+                    View::max_width_ui(ui, Root::SIDE_PANEL_WIDTH * 1.3, |ui| {
                         self.account_ui(ui, wallet, data.unwrap(), cb);
                     });
                 });

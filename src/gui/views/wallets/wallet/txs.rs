@@ -61,7 +61,8 @@ impl WalletTab for WalletInfo {
             })
             .show_inside(ui, |ui| {
                 ui.vertical_centered(|ui| {
-                    self.txs_ui(ui, wallet);
+                    let data = wallet.get_data().unwrap();
+                    self.txs_ui(ui, wallet, &data);
                 });
             });
     }
@@ -69,12 +70,11 @@ impl WalletTab for WalletInfo {
 
 impl WalletInfo {
     /// Draw transactions content.
-    fn txs_ui(&self, ui: &mut egui::Ui, wallet: &mut Wallet) {
-        let data = wallet.get_data().unwrap();
+    fn txs_ui(&self, ui: &mut egui::Ui, wallet: &mut Wallet, data: &WalletData) {
         let txs_size = data.txs.len();
 
         // Show transactions info.
-        View::max_width_ui(ui, Root::SIDE_PANEL_WIDTH * 1.25, |ui| {
+        View::max_width_ui(ui, Root::SIDE_PANEL_WIDTH * 1.3, |ui| {
             let amount_awaiting_conf = data.info.amount_awaiting_confirmation;
             let amount_awaiting_fin = data.info.amount_awaiting_finalization;
             let amount_locked = data.info.amount_locked;
@@ -140,12 +140,17 @@ impl WalletInfo {
             .show_rows(ui, TX_ITEM_HEIGHT, txs_size, |ui, row_range| {
                 ui.add_space(3.0);
                 View::max_width_ui(ui, Root::SIDE_PANEL_WIDTH * 1.3, |ui| {
+                    let amount_awaiting_conf = data.info.amount_awaiting_confirmation;
+                    let amount_awaiting_fin = data.info.amount_awaiting_finalization;
+                    let amount_locked = data.info.amount_locked;
+                    let extra_padding = amount_awaiting_conf != 0 || amount_awaiting_fin != 0 ||
+                        amount_locked != 0;
                     for index in row_range {
                         let tx = data.txs.get(index).unwrap();
                         // Setup item rounding.
                         let item_rounding = View::item_rounding(index, txs_size, false);
                         // Show transaction item.
-                        tx_item_ui(ui, tx, item_rounding, &data, wallet);
+                        tx_item_ui(ui, tx, item_rounding, extra_padding, &data, wallet);
                     }
                 });
             });
@@ -159,10 +164,15 @@ const TX_ITEM_HEIGHT: f32 = 76.0;
 fn tx_item_ui(ui: &mut egui::Ui,
               tx: &WalletTransaction,
               mut rounding: Rounding,
+              extra_padding: bool,
               data: &WalletData,
               wallet: &mut Wallet) {
     // Setup layout size.
     let mut rect = ui.available_rect_before_wrap();
+    if extra_padding {
+        rect.min += egui::emath::vec2(6.0, 0.0);
+        rect.max -= egui::emath::vec2(6.0, 0.0);
+    }
     rect.set_height(TX_ITEM_HEIGHT);
 
     // Draw round background.
@@ -171,6 +181,10 @@ fn tx_item_ui(ui: &mut egui::Ui,
 
     ui.vertical(|ui| {
         ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
+            if extra_padding {
+                ui.add_space(-6.0);
+            }
+
             // Draw button to show transaction info.
             rounding.nw = 0.0;
             rounding.sw = 0.0;
@@ -217,7 +231,11 @@ fn tx_item_ui(ui: &mut egui::Ui,
 
             let layout_size = ui.available_size();
             ui.allocate_ui_with_layout(layout_size, Layout::left_to_right(Align::Center), |ui| {
-                ui.add_space(8.0);
+                if extra_padding {
+                    ui.add_space(12.0);
+                } else {
+                    ui.add_space(6.0);
+                }
                 ui.vertical(|ui| {
                     ui.add_space(3.0);
 
