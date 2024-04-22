@@ -49,12 +49,12 @@ wallets:
   closing: Закрывается
   checking: Проверяется
   default_wallet: Стандартный кошелёк
+  new_account_desc: 'Введите название нового аккаунта:'
   wallet_loading: Загрузка кошелька
   wallet_closing: Закрытие кошелька
   wallet_checking: Проверка кошелька
   tx_loading: Загрузка транзакций
   default_account: Стандартный аккаунт
-  create_account: Создать аккаунт
   accounts: Аккаунты
   tx_sent: Отправлено
   tx_received: Получено

@@ -371,6 +371,15 @@ impl Wallet {
         controller::owner_single_use(None, None, Some(&mut api), |api, m| {
             api.create_account_path(m, label)?;
 
+            // Update account list at separate thread.
+            if let Some(data) = self.get_data() {
+                let last_height = data.info.last_confirmed_height;
+                let wallet = self.clone();
+                thread::spawn(move || {
+                    update_accounts(&wallet, last_height, None);
+                });
+            }
+
             // Sync wallet data.
             self.sync();
             Ok(())
@@ -921,7 +930,12 @@ fn sync_wallet_data(wallet: &Wallet) {
             if wallet.info_sync_progress() == 100 {
                 // Retrieve accounts data.
                 let last_height = info.1.last_confirmed_height;
-                update_accounts(wallet, last_height, info.1.amount_currently_spendable);
+                let spendable = if wallet.get_data().is_none() {
+                    None
+                } else {
+                    Some(info.1.amount_currently_spendable)
+                };
+                update_accounts(wallet, last_height, spendable);
 
                 // Update txs sync progress at separate thread.
                 let wallet_txs = wallet.clone();
@@ -1076,13 +1090,13 @@ fn sync_wallet_data(wallet: &Wallet) {
 }
 
 /// Update wallet accounts data.
-fn update_accounts(wallet: &Wallet, current_height: u64, current_spendable: u64) {
+fn update_accounts(wallet: &Wallet, current_height: u64, current_spendable: Option<u64>) {
     // Update only current account if list is not empty.
-    if !wallet.accounts.read().unwrap().is_empty() {
+    if current_spendable.is_some() {
         let mut accounts = wallet.accounts.read().unwrap().clone();
         for mut a in accounts.iter_mut() {
             if a.label == wallet.get_config().account {
-                a.spendable_amount = current_spendable;
+                a.spendable_amount = current_spendable.unwrap();
             }
         }
         // Save accounts data.
@@ -1113,8 +1127,10 @@ fn update_accounts(wallet: &Wallet, current_height: u64, current_spendable: u64)
                     spendable_amount,
                     label: a.label,
                     path: a.path.to_bip_32_string(),
-                })
+                });
             }
+            // Sort in reverse.
+            accounts.reverse();
 
             // Save accounts data.
             let mut w_data = wallet.accounts.write().unwrap();

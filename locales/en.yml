@@ -49,12 +49,12 @@ wallets:
   closing: Closing
   checking: Checking
   default_wallet: Default wallet
+  new_account_desc: 'Enter name of new account:'
   wallet_loading: Loading wallet
   wallet_closing: Closing wallet
   wallet_checking: Checking wallet
   tx_loading: Loading transactions
   default_account: Default account
-  create_account: Create account
   accounts: Accounts
   tx_sent: Sent
   tx_received: Received
