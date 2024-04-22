@@ -638,6 +638,9 @@ impl WalletMessages {
                 columns[1].vertical_centered_justified(|ui| {
                     // Button to create Slatepack message for request.
                     View::button(ui, t!("continue"), Colors::WHITE, || {
+                        if self.amount_edit.is_empty() {
+                            return;
+                        }
                         if let Ok(a) = amount_from_hr_string(self.amount_edit.as_str()) {
                             let message = if self.send_request {
                                 wallet.send(a)
