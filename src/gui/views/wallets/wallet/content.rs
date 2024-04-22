@@ -294,7 +294,7 @@ impl WalletContent {
             // Show list of accounts.
             let size = self.accounts.len();
             ScrollArea::vertical()
-                .max_height(285.0)
+                .max_height(266.0)
                 .id_source("account_list_modal_scroll")
                 .auto_shrink([true; 2])
                 .show_rows(ui, ACCOUNT_ITEM_HEIGHT, size, |ui, row_range| {
