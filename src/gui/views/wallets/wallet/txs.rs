@@ -132,13 +132,13 @@ impl WalletInfo {
         });
 
         // Show list of transactions.
-        ui.add_space(3.0);
+        ui.add_space(4.0);
         ScrollArea::vertical()
             .scroll_bar_visibility(ScrollBarVisibility::AlwaysVisible)
             .id_source(Id::from("txs_content").with(wallet.get_config().id))
             .auto_shrink([false; 2])
             .show_rows(ui, TX_ITEM_HEIGHT, txs_size, |ui, row_range| {
-                ui.add_space(4.0);
+                ui.add_space(3.0);
                 View::max_width_ui(ui, Root::SIDE_PANEL_WIDTH * 1.3, |ui| {
                     for index in row_range {
                         let tx = data.txs.get(index).unwrap();
@@ -148,7 +148,6 @@ impl WalletInfo {
                         tx_item_ui(ui, tx, item_rounding, &data, wallet);
                     }
                 });
-                ui.add_space(2.0);
             });
     }
 }
@@ -164,8 +163,6 @@ fn tx_item_ui(ui: &mut egui::Ui,
               wallet: &mut Wallet) {
     // Setup layout size.
     let mut rect = ui.available_rect_before_wrap();
-    rect.min += egui::vec2(5.0, 0.0);
-    rect.max -= egui::vec2(4.0, 0.0);
     rect.set_height(TX_ITEM_HEIGHT);
 
     // Draw round background.
@@ -174,7 +171,6 @@ fn tx_item_ui(ui: &mut egui::Ui,
 
     ui.vertical(|ui| {
         ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
-            ui.add_space(-5.0);
             // Draw button to show transaction info.
             rounding.nw = 0.0;
             rounding.sw = 0.0;
@@ -221,7 +217,7 @@ fn tx_item_ui(ui: &mut egui::Ui,
 
             let layout_size = ui.available_size();
             ui.allocate_ui_with_layout(layout_size, Layout::left_to_right(Align::Center), |ui| {
-                ui.add_space(12.0);
+                ui.add_space(8.0);
                 ui.vertical(|ui| {
                     ui.add_space(3.0);
 
