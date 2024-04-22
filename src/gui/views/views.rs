@@ -263,6 +263,8 @@ impl View {
         let button_size = rect.size();
 
         ui.scope(|ui| {
+            // Setup padding for item buttons.
+            ui.style_mut().spacing.button_padding = egui::vec2(14.0, 0.0);
             // Disable expansion on click/hover.
             ui.style_mut().visuals.widgets.hovered.expansion = 0.0;
             ui.style_mut().visuals.widgets.active.expansion = 0.0;

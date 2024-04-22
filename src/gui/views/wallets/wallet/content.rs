@@ -175,9 +175,6 @@ impl WalletContent {
         ui.painter().rect(rect, rounding, Colors::BUTTON, View::HOVER_STROKE);
 
         ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
-            // Setup padding for item buttons.
-            ui.style_mut().spacing.button_padding = egui::vec2(14.0, 0.0);
-
             // Draw button to scan QR code.
             View::item_button(ui, View::item_rounding(0, 2, true), QR_CODE, None, || {
                 //TODO: Scan with QR code.
@@ -297,7 +294,7 @@ impl WalletContent {
             // Show list of accounts.
             let size = self.accounts.len();
             ScrollArea::vertical()
-                .max_height(280.0)
+                .max_height(285.0)
                 .id_source("account_list_modal_scroll")
                 .auto_shrink([true; 2])
                 .show_rows(ui, ACCOUNT_ITEM_HEIGHT, size, |ui, row_range| {
