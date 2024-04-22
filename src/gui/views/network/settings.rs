@@ -17,7 +17,7 @@ use egui::{RichText, ScrollArea};
 use crate::gui::Colors;
 use crate::gui::icons::ARROW_COUNTER_CLOCKWISE;
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Modal, View};
+use crate::gui::views::{Modal, Root, View};
 use crate::gui::views::network::setup::{DandelionSetup, NodeSetup, P2PSetup, PoolSetup, StratumSetup};
 use crate::gui::views::network::types::{NetworkTab, NetworkTabType};
 use crate::gui::views::types::{ModalContainer, ModalPosition};
@@ -89,44 +89,47 @@ impl NetworkTab for NetworkSettings {
             .auto_shrink([false; 2])
             .show(ui, |ui| {
                 ui.add_space(1.0);
+                ui.vertical_centered(|ui| {
+                    View::max_width_ui(ui, Root::SIDE_PANEL_WIDTH * 1.3, |ui| {
+                        // Draw node setup section.
+                        self.node.ui(ui, frame, cb);
 
-                // Draw node setup section.
-                self.node.ui(ui, frame, cb);
+                        ui.add_space(6.0);
+                        View::horizontal_line(ui, Colors::STROKE);
+                        ui.add_space(4.0);
 
-                ui.add_space(6.0);
-                View::horizontal_line(ui, Colors::STROKE);
-                ui.add_space(4.0);
+                        // Draw P2P server setup section.
+                        self.p2p.ui(ui, frame, cb);
 
-                // Draw P2P server setup section.
-                self.p2p.ui(ui, frame, cb);
+                        ui.add_space(6.0);
+                        View::horizontal_line(ui, Colors::STROKE);
+                        ui.add_space(4.0);
 
-                ui.add_space(6.0);
-                View::horizontal_line(ui, Colors::STROKE);
-                ui.add_space(4.0);
+                        // Draw Stratum server setup section.
+                        self.stratum.ui(ui, frame, cb);
 
-                // Draw Stratum server setup section.
-                self.stratum.ui(ui, frame, cb);
+                        ui.add_space(6.0);
+                        View::horizontal_line(ui, Colors::STROKE);
+                        ui.add_space(4.0);
 
-                ui.add_space(6.0);
-                View::horizontal_line(ui, Colors::STROKE);
-                ui.add_space(4.0);
+                        // Draw pool setup section.
+                        self.pool.ui(ui, frame, cb);
 
-                // Draw pool setup section.
-                self.pool.ui(ui, frame, cb);
+                        ui.add_space(6.0);
+                        View::horizontal_line(ui, Colors::STROKE);
+                        ui.add_space(4.0);
 
-                ui.add_space(6.0);
-                View::horizontal_line(ui, Colors::STROKE);
-                ui.add_space(4.0);
+                        // Draw Dandelion server setup section.
+                        self.dandelion.ui(ui, frame, cb);
 
-                // Draw Dandelion server setup section.
-                self.dandelion.ui(ui, frame, cb);
+                        ui.add_space(6.0);
+                        View::horizontal_line(ui, Colors::STROKE);
+                        ui.add_space(6.0);
 
-                ui.add_space(6.0);
-                View::horizontal_line(ui, Colors::STROKE);
-                ui.add_space(6.0);
-
-                // Draw reset settings content.
-                reset_settings_ui(ui);
+                        // Draw reset settings content.
+                        reset_settings_ui(ui);
+                    });
+                });
             });
     }
 }

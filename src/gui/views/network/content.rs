@@ -16,7 +16,7 @@ use egui::{Margin, RichText, ScrollArea, Stroke};
 
 use crate::AppConfig;
 use crate::gui::Colors;
-use crate::gui::icons::{CARDHOLDER, DATABASE, DOTS_THREE_OUTLINE_VERTICAL, FACTORY, FADERS, GAUGE, PLUS_CIRCLE, POWER};
+use crate::gui::icons::{BRIEFCASE, CARDHOLDER, DATABASE, DOTS_THREE_OUTLINE_VERTICAL, FACTORY, FADERS, GAUGE, PLUS_CIRCLE, POWER};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{ConnectionsContent, NetworkMetrics, NetworkMining, NetworkNode, NetworkSettings, Root, TitlePanel, View};
 use crate::gui::views::network::types::{NetworkTab, NetworkTabType};
@@ -64,7 +64,12 @@ impl NetworkContent {
                 ..Default::default()
             })
             .show_animated_inside(ui, !show_connections, |ui| {
-                self.tabs_ui(ui);
+                ui.vertical_centered(|ui| {
+                    View::max_width_ui(ui, Root::SIDE_PANEL_WIDTH * 1.3, |ui| {
+                        // Show tabs content.
+                        self.tabs_ui(ui);
+                    });
+                });
             });
 
         // Show current node tab content.
@@ -89,6 +94,7 @@ impl NetworkContent {
                         ..Default::default()
                     })
                     .show_inside(ui, |ui| {
+                        // Draw node tab content.
                         self.node_tab_content.ui(ui, frame, cb);
                     });
             });
@@ -148,7 +154,7 @@ impl NetworkContent {
 
     /// Draw tab buttons in the bottom of the screen.
     fn tabs_ui(&mut self, ui: &mut egui::Ui) {
-        ui.scope(|ui| {
+        ui.vertical_centered(|ui| {
             // Setup spacing between tabs.
             ui.style_mut().spacing.item_spacing = egui::vec2(4.0, 0.0);
             // Setup vertical padding inside tab button.
@@ -213,7 +219,7 @@ impl NetworkContent {
             }
         }, |ui, frame| {
             if !Root::is_dual_panel_mode(ui) {
-                View::title_button(ui, CARDHOLDER, || {
+                View::title_button(ui, BRIEFCASE, || {
                     Root::toggle_network_panel();
                 });
             }

@@ -13,12 +13,12 @@
 // limitations under the License.
 
 use egui::{RichText, Rounding, ScrollArea, vec2};
-use grin_servers::DiffBlock;
+use grin_servers::{DiffBlock, ServerStats};
 
 use crate::gui::Colors;
 use crate::gui::icons::{AT, COINS, CUBE_TRANSPARENT, HASH, HOURGLASS_LOW, HOURGLASS_MEDIUM, TIMER};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{NetworkContent, View};
+use crate::gui::views::{NetworkContent, Root, View};
 use crate::gui::views::network::types::{NetworkTab, NetworkTabType};
 use crate::node::Node;
 
@@ -56,90 +56,102 @@ impl NetworkTab for NetworkMetrics {
             return;
         }
 
-        let stats = server_stats.as_ref().unwrap();
-
         ui.add_space(1.0);
-
-        // Show emission info.
-        View::sub_title(ui, format!("{} {}", COINS, t!("network_metrics.emission")));
-        ui.columns(3, |columns| {
-            let supply = stats.header_stats.height as f64 * BLOCK_REWARD;
-            let rate = (YEARLY_SUPPLY * 100.0) / supply;
-
-            columns[0].vertical_centered(|ui| {
-                View::rounded_box(ui,
-                                  format!("{}ツ", BLOCK_REWARD),
-                                  t!("network_metrics.reward"),
-                                  [true, false, true, false]);
-            });
-            columns[1].vertical_centered(|ui| {
-                View::rounded_box(ui,
-                                  format!("{:.2}%", rate),
-                                  t!("network_metrics.inflation"),
-                                  [false, false, false, false]);
-            });
-            columns[2].vertical_centered(|ui| {
-                View::rounded_box(ui,
-                                  supply.to_string(),
-                                  t!("network_metrics.supply"),
-                                  [false, true, false, true]);
+        ui.vertical_centered(|ui| {
+            View::max_width_ui(ui, Root::SIDE_PANEL_WIDTH * 1.3, |ui| {
+                let stats = server_stats.as_ref().unwrap();
+                // Show emission and difficulty info.
+                info_ui(ui, stats);
+                // Show difficulty adjustment window blocks.
+                blocks_ui(ui, stats);
             });
         });
-        ui.add_space(5.0);
-
-        // Show difficulty adjustment window info.
-        let difficulty_title = t!(
-                "network_metrics.difficulty_window",
-                "size" => stats.diff_stats.window_size
-            );
-        View::sub_title(ui, format!("{} {}", HOURGLASS_MEDIUM, difficulty_title));
-        ui.columns(3, |columns| {
-            columns[0].vertical_centered(|ui| {
-                View::rounded_box(ui,
-                                  stats.diff_stats.height.to_string(),
-                                  t!("network_node.height"),
-                                  [true, false, true, false]);
-            });
-            columns[1].vertical_centered(|ui| {
-                View::rounded_box(ui,
-                                  format!("{}s", stats.diff_stats.average_block_time),
-                                  t!("network_metrics.block_time"),
-                                  [false, false, false, false]);
-            });
-            columns[2].vertical_centered(|ui| {
-                View::rounded_box(ui,
-                                  stats.diff_stats.average_difficulty.to_string(),
-                                  t!("network_node.difficulty"),
-                                  [false, true, false, true]);
-            });
-        });
-        ui.add_space(4.0);
-
-        // Show difficulty adjustment window blocks.
-        let blocks_size = stats.diff_stats.last_blocks.len();
-        ScrollArea::vertical()
-            .id_source("difficulty_scroll")
-            .auto_shrink([false; 2])
-            .stick_to_bottom(true)
-            .show_rows(
-                ui,
-                BLOCK_ITEM_HEIGHT - 1.0,
-                blocks_size,
-                |ui, row_range| {
-                    for index in row_range {
-                        // Add space before the first item.
-                        if index == 0 {
-                            ui.add_space(4.0);
-                        }
-                        let db = stats.diff_stats.last_blocks.get(index).unwrap();
-                        block_item_ui(ui, db, View::item_rounding(index, blocks_size, false));
-                    }
-                },
-            );
     }
 }
 
 const BLOCK_ITEM_HEIGHT: f32 = 77.0;
+
+/// Draw emission and difficulty info.
+fn info_ui(ui: &mut egui::Ui, stats: &ServerStats) {
+    // Show emission info.
+    View::sub_title(ui, format!("{} {}", COINS, t!("network_metrics.emission")));
+    ui.columns(3, |columns| {
+        let supply = stats.header_stats.height as f64 * BLOCK_REWARD;
+        let rate = (YEARLY_SUPPLY * 100.0) / supply;
+
+        columns[0].vertical_centered(|ui| {
+            View::rounded_box(ui,
+                              format!("{}ツ", BLOCK_REWARD),
+                              t!("network_metrics.reward"),
+                              [true, false, true, false]);
+        });
+        columns[1].vertical_centered(|ui| {
+            View::rounded_box(ui,
+                              format!("{:.2}%", rate),
+                              t!("network_metrics.inflation"),
+                              [false, false, false, false]);
+        });
+        columns[2].vertical_centered(|ui| {
+            View::rounded_box(ui,
+                              supply.to_string(),
+                              t!("network_metrics.supply"),
+                              [false, true, false, true]);
+        });
+    });
+    ui.add_space(5.0);
+
+    // Show difficulty adjustment window info.
+    let difficulty_title = t!(
+                "network_metrics.difficulty_window",
+                "size" => stats.diff_stats.window_size
+            );
+    View::sub_title(ui, format!("{} {}", HOURGLASS_MEDIUM, difficulty_title));
+    ui.columns(3, |columns| {
+        columns[0].vertical_centered(|ui| {
+            View::rounded_box(ui,
+                              stats.diff_stats.height.to_string(),
+                              t!("network_node.height"),
+                              [true, false, true, false]);
+        });
+        columns[1].vertical_centered(|ui| {
+            View::rounded_box(ui,
+                              format!("{}s", stats.diff_stats.average_block_time),
+                              t!("network_metrics.block_time"),
+                              [false, false, false, false]);
+        });
+        columns[2].vertical_centered(|ui| {
+            View::rounded_box(ui,
+                              stats.diff_stats.average_difficulty.to_string(),
+                              t!("network_node.difficulty"),
+                              [false, true, false, true]);
+        });
+    });
+}
+
+/// Draw difficulty adjustment window blocks content.
+fn blocks_ui(ui: &mut egui::Ui, stats: &ServerStats) {
+    let blocks_size = stats.diff_stats.last_blocks.len();
+    ui.add_space(4.0);
+    ScrollArea::vertical()
+        .id_source("difficulty_scroll")
+        .auto_shrink([false; 2])
+        .stick_to_bottom(true)
+        .show_rows(
+            ui,
+            BLOCK_ITEM_HEIGHT - 1.0,
+            blocks_size,
+            |ui, row_range| {
+                for index in row_range {
+                    // Add space before the first item.
+                    if index == 0 {
+                        ui.add_space(4.0);
+                    }
+                    let db = stats.diff_stats.last_blocks.get(index).unwrap();
+                    block_item_ui(ui, db, View::item_rounding(index, blocks_size, false));
+                }
+            },
+        );
+}
 
 /// Draw block difficulty item.
 fn block_item_ui(ui: &mut egui::Ui, db: &DiffBlock, rounding: Rounding) {

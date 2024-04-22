@@ -19,7 +19,7 @@ use grin_servers::WorkerStats;
 use crate::gui::Colors;
 use crate::gui::icons::{BARBELL, CLOCK_AFTERNOON, CPU, CUBE, FADERS, FOLDER_DASHED, FOLDER_SIMPLE_MINUS, FOLDER_SIMPLE_PLUS, HARD_DRIVES, PLUGS, PLUGS_CONNECTED, POLYGON};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{NetworkContent, View};
+use crate::gui::views::{NetworkContent, Root, View};
 use crate::gui::views::network::setup::StratumSetup;
 use crate::gui::views::network::types::{NetworkTab, NetworkTabType};
 use crate::node::{Node, NodeConfig};
@@ -73,7 +73,11 @@ impl NetworkTab for NetworkMining {
                 .auto_shrink([false; 2])
                 .show(ui, |ui| {
                     ui.add_space(1.0);
-                    self.stratum_server_setup.ui(ui, frame, cb);
+                    ui.vertical_centered(|ui| {
+                        View::max_width_ui(ui, Root::SIDE_PANEL_WIDTH * 1.3, |ui| {
+                            self.stratum_server_setup.ui(ui, frame, cb);
+                        });
+                    });
                 });
             return;
         }
