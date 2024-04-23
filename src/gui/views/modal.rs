@@ -180,6 +180,7 @@ impl Modal {
             .title_bar(false)
             .resizable(false)
             .collapsible(false)
+            .min_width(width)
             .default_width(width)
             .anchor(content_align, content_offset)
             .frame(egui::Frame {
