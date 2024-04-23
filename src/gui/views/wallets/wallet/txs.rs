@@ -210,6 +210,24 @@ impl WalletTransactions {
         }
     }
 
+    /// Show transaction information [`Modal`].
+    fn show_tx_info_modal(&mut self, wallet: &Wallet, tx: &WalletTransaction) {
+        self.tx_info_response_edit = "".to_string();
+        self.tx_info_finalize_edit = "".to_string();
+        self.tx_info_finalize_error = false;
+        self.tx_info_id = Some(tx.data.id);
+        // Setup slate and message from transaction.
+        if let Some((slate, message)) = wallet.read_slate_by_tx(tx) {
+            self.tx_info_response_edit = message;
+            self.tx_info_slate = Some(slate);
+        }
+        // Show transaction information modal.
+        Modal::new(TX_INFO_MODAL)
+            .position(ModalPosition::CenterTop)
+            .title(t!("wallets.tx"))
+            .show();
+    }
+
     /// Draw transaction item.
     fn tx_item_ui(&mut self,
                   ui: &mut egui::Ui,
@@ -420,23 +438,6 @@ impl WalletTransactions {
                 });
             });
         });
-    }
-
-    /// Show transaction information [`Modal`].
-    fn show_tx_info_modal(&mut self, wallet: &Wallet, tx: &WalletTransaction) {
-        self.tx_info_response_edit = "".to_string();
-        self.tx_info_finalize_edit = "".to_string();
-        self.tx_info_finalize_error = false;
-        self.tx_info_id = Some(tx.data.id);
-        // Setup slate and message from transaction.
-        if let Some((slate, message)) = wallet.read_slate_by_tx(tx) {
-            self.tx_info_response_edit = message;
-            self.tx_info_slate = Some(slate);
-        }
-        // Show transaction information modal.
-        Modal::new(TX_INFO_MODAL)
-            .position(ModalPosition::CenterTop)
-            .show();
     }
 
     /// Draw transaction info [`Modal`] content.

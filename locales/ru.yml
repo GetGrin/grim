@@ -67,6 +67,7 @@ wallets:
   tx_finalizing: Завершение
   tx_confirmed: Подтверждено
   txs: Транзакции
+  tx: Транзакция
   input_finalize_desc: 'Введите полученное сообщение для завершения транзакции:'
   messages: Сообщения
   transport: Транспорт
