@@ -2808,7 +2808,7 @@ dependencies = [
 [[package]]
 name = "grin_wallet_api"
 version = "5.2.0-beta.1"
-source = "git+https://github.com/mimblewimble/grin-wallet?branch=master#75363a9a258bc1fb0cf60bfb4c88a8a653b122f2"
+source = "git+https://github.com/yeastplume/grin-wallet?branch=prevent_double_pay#6e6b16a61c53825447f27ad49ba654c922cf9702"
 dependencies = [
  "base64 0.12.3",
  "chrono",
@@ -2833,7 +2833,7 @@ dependencies = [
 [[package]]
 name = "grin_wallet_config"
 version = "5.2.0-beta.1"
-source = "git+https://github.com/mimblewimble/grin-wallet?branch=master#75363a9a258bc1fb0cf60bfb4c88a8a653b122f2"
+source = "git+https://github.com/yeastplume/grin-wallet?branch=prevent_double_pay#6e6b16a61c53825447f27ad49ba654c922cf9702"
 dependencies = [
  "dirs 2.0.2",
  "grin_core",
@@ -2848,7 +2848,7 @@ dependencies = [
 [[package]]
 name = "grin_wallet_controller"
 version = "5.2.0-beta.1"
-source = "git+https://github.com/mimblewimble/grin-wallet?branch=master#75363a9a258bc1fb0cf60bfb4c88a8a653b122f2"
+source = "git+https://github.com/yeastplume/grin-wallet?branch=prevent_double_pay#6e6b16a61c53825447f27ad49ba654c922cf9702"
 dependencies = [
  "chrono",
  "easy-jsonrpc-mw",
@@ -2882,7 +2882,7 @@ dependencies = [
 [[package]]
 name = "grin_wallet_impls"
 version = "5.2.0-beta.1"
-source = "git+https://github.com/mimblewimble/grin-wallet?branch=master#75363a9a258bc1fb0cf60bfb4c88a8a653b122f2"
+source = "git+https://github.com/yeastplume/grin-wallet?branch=prevent_double_pay#6e6b16a61c53825447f27ad49ba654c922cf9702"
 dependencies = [
  "base64 0.12.3",
  "blake2-rfc",
@@ -2921,7 +2921,7 @@ dependencies = [
 [[package]]
 name = "grin_wallet_libwallet"
 version = "5.2.0-beta.1"
-source = "git+https://github.com/mimblewimble/grin-wallet?branch=master#75363a9a258bc1fb0cf60bfb4c88a8a653b122f2"
+source = "git+https://github.com/yeastplume/grin-wallet?branch=prevent_double_pay#6e6b16a61c53825447f27ad49ba654c922cf9702"
 dependencies = [
  "age",
  "base64 0.9.3",
@@ -2958,7 +2958,7 @@ dependencies = [
 [[package]]
 name = "grin_wallet_util"
 version = "5.2.0-beta.1"
-source = "git+https://github.com/mimblewimble/grin-wallet?branch=master#75363a9a258bc1fb0cf60bfb4c88a8a653b122f2"
+source = "git+https://github.com/yeastplume/grin-wallet?branch=prevent_double_pay#6e6b16a61c53825447f27ad49ba654c922cf9702"
 dependencies = [
  "data-encoding",
  "ed25519-dalek",

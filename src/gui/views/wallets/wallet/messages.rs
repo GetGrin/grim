@@ -146,14 +146,14 @@ impl WalletMessages {
               ui: &mut egui::Ui,
               wallet: &mut Wallet,
               cb: &dyn PlatformCallbacks) {
-        ui.add_space(4.0);
+        ui.add_space(3.0);
 
         // Show creation of request to send or receive funds.
         self.request_ui(ui, cb);
 
         ui.add_space(12.0);
         View::horizontal_line(ui, Colors::ITEM_STROKE);
-        ui.add_space(8.0);
+        ui.add_space(6.0);
 
         // Show Slatepack message input field.
         self.input_slatepack_ui(ui, wallet, cb);
@@ -326,11 +326,10 @@ impl WalletMessages {
                             } else {
                                 show_dandelion = true;
                                 View::button(ui, t!("wallets.finalize"), Colors::GOLD, || {
-                                    let message = self.message_edit.clone();
                                     let slate = self.message_slate.clone().unwrap();
                                     if slate.state == SlateState::Invoice3 ||
                                         slate.state == SlateState::Standard3 {
-                                        if let Ok(_) = wallet.post(&slate, self.dandelion) {
+                                        if wallet.post(&slate, self.dandelion).is_ok() {
                                             self.message_edit.clear();
                                             self.message_slate = None;
                                         } else {
@@ -341,7 +340,8 @@ impl WalletMessages {
                                             );
                                         }
                                     } else {
-                                        if let Ok(_) = wallet.finalize(message, self.dandelion) {
+                                        let r = wallet.finalize(&self.message_edit, self.dandelion);
+                                        if r.is_ok() {
                                             self.message_edit.clear();
                                             self.message_slate = None;
                                         } else {
@@ -397,7 +397,7 @@ impl WalletMessages {
         if self.message_edit.is_empty() {
            return;
         }
-        if let Ok(mut slate) = wallet.parse_slatepack(self.message_edit.clone()) {
+        if let Ok(mut slate) = wallet.parse_slatepack(&self.message_edit) {
             println!("parse_message: {}", slate);
 
             // Try to setup empty amount from transaction by id.
@@ -423,13 +423,23 @@ impl WalletMessages {
             match slate.state {
                 SlateState::Standard1 | SlateState::Invoice1 => {
                     let resp = if slate.state == SlateState::Standard1 {
-                        wallet.receive(self.message_edit.clone())
+                        wallet.receive(&self.message_edit)
                     } else {
-                        wallet.pay(self.message_edit.clone())
+                        wallet.pay(&self.message_edit)
                     };
                     if resp.is_ok() {
                         self.response_edit = resp.unwrap();
                     } else {
+                        match resp.err().unwrap() {
+                            grin_wallet_libwallet::Error::TransactionWasCancelled {..} => {
+                                // Set already canceled transaction error message.
+                                self.message_error = Some(
+                                    MessageError::Response(t!("wallets.resp_canceled_err"))
+                                );
+                                return;
+                            }
+                            _ => {}
+                        }
                         // Check if tx with same slate id already exists.
                         let exists_tx = wallet.tx_by_slate(&slate).is_some();
                         if exists_tx {
@@ -726,7 +736,7 @@ impl WalletMessages {
                     // Button to cancel transaction.
                     let cancel = format!("{} {}", PROHIBIT, t!("modal.cancel"));
                     View::colored_text_button(ui, cancel, Colors::RED, Colors::BUTTON, || {
-                        if let Ok(slate) = wallet.parse_slatepack(self.request_edit.clone()) {
+                        if let Ok(slate) = wallet.parse_slatepack(&self.request_edit) {
                             if let Some(tx) = wallet.tx_by_slate(&slate) {
                                 wallet.cancel(tx.data.id);
                             }

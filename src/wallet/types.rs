@@ -17,7 +17,7 @@ use std::sync::Arc;
 use grin_keychain::ExtKeychain;
 use grin_util::Mutex;
 use grin_wallet_impls::{DefaultLCProvider, HTTPNodeClient};
-use grin_wallet_libwallet::{TxLogEntry, WalletInfo, WalletInst};
+use grin_wallet_libwallet::{TxLogEntry, TxLogEntryType, WalletInfo, WalletInst};
 
 /// Mnemonic phrase setup mode.
 #[derive(PartialEq, Clone)]
@@ -149,6 +149,25 @@ pub struct WalletTransaction {
     pub amount: u64,
     /// Flag to check if transaction is posting after finalization.
     pub posting: bool,
+    /// Flag to check if transaction can be finalized based on Slatepack message state.
+    pub can_finalize: bool,
     /// Last wallet block height of transaction reposting.
     pub repost_height: Option<u64>
+}
+
+impl WalletTransaction {
+    /// Check if transaction can be cancelled.
+    pub fn can_cancel(&self) -> bool {
+        !self.posting && !self.data.confirmed &&
+            self.data.tx_type != TxLogEntryType::TxReceivedCancelled
+            && self.data.tx_type != TxLogEntryType::TxSentCancelled
+    }
+
+    /// Check if transaction can be reposted.
+    pub fn can_repost(&self, data: &WalletData) -> bool {
+        let last_height = data.info.last_confirmed_height;
+        let min_conf = data.info.minimum_confirmations;
+        self.posting && self.repost_height.is_some() &&
+            last_height - self.repost_height.unwrap() > min_conf
+    }
 }

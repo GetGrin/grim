@@ -15,7 +15,7 @@
 pub mod types;
 
 mod txs;
-pub use txs::WalletInfo;
+pub use txs::WalletTransactions;
 
 mod messages;
 pub use messages::WalletMessages;

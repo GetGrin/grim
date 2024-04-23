@@ -479,9 +479,9 @@ impl Wallet {
     }
 
     /// Parse Slatepack message into [`Slate`].
-    pub fn parse_slatepack(&self, message: String) -> Result<Slate, Error> {
+    pub fn parse_slatepack(&self, message: &String) -> Result<Slate, Error> {
         let api = Owner::new(self.instance.clone().unwrap(), None);
-        api.slate_from_slatepack_message(None, message, vec![])
+        api.slate_from_slatepack_message(None, message.clone(), vec![])
     }
 
     /// Create Slatepack message from provided slate.
@@ -493,7 +493,7 @@ impl Wallet {
             Ok(())
         })?;
 
-        // Save slatepack.
+        // Write Slatepack message to file.
         let slatepack_dir = self.get_config().get_slatepack_path(&slate);
         let mut output = File::create(slatepack_dir)?;
         output.write_all(message.as_bytes())?;
@@ -510,7 +510,51 @@ impl Wallet {
         }
     }
 
-    /// Get transaction by slate id.
+    /// Get last stored [`Slate`] for transaction.
+    pub fn read_slate_by_tx(&self, tx: &WalletTransaction) -> Option<(Slate, String)> {
+        let mut slate = None;
+        if let Some(slate_id) = tx.data.tx_slate_id {
+            // Get slate state based on tx state and status.
+            let state = if tx.posting {
+                if tx.data.tx_type == TxLogEntryType::TxSent {
+                    Some(SlateState::Standard3)
+                } else {
+                    Some(SlateState::Invoice3)
+                }
+            } else if !tx.data.confirmed && (tx.data.tx_type == TxLogEntryType::TxSent ||
+                tx.data.tx_type == TxLogEntryType::TxReceived) {
+                if tx.can_finalize {
+                    if tx.data.tx_type == TxLogEntryType::TxSent {
+                        Some(SlateState::Standard1)
+                    } else {
+                        Some(SlateState::Invoice1)
+                    }
+                } else {
+                    if tx.data.tx_type == TxLogEntryType::TxReceived {
+                        Some(SlateState::Standard2)
+                    } else {
+                        Some(SlateState::Invoice2)
+                    }
+                }
+            } else {
+                None
+            };
+            // Get slate from state by reading Slatepack message file.
+            if let Some(st) = state {
+                let mut s = Slate::blank(0, false);
+                s.id = slate_id;
+                s.state = st;
+                if let Some(m) = self.read_slatepack(&s) {
+                    if let Ok(s) = self.parse_slatepack(&m) {
+                        slate = Some((s, m));
+                    }
+                }
+            }
+        }
+        slate
+    }
+
+    /// Get transaction for [`Slate`] id.
     pub fn tx_by_slate(&self, slate: &Slate) -> Option<WalletTransaction> {
         if let Some(data) = self.get_data() {
             let txs = data.txs.clone().iter().map(|tx| tx.clone()).filter(|tx| {
@@ -571,7 +615,7 @@ impl Wallet {
     }
 
     /// Handle message from the invoice issuer to send founds, return response for funds receiver.
-    pub fn pay(&self, message: String) -> Result<String, Error> {
+    pub fn pay(&self, message: &String) -> Result<String, Error> {
         let slate = self.parse_slatepack(message)?;
         let config = self.get_config();
         let args = InitTxArgs {
@@ -595,7 +639,7 @@ impl Wallet {
     }
 
     /// Handle message to receive funds, return response to sender.
-    pub fn receive(&self, message: String) -> Result<String, Error> {
+    pub fn receive(&self, message: &String) -> Result<String, Error> {
         let mut slate = self.parse_slatepack(message)?;
         let api = Owner::new(self.instance.clone().unwrap(), None);
         controller::foreign_single_use(api.wallet_inst.clone(), None, |api| {
@@ -612,7 +656,7 @@ impl Wallet {
     }
 
     /// Finalize transaction from provided message as sender or invoice issuer with Dandelion.
-    pub fn finalize(&self, message: String, dandelion: bool) -> Result<Slate, Error> {
+    pub fn finalize(&self, message: &String, dandelion: bool) -> Result<Slate, Error> {
         let mut slate = self.parse_slatepack(message)?;
         let api = Owner::new(self.instance.clone().unwrap(), None);
         slate = api.finalize_tx(None, &slate)?;
@@ -629,7 +673,7 @@ impl Wallet {
         // Post transaction to blockchain.
         let api = Owner::new(self.instance.clone().unwrap(), None);
         api.post_tx(None, slate, dandelion)?;
-        // Setup transaction repost height and posting flag.
+        // Setup transaction repost height, posting flag and ability to finalize.
         let mut slate = slate.clone();
         if slate.state == SlateState::Invoice2 {
             slate.state = SlateState::Invoice3
@@ -643,6 +687,7 @@ impl Wallet {
                 if t.data.id == tx.data.id {
                     t.repost_height = Some(data.info.last_confirmed_height);
                     t.posting = true;
+                    t.can_finalize = false;
                 }
             }
             *w_data = Some(data);
@@ -656,23 +701,23 @@ impl Wallet {
     pub fn cancel(&mut self, id: u32) {
         let instance = self.instance.clone().unwrap();
         let _ = cancel_tx(instance, None, &None, Some(id), None);
-        // Set cancelling status.
-        {
-            let mut w_data = self.data.write().unwrap();
-            let mut data = w_data.clone().unwrap();
-            let txs = data.txs.iter_mut().map(|tx| {
-                if tx.data.id == id {
-                    tx.data.tx_type = if tx.data.tx_type == TxLogEntryType::TxReceived {
-                        TxLogEntryType::TxReceivedCancelled
-                    } else {
-                        TxLogEntryType::TxSentCancelled
-                    };
-                }
-                tx.clone()
-            }).collect::<Vec<WalletTransaction>>();
-            data.txs = txs;
-            *w_data = Some(data);
-        }
+        // Setup cancelling status, posting flag, and ability to finalize.
+        let mut w_data = self.data.write().unwrap();
+        let mut data = w_data.clone().unwrap();
+        let txs = data.txs.iter_mut().map(|tx| {
+            if tx.data.id == id {
+                tx.posting = false;
+                tx.can_finalize = false;
+                tx.data.tx_type = if tx.data.tx_type == TxLogEntryType::TxReceived {
+                    TxLogEntryType::TxReceivedCancelled
+                } else {
+                    TxLogEntryType::TxSentCancelled
+                };
+            }
+            tx.clone()
+        }).collect::<Vec<WalletTransaction>>();
+        data.txs = txs;
+        *w_data = Some(data);
         // Refresh wallet info to update statuses.
         self.sync();
     }
@@ -995,7 +1040,6 @@ fn sync_wallet_data(wallet: &Wallet) {
                         // Create wallet txs.
                         let mut new_txs: Vec<WalletTransaction> = vec![];
                         for tx in &filter_txs {
-                            println!("{}", serde_json::to_string(tx).unwrap());
                             // Setup transaction amount.
                             let amount = if tx.amount_debited > tx.amount_credited {
                                 tx.amount_debited - tx.amount_credited
@@ -1003,15 +1047,20 @@ fn sync_wallet_data(wallet: &Wallet) {
                                 tx.amount_credited - tx.amount_debited
                             };
 
-                            // Setup transaction posting flag based on slate state.
-                            let posting = if (tx.tx_type == TxLogEntryType::TxSent ||
-                                tx.tx_type == TxLogEntryType::TxReceived) &&
-                                !tx.confirmed && tx.tx_slate_id.is_some() {
+                            let unconfirmed_sent_or_received = tx.tx_slate_id.is_some() &&
+                                !tx.confirmed && (tx.tx_type == TxLogEntryType::TxSent ||
+                                tx.tx_type == TxLogEntryType::TxReceived);
+
+                            // Setup transaction posting status based on slate state.
+                            let posting = if unconfirmed_sent_or_received {
+                                println!("{}", serde_json::to_string(tx).unwrap());
+
                                 // Create slate to check existing file.
-                                let mut slate = Slate::blank(1, false);
+                                let is_invoice = tx.tx_type == TxLogEntryType::TxReceived;
+                                let mut slate = Slate::blank(0, is_invoice);
                                 slate.id = tx.tx_slate_id.unwrap();
-                                slate.state = match tx.tx_type {
-                                    TxLogEntryType::TxReceived => SlateState::Invoice3,
+                                slate.state = match is_invoice {
+                                    true => SlateState::Invoice3,
                                     _ => SlateState::Standard3
                                 };
 
@@ -1033,6 +1082,20 @@ fn sync_wallet_data(wallet: &Wallet) {
                                 false
                             };
 
+                            // Setup flag for ability to finalize transaction.
+                            let can_finalize = if !posting && unconfirmed_sent_or_received {
+                                // Create slate to check existing file.
+                                let mut slate = Slate::blank(1, false);
+                                slate.id = tx.tx_slate_id.unwrap();
+                                slate.state = match tx.tx_type {
+                                    TxLogEntryType::TxReceived => SlateState::Invoice1,
+                                    _ => SlateState::Standard1
+                                };
+                                wallet.read_slatepack(&slate).is_some()
+                            } else {
+                                false
+                            };
+
                             // Setup reposting height.
                             let mut repost_height = None;
                             if posting {
@@ -1046,10 +1109,12 @@ fn sync_wallet_data(wallet: &Wallet) {
                                 }
                             }
 
+                            // Add transaction to list.
                             new_txs.push(WalletTransaction {
                                 data: tx.clone(),
                                 amount,
                                 posting,
+                                can_finalize,
                                 repost_height,
                             })
                         }

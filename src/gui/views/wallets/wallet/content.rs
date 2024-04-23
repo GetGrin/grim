@@ -23,7 +23,7 @@ use crate::gui::icons::{BRIDGE, CHAT_CIRCLE_TEXT, CHECK, CHECK_FAT, FOLDER_USER,
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, Root, View};
 use crate::gui::views::types::{ModalPosition, TextEditOptions};
-use crate::gui::views::wallets::{WalletInfo, WalletMessages, WalletTransport, WalletSettings};
+use crate::gui::views::wallets::{WalletTransactions, WalletMessages, WalletTransport, WalletSettings};
 use crate::gui::views::wallets::types::{GRIN, WalletTab, WalletTabType};
 use crate::node::Node;
 use crate::wallet::{Wallet, WalletConfig};
@@ -52,7 +52,7 @@ impl Default for WalletContent {
             account_creating: false,
             account_label_edit: "".to_string(),
             account_creation_error: false,
-            current_tab: Box::new(WalletInfo::default())
+            current_tab: Box::new(WalletTransactions::default())
         }
     }
 }
@@ -349,7 +349,7 @@ impl WalletContent {
             ui.columns(4, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
                     View::tab_button(ui, GRAPH, current_type == WalletTabType::Txs, || {
-                        self.current_tab = Box::new(WalletInfo::default());
+                        self.current_tab = Box::new(WalletTransactions::default());
                     });
                 });
                 columns[1].vertical_centered_justified(|ui| {
