@@ -20,9 +20,8 @@ use egui::{Context, Stroke};
 #[cfg(target_os = "android")]
 use winit::platform::android::activity::AndroidApp;
 
-pub use config::AppConfig;
+pub use settings::AppConfig;
 pub use settings::Settings;
-use crate::config::DEFAULT_LOCALE;
 
 use crate::gui::{Colors, PlatformApp};
 use crate::gui::platform::PlatformCallbacks;
@@ -35,7 +34,6 @@ mod node;
 mod wallet;
 
 mod settings;
-mod config;
 pub mod gui;
 
 // Include build information.
@@ -212,9 +210,9 @@ fn setup_i18n() {
             rust_i18n::set_locale(lang.as_str());
         }
     } else {
-        let locale = sys_locale::get_locale().unwrap_or(String::from(DEFAULT_LOCALE));
+        let locale = sys_locale::get_locale().unwrap_or(String::from(AppConfig::DEFAULT_LOCALE));
         let locale_str = if locale.contains("-") {
-            locale.split("-").next().unwrap_or(DEFAULT_LOCALE)
+            locale.split("-").next().unwrap_or(AppConfig::DEFAULT_LOCALE)
         } else {
             locale.as_str()
         };
@@ -223,7 +221,7 @@ fn setup_i18n() {
         if rust_i18n::available_locales!().contains(&locale_str) {
             rust_i18n::set_locale(locale_str);
         } else {
-            rust_i18n::set_locale(DEFAULT_LOCALE);
+            rust_i18n::set_locale(AppConfig::DEFAULT_LOCALE);
         }
     }
 }

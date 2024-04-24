@@ -22,8 +22,8 @@ use lazy_static::lazy_static;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
-use crate::config::AppConfig;
 use crate::node::NodeConfig;
+use crate::settings::AppConfig;
 use crate::wallet::ConnectionsConfig;
 
 lazy_static! {

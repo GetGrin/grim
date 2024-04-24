@@ -15,8 +15,7 @@
 use grin_core::global::ChainTypes;
 use serde_derive::{Deserialize, Serialize};
 
-use crate::config::AppConfig;
-use crate::Settings;
+use crate::{AppConfig, Settings};
 use crate::wallet::ExternalConnection;
 
 /// Wallet connections configuration.

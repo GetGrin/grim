@@ -43,10 +43,8 @@ pub struct AppConfig {
     lang: Option<String>
 }
 
-pub const DEFAULT_LOCALE: &str = "en";
-
-pub const DEFAULT_WIDTH: f32 = 1200.0;
-pub const DEFAULT_HEIGHT: f32 = 720.0;
+const DEFAULT_WIDTH: f32 = 1200.0;
+const DEFAULT_HEIGHT: f32 = 720.0;
 
 impl Default for AppConfig {
     fn default() -> Self {
@@ -67,6 +65,9 @@ impl Default for AppConfig {
 impl AppConfig {
     /// Application configuration file name.
     pub const FILE_NAME: &'static str = "app.toml";
+
+    /// Default i18n locale.
+    pub const DEFAULT_LOCALE: &'static str = "en";
 
     /// Save application configuration to the file.
     pub fn save(&self) {
