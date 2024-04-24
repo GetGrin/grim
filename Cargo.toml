@@ -35,7 +35,7 @@ grin_wallet_controller = { git = "https://github.com/yeastplume/grin-wallet", br
 ## ui
 egui = { version = "0.27.2", default-features = false }
 egui_extras = { version = "0.27.2", features = ["image"] }
-rust-i18n = "2.1.0"
+rust-i18n = "2.3.1"
 
 ## other
 thiserror = "1.0.58"

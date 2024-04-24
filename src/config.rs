@@ -37,8 +37,13 @@ pub struct AppConfig {
     height: f32,
 
     /// Position of the desktop window.
-    x: Option<f32>, y: Option<f32>
+    x: Option<f32>, y: Option<f32>,
+
+    /// Locale code for i18n.
+    lang: Option<String>
 }
+
+pub const DEFAULT_LOCALE: &str = "en";
 
 pub const DEFAULT_WIDTH: f32 = 1200.0;
 pub const DEFAULT_HEIGHT: f32 = 720.0;
@@ -54,6 +59,7 @@ impl Default for AppConfig {
             height: DEFAULT_HEIGHT,
             x: None,
             y: None,
+            lang: None,
         }
     }
 }
@@ -167,6 +173,22 @@ impl AppConfig {
         let r_config = Settings::app_config_to_read();
         if r_config.x.is_some() && r_config.y.is_some() {
             return Some((r_config.x.unwrap(), r_config.y.unwrap()))
+        }
+        None
+    }
+
+    /// Save locale code.
+    pub fn save_locale(lang: &str) {
+        let mut w_app_config = Settings::app_config_to_update();
+        w_app_config.lang = Some(lang.to_string());
+        w_app_config.save();
+    }
+
+    /// Get current saved locale code.
+    pub fn locale() -> Option<String> {
+        let r_config = Settings::app_config_to_read();
+        if r_config.lang.is_some() {
+            return Some(r_config.lang.clone().unwrap())
         }
         None
     }

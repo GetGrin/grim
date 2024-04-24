@@ -1,3 +1,4 @@
+lang_name: English
 copy: Copy
 paste: Paste
 continue: Continue
@@ -12,6 +13,8 @@ clear: Clear
 create: Create
 id: Identifier
 kernel: Kernel
+settings: Settings
+language: Language
 wallets:
   await_conf_amount: Awaiting confirmation
   await_fin_amount: Awaiting finalization

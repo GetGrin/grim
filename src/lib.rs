@@ -15,14 +15,14 @@
 #[macro_use]
 extern crate rust_i18n;
 
-use eframe::wgpu;
-use egui::{Context, Stroke, vec2};
+use egui::{Context, Stroke};
 
 #[cfg(target_os = "android")]
 use winit::platform::android::activity::AndroidApp;
 
 pub use config::AppConfig;
 pub use settings::Settings;
+use crate::config::DEFAULT_LOCALE;
 
 use crate::gui::{Colors, PlatformApp};
 use crate::gui::platform::PlatformCallbacks;
@@ -206,14 +206,24 @@ pub fn setup_fonts(ctx: &Context) {
 
 /// Setup translations.
 fn setup_i18n() {
-    const DEFAULT_LOCALE: &str = "en";
-    let locale = sys_locale::get_locale().unwrap_or(String::from(DEFAULT_LOCALE));
-    let locale_str = if locale.contains("-") {
-        locale.split("-").next().unwrap_or(DEFAULT_LOCALE)
+    // Set saved locale or get from system.
+    if let Some(lang) = AppConfig::locale() {
+        if rust_i18n::available_locales!().contains(&lang.as_str()) {
+            rust_i18n::set_locale(lang.as_str());
+        }
     } else {
-        locale.as_str()
-    };
-    if _rust_i18n_available_locales().contains(&locale_str) {
-        rust_i18n::set_locale(locale_str);
+        let locale = sys_locale::get_locale().unwrap_or(String::from(DEFAULT_LOCALE));
+        let locale_str = if locale.contains("-") {
+            locale.split("-").next().unwrap_or(DEFAULT_LOCALE)
+        } else {
+            locale.as_str()
+        };
+
+        // Set best possible locale.
+        if rust_i18n::available_locales!().contains(&locale_str) {
+            rust_i18n::set_locale(locale_str);
+        } else {
+            rust_i18n::set_locale(DEFAULT_LOCALE);
+        }
     }
 }
