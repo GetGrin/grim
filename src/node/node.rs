@@ -585,6 +585,10 @@ fn start_node_server() -> Result<Server, Error>  {
     }
 
     let server_result = Server::new(server_config, None, api_chan);
+
+    // Delay after server start.
+    thread::sleep(Duration::from_millis(5000));
+
     server_result
 }
 
