@@ -104,10 +104,9 @@ impl TorServer {
             // Check if Tor client is already running.
             if TOR_SERVER_STATE.client.read().unwrap().is_some() {
                 let r_client = TOR_SERVER_STATE.client.read().unwrap();
-                let runtime = TokioNativeTlsRuntime::create().unwrap();
-                let _ = runtime.clone().block_on(
-                    Self::launch_socks_proxy(runtime, r_client.as_ref().unwrap().clone())
-                );
+                let client = r_client.as_ref().unwrap().clone();
+                let runtime = client.runtime().clone();
+                let _ = runtime.clone().block_on(Self::launch_socks_proxy(runtime, client));
             } else {
                 // Create Tor client config to connect.
                 let mut builder = TorClientConfig::builder();
