@@ -790,6 +790,9 @@ impl Wallet {
 /// Delay in seconds to sync [`WalletData`] (60 seconds as average block time).
 const SYNC_DELAY: Duration = Duration::from_millis(60 * 1000);
 
+/// Delay in seconds for sync thread to wait before start of new attempt.
+const ATTEMPT_DELAY: Duration = Duration::from_millis(3 * 1000);
+
 /// Number of attempts to sync [`WalletData`] before setting an error.
 const SYNC_ATTEMPTS: u8 = 10;
 
@@ -836,7 +839,7 @@ fn start_sync(mut wallet: Wallet) -> Thread {
             // Skip cycle when node sync is not finished.
             if !Node::is_running() || Node::get_sync_status() != Some(SyncStatus::NoSync) {
                 println!("integrated node wait");
-                thread::park_timeout(Duration::from_millis(1000));
+                thread::park_timeout(ATTEMPT_DELAY);
                 continue;
             }
         }
@@ -878,10 +881,10 @@ fn start_sync(mut wallet: Wallet) -> Thread {
             return;
         }
 
-        // Repeat after default delay or after 1 second if sync was not success.
+        // Repeat after default or attempt delay if synchronization was not successful.
         let delay = if wallet.sync_error()
             || wallet.get_sync_attempts() != 0 {
-            Duration::from_millis(1000)
+            ATTEMPT_DELAY
         } else {
             SYNC_DELAY
         };
