@@ -16,21 +16,21 @@ log = "0.4"
 
 ## node
 openssl-sys = { version = "0.9.82", features = ["vendored"] }
-grin_api = { git = "https://github.com/mimblewimble/grin", branch = "master" }
-grin_chain = { git = "https://github.com/mimblewimble/grin", branch = "master" }
-grin_config = { git = "https://github.com/mimblewimble/grin", branch = "master" }
-grin_core = { git = "https://github.com/mimblewimble/grin", branch = "master" }
-grin_p2p = { git = "https://github.com/mimblewimble/grin", branch = "master" }
-grin_servers = { git = "https://github.com/mimblewimble/grin", branch = "master" }
-grin_keychain = { git = "https://github.com/mimblewimble/grin", branch = "master" }
-grin_util = { git = "https://github.com/mimblewimble/grin", branch = "master" }
+grin_api = "5.3.0"
+grin_chain = "5.3.0"
+grin_config = "5.3.0"
+grin_core = "5.3.0"
+grin_p2p = "5.3.0"
+grin_servers = "5.3.0"
+grin_keychain = "5.3.0"
+grin_util = "5.3.0"
 
 ## wallet
-grin_wallet_impls = { git = "https://github.com/mimblewimble/grin-wallet", branch = "master" }
-grin_wallet_api = { git = "https://github.com/mimblewimble/grin-wallet", branch = "master" }
-grin_wallet_libwallet = { git = "https://github.com/mimblewimble/grin-wallet", branch = "master" }
-grin_wallet_util = { git = "https://github.com/mimblewimble/grin-wallet", branch = "master" }
-grin_wallet_controller = { git = "https://github.com/mimblewimble/grin-wallet", branch = "master" }
+grin_wallet_impls = "5.3.0"
+grin_wallet_api = "5.3.0"
+grin_wallet_libwallet = "5.3.0"
+grin_wallet_util = "5.3.0"
+grin_wallet_controller = "5.3.0"
 
 ## ui
 egui = { version = "0.27.2", default-features = false }
@@ -38,6 +38,7 @@ egui_extras = { version = "0.27.2", features = ["image"] }
 rust-i18n = "2.3.1"
 
 ## other
+anyhow = "1.0.75"
 thiserror = "1.0.58"
 futures = "0.3"
 dirs = "5.0.1"
@@ -48,13 +49,20 @@ toml = "0.8.2"
 serde = "1.0.170"
 local-ip-address = "0.6.1"
 url = "2.4.0"
-
-## stratum server
+rand = "0.8.5"
 serde_derive = "1.0.197"
 serde_json = "1.0.115"
-tokio = {version = "1.29.1", features = ["full"] }
+tokio = { version = "1.37.0", features = ["full"] }
+
+## tor
+arti = { version = "1.2.0", features = ["experimental-api", "pt-client", "static"] }
+arti-client = { version = "0.17.0", features = ["experimental-api", "pt-client", "static"] }
+tor-rtcompat = { version = "0.17.0", features = ["static"] }
+tor-config = "0.17.0"
+fs-mistrust = "0.7.9"
+
+## stratum server
 tokio-util = { version = "0.7.8", features = ["codec"] }
-rand = "0.8.5"
 
 [build-dependencies]
 built = { version = "0.7.0", features = ["git2"]}
@@ -70,5 +78,6 @@ image = "0.25.1"
 android_logger = "0.13.1"
 jni = "0.21.1"
 android-activity = "0.5.2"
+wgpu = "0.19"
 winit = { version = "0.29", features = [ "android-game-activity" ] }
 eframe = { version = "0.27.2", features = [ "wgpu", "android-game-activity" ] }

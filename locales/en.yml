@@ -126,6 +126,12 @@ network:
   available: Available
   not_available: Not available
   availability_check: Availability check
+  tor_network: Tor network
+  server_enabled: Server enabled
+  server_starting: Server is starting
+  server_stopping: Server is stopping
+  server_error: Server error
+  server_disabled: Server disabled
 sync_status:
   node_restarting: Node is restarting
   node_down: Node is down

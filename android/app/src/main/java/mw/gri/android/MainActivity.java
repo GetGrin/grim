@@ -40,6 +40,7 @@ public class MainActivity extends GameActivity {
         try {
             Os.setenv("HOME", getExternalFilesDir("").getPath(), true);
             Os.setenv("XDG_CACHE_HOME", getExternalCacheDir().getPath(), true);
+            Os.setenv("ARTI_FS_DISABLE_PERMISSION_CHECKS", "true", true);
         } catch (ErrnoException e) {
             throw new RuntimeException(e);
         }

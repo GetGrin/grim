@@ -22,6 +22,7 @@ use crate::gui::views::{ConnectionsContent, NetworkMetrics, NetworkMining, Netwo
 use crate::gui::views::network::types::{NetworkTab, NetworkTabType};
 use crate::gui::views::types::{TitleContentType, TitleType};
 use crate::node::Node;
+use crate::tor::TorServer;
 use crate::wallet::ExternalConnection;
 
 /// Network content.
@@ -147,7 +148,8 @@ impl NetworkContent {
             });
 
         // Redraw after delay if node is syncing to update stats.
-        if Node::is_running() {
+        if Node::is_running() || TorServer::is_running() || TorServer::is_starting() ||
+            TorServer::is_stopping() {
             ui.ctx().request_repaint_after(Node::STATS_UPDATE_DELAY);
         }
     }

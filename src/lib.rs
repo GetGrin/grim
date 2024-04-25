@@ -32,7 +32,7 @@ i18n!("locales");
 
 mod node;
 mod wallet;
-
+mod tor;
 mod settings;
 pub mod gui;
 
@@ -63,8 +63,9 @@ fn android_main(app: AndroidApp) {
 
     let width = app.config().screen_width_dp().unwrap() as f32;
     let height = app.config().screen_height_dp().unwrap() as f32;
+    let size = egui::emath::vec2(width, height);
     let mut options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default().with_inner_size(vec2(width, height)),
+        viewport: egui::ViewportBuilder::default().with_inner_size(size),
         ..Default::default()
     };
     // Setup limits that are guaranteed to be compatible with Android devices.

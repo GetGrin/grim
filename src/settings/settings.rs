@@ -24,6 +24,7 @@ use serde::Serialize;
 
 use crate::node::NodeConfig;
 use crate::settings::AppConfig;
+use crate::tor::TorServerConfig;
 use crate::wallet::ConnectionsConfig;
 
 lazy_static! {
@@ -42,18 +43,27 @@ pub struct Settings {
     node_config: Arc<RwLock<NodeConfig>>,
     /// Wallet connections configuration.
     conn_config: Arc<RwLock<ConnectionsConfig>>,
+    /// Tor server configuration.
+    tor_config: Arc<RwLock<TorServerConfig>>
 }
 
 impl Settings {
     /// Initialize settings with app and node configs.
     fn init() -> Self {
+        // Initialize app config.
         let app_config_path = Settings::get_config_path(AppConfig::FILE_NAME, None);
         let app_config = Self::init_config::<AppConfig>(app_config_path);
+
+        // Initialize tor config.
+        let tor_config_path = Settings::get_config_path(TorServerConfig::FILE_NAME, None);
+        let tor_config = Self::init_config::<TorServerConfig>(tor_config_path);
+
         let chain_type = &app_config.chain_type;
         Self {
             node_config: Arc::new(RwLock::new(NodeConfig::for_chain_type(chain_type))),
             conn_config: Arc::new(RwLock::new(ConnectionsConfig::for_chain_type(chain_type))),
             app_config: Arc::new(RwLock::new(app_config)),
+            tor_config: Arc::new(RwLock::new(tor_config)),
         }
     }
 
@@ -97,6 +107,16 @@ impl Settings {
     /// Get connections configuration to update values.
     pub fn conn_config_to_update() -> RwLockWriteGuard<'static, ConnectionsConfig> {
         SETTINGS_STATE.conn_config.write().unwrap()
+    }
+
+    /// Get tor server configuration to read values.
+    pub fn tor_config_to_read() -> RwLockReadGuard<'static, TorServerConfig> {
+        SETTINGS_STATE.tor_config.read().unwrap()
+    }
+
+    /// Get tor server configuration to update values.
+    pub fn tor_config_to_update() -> RwLockWriteGuard<'static, TorServerConfig> {
+        SETTINGS_STATE.tor_config.write().unwrap()
     }
 
     /// Get base directory path for configuration.

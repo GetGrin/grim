@@ -126,6 +126,12 @@ network:
   available: Доступно
   not_available: Недоступно
   availability_check: Проверка доступности
+  tor_network: Сеть Tor
+  server_enabled: Сервер включен
+  server_starting: Сервер запускается
+  server_stopping: Сервер останавливается
+  server_error: Ошибка сервера
+  server_disabled: Сервер отключен
 sync_status:
   node_restarting: Узел перезапускается
   node_down: Узел выключен

@@ -17,11 +17,12 @@ use url::Url;
 
 use crate::AppConfig;
 use crate::gui::Colors;
-use crate::gui::icons::{CARET_RIGHT, CHECK_CIRCLE, COMPUTER_TOWER, DOTS_THREE_CIRCLE, PENCIL, POWER, TRASH, X_CIRCLE};
+use crate::gui::icons::{CARET_RIGHT, CHECK_CIRCLE, COMPUTER_TOWER, DOTS_THREE_CIRCLE, GEAR_SIX, PENCIL, POWER, TRASH, WARNING_CIRCLE, X_CIRCLE};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, NodeSetup, View};
 use crate::gui::views::types::{ModalContainer, ModalPosition, TextEditOptions};
 use crate::node::{Node, NodeConfig};
+use crate::tor::{TorServer, TorServerConfig};
 use crate::wallet::{ConnectionsConfig, ExternalConnection};
 
 /// Network connections content.
@@ -99,12 +100,21 @@ impl ConnectionsContent {
         // Show integrated node info content.
         Self::integrated_node_item_ui(ui);
 
+        // Show transport connections.
+        ui.add_space(6.0);
+        let transport_text = format!("{}:", t!("wallets.transport"));
+        ui.label(RichText::new(transport_text).size(16.0).color(Colors::GRAY));
+        ui.add_space(6.0);
+
+        // Show Tor SOCKS server.
+        Self::tor_transport_item_ui(ui);
+
+        // Show external connections.
         let ext_conn_list = ConnectionsConfig::ext_conn_list();
         if !ext_conn_list.is_empty() {
             ui.add_space(6.0);
             ui.label(RichText::new(t!("wallets.ext_conn")).size(16.0).color(Colors::GRAY));
             ui.add_space(6.0);
-            // Show external connections.
             for (index, conn) in ext_conn_list.iter().enumerate() {
                 ui.horizontal_wrapped(|ui| {
                     // Draw connection list item.
@@ -112,6 +122,67 @@ impl ConnectionsContent {
                 });
             }
         }
+    }
+
+    /// Draw Tor connection item content.
+    fn tor_transport_item_ui(ui: &mut egui::Ui) {
+        // Draw round background.
+        let mut rect = ui.available_rect_before_wrap();
+        rect.set_height(78.0);
+        let rounding = View::item_rounding(0, 1, false);
+        ui.painter().rect(rect, rounding, Colors::FILL, View::ITEM_STROKE);
+
+        ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
+            // Draw button to show Tor connection settings.
+            View::item_button(ui, View::item_rounding(0, 1, true), GEAR_SIX, None, || {
+                AppConfig::toggle_show_connections_network_panel();
+            });
+
+            // Draw buttons to stop or start Tor server.
+            if !TorServer::is_stopping() && !TorServer::is_starting() {
+                if TorServer::is_running() {
+                    View::item_button(ui, Rounding::default(), POWER, Some(Colors::RED), || {
+                        TorServer::stop();
+                    });
+                } else {
+                    View::item_button(ui, Rounding::default(), POWER, Some(Colors::GREEN), || {
+                        TorServer::start();
+                    });
+                }
+            }
+
+            let layout_size = ui.available_size();
+            ui.allocate_ui_with_layout(layout_size, Layout::left_to_right(Align::Center), |ui| {
+                ui.add_space(6.0);
+                ui.vertical(|ui| {
+                    ui.add_space(3.0);
+                    ui.label(RichText::new(t!("network.tor_network"))
+                        .size(18.0)
+                        .color(Colors::TITLE));
+
+                    // Setup SOCKS server address.
+                    let socks_port = TorServerConfig::socks_port();
+                    let addr_text = format!("{} http://127.0.0.1:{}", COMPUTER_TOWER, socks_port);
+                    ui.label(RichText::new(addr_text).size(15.0).color(Colors::TEXT));
+                    ui.add_space(1.0);
+
+                    // Setup server status text.
+                    let (status_icon, status_text) = if TorServer::has_error() {
+                        (WARNING_CIRCLE, t!("network.server_error"))
+                    } else if TorServer::is_starting() {
+                        (DOTS_THREE_CIRCLE, t!("network.server_starting"))
+                    } else if TorServer::is_stopping() {
+                        (DOTS_THREE_CIRCLE, t!("network.server_stopping"))
+                    } else if TorServer::is_running() {
+                        (CHECK_CIRCLE, t!("network.server_enabled"))
+                    } else {
+                        (X_CIRCLE, t!("network.server_disabled"))
+                    };
+                    let status_text = format!("{} {}", status_icon, status_text);
+                    ui.label(RichText::new(status_text).size(15.0).color(Colors::GRAY));
+                })
+            });
+        });
     }
 
     /// Draw integrated node connection item content.
@@ -123,9 +194,6 @@ impl ConnectionsContent {
         ui.painter().rect(rect, rounding, Colors::FILL, View::ITEM_STROKE);
 
         ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
-            // Setup padding for item buttons.
-            ui.style_mut().spacing.button_padding = egui::vec2(14.0, 0.0);
-
             // Draw button to show integrated node info.
             View::item_button(ui, View::item_rounding(0, 1, true), CARET_RIGHT, None, || {
                 AppConfig::toggle_show_connections_network_panel();
@@ -137,7 +205,7 @@ impl ConnectionsContent {
                     Node::start();
                 });
             } else if !Node::is_starting() && !Node::is_stopping() && !Node::is_restarting() {
-                // Draw button to open closed wallet.
+                // Draw button to stop integrated node.
                 View::item_button(ui, Rounding::default(), POWER, Some(Colors::RED), || {
                     Node::stop(false);
                 });
