@@ -39,6 +39,7 @@ public class MainActivity extends GameActivity {
         // Setup HOME environment variable for native code configurations.
         try {
             Os.setenv("HOME", getExternalFilesDir("").getPath(), true);
+            Os.setenv("XDG_CACHE_HOME", getExternalCacheDir().getPath(), true);
         } catch (ErrnoException e) {
             throw new RuntimeException(e);
         }
