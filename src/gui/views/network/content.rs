@@ -16,13 +16,12 @@ use egui::{Margin, RichText, ScrollArea, Stroke};
 
 use crate::AppConfig;
 use crate::gui::Colors;
-use crate::gui::icons::{BRIEFCASE, CARDHOLDER, DATABASE, DOTS_THREE_OUTLINE_VERTICAL, FACTORY, FADERS, GAUGE, PLUS_CIRCLE, POWER};
+use crate::gui::icons::{BRIEFCASE, DATABASE, DOTS_THREE_OUTLINE_VERTICAL, FACTORY, FADERS, GAUGE, PLUS_CIRCLE, POWER};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{ConnectionsContent, NetworkMetrics, NetworkMining, NetworkNode, NetworkSettings, Root, TitlePanel, View};
 use crate::gui::views::network::types::{NetworkTab, NetworkTabType};
 use crate::gui::views::types::{TitleContentType, TitleType};
 use crate::node::Node;
-use crate::tor::TorServer;
 use crate::wallet::ExternalConnection;
 
 /// Network content.
@@ -148,8 +147,7 @@ impl NetworkContent {
             });
 
         // Redraw after delay if node is syncing to update stats.
-        if Node::is_running() || TorServer::is_running() || TorServer::is_starting() ||
-            TorServer::is_stopping() {
+        if Node::is_running() {
             ui.ctx().request_repaint_after(Node::STATS_UPDATE_DELAY);
         }
     }
@@ -219,7 +217,7 @@ impl NetworkContent {
                     self.connections.show_add_ext_conn_modal(None, cb);
                 });
             }
-        }, |ui, frame| {
+        }, |ui, _| {
             if !Root::is_dual_panel_mode(ui) {
                 View::title_button(ui, BRIEFCASE, || {
                     Root::toggle_network_panel();

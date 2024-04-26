@@ -12,8 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::time::Duration;
 use egui::{Align, Id, Layout, RichText, Rounding};
 use url::Url;
+use crate::tor::{TorServer, TorServerConfig};
 
 use crate::AppConfig;
 use crate::gui::Colors;
@@ -22,7 +24,6 @@ use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, NodeSetup, View};
 use crate::gui::views::types::{ModalContainer, ModalPosition, TextEditOptions};
 use crate::node::{Node, NodeConfig};
-use crate::tor::{TorServer, TorServerConfig};
 use crate::wallet::{ConnectionsConfig, ExternalConnection};
 
 /// Network connections content.
@@ -121,6 +122,12 @@ impl ConnectionsContent {
                     self.ext_conn_item_ui(ui, conn, index, ext_conn_list.len(), cb);
                 });
             }
+        }
+
+        // Redraw after delay if Tor server is running.
+        if TorServer::is_running() || TorServer::is_starting() ||
+            TorServer::is_stopping() {
+            ui.ctx().request_repaint_after(Duration::from_millis(1000));
         }
     }
 

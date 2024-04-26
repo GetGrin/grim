@@ -12,22 +12,37 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::collections::HashMap;
+use std::net::SocketAddr;
 use std::sync::{Arc, RwLock};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
 use std::time::Duration;
 use lazy_static::lazy_static;
-use arti::socks::run_socks_proxy;
-use arti_client::{TorClient, TorClientConfig};
-use arti_client::config::pt::{TransportConfigBuilder};
-use arti_client::config::{BridgeConfigBuilder, TorClientConfigBuilder, StorageConfigBuilder};
 use futures::task::SpawnExt;
 use tokio::task::JoinHandle;
-use anyhow::{Result};
+use anyhow::Result;
 use tokio::time::sleep;
+
+use arti::socks::run_socks_proxy;
+use arti_client::{TorClient, TorClientConfig};
+use arti_client::config::pt::TransportConfigBuilder;
+use arti_client::config::{BridgeConfigBuilder, TorClientConfigBuilder};
+use fs_mistrust::Mistrust;
+use grin_util::secp::SecretKey;
+use grin_wallet_util::OnionV3Address;
+use ed25519_dalek::hazmat::ExpandedSecretKey;
+use curve25519_dalek::digest::Digest;
+use sha2::Sha512;
 use tor_config::{CfgPath, Listen};
-use tor_rtcompat::{BlockOn, Runtime};
-use tor_rtcompat::tokio::TokioNativeTlsRuntime;
+use tor_rtcompat::{BlockOn, PreferredRuntime, Runtime};
+use tor_hsrproxy::OnionServiceReverseProxy;
+use tor_hsrproxy::config::{Encapsulation, ProxyAction, ProxyPattern, ProxyRule, TargetAddr, ProxyConfigBuilder};
+use tor_hsservice::config::OnionServiceConfigBuilder;
+use tor_hsservice::{HsIdKeypairSpecifier, HsIdPublicKeySpecifier, HsNickname};
+use tor_keymgr::{ArtiNativeKeystore, KeyMgrBuilder, KeystoreSelector};
+use tor_llcrypto::pk::ed25519::ExpandedKeypair;
+use tor_hscrypto::pk::{HsIdKey, HsIdKeypair};
 
 use crate::tor::TorServerConfig;
 
@@ -36,18 +51,25 @@ lazy_static! {
     static ref TOR_SERVER_STATE: Arc<TorServer> = Arc::new(TorServer::default());
 }
 
-/// Tor SOCKS proxy server.
+/// Tor server to use as SOCKS proxy for requests and to launch Onion services.
 pub struct TorServer {
+    /// Running Tor client.
+    client: Arc<RwLock<Option<TorClient<PreferredRuntime>>>>,
+    /// Running Tor client configuration.
+    config: Arc<RwLock<Option<TorClientConfig>>>,
+
     /// Flag to check if server is running.
     running: AtomicBool,
     /// Flag to check if server is starting.
     starting: AtomicBool,
     /// Flag to check if server needs to stop.
     stopping: AtomicBool,
+
     /// Flag to check if error happened.
     error: AtomicBool,
-    /// Tor client to use for proxy.
-    client: Arc<RwLock<Option<TorClient<TokioNativeTlsRuntime>>>>
+
+    /// Mapping of running Onion services identifiers to proxy.
+    running_services: Arc<RwLock<HashMap<String, Arc<OnionServiceReverseProxy>>>>
 }
 
 impl Default for TorServer {
@@ -58,6 +80,8 @@ impl Default for TorServer {
             stopping: AtomicBool::new(false),
             error: AtomicBool::new(false),
             client: Arc::new(RwLock::new(None)),
+            running_services: Arc::new(RwLock::new(HashMap::new())),
+            config: Arc::new(RwLock::new(None)),
         }
     }
 }
@@ -109,13 +133,19 @@ impl TorServer {
                 let _ = runtime.clone().block_on(Self::launch_socks_proxy(runtime, client));
             } else {
                 // Create Tor client config to connect.
-                let mut builder = TorClientConfig::builder();
+                let mut builder =
+                    TorClientConfigBuilder::from_directories(TorServerConfig::state_path(),
+                                                             TorServerConfig::cache_path());
+                builder.address_filter().allow_onion_addrs(true);
 
                 // Setup Snowflake bridges.
                 Self::setup_bridges(&mut builder);
 
                 // Create Tor client from config.
                 if let Ok(config) = builder.build() {
+                    let mut w_config = TOR_SERVER_STATE.config.write().unwrap();
+                    *w_config = Some(config.clone());
+
                     // Restart server on connection timeout.
                     thread::spawn(|| {
                         thread::sleep(Duration::from_millis(30000));
@@ -125,7 +155,7 @@ impl TorServer {
                         }
                     });
                     // Create Tor client.
-                    let runtime = TokioNativeTlsRuntime::create().unwrap();
+                    let runtime = PreferredRuntime::current().unwrap();
                     match TorClient::with_runtime(runtime.clone())
                         .config(config)
                         .bootstrap_behavior(arti_client::BootstrapBehavior::OnDemand)
@@ -155,7 +185,7 @@ impl TorServer {
         });
     }
 
-    /// Launch SOCKS proxy server.
+    /// Launch SOCKS proxy server to send connections.
     async fn launch_socks_proxy<R: Runtime>(runtime: R, tor_client: TorClient<R>) -> Result<()> {
         let proxy_handle: JoinHandle<Result<()>> = tokio::spawn(
             run_socks_proxy(
@@ -178,6 +208,125 @@ impl TorServer {
             }
             sleep(Duration::from_millis(3000)).await;
         }
+    }
+
+    /// Check if Onion service is running.
+    pub fn is_service_running(id: &String) -> bool {
+        let r_services = TOR_SERVER_STATE.running_services.read().unwrap();
+        r_services.contains_key(id)
+    }
+
+    /// Stop running Onion service.
+    pub fn stop_service(id: &String) {
+        let mut w_services = TOR_SERVER_STATE.running_services.write().unwrap();
+        if let Some(proxy) = w_services.remove(id) {
+            proxy.shutdown();
+        }
+    }
+
+    /// Run Onion service from listening local address, secret key and identifier.
+    pub fn run_service(addr: SocketAddr, key: SecretKey, id: &String) {
+        // Check if service is already running.
+        if Self::is_service_running(id) {
+            return;
+        }
+
+        let hs_nickname = HsNickname::new(id.clone()).unwrap();
+        let service_config = OnionServiceConfigBuilder::default()
+            .nickname(hs_nickname.clone())
+            .build()
+            .unwrap();
+        let r_client = TOR_SERVER_STATE.client.read().unwrap();
+        let client = r_client.clone().unwrap();
+
+        // Add service key to keystore.
+        let r_config = TOR_SERVER_STATE.config.read().unwrap();
+        let config = r_config.clone().unwrap();
+        Self::add_service_key(config.fs_mistrust(), &key, &hs_nickname);
+
+        // Launch Onion service.
+        let (_, request) = client.launch_onion_service(service_config).unwrap();
+
+        // Setup proxy to forward request from Tor address to local address.
+        let proxy_rule = ProxyRule::new(
+            ProxyPattern::one_port(80).unwrap(),
+            ProxyAction::Forward(Encapsulation::Simple, TargetAddr::Inet(addr)),
+        );
+        let mut proxy_cfg_builder = ProxyConfigBuilder::default();
+        proxy_cfg_builder.set_proxy_ports(vec![proxy_rule]);
+        let proxy = OnionServiceReverseProxy::new(proxy_cfg_builder.build().unwrap());
+
+        // Launch proxy at client runtime.
+        let proxy_service = proxy.clone();
+        let runtime = client.runtime().clone();
+        let nickname = hs_nickname.clone();
+        client
+            .runtime()
+            .spawn(async move {
+                // Launch proxy for launched service.
+                match proxy_service.handle_requests(runtime, nickname.clone(), request).await {
+                    Ok(()) => {
+                        eprintln!("Onion service {} stopped.", nickname);
+                    }
+                    Err(e) => {
+                        eprintln!("Onion service {} exited with an error: {}", nickname, e);
+                    }
+                }
+            }).unwrap();
+
+        // Save running service.
+        let mut w_services = TOR_SERVER_STATE.running_services.write().unwrap();
+        w_services.insert(id.clone(), proxy);
+
+        let onion_addr = OnionV3Address::from_private(&key.0).unwrap();
+        eprintln!("Onion service {} launched at {}", hs_nickname, onion_addr.to_ov3_str());
+    }
+
+    /// Add Onion service key to keystore.
+    fn add_service_key(mistrust: &Mistrust, key: &SecretKey, hs_nickname: &HsNickname) {
+        let mut client_config_builder = TorClientConfigBuilder::from_directories(
+            TorServerConfig::state_path(),
+            TorServerConfig::cache_path()
+        );
+        client_config_builder
+            .address_filter()
+            .allow_onion_addrs(true);
+        let arti_store =
+            ArtiNativeKeystore::from_path_and_mistrust(TorServerConfig::keystore_path(), &mistrust)
+                .unwrap();
+
+        let key_manager = KeyMgrBuilder::default()
+            .default_store(Box::new(arti_store))
+            .build()
+            .unwrap();
+
+        let expanded_sk = ExpandedSecretKey::from_bytes(
+            Sha512::default()
+                .chain_update(key)
+                .finalize()
+                .as_ref(),
+        );
+
+        let mut sk_bytes = [0_u8; 64];
+        sk_bytes[0..32].copy_from_slice(&expanded_sk.scalar.to_bytes());
+        sk_bytes[32..64].copy_from_slice(&expanded_sk.hash_prefix);
+        let expanded_kp = ExpandedKeypair::from_secret_key_bytes(sk_bytes).unwrap();
+
+        key_manager
+            .insert(
+                HsIdKey::from(expanded_kp.public().clone()),
+                &HsIdPublicKeySpecifier::new(hs_nickname.clone()),
+                KeystoreSelector::Default,
+            )
+            .unwrap();
+
+        key_manager
+            .insert(
+                HsIdKeypair::from(expanded_kp),
+                &HsIdKeypairSpecifier::new(hs_nickname.clone()),
+                KeystoreSelector::Default,
+            )
+            .unwrap();
     }
 
     /// Setup Tor Snowflake bridges.

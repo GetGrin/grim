@@ -33,12 +33,45 @@ impl Default for TorServerConfig {
 }
 
 impl TorServerConfig {
-    /// Application configuration file name.
-    pub const FILE_NAME: &'static str = "app.toml";
+    /// Tor configuration file name.
+    pub const FILE_NAME: &'static str = "tor.toml";
+
+    /// Directory for config and Tor related files.
+    const DIR_NAME: &'static str = "tor";
+
+    /// Subdirectory name for Tor state.
+    const STATE_SUB_DIR: &'static str = "state";
+    /// Subdirectory name for Tor cache.
+    const CACHE_SUB_DIR: &'static str = "cache";
+    /// Subdirectory name for Tor keystore.
+    const KEYSTORE_DIR: &'static str = "keystore";
 
     /// Save application configuration to the file.
     pub fn save(&self) {
-        Settings::write_to_file(self, Settings::get_config_path(Self::FILE_NAME, None));
+        Settings::write_to_file(self, Settings::get_config_path(Self::FILE_NAME,
+                                                                Some(Self::DIR_NAME.to_string())));
+    }
+
+    /// Get subdirectory path from dir name.
+    fn sub_dir_path(name: &str) -> String {
+        let mut base = Settings::get_base_path(Some(Self::DIR_NAME.to_string()));
+        base.push(name);
+        base.to_str().unwrap().to_string()
+    }
+
+    /// Get Tor state directory path.
+    pub fn state_path() -> String {
+        Self::sub_dir_path(Self::STATE_SUB_DIR)
+    }
+
+    /// Get Tor cache directory path.
+    pub fn cache_path() -> String {
+        Self::sub_dir_path(Self::CACHE_SUB_DIR)
+    }
+
+    /// Get Tor keystore directory path.
+    pub fn keystore_path() -> String {
+        Self::sub_dir_path(Self::KEYSTORE_DIR)
     }
 
     /// Get SOCKS port value.
