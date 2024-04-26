@@ -85,7 +85,7 @@ image = "0.25.1"
 [target.'cfg(target_os = "android")'.dependencies]
 android_logger = "0.13.1"
 jni = "0.21.1"
-android-activity = "0.5.2"
+android-activity = { version = "0.6.0", features = ["game-activity"] }
 wgpu = "0.19"
-winit = { version = "0.29", features = [ "android-game-activity" ] }
-eframe = { version = "0.27.2", features = [ "wgpu", "android-game-activity" ] }
+winit = { version = "0.29", features = ["android-game-activity"] }
+eframe = { version = "0.27.2", features = ["wgpu", "android-game-activity"] }
