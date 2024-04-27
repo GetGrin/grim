@@ -35,7 +35,8 @@ use ed25519_dalek::hazmat::ExpandedSecretKey;
 use curve25519_dalek::digest::Digest;
 use sha2::Sha512;
 use tor_config::{CfgPath, Listen};
-use tor_rtcompat::{BlockOn, PreferredRuntime, Runtime};
+use tor_rtcompat::tokio::TokioNativeTlsRuntime;
+use tor_rtcompat::{BlockOn, Runtime};
 use tor_hsrproxy::OnionServiceReverseProxy;
 use tor_hsrproxy::config::{Encapsulation, ProxyAction, ProxyPattern, ProxyRule, TargetAddr, ProxyConfigBuilder};
 use tor_hsservice::config::OnionServiceConfigBuilder;
@@ -54,7 +55,7 @@ lazy_static! {
 /// Tor server to use as SOCKS proxy for requests and to launch Onion services.
 pub struct TorServer {
     /// Running Tor client.
-    client: Arc<RwLock<Option<TorClient<PreferredRuntime>>>>,
+    client: Arc<RwLock<Option<TorClient<TokioNativeTlsRuntime>>>>,
     /// Running Tor client configuration.
     config: Arc<RwLock<Option<TorClientConfig>>>,
 
@@ -155,7 +156,7 @@ impl TorServer {
                         }
                     });
                     // Create Tor client.
-                    let runtime = PreferredRuntime::current().unwrap();
+                    let runtime = TokioNativeTlsRuntime::create().unwrap();
                     match TorClient::with_runtime(runtime.clone())
                         .config(config)
                         .bootstrap_behavior(arti_client::BootstrapBehavior::OnDemand)
