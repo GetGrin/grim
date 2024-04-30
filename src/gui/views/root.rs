@@ -38,9 +38,11 @@ pub struct Root {
 
     /// Check if app exit is allowed on close event of [`eframe::App`] implementation.
     pub(crate) exit_allowed: bool,
-
     /// Flag to show exit progress at [`Modal`].
     show_exit_progress: bool,
+
+    /// Flag to check if first it's first draw of content.
+    first_draw: bool,
 
     /// List of allowed [`Modal`] ids for this [`ModalContainer`].
     allowed_modal_ids: Vec<&'static str>
@@ -56,8 +58,10 @@ impl Default for Root {
             wallets: WalletsContent::default(),
             exit_allowed,
             show_exit_progress: false,
+            first_draw: true,
             allowed_modal_ids: vec![
-                Self::EXIT_MODAL_ID
+                Self::EXIT_MODAL_ID,
+                Self::ANDROID_INTEGRATED_NODE_WARNING_MODAL
             ],
         }
     }
@@ -75,6 +79,7 @@ impl ModalContainer for Root {
                 _: &dyn PlatformCallbacks) {
         match modal.id {
             Self::EXIT_MODAL_ID => self.exit_modal_content(ui, modal),
+            Self::ANDROID_INTEGRATED_NODE_WARNING_MODAL => self.android_warning_modal_ui(ui, modal),
             _ => {}
         }
     }
@@ -82,7 +87,10 @@ impl ModalContainer for Root {
 
 impl Root {
     /// Identifier for exit confirmation [`Modal`].
-    pub const EXIT_MODAL_ID: &'static str = "exit_confirmation";
+    pub const EXIT_MODAL_ID: &'static str = "exit_confirmation_modal";
+
+    /// Identifier for integrated node warning [`Modal`] on Android.
+    const ANDROID_INTEGRATED_NODE_WARNING_MODAL: &'static str = "android_node_warning_modal";
 
     /// Default width of side panel at application UI.
     pub const SIDE_PANEL_WIDTH: f32 = 400.0;
@@ -125,6 +133,19 @@ impl Root {
                     self.wallets.ui(ui, frame, cb);
                 });
             });
+
+        // Show integrated node warning on Android if needed.
+        if self.first_draw && OperatingSystem::from_target_os() == OperatingSystem::Android &&
+            AppConfig::android_integrated_node_warning_needed() {
+            Modal::new(Self::ANDROID_INTEGRATED_NODE_WARNING_MODAL)
+                .title(t!("network.node"))
+                .show();
+        }
+
+        // Setup first draw flag.
+        if self.first_draw {
+            self.first_draw = false;
+        }
     }
 
     /// Get [`NetworkContent`] panel state and width.
@@ -231,5 +252,23 @@ impl Root {
                 Self::show_exit_modal()
             }
         }
+    }
+
+    /// Draw content for integrated node warning [`Modal`] on Android.
+    fn android_warning_modal_ui(&mut self, ui: &mut egui::Ui, modal: &Modal) {
+        ui.add_space(6.0);
+        ui.vertical_centered(|ui| {
+            ui.label(RichText::new(t!("network.android_warning"))
+                .size(17.0)
+                .color(Colors::TEXT));
+        });
+        ui.add_space(8.0);
+        ui.vertical_centered_justified(|ui| {
+            View::button(ui, t!("continue"), Colors::WHITE, || {
+                AppConfig::show_android_integrated_node_warning();
+                modal.close();
+            });
+        });
+        ui.add_space(6.0);
     }
 }

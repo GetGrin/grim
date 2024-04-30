@@ -26,6 +26,9 @@ pub struct AppConfig {
     /// Chain type for node and wallets.
     pub(crate) chain_type: ChainTypes,
 
+    /// Flag to check if Android integrated node warning was shown.
+    android_integrated_node_warning: Option<bool>,
+
     /// Flag to show wallet list at dual panel wallets mode.
     show_wallets_at_dual_panel: bool,
     /// Flag to show all connections at network panel or integrated node info.
@@ -51,6 +54,7 @@ impl Default for AppConfig {
         Self {
             auto_start_node: false,
             chain_type: ChainTypes::default(),
+            android_integrated_node_warning: None,
             show_wallets_at_dual_panel: false,
             show_connections_network_panel: false,
             width: DEFAULT_WIDTH,
@@ -192,5 +196,18 @@ impl AppConfig {
             return Some(r_config.lang.clone().unwrap())
         }
         None
+    }
+
+    /// Check if integrated node warning is needed for Android.
+    pub fn android_integrated_node_warning_needed() -> bool {
+        let r_config = Settings::app_config_to_read();
+        r_config.android_integrated_node_warning.unwrap_or(true)
+    }
+
+    /// Mark integrated node warning for Android as shown.
+    pub fn show_android_integrated_node_warning() {
+        let mut w_app_config = Settings::app_config_to_update();
+        w_app_config.android_integrated_node_warning = Some(false);
+        w_app_config.save();
     }
 }

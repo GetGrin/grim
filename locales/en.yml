@@ -143,6 +143,7 @@ network:
   available: Available
   not_available: Not available
   availability_check: Availability check
+  android_warning: Attention to Android users. To synchronize integrated node successfully, you must allow access to notifications and remove battery usage restrictions for the Grim application at system settings of your phone. This is necessary operation for correct work of application in the background.
 sync_status:
   node_restarting: Node is restarting
   node_down: Node is down
