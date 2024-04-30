@@ -19,7 +19,7 @@ use grin_core::core::amount_to_hr_string;
 
 use crate::AppConfig;
 use crate::gui::Colors;
-use crate::gui::icons::{BRIDGE, CHAT_CIRCLE_TEXT, CHECK, CHECK_FAT, FOLDER_USER, GEAR_FINE, GRAPH, PACKAGE, PATH, POWER, QR_CODE, REPEAT, USERS_THREE};
+use crate::gui::icons::{BRIDGE, CHAT_CIRCLE_TEXT, CHECK, CHECK_FAT, FOLDER_USER, GEAR_FINE, GRAPH, PACKAGE, PATH, POWER, REPEAT, SCAN, USERS_THREE};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, Root, View};
 use crate::gui::views::types::{ModalPosition, TextEditOptions};
@@ -176,7 +176,7 @@ impl WalletContent {
 
         ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
             // Draw button to scan QR code.
-            View::item_button(ui, View::item_rounding(0, 2, true), QR_CODE, None, || {
+            View::item_button(ui, View::item_rounding(0, 2, true), SCAN, None, || {
                 //TODO: Scan with QR code.
             });
 

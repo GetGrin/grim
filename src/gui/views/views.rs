@@ -25,7 +25,7 @@ use egui::text::{LayoutJob, TextFormat};
 use egui::text_edit::TextEditState;
 
 use crate::gui::Colors;
-use crate::gui::icons::{CHECK_SQUARE, CLIPBOARD_TEXT, COPY, EYE, EYE_SLASH, SQUARE};
+use crate::gui::icons::{CHECK_SQUARE, CLIPBOARD_TEXT, COPY, EYE, EYE_SLASH, SCAN, SQUARE};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::types::TextEditOptions;
 
@@ -342,6 +342,15 @@ impl View {
                 let paste_icon = CLIPBOARD_TEXT.to_string();
                 View::button(ui, paste_icon, Colors::WHITE, || {
                     *value = cb.get_string_from_buffer();
+                });
+                ui.add_space(8.0);
+            }
+
+            // Setup scan QR code button.
+            if options.paste {
+                let scan_icon = SCAN.to_string();
+                View::button(ui, scan_icon, Colors::WHITE, || {
+                    //TODO: open scanner
                 });
                 ui.add_space(8.0);
             }

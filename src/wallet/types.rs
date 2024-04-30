@@ -147,6 +147,8 @@ pub struct WalletTransaction {
     pub data: TxLogEntry,
     /// Calculated transaction amount between debited and credited amount.
     pub amount: u64,
+    /// Flag to check if transaction is cancelling.
+    pub cancelling: bool,
     /// Flag to check if transaction is posting after finalization.
     pub posting: bool,
     /// Flag to check if transaction can be finalized based on Slatepack message state.
@@ -158,7 +160,7 @@ pub struct WalletTransaction {
 impl WalletTransaction {
     /// Check if transaction can be cancelled.
     pub fn can_cancel(&self) -> bool {
-        !self.posting && !self.data.confirmed &&
+        !self.cancelling && !self.posting && !self.data.confirmed &&
             self.data.tx_type != TxLogEntryType::TxReceivedCancelled
             && self.data.tx_type != TxLogEntryType::TxSentCancelled
     }

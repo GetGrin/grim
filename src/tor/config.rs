@@ -12,31 +12,30 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::path::PathBuf;
 use serde_derive::{Deserialize, Serialize};
 use crate::Settings;
 
-/// Tor SOCKS proxy server configuration.
+/// Tor configuration.
 #[derive(Serialize, Deserialize, Clone)]
-pub struct TorServerConfig {
-    socks_port: u16
+pub struct TorConfig {
+    // Flag to check if Tor bridges usage is needed.
+    pub(crate) use_bridges: Option<bool>
 }
 
-/// Default SOCKS port value.
-const DEFAULT_SOCKS_PORT: u16 = 9060;
-
-impl Default for TorServerConfig {
+impl Default for TorConfig {
     fn default() -> Self {
         Self {
-            socks_port: DEFAULT_SOCKS_PORT,
+            use_bridges: Some(false)
         }
     }
 }
 
-impl TorServerConfig {
+impl TorConfig {
     /// Tor configuration file name.
     pub const FILE_NAME: &'static str = "tor.toml";
 
-    /// Directory for config and Tor related files.
+    /// Directory for Tor data files.
     const DIR_NAME: &'static str = "tor";
 
     /// Subdirectory name for Tor state.
@@ -48,11 +47,10 @@ impl TorServerConfig {
 
     /// Save application configuration to the file.
     pub fn save(&self) {
-        Settings::write_to_file(self, Settings::get_config_path(Self::FILE_NAME,
-                                                                Some(Self::DIR_NAME.to_string())));
+        Settings::write_to_file(self, Settings::get_config_path(Self::FILE_NAME, None));
     }
 
-    /// Get subdirectory path from dir name.
+    /// Get path from subdirectory name.
     fn sub_dir_path(name: &str) -> String {
         let mut base = Settings::get_base_path(Some(Self::DIR_NAME.to_string()));
         base.push(name);
@@ -71,19 +69,8 @@ impl TorServerConfig {
 
     /// Get Tor keystore directory path.
     pub fn keystore_path() -> String {
-        Self::sub_dir_path(Self::KEYSTORE_DIR)
-    }
-
-    /// Get SOCKS port value.
-    pub fn socks_port() -> u16 {
-        let r_config = Settings::tor_config_to_read();
-        r_config.socks_port
-    }
-
-    /// Save SOCKS port value.
-    pub fn save_socks_port(port: u16) {
-        let mut w_config = Settings::tor_config_to_update();
-        w_config.socks_port = port;
-        w_config.save();
+        let mut base = PathBuf::from(Self::state_path());
+        base.push(Self::KEYSTORE_DIR);
+        base.to_str().unwrap().to_string()
     }
 }

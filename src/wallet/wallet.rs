@@ -27,17 +27,21 @@ use grin_api::{ApiServer, Router};
 use grin_chain::SyncStatus;
 use grin_core::global;
 use grin_keychain::{ExtKeychain, Identifier, Keychain};
-use grin_util::Mutex;
+use grin_util::{Mutex, ToHex};
+use grin_util::secp::SecretKey;
 use grin_util::types::ZeroingString;
 use grin_wallet_api::Owner;
 use grin_wallet_controller::controller;
 use grin_wallet_controller::controller::ForeignAPIHandlerV2;
 use grin_wallet_impls::{DefaultLCProvider, DefaultWalletImpl, HTTPNodeClient};
-use grin_wallet_libwallet::{Error, InitTxArgs, IssueInvoiceTxArgs, NodeClient, RetrieveTxQueryArgs, RetrieveTxQuerySortField, RetrieveTxQuerySortOrder, Slate, SlateState, StatusMessage, TxLogEntry, TxLogEntryType, WalletInst, WalletLCProvider};
+use grin_wallet_libwallet::{address, Error, InitTxArgs, IssueInvoiceTxArgs, NodeClient, RetrieveTxQueryArgs, RetrieveTxQuerySortField, RetrieveTxQuerySortOrder, Slate, SlatepackAddress, SlateState, SlateVersion, StatusMessage, TxLogEntry, TxLogEntryType, VersionedSlate, WalletInst, WalletLCProvider};
 use grin_wallet_libwallet::api_impl::owner::{cancel_tx, retrieve_summary_info, retrieve_txs};
-use crate::AppConfig;
+use grin_wallet_util::OnionV3Address;
+use serde_json::{json, Value};
 
+use crate::AppConfig;
 use crate::node::{Node, NodeConfig};
+use crate::tor::Tor;
 use crate::wallet::{ConnectionsConfig, ExternalConnection, WalletConfig};
 use crate::wallet::types::{ConnectionMethod, WalletAccount, WalletData, WalletInstance, WalletTransaction};
 
@@ -51,11 +55,14 @@ pub struct Wallet {
     /// [`WalletInstance`] external connection id applied after opening.
     instance_ext_conn_id: Arc<AtomicI64>,
 
+    /// Wallet Slatepack address to receive txs at transport.
+    slatepack_address: Arc<RwLock<Option<String>>>,
+
     /// Wallet sync thread.
     sync_thread: Arc<RwLock<Option<Thread>>>,
 
-    /// Foreign API server.
-    foreign_api_server: Arc<RwLock<Option<ApiServer>>>,
+    /// Running wallet foreign API server and port.
+    foreign_api_server: Arc<RwLock<Option<(ApiServer, u16)>>>,
 
     /// Flag to check if wallet reopening is needed.
     reopen: Arc<AtomicBool>,
@@ -91,7 +98,7 @@ pub struct Wallet {
 /// Default Foreign API server host.
 const DEFAULT_FOREIGN_API_HOST: &str = "127.0.0.1";
 /// Default Foreign API server port.
-const DEFAULT_FOREIGN_API_PORT: u16 = 3421;
+const DEFAULT_FOREIGN_API_PORT: u16 = 3415;
 
 impl Wallet {
     /// Create new [`Wallet`] instance with provided [`WalletConfig`].
@@ -100,6 +107,7 @@ impl Wallet {
             config: Arc::new(RwLock::new(config)),
             instance: None,
             instance_ext_conn_id: Arc::new(AtomicI64::new(0)),
+            slatepack_address: Arc::new(RwLock::new(None)),
             sync_thread: Arc::from(RwLock::new(None)),
             foreign_api_server: Arc::new(RwLock::new(None)),
             reopen: Arc::new(AtomicBool::new(false)),
@@ -210,6 +218,35 @@ impl Wallet {
         Ok(w_inst.parent_key_id())
     }
 
+    /// Get wallet [`SecretKey`] for transports.
+    pub fn secret_key(&self) -> Result<SecretKey, Error> {
+        let instance = self.instance.clone().unwrap();
+        let mut w_lock = instance.lock();
+        let lc = w_lock.lc_provider()?;
+        let w_inst = lc.wallet_inst()?;
+        let k = w_inst.keychain((&None).as_ref())?;
+        let parent_key_id = w_inst.parent_key_id();
+        let sec_key = address::address_from_derivation_path(&k, &parent_key_id, 0)
+            .map_err(|e| Error::TorConfig(format!("{:?}", e)))?;
+        Ok(sec_key)
+    }
+
+    /// Get unique opened wallet identifier, including current account.
+    pub fn identifier(&self) -> String {
+        let config = self.get_config();
+        format!("wallet_{}_{}", config.id, config.account.to_hex())
+    }
+
+    /// Get Slatepack address to receive txs at transport.
+    pub fn slatepack_address(&self) -> Option<String> {
+        let r_address = self.slatepack_address.read().unwrap();
+        if r_address.is_some() {
+            let addr = r_address.clone().unwrap();
+            return Some(addr)
+        }
+        None
+    }
+
     /// Get wallet config.
     pub fn get_config(&self) -> WalletConfig {
         self.config.read().unwrap().clone()
@@ -222,10 +259,23 @@ impl Wallet {
         w_config.save();
     }
 
+    /// Check if start of Tor listener on wallet opening is needed.
+    pub fn auto_start_tor_listener(&self) -> bool {
+        let r_config = self.config.read().unwrap();
+        r_config.enable_tor_listener.unwrap_or(true)
+    }
+
+    /// Update start of Tor listener on wallet opening.
+    pub fn update_auto_start_tor_listener(&self, start: bool) {
+        let mut w_config = self.config.write().unwrap();
+        w_config.enable_tor_listener = Some(start);
+        w_config.save();
+    }
+
     /// Check if Dandelion usage is needed to post transactions.
     pub fn can_use_dandelion(&self) -> bool {
         let r_config = self.config.read().unwrap();
-        r_config.use_dandelion.unwrap_or(false)
+        r_config.use_dandelion.unwrap_or(true)
     }
 
     /// Update usage of Dandelion to post transactions.
@@ -267,36 +317,47 @@ impl Wallet {
         }
 
         // Open the wallet.
-        let instance = self.instance.clone().unwrap();
-        let mut wallet_lock = instance.lock();
-        let lc = wallet_lock.lc_provider()?;
-        match lc.open_wallet(None, ZeroingString::from(password), false, false) {
-            Ok(_) => {
-                // Reset an error on opening.
-                self.set_sync_error(false);
-                self.reset_sync_attempts();
+        {
+            let instance = self.instance.clone().unwrap();
+            let mut wallet_lock = instance.lock();
+            let lc = wallet_lock.lc_provider()?;
+            match lc.open_wallet(None, ZeroingString::from(password), false, false) {
+                Ok(_) => {
+                    // Reset an error on opening.
+                    self.set_sync_error(false);
+                    self.reset_sync_attempts();
 
-                // Set current account.
-                let wallet_inst = lc.wallet_inst()?;
-                let label = self.get_config().account.to_owned();
-                wallet_inst.set_parent_key_id_by_name(label.as_str())?;
+                    // Set current account.
+                    let wallet_inst = lc.wallet_inst()?;
+                    let label = self.get_config().account.to_owned();
+                    wallet_inst.set_parent_key_id_by_name(label.as_str())?;
 
-                // Start new synchronization thread or wake up existing one.
-                let mut thread_w = self.sync_thread.write().unwrap();
-                if thread_w.is_none() {
-                    let thread = start_sync(self.clone());
-                    *thread_w = Some(thread);
-                } else {
-                    println!("unfreeze thread");
-                    thread_w.clone().unwrap().unpark();
+                    // Start new synchronization thread or wake up existing one.
+                    let mut thread_w = self.sync_thread.write().unwrap();
+                    if thread_w.is_none() {
+                        let thread = start_sync(self.clone());
+                        *thread_w = Some(thread);
+                    } else {
+                        println!("unfreeze thread");
+                        thread_w.clone().unwrap().unpark();
+                    }
+                    self.is_open.store(true, Ordering::Relaxed);
                 }
-                self.is_open.store(true, Ordering::Relaxed);
-            }
-            Err(e) => {
-                self.instance = None;
-                return Err(e)
+                Err(e) => {
+                    self.instance = None;
+                    return Err(e)
+                }
             }
         }
+
+        // Set slatepack address.
+        let mut api = Owner::new(self.instance.clone().unwrap(), None);
+        controller::owner_single_use(None, None, Some(&mut api), |api, m| {
+            let mut w_address = self.slatepack_address.write().unwrap();
+            *w_address = Some(api.get_slatepack_address(m, 0)?.to_string());
+            Ok(())
+        })?;
+
         Ok(())
     }
 
@@ -335,16 +396,20 @@ impl Wallet {
         // Close wallet at separate thread.
         let wallet_close = self.clone();
         let instance = wallet_close.instance.clone().unwrap();
+        let service_id = wallet_close.identifier();
         thread::spawn(move || {
-            // Stop created API server.
+            // Stop running API server.
             let api_server_exists = {
                 wallet_close.foreign_api_server.read().unwrap().is_some()
             };
             if api_server_exists {
-                let mut api_server_w = wallet_close.foreign_api_server.write().unwrap();
-                api_server_w.as_mut().unwrap().stop();
-                *api_server_w = None;
+                let mut w_api_server = wallet_close.foreign_api_server.write().unwrap();
+                w_api_server.as_mut().unwrap().0.stop();
+                *w_api_server = None;
             }
+
+            // Stop running Tor service.
+            Tor::stop_service(&service_id);
 
             // Close the wallet.
             Self::close_wallet(&instance);
@@ -391,8 +456,15 @@ impl Wallet {
         let mut api = Owner::new(self.instance.clone().unwrap(), None);
         controller::owner_single_use(None, None, Some(&mut api), |api, m| {
             api.set_active_account(m, label)?;
+            // Set Slatepack address.
+            let mut w_address = self.slatepack_address.write().unwrap();
+            *w_address = Some(api.get_slatepack_address(m, 0)?.to_string());
             Ok(())
         })?;
+
+        // Stop service from previous account.
+        let cur_service_id = self.identifier();
+        Tor::stop_service(&cur_service_id);
 
         // Save account label into config.
         let mut w_config = self.config.write().unwrap();
@@ -476,6 +548,16 @@ impl Wallet {
         if let Some(thread) = thread_r.as_ref() {
             thread.unpark();
         }
+    }
+
+    /// Get running Foreign API server port.
+    pub fn foreign_api_port(&self) -> Option<u16> {
+        let r_api = self.foreign_api_server.read().unwrap();
+        if r_api.is_some() {
+            let api = r_api.as_ref().unwrap();
+            return Some(api.1);
+        }
+        None
     }
 
     /// Parse Slatepack message into [`Slate`].
@@ -570,7 +652,7 @@ impl Wallet {
     }
 
     /// Initialize a transaction to send amount, return request for funds receiver.
-    pub fn send(&self, amount: u64) -> Result<String, Error> {
+    pub fn send(&self, amount: u64) -> Result<(Slate, String), Error> {
         let config = self.get_config();
         let args = InitTxArgs {
             src_acct_name: Some(config.account),
@@ -587,16 +669,102 @@ impl Wallet {
         api.tx_lock_outputs(None, &slate)?;
 
         // Create Slatepack message response.
-        let response = self.create_slatepack_message(&slate)?;
+        let message_resp = self.create_slatepack_message(&slate)?;
 
         // Sync wallet info.
         self.sync();
 
-        Ok(response)
+        Ok((slate, message_resp))
+    }
+
+    /// Send amount to provided address with Tor transport.
+    pub async fn send_tor(&mut self, amount: u64, addr: &SlatepackAddress) -> Option<Slate> {
+        // Initialize transaction.
+        let send_res = self.send(amount);
+
+        if send_res.is_err() {
+            return None;
+        }
+        let slate = send_res.unwrap().0;
+
+        // Function to cancel initialized tx in case of error.
+        let cancel_tx = || {
+            let instance = self.instance.clone().unwrap();
+            let _ = cancel_tx(instance, None, &None, None, Some(slate.clone().id));
+        };
+
+        // Initialize parameters.
+        let tor_addr = OnionV3Address::try_from(addr).unwrap().to_http_str();
+        let url = format!("{}/v2/foreign", tor_addr);
+        let slate_send = VersionedSlate::into_version(slate.clone(), SlateVersion::V4).unwrap();
+        let body = json!({
+				"jsonrpc": "2.0",
+				"method": "receive_tx",
+				"id": 1,
+				"params": [
+							slate_send,
+							null,
+							null
+						]
+			}).to_string();
+
+        // Send request to receiver.
+        let req_res = Tor::post(body, url).await;
+        if req_res.is_none() {
+            cancel_tx();
+            return None;
+        }
+
+        // Parse response and finalize transaction.
+        let res: Value = serde_json::from_str(&req_res.unwrap()).unwrap();
+        println!("Response: {}", res);
+        if res["error"] != json!(null) {
+            let report = format!(
+                "Posting transaction slate: Error: {}, Message: {}",
+                res["error"]["code"], res["error"]["message"]
+            );
+            println!("{}", report);
+            cancel_tx();
+            return None;
+        }
+
+        let slate_value = res["result"]["Ok"].clone();
+        println!("slate_value: {}", slate_value);
+
+        let mut ret_slate = None;
+        match Slate::deserialize_upgrade(&serde_json::to_string(&slate_value).unwrap()) {
+            Ok(s) => {
+                let mut api = Owner::new(self.instance.clone().unwrap(), None);
+                controller::owner_single_use(None, None, Some(&mut api), |api, m| {
+                    return if let Ok(slate) = api.finalize_tx(m, &s) {
+                        ret_slate = Some(slate.clone());
+                        let result = api.post_tx(m, &slate, self.can_use_dandelion());
+                        match result {
+                            Ok(_) => {
+                                println!("Tx sent successfully", );
+                                Ok(())
+                            }
+                            Err(e) => {
+                                eprintln!("Tx sent fail: {}", e);
+                                Err(e)
+                            }
+                        }
+                    } else {
+                        Err(Error::GenericError("TX finalization error".to_string()))
+                    };
+                }).unwrap();
+            }
+            Err(_) => {}
+        };
+
+        if ret_slate.is_none() {
+            cancel_tx();
+        }
+        ret_slate
     }
 
     /// Initialize an invoice transaction to receive amount, return request for funds sender.
-    pub fn issue_invoice(&self, amount: u64) -> Result<String, Error> {
+    pub fn issue_invoice(&self, amount: u64) -> Result<(Slate, String), Error> {
         let args = IssueInvoiceTxArgs {
             dest_acct_name: None,
             amount,
@@ -606,12 +774,12 @@ impl Wallet {
         let slate = api.issue_invoice_tx(None, args)?;
 
         // Create Slatepack message response.
-        let response = self.create_slatepack_message(&slate)?;
+        let response = self.create_slatepack_message(&slate.clone())?;
 
         // Sync wallet info.
         self.sync();
 
-        Ok(response)
+        Ok((slate, response))
     }
 
     /// Handle message from the invoice issuer to send founds, return response for funds receiver.
@@ -699,27 +867,46 @@ impl Wallet {
 
     /// Cancel transaction.
     pub fn cancel(&mut self, id: u32) {
-        let instance = self.instance.clone().unwrap();
-        let _ = cancel_tx(instance, None, &None, Some(id), None);
-        // Setup cancelling status, posting flag, and ability to finalize.
-        let mut w_data = self.data.write().unwrap();
-        let mut data = w_data.clone().unwrap();
-        let txs = data.txs.iter_mut().map(|tx| {
-            if tx.data.id == id {
-                tx.posting = false;
-                tx.can_finalize = false;
-                tx.data.tx_type = if tx.data.tx_type == TxLogEntryType::TxReceived {
-                    TxLogEntryType::TxReceivedCancelled
-                } else {
-                    TxLogEntryType::TxSentCancelled
-                };
-            }
-            tx.clone()
-        }).collect::<Vec<WalletTransaction>>();
-        data.txs = txs;
-        *w_data = Some(data);
-        // Refresh wallet info to update statuses.
-        self.sync();
+        // Setup cancelling status.
+        {
+            let mut w_data = self.data.write().unwrap();
+            let mut data = w_data.clone().unwrap();
+            let txs = data.txs.iter_mut().map(|tx| {
+                if tx.data.id == id {
+                    tx.cancelling = true;
+                    tx.can_finalize = false;
+                }
+                tx.clone()
+            }).collect::<Vec<WalletTransaction>>();
+            data.txs = txs;
+            *w_data = Some(data);
+        }
+
+        let wallet = self.clone();
+        thread::spawn(move || {
+            let instance = wallet.instance.clone().unwrap();
+            let _ = cancel_tx(instance, None, &None, Some(id), None);
+            // Setup posting flag, and ability to finalize.
+            let mut w_data = wallet.data.write().unwrap();
+            let mut data = w_data.clone().unwrap();
+            let txs = data.txs.iter_mut().map(|tx| {
+                if tx.data.id == id {
+                    tx.cancelling = false;
+                    tx.posting = false;
+                    tx.can_finalize = false;
+                    tx.data.tx_type = if tx.data.tx_type == TxLogEntryType::TxReceived {
+                        TxLogEntryType::TxReceivedCancelled
+                    } else {
+                        TxLogEntryType::TxSentCancelled
+                    };
+                }
+                tx.clone()
+            }).collect::<Vec<WalletTransaction>>();
+            data.txs = txs;
+            *w_data = Some(data);
+            // Refresh wallet info to update statuses.
+            wallet.sync();
+        });
     }
 
     /// Change wallet password.
@@ -803,9 +990,8 @@ fn start_sync(mut wallet: Wallet) -> Thread {
     wallet.txs_sync_progress.store(0, Ordering::Relaxed);
     wallet.repair_progress.store(0, Ordering::Relaxed);
 
-    println!("create new thread");
     thread::spawn(move || loop {
-        println!("start new cycle");
+        println!("SYNC {}, attempts: {}", wallet.get_config().name, wallet.get_sync_attempts());
 
         // Close wallet on chain type change.
         if wallet.get_config().chain_type != AppConfig::chain_type() {
@@ -814,7 +1000,6 @@ fn start_sync(mut wallet: Wallet) -> Thread {
 
         // Stop syncing if wallet was closed.
         if !wallet.is_open() {
-            println!("finishing thread at start");
             // Clear thread instance.
             let mut thread_w = wallet.sync_thread.write().unwrap();
             *thread_w = None;
@@ -822,7 +1007,6 @@ fn start_sync(mut wallet: Wallet) -> Thread {
             // Clear wallet info.
             let mut w_data = wallet.data.write().unwrap();
             *w_data = None;
-            println!("finish at start complete");
             return;
         }
 
@@ -838,23 +1022,33 @@ fn start_sync(mut wallet: Wallet) -> Thread {
             wallet.set_sync_error(not_enabled);
             // Skip cycle when node sync is not finished.
             if !Node::is_running() || Node::get_sync_status() != Some(SyncStatus::NoSync) {
-                println!("integrated node wait");
                 thread::park_timeout(ATTEMPT_DELAY);
                 continue;
             }
         }
 
-        // Start Foreign API listener if API server was not created.
-        let api_server_exists = {
+        // Start Foreign API listener if API server is not running.
+        let mut api_server_running = {
             wallet.foreign_api_server.read().unwrap().is_some()
         };
-        if !api_server_exists {
+        if !api_server_running && wallet.is_open() {
             match start_api_server(&mut wallet) {
                 Ok(api_server) => {
                     let mut api_server_w = wallet.foreign_api_server.write().unwrap();
                     *api_server_w = Some(api_server);
+                    api_server_running = true;
                 }
                 Err(_) => {}
+            }
+        }
+
+        // Start Tor service if API server is running and wallet is open.
+        if wallet.auto_start_tor_listener() && wallet.is_open() && api_server_running &&
+            !Tor::is_service_running(&wallet.identifier()) {
+            let r_foreign_api = wallet.foreign_api_server.read().unwrap();
+            let api = r_foreign_api.as_ref().unwrap();
+            if let Ok(sec_key) = wallet.secret_key() {
+                Tor::start_service(api.1, sec_key, &wallet.identifier());
             }
         }
 
@@ -869,7 +1063,6 @@ fn start_sync(mut wallet: Wallet) -> Thread {
 
         // Stop sync if wallet was closed.
         if !wallet.is_open() {
-            println!("finishing thread after updating");
             // Clear thread instance.
             let mut thread_w = wallet.sync_thread.write().unwrap();
             *thread_w = None;
@@ -877,73 +1070,37 @@ fn start_sync(mut wallet: Wallet) -> Thread {
             // Clear wallet info.
             let mut w_data = wallet.data.write().unwrap();
             *w_data = None;
-            println!("finishing after updating complete");
             return;
         }
 
         // Repeat after default or attempt delay if synchronization was not successful.
-        let delay = if wallet.sync_error()
-            || wallet.get_sync_attempts() != 0 {
+        let failed_sync = wallet.sync_error() || wallet.get_sync_attempts() != 0;
+        let delay = if failed_sync {
             ATTEMPT_DELAY
         } else {
             SYNC_DELAY
         };
-        println!("park for {}", delay.as_millis());
+        if failed_sync {
+            println!("SYNC {} failed, attempts: {}, wait {}ms",
+                     wallet.get_config().name,
+                     wallet.get_sync_attempts(),
+                     delay.as_millis());
+        } else {
+            println!("SYNC success for {}, wait {}ms",
+                     wallet.get_config().name,
+                     delay.as_millis());
+        }
         thread::park_timeout(delay);
     }).thread().clone()
 }
 
-/// Start Foreign API server to accept txs via Tor and receive mining rewards from Stratum server.
-fn start_api_server(wallet: &mut Wallet) -> Result<ApiServer, Error> {
-    // Find free port.
-    let free_port = (DEFAULT_FOREIGN_API_PORT..).find(|port| {
-        return match TcpListener::bind((DEFAULT_FOREIGN_API_HOST, port.to_owned())) {
-            Ok(_) => {
-                let node_p2p_port = NodeConfig::get_p2p_port();
-                let node_api_port = NodeConfig::get_api_ip_port().1;
-                port.to_string() != node_p2p_port && port.to_string() != node_api_port
-            },
-            Err(_) => false
-        }
-    }).unwrap();
-
-    // Setup API server address.
-    let api_addr = format!("{}:{}", DEFAULT_FOREIGN_API_HOST, free_port);
-
-    // Start Foreign API server thread.
-    let instance = wallet.instance.clone().unwrap();
-    let api_handler_v2 = ForeignAPIHandlerV2::new(instance,
-                                                  Arc::new(Mutex::new(None)),
-                                                  false,
-                                                  Mutex::new(None));
-    let mut router = Router::new();
-    router
-        .add_route("/v2/foreign", Arc::new(api_handler_v2))
-        .map_err(|_| Error::GenericError("Router failed to add route".to_string()))?;
-
-    let api_chan: &'static mut (oneshot::Sender<()>, oneshot::Receiver<()>) =
-        Box::leak(Box::new(oneshot::channel::<()>()));
-
-    let mut apis = ApiServer::new();
-    println!("Starting HTTP Foreign listener API server at {}.", api_addr);
-    let socket_addr: SocketAddr = api_addr.parse().unwrap();
-    let _ = apis.start(socket_addr, router, None, api_chan)
-        .map_err(|_| Error::GenericError("API thread failed to start".to_string()))?;
-
-    println!("HTTP Foreign listener started.");
-    Ok(apis)
-}
-
 /// Retrieve [`WalletData`] from node.
 fn sync_wallet_data(wallet: &Wallet) {
-    println!("SYNC start, attempts: {}", wallet.get_sync_attempts());
-
     let wallet_info = wallet.clone();
     let (info_tx, info_rx) = mpsc::channel::<StatusMessage>();
     // Update info sync progress at separate thread.
     thread::spawn(move || {
         while let Ok(m) = info_rx.recv() {
-            println!("SYNC INFO MESSAGE");
             match m {
                 StatusMessage::UpdatingOutputs(_) => {}
                 StatusMessage::UpdatingTransactions(_) => {}
@@ -990,7 +1147,6 @@ fn sync_wallet_data(wallet: &Wallet) {
                 let (txs_tx, txs_rx) = mpsc::channel::<StatusMessage>();
                 thread::spawn(move || {
                     while let Ok(m) = txs_rx.recv() {
-                        println!("SYNC TXS MESSAGE");
                         match m {
                             StatusMessage::UpdatingOutputs(_) => {}
                             StatusMessage::UpdatingTransactions(_) => {}
@@ -1116,6 +1272,7 @@ fn sync_wallet_data(wallet: &Wallet) {
                             new_txs.push(WalletTransaction {
                                 data: tx.clone(),
                                 amount,
+                                cancelling: false,
                                 posting,
                                 can_finalize,
                                 repost_height,
@@ -1148,13 +1305,52 @@ fn sync_wallet_data(wallet: &Wallet) {
         wallet.increment_sync_attempts();
     }
 
-    println!("SYNC cycle finished, attempts: {}", wallet.get_sync_attempts());
-
     // Set an error if maximum number of attempts was reached.
     if wallet.get_sync_attempts() >= SYNC_ATTEMPTS {
         wallet.reset_sync_attempts();
         wallet.set_sync_error(true);
     }
+}
+
+/// Start Foreign API server to receive mining rewards from Stratum server.
+fn start_api_server(wallet: &mut Wallet) -> Result<(ApiServer, u16), Error> {
+    // Find free port.
+    let free_port = (DEFAULT_FOREIGN_API_PORT..).find(|port| {
+        return match TcpListener::bind((DEFAULT_FOREIGN_API_HOST, port.to_owned())) {
+            Ok(_) => {
+                let node_p2p_port = NodeConfig::get_p2p_port();
+                let node_api_port = NodeConfig::get_api_ip_port().1;
+                port.to_string() != node_p2p_port && port.to_string() != node_api_port
+            },
+            Err(_) => false
+        }
+    }).unwrap();
+
+    // Setup API server address.
+    let api_addr = format!("{}:{}", DEFAULT_FOREIGN_API_HOST, free_port);
+
+    // Start Foreign API server thread.
+    let instance = wallet.instance.clone().unwrap();
+    let api_handler_v2 = ForeignAPIHandlerV2::new(instance,
+                                                  Arc::new(Mutex::new(None)),
+                                                  false,
+                                                  Mutex::new(None));
+    let mut router = Router::new();
+    router
+        .add_route("/v2/foreign", Arc::new(api_handler_v2))
+        .map_err(|_| Error::GenericError("Router failed to add route".to_string()))?;
+
+    let api_chan: &'static mut (oneshot::Sender<()>, oneshot::Receiver<()>) =
+        Box::leak(Box::new(oneshot::channel::<()>()));
+
+    let mut apis = ApiServer::new();
+    println!("Starting HTTP Foreign listener API server at {}.", api_addr);
+    let socket_addr: SocketAddr = api_addr.parse().unwrap();
+    let _ = apis.start(socket_addr, router, None, api_chan)
+        .map_err(|_| Error::GenericError("API thread failed to start".to_string()))?;
+
+    println!("HTTP Foreign listener started.");
+    Ok((apis, free_port))
 }
 
 /// Update wallet accounts data.

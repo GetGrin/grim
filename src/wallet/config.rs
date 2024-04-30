@@ -39,7 +39,9 @@ pub struct WalletConfig {
     /// Minimal amount of confirmations.
     pub min_confirmations: u64,
     /// Flag to use Dandelion to broadcast transactions.
-    pub use_dandelion: Option<bool>
+    pub use_dandelion: Option<bool>,
+    /// Flag to enable Tor listener on start.
+    pub enable_tor_listener: Option<bool>
 }
 
 /// Base wallets directory name.
@@ -74,6 +76,7 @@ impl WalletConfig {
             },
             min_confirmations: MIN_CONFIRMATIONS_DEFAULT,
             use_dandelion: Some(true),
+            enable_tor_listener: Some(true),
         };
         Settings::write_to_file(&config, config_path);
         config

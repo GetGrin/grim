@@ -13,7 +13,7 @@
 // limitations under the License.
 
 mod config;
-pub use config::TorServerConfig;
+pub use config::TorConfig;
 
 mod tor;
-pub use tor::TorServer;
+pub use tor::Tor;

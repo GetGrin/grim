@@ -15,6 +15,9 @@ id: Identifier
 kernel: Kernel
 settings: Settings
 language: Language
+scan: Scan
+qr_code: QR code
+repeat: Repeat
 wallets:
   await_conf_amount: Awaiting confirmation
   await_fin_amount: Awaiting finalization
@@ -109,6 +112,19 @@ wallets:
   receive: Receive
   settings: Wallet settings
   change_server_confirmation: To apply change of connection settings, you need to re-open your wallet. Reopen it now?
+transport:
+  desc: 'Use transport to receive or send messages synchronously:'
+  tor_network: Tor network
+  connected: Connected
+  connecting: Connecting
+  disconnecting: Disconnecting
+  conn_error: Connection error
+  disconnected: Disconnected
+  receiver_address: 'Address of the receiver:'
+  incorrect_addr_err: 'Entered address is incorrect:'
+  tor_send_error: An error occurred during sending over Tor, make sure receiver is online, transaction was canceled.
+  tor_autorun_desc: Whether to launch Tor service on wallet opening to receive transactions synchronously.
+  tor_sending: Sending over Tor
 network:
   self: Network
   type: 'Network type:'
@@ -126,12 +142,6 @@ network:
   available: Available
   not_available: Not available
   availability_check: Availability check
-  tor_network: Tor network
-  server_enabled: Server enabled
-  server_starting: Server is starting
-  server_stopping: Server is stopping
-  server_error: Server error
-  server_disabled: Server disabled
 sync_status:
   node_restarting: Node is restarting
   node_down: Node is down

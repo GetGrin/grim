@@ -15,6 +15,9 @@ id: Идентификатор
 kernel: Ядро
 settings: Настройки
 language: Язык
+scan: Сканировать
+qr_code: QR-код
+repeat: Повторить
 wallets:
   await_conf_amount: Ожидает подтверждения
   await_fin_amount: Ожидает завершения
@@ -109,6 +112,19 @@ wallets:
   receive: Получить
   settings: Настройки кошелька
   change_server_confirmation: Для применения изменения настроек соединения необходимо переоткрыть кошелёк. Переоткрыть его сейчас?
+transport:
+  desc: 'Используйте транспорт для синхронного получения или отправки сообщений:'
+  tor_network: Сеть Tor
+  connected: Подключено
+  connecting: Подключение
+  disconnecting: Отключение
+  conn_error: Ошибка подключения
+  disconnected: Отключено
+  receiver_address: 'Адрес получателя:'
+  incorrect_addr_err: 'Введённый адрес неверен:'
+  tor_send_error: Во время отправки через Tor произошла ошибка, убедитесь, что получатель находится онлайн, транзакция была отменена.
+  tor_autorun_desc: Запускать ли Tor сервис при открытии кошелька для синхронного получения транзакций.
+  tor_sending: Отправка через Tor
 network:
   self: Сеть
   type: 'Тип сети:'
@@ -126,12 +142,6 @@ network:
   available: Доступно
   not_available: Недоступно
   availability_check: Проверка доступности
-  tor_network: Сеть Tor
-  server_enabled: Сервер включен
-  server_starting: Сервер запускается
-  server_stopping: Сервер останавливается
-  server_error: Ошибка сервера
-  server_disabled: Сервер отключен
 sync_status:
   node_restarting: Узел перезапускается
   node_down: Узел выключен

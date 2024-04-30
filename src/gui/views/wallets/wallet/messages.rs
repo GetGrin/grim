@@ -53,9 +53,6 @@ impl MessageError {
 
 /// Slatepacks messages interaction tab content.
 pub struct WalletMessages {
-    /// Flag to check if send or invoice request was opened.
-    send_request: bool,
-
     /// Slatepack message to create response message.
     message_edit: String,
     /// Parsed Slatepack message.
@@ -67,15 +64,17 @@ pub struct WalletMessages {
     /// Flag to check if Dandelion is needed to finalize transaction.
     dandelion: bool,
 
-    /// Amount to send or receive.
+    /// Flag to check if send or invoice request was opened for [`Modal`].
+    send_request: bool,
+    /// Amount to send or receive at [`Modal`].
     amount_edit: String,
-    /// Generated Slatepack message as request to send or receive funds.
+    /// Generated Slatepack message as request to send or receive funds at [`Modal`].
     request_edit: String,
-    /// Flag to check if there is an error happened on invoice creation.
+    /// Flag to check if there is an error happened on request creation at [`Modal`].
     request_error: Option<MessageError>,
 }
 
-/// Identifier for invoice amount [`Modal`].
+/// Identifier for amount input [`Modal`].
 const AMOUNT_MODAL: &'static str = "amount_modal";
 
 impl WalletMessages {
@@ -127,7 +126,7 @@ impl WalletTab for WalletMessages {
             .show_inside(ui, |ui| {
                 ScrollArea::vertical()
                     .scroll_bar_visibility(ScrollBarVisibility::AlwaysVisible)
-                    .id_source(Id::from("wallet_manual").with(wallet.get_config().id))
+                    .id_source(Id::from("wallet_messages").with(wallet.get_config().id))
                     .auto_shrink([false; 2])
                     .show(ui, |ui| {
                         ui.vertical_centered(|ui| {
@@ -179,6 +178,54 @@ impl WalletMessages {
                 }
             }
         }
+    }
+
+    /// Draw creation of request to send or receive funds.
+    fn request_ui(&mut self,
+                  ui: &mut egui::Ui,
+                  cb: &dyn PlatformCallbacks) {
+        ui.label(RichText::new(t!("wallets.create_request_desc"))
+            .size(16.0)
+            .color(Colors::INACTIVE_TEXT));
+        ui.add_space(7.0);
+
+        // Setup spacing between buttons.
+        ui.spacing_mut().item_spacing = egui::Vec2::new(6.0, 0.0);
+
+        ui.columns(2, |columns| {
+            columns[0].vertical_centered_justified(|ui| {
+                // Draw send request creation button.
+                let send_text = format!("{} {}", UPLOAD_SIMPLE, t!("wallets.send"));
+                View::button(ui, send_text, Colors::BUTTON, || {
+                    // Setup modal values.
+                    self.send_request = true;
+                    self.amount_edit = "".to_string();
+                    self.request_error = None;
+                    // Show send amount modal.
+                    Modal::new(AMOUNT_MODAL)
+                        .position(ModalPosition::CenterTop)
+                        .title(t!("wallets.send"))
+                        .show();
+                    cb.show_keyboard();
+                });
+            });
+            columns[1].vertical_centered_justified(|ui| {
+                // Draw invoice request creation button.
+                let receive_text = format!("{} {}", DOWNLOAD_SIMPLE, t!("wallets.receive"));
+                View::button(ui, receive_text, Colors::BUTTON, || {
+                    // Setup modal values.
+                    self.send_request = false;
+                    self.amount_edit = "".to_string();
+                    self.request_error = None;
+                    // Show receive amount modal.
+                    Modal::new(AMOUNT_MODAL)
+                        .position(ModalPosition::CenterTop)
+                        .title(t!("wallets.receive"))
+                        .show();
+                    cb.show_keyboard();
+                });
+            });
+        });
     }
 
     /// Draw Slatepack message input content.
@@ -509,55 +556,7 @@ impl WalletMessages {
         }
     }
 
-    /// Draw creation of request to send or receive funds.
-    fn request_ui(&mut self,
-                  ui: &mut egui::Ui,
-                  cb: &dyn PlatformCallbacks) {
-        ui.label(RichText::new(t!("wallets.create_request_desc"))
-            .size(16.0)
-            .color(Colors::INACTIVE_TEXT));
-        ui.add_space(7.0);
-
-        // Setup spacing between buttons.
-        ui.spacing_mut().item_spacing = egui::Vec2::new(6.0, 0.0);
-
-        ui.columns(2, |columns| {
-            columns[0].vertical_centered_justified(|ui| {
-                // Draw send request creation button.
-                let send_text = format!("{} {}", UPLOAD_SIMPLE, t!("wallets.send"));
-                View::button(ui, send_text, Colors::BUTTON, || {
-                    // Setup modal values.
-                    self.send_request = true;
-                    self.amount_edit = "".to_string();
-                    self.request_error = None;
-                    // Show send amount modal.
-                    Modal::new(AMOUNT_MODAL)
-                        .position(ModalPosition::CenterTop)
-                        .title(t!("wallets.send"))
-                        .show();
-                    cb.show_keyboard();
-                });
-            });
-            columns[1].vertical_centered_justified(|ui| {
-                // Draw invoice request creation button.
-                let receive_text = format!("{} {}", DOWNLOAD_SIMPLE, t!("wallets.receive"));
-                View::button(ui, receive_text, Colors::BUTTON, || {
-                    // Setup modal values.
-                    self.send_request = false;
-                    self.amount_edit = "".to_string();
-                    self.request_error = None;
-                    // Show receive amount modal.
-                    Modal::new(AMOUNT_MODAL)
-                        .position(ModalPosition::CenterTop)
-                        .title(t!("wallets.receive"))
-                        .show();
-                    cb.show_keyboard();
-                });
-            });
-        });
-    }
-
-    /// Draw invoice amount [`Modal`] content.
+    /// Draw amount input [`Modal`] content to create invoice or request to send funds.
     fn amount_modal_ui(&mut self,
                        ui: &mut egui::Ui,
                        wallet: &mut Wallet,
@@ -621,7 +620,7 @@ impl WalletMessages {
                 }
             }
 
-            // Show invoice creation error.
+            // Show request creation error.
             if self.request_error.is_some() {
                 ui.add_space(12.0);
                 ui.vertical_centered(|ui| {
@@ -658,7 +657,7 @@ impl WalletMessages {
                                 wallet.issue_invoice(a)
                             };
                             match message {
-                                Ok(message) => {
+                                Ok((_, message)) => {
                                     self.request_edit = message;
                                     cb.hide_keyboard();
                                 }

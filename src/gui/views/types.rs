@@ -83,7 +83,9 @@ pub struct TextEditOptions {
     /// Flag to show copy button.
     pub copy: bool,
     /// Flag to show paste button.
-    pub paste: bool
+    pub paste: bool,
+    /// Flag to show button to scan QR code into text.
+    pub scan_qr: bool
 }
 
 impl TextEditOptions {
@@ -95,6 +97,7 @@ impl TextEditOptions {
             password: false,
             copy: false,
             paste: false,
+            scan_qr: false,
         }
     }
 
@@ -125,6 +128,12 @@ impl TextEditOptions {
     /// Show button to paste text.
     pub fn paste(mut self) -> Self {
         self.paste = true;
+        self
+    }
+
+    /// Show button to scan QR code to text.
+    pub fn scan_qr(mut self) -> Self {
+        self.scan_qr = true;
         self
     }
 }
