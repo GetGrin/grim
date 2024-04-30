@@ -134,8 +134,8 @@ impl Node {
     }
 
     /// Get [`StratumServer`] statistics.
-    pub fn get_stratum_stats() -> grin_util::RwLockReadGuard<'static, StratumStats> {
-        NODE_STATE.stratum_stats.read()
+    pub fn get_stratum_stats() -> StratumStats {
+        NODE_STATE.stratum_stats.read().clone()
     }
 
     /// Stop [`StratumServer`].
@@ -169,8 +169,8 @@ impl Node {
     }
 
     /// Get node [`Server`] statistics.
-    pub fn get_stats() -> RwLockReadGuard<'static, Option<ServerStats>> {
-        NODE_STATE.stats.read().unwrap()
+    pub fn get_stats() -> Option<ServerStats> {
+        NODE_STATE.stats.read().unwrap().clone()
     }
 
     /// Check if [`Server`] is not syncing (disabled or just running after synchronization).
