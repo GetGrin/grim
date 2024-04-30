@@ -728,17 +728,21 @@ impl Wallet {
             return None;
         }
 
+        // Slatepack message json value.
         let slate_value = res["result"]["Ok"].clone();
-        println!("slate_value: {}", slate_value);
 
         let mut ret_slate = None;
         match Slate::deserialize_upgrade(&serde_json::to_string(&slate_value).unwrap()) {
             Ok(s) => {
                 let mut api = Owner::new(self.instance.clone().unwrap(), None);
                 controller::owner_single_use(None, None, Some(&mut api), |api, m| {
+                    // Finalize transaction.
                     return if let Ok(slate) = api.finalize_tx(m, &s) {
                         ret_slate = Some(slate.clone());
-                        let result = api.post_tx(m, &slate, self.can_use_dandelion());
+                        // Save Slatepack message to file.
+                        let _ = self.create_slatepack_message(&slate).unwrap_or("".to_string());
+                        // Post transaction to blockchain.
+                        let result = self.post(&slate, self.can_use_dandelion());
                         match result {
                             Ok(_) => {
                                 println!("Tx sent successfully", );
@@ -828,8 +832,9 @@ impl Wallet {
         let mut slate = self.parse_slatepack(message)?;
         let api = Owner::new(self.instance.clone().unwrap(), None);
         slate = api.finalize_tx(None, &slate)?;
-        // Post transaction to blockchain.
+        // Save Slatepack message to file.
         let _ = self.create_slatepack_message(&slate)?;
+        // Post transaction to blockchain.
         let _ = self.post(&slate, dandelion);
         // Sync wallet info.
         self.sync();

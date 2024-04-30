@@ -20,7 +20,7 @@ use grin_core::core::{amount_from_hr_string, amount_to_hr_string};
 use grin_wallet_libwallet::SlatepackAddress;
 
 use crate::gui::Colors;
-use crate::gui::icons::{CHECK_CIRCLE, COMPUTER_TOWER, COPY, DOTS_THREE_CIRCLE, EXPORT, GEAR_SIX, GLOBE_SIMPLE, POWER, QR_CODE, UPLOAD, WARNING_CIRCLE, X_CIRCLE};
+use crate::gui::icons::{CHECK_CIRCLE, COMPUTER_TOWER, COPY, DOTS_THREE_CIRCLE, EXPORT, GEAR_SIX, POWER, QR_CODE, WARNING_CIRCLE, X_CIRCLE};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, Root, View};
 use crate::gui::views::types::{ModalPosition, TextEditOptions};
@@ -110,6 +110,9 @@ impl WalletTab for WalletTransport {
 /// Identifier for [`Modal`] to send amount over Tor.
 const SEND_TOR_MODAL: &'static str = "send_tor_modal";
 
+/// Identifier for [`Modal`] to setup Tor service.
+const TOR_SETTINGS_MODAL: &'static str = "tor_settings_modal";
+
 impl WalletTransport {
     /// Draw wallet transport content.
     pub fn ui(&mut self, ui: &mut egui::Ui, wallet: &mut Wallet, cb: &dyn PlatformCallbacks) {
@@ -137,6 +140,11 @@ impl WalletTransport {
                             self.send_tor_modal_ui(ui, wallet, modal, cb);
                         });
                     }
+                    TOR_SETTINGS_MODAL => {
+                        Modal::ui(ui.ctx(), |ui, modal| {
+                            self.tor_settings_modal_ui(ui, wallet, modal);
+                        });
+                    }
                     _ => {}
                 }
             }
@@ -146,7 +154,7 @@ impl WalletTransport {
     /// Draw Tor transport content.
     fn tor_ui(&mut self, ui: &mut egui::Ui, wallet: &mut Wallet, cb: &dyn PlatformCallbacks) {
         // Draw header content.
-        self.tor_header_ui(ui, wallet, cb);
+        self.tor_header_ui(ui, wallet);
 
         // Draw receive info content.
         if wallet.slatepack_address().is_some() {
@@ -154,11 +162,11 @@ impl WalletTransport {
         }
 
         // Draw send content.
-        self.tor_send_ui(ui, wallet, cb);
+        self.tor_send_ui(ui, cb);
     }
 
     /// Draw Tor transport header content.
-    fn tor_header_ui(&self, ui: &mut egui::Ui, wallet: &mut Wallet, cb: &dyn PlatformCallbacks) {
+    fn tor_header_ui(&self, ui: &mut egui::Ui, wallet: &mut Wallet) {
         // Setup layout size.
         let mut rect = ui.available_rect_before_wrap();
         rect.set_height(78.0);
@@ -173,7 +181,11 @@ impl WalletTransport {
                 // Draw button to setup Tor transport.
                 let button_rounding = View::item_rounding(0, 2, true);
                 View::item_button(ui, button_rounding, GEAR_SIX, None, || {
-                    //TODO: tor settings
+                    // Show modal.
+                    Modal::new(TOR_SETTINGS_MODAL)
+                        .position(ModalPosition::CenterTop)
+                        .title(t!("transport.tor_settings"))
+                        .show();
                 });
 
                 // Draw button to enable/disable Tor listener for current wallet.
@@ -202,7 +214,9 @@ impl WalletTransport {
 
                         // Setup wallet API address text.
                         let port = wallet.foreign_api_port().unwrap();
-                        let address_text = format!("{} http://127.0.0.1:{}", GLOBE_SIMPLE, port);
+                        let address_text = format!("{} http://127.0.0.1:{}",
+                                                   COMPUTER_TOWER,
+                                                   port);
                         ui.label(RichText::new(address_text).size(15.0).color(Colors::TEXT));
                         ui.add_space(1.0);
 
@@ -224,6 +238,29 @@ impl WalletTransport {
                     });
                 });
             });
+        });
+    }
+
+    /// Draw tor transport settings [`Modal`] content.
+    fn tor_settings_modal_ui(&self, ui: &mut egui::Ui, wallet: &mut Wallet, modal: &Modal) {
+        ui.add_space(6.0);
+        ui.vertical_centered(|ui| {
+            ui.label(RichText::new(t!("transport.tor_autorun_desc"))
+                .size(17.0)
+                .color(Colors::INACTIVE_TEXT));
+
+            // Show Tor service autorun checkbox.
+            let autorun = wallet.auto_start_tor_listener();
+            View::checkbox(ui, autorun, t!("network.autorun"), || {
+                wallet.update_auto_start_tor_listener(!autorun);
+            });
+        });
+        ui.add_space(6.0);
+        ui.vertical_centered_justified(|ui| {
+            View::button(ui, t!("close"), Colors::WHITE, || {
+                modal.close();
+            });
+            ui.add_space(6.0);
         });
     }
 
@@ -281,7 +318,7 @@ impl WalletTransport {
     }
 
     /// Draw Tor receive content.
-    fn tor_send_ui(&mut self, ui: &mut egui::Ui, wallet: &mut Wallet, cb: &dyn PlatformCallbacks) {
+    fn tor_send_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         // Setup layout size.
         let mut rect = ui.available_rect_before_wrap();
         rect.set_height(55.0);
@@ -494,9 +531,11 @@ impl WalletTransport {
             ui.add_space(6.0);
         } else if has_send_err {
             ui.add_space(6.0);
-            ui.label(RichText::new(t!("transport.tor_send_error"))
-                .size(17.0)
-                .color(Colors::RED));
+            ui.vertical_centered(|ui| {
+                ui.label(RichText::new(t!("transport.tor_send_error"))
+                    .size(17.0)
+                    .color(Colors::RED));
+            });
             ui.add_space(12.0);
 
             // Setup spacing between buttons.
@@ -549,6 +588,7 @@ impl WalletTransport {
                     });
                 });
             });
+            ui.add_space(6.0);
         } else {
             ui.add_space(16.0);
             ui.vertical_centered(|ui| {
@@ -556,7 +596,7 @@ impl WalletTransport {
                 ui.add_space(12.0);
                 ui.label(RichText::new(t!("transport.tor_sending"))
                     .size(17.0)
-                    .color(Colors::TEXT));
+                    .color(Colors::GRAY));
             });
             ui.add_space(10.0);
 

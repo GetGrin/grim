@@ -125,6 +125,7 @@ transport:
   tor_send_error: An error occurred during sending over Tor, make sure receiver is online, transaction was canceled.
   tor_autorun_desc: Whether to launch Tor service on wallet opening to receive transactions synchronously.
   tor_sending: Sending over Tor
+  tor_settings: Tor Settings
 network:
   self: Network
   type: 'Network type:'
