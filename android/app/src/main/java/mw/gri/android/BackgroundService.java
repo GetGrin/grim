@@ -21,6 +21,8 @@ public class BackgroundService extends Service {
     private static final int SYNC_STATUS_NOTIFICATION_ID = 1;
     private NotificationCompat.Builder mNotificationBuilder;
 
+    private String mNotificationContentText = "";
+
     private final Runnable mUpdateSyncStatus = new Runnable() {
         @Override
         public void run() {
@@ -28,9 +30,13 @@ public class BackgroundService extends Service {
                 return;
             }
             // Update sync status at notification.
-            mNotificationBuilder.setContentText(getSyncStatusText());
-            NotificationManager manager = getSystemService(NotificationManager.class);
-            manager.notify(SYNC_STATUS_NOTIFICATION_ID, mNotificationBuilder.build());
+            String syncStatusText = getSyncStatusText();
+            if (!mNotificationContentText.equals(syncStatusText)) {
+                mNotificationContentText = syncStatusText;
+                mNotificationBuilder.setContentText(mNotificationContentText);
+                NotificationManager manager = getSystemService(NotificationManager.class);
+                manager.notify(SYNC_STATUS_NOTIFICATION_ID, mNotificationBuilder.build());
+            }
 
             // Send broadcast to MainActivity if exit from the app is needed after node stop.
             if (exitAppAfterNodeStop()) {
