@@ -74,9 +74,9 @@ wallets:
   tx_confirmed: Confirmed
   txs: Transactions
   tx: Transaction
-  input_finalize_desc: 'Enter message to finalize the transaction:'
   messages: Messages
   transport: Transport
+  input_finalize_desc: 'Enter message to finalize the transaction:'
   input_slatepack_desc: 'Enter message to create response or finalize the transaction:'
   parse_slatepack_err: 'An error occurred during reading of the message, check input data:'
   pay_balance_error: 'Account balance is insufficient to pay %{amount} ツ and network fee.'
