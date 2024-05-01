@@ -616,7 +616,7 @@ impl WalletTransport {
             ui.vertical_centered(|ui| {
                 View::small_loading_spinner(ui);
                 ui.add_space(12.0);
-                ui.label(RichText::new(t!("transport.tor_sending"))
+                ui.label(RichText::new(t!("transport.tor_sending", "amount" => self.amount_edit))
                     .size(17.0)
                     .color(Colors::GRAY));
             });
