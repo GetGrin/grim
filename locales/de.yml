@@ -1,3 +1,4 @@
+lang_name:
 copy: Kopieren
 paste: Einfügen
 continue: Weiter
@@ -10,6 +11,13 @@ show: Zeigen
 delete: Löschen
 clear: Clear
 create: Erstellen
+id:
+kernel:
+settings:
+language:
+scan:
+qr_code:
+repeat:
 wallets:
   await_conf_amount: Erwarte Bestätigung
   await_fin_amount: Warten auf die Fertigstellung
@@ -49,12 +57,12 @@ wallets:
   closing: Schließen
   checking: Überprüfung
   default_wallet: Standard-Wallet
+  new_account_desc:
   wallet_loading: Wallet wird geladen
   wallet_closing: Wallet schließen
   wallet_checking: Wallet prüfen
   tx_loading: Laden von Transaktionen
   default_account: Standardaccount
-  create_account: Account erstellen
   accounts: Accounts
   tx_sent: Gesendet
   tx_received: Erhalten
@@ -65,18 +73,22 @@ wallets:
   tx_canceled: Abgebrochen
   tx_confirmed: Bestätigt
   txs: Transaktionen
+  tx:
   messages: Nachrichten
   transport: Transport
+  input_finalize_desc:
   input_slatepack_desc: 'Geben Sie eine Nachricht ein, um eine Antwort zu erstellen oder die Transaktion abzuschließen:'
-  send_slatepack_desc: 'Senden Sie eine Nachricht an den Empfänger, um die Transaktion abzuschließen:'
   parse_slatepack_err: 'Bei der Verarbeitung der Nachricht ist ein Fehler aufgetreten. Überprüfen Sie die Eingabedaten:'
   pay_balance_error: 'Der Kontostand reicht nicht aus, um %{amount} ツ und die Netzwerkgebühr zu bezahlen.'
   parse_i1_slatepack_desc: 'Um %{amount} zu zahlen, senden Sie diese Nachricht an den Empfänger:'
   parse_i2_slatepack_desc: 'Schließen Sie die Transaktion ab, um %{amount} ツ zu erhalten'
+  parse_i3_slatepack_desc:
   parse_s1_slatepack_desc: 'Um %{amount} zu erhalten, senden Sie diese Nachricht an den Absender:'
   parse_s2_slatepack_desc: 'Schließen Sie die Transaktion ab, um %{amount} ツ zu senden'
-  response_slatepack_err: 'Beim Erstellen der Antwort ist ein Fehler aufgetreten. Überprüfen Sie die Eingabedaten:'
-  response_exists_err: 'Eine solche Transaktion existiert bereits:'
+  parse_s3_slatepack_desc:
+  resp_slatepack_err: 'Beim Erstellen der Antwort ist ein Fehler aufgetreten. Überprüfen Sie die Eingabedaten:'
+  resp_exists_err: 'Eine solche Transaktion existiert bereits:'
+  resp_canceled_err:
   create_request_desc: 'Erstellen Sie eine Anfrage zum Senden oder Empfangen der Gelder:'
   send_request_desc: 'Sie haben eine Anfrage zum Senden von %{amount} ツ erstellt. Senden Sie diese Nachricht an den Empfänger:'
   send_slatepack_err: Beim Erstellen der Anfrage zum Senden von Geldern ist ein Fehler aufgetreten. Überprüfen Sie die Eingabedaten.
@@ -100,9 +112,25 @@ wallets:
   receive: Empfangen
   settings: Wallet Einstellungen
   change_server_confirmation: Um die Änderung der Verbindungseinstellungen zu übernehmen, müssen Sie Ihr Wallet erneut öffnen. Jetzt wieder öffnen?
+transport:
+  desc:
+  tor_network:
+  connected:
+  connecting:
+  disconnecting:
+  conn_error:
+  disconnected:
+  receiver_address:
+  incorrect_addr_err:
+  tor_send_error:
+  tor_autorun_desc:
+  tor_sending:
+  tor_settings:
 network:
   self: Netzwerk
   type: 'Netzwerk Typ:'
+  mainnet:
+  testnet:
   connections: Verbindungen
   node: Integrierte Node
   metrics: Metriken
@@ -115,6 +143,7 @@ network:
   available: Verfügbar
   not_available: Nicht verfügbar
   availability_check: Verfügbarkeitsprüfung
+  android_warning:
 sync_status:
   node_restarting: Node wird neu gestartet
   node_down: Node ist ausgefallen
