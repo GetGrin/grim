@@ -20,7 +20,7 @@ use grin_core::core::{amount_from_hr_string, amount_to_hr_string};
 use grin_wallet_libwallet::SlatepackAddress;
 
 use crate::gui::Colors;
-use crate::gui::icons::{CHECK_CIRCLE, COMPUTER_TOWER, COPY, DOTS_THREE_CIRCLE, EXPORT, GEAR_SIX, POWER, QR_CODE, WARNING_CIRCLE, X_CIRCLE};
+use crate::gui::icons::{CHECK_CIRCLE, COMPUTER_TOWER, COPY, DOTS_THREE_CIRCLE, EXPORT, GEAR_SIX, GLOBE_SIMPLE, POWER, QR_CODE, WARNING_CIRCLE, X_CIRCLE};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, Root, View};
 use crate::gui::views::types::{ModalPosition, TextEditOptions};
@@ -308,7 +308,7 @@ impl WalletTransport {
                         View::ellipsize_text(ui, slatepack_addr, 15.0, address_color);
 
                         let address_label = format!("{} {}",
-                                                    COMPUTER_TOWER,
+                                                    GLOBE_SIMPLE,
                                                     t!("network_mining.address"));
                         ui.label(RichText::new(address_label).size(15.0).color(Colors::GRAY));
                     });
@@ -497,6 +497,7 @@ impl WalletTransport {
                             // Parse amount and send over Tor.
                             if let Ok(a) = amount_from_hr_string(self.amount_edit.as_str()) {
                                 cb.hide_keyboard();
+                                modal.disable_closing();
                                 let mut w_sending = self.tor_sending.write().unwrap();
                                 *w_sending = true;
                                 {
