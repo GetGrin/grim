@@ -17,9 +17,9 @@ use egui::{Align, Id, Layout, Margin, RichText, Rounding, ScrollArea, Widget};
 
 use crate::AppConfig;
 use crate::gui::Colors;
-use crate::gui::icons::{ARROW_LEFT, CARET_RIGHT, CHECK, CHECK_FAT, COMPUTER_TOWER, FLAG, FOLDER_LOCK, FOLDER_OPEN, GEAR, GLOBE, GLOBE_SIMPLE, LOCK_KEY, PLUS, SIDEBAR_SIMPLE, SPINNER, SUITCASE, WARNING_CIRCLE};
+use crate::gui::icons::{ARROW_LEFT, CARET_RIGHT, COMPUTER_TOWER, FOLDER_LOCK, FOLDER_OPEN, GEAR, GLOBE, GLOBE_SIMPLE, LOCK_KEY, PLUS, SIDEBAR_SIMPLE, SPINNER, SUITCASE, WARNING_CIRCLE};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Modal, NodeSetup, Root, TitlePanel, View};
+use crate::gui::views::{Modal, Root, TitlePanel, View};
 use crate::gui::views::types::{ModalContainer, ModalPosition, TextEditOptions, TitleContentType, TitleType};
 use crate::gui::views::wallets::creation::WalletCreation;
 use crate::gui::views::wallets::types::WalletTabType;
@@ -51,9 +51,6 @@ pub struct WalletsContent {
 /// Identifier for wallet opening [`Modal`].
 const OPEN_WALLET_MODAL: &'static str = "open_wallet_modal";
 
-/// Identifier for wallet opening [`Modal`].
-const SETTINGS_MODAL: &'static str = "settings_modal";
-
 impl Default for WalletsContent {
     fn default() -> Self {
         Self {
@@ -65,7 +62,6 @@ impl Default for WalletsContent {
             show_wallets_at_dual_panel: AppConfig::show_wallets_at_dual_panel(),
             modal_ids: vec![
                 OPEN_WALLET_MODAL,
-                SETTINGS_MODAL,
                 WalletCreation::NAME_PASS_MODAL
             ]
         }
@@ -87,7 +83,6 @@ impl ModalContainer for WalletsContent {
             WalletCreation::NAME_PASS_MODAL => {
                 self.creation_content.name_pass_modal_ui(ui, modal, cb)
             },
-            SETTINGS_MODAL => self.settings_modal_ui(ui, modal),
             _ => {}
         }
     }
@@ -304,7 +299,7 @@ impl WalletsContent {
         }, |ui, frame| {
             View::title_button(ui, GEAR, || {
                 // Show settings modal.
-                Modal::new(SETTINGS_MODAL)
+                Modal::new(Root::SETTINGS_MODAL)
                     .position(ModalPosition::CenterTop)
                     .title(t!("settings"))
                     .show();
@@ -592,89 +587,6 @@ impl WalletsContent {
                 });
             });
             ui.add_space(6.0);
-        });
-    }
-
-    /// Draw creating wallet name/password input [`Modal`] content.
-    pub fn settings_modal_ui(&mut self, ui: &mut egui::Ui, modal: &Modal) {
-        ui.add_space(6.0);
-
-        // Draw chain type selection.
-        NodeSetup::chain_type_ui(ui);
-
-        ui.add_space(8.0);
-        View::horizontal_line(ui, Colors::ITEM_STROKE);
-        ui.add_space(6.0);
-
-        ui.vertical_centered(|ui| {
-            ui.label(RichText::new(format!("{} {}", GLOBE_SIMPLE, t!("language")))
-                .size(16.0)
-                .color(Colors::GRAY)
-            );
-        });
-        ui.add_space(6.0);
-
-        // Draw available list of languages to select.
-        let locales = rust_i18n::available_locales!();
-        for (index, locale) in locales.iter().enumerate() {
-            Self::language_item_ui(locale, ui, index, locales.len(), modal);
-        }
-
-        ui.add_space(8.0);
-
-        // Show button to close modal.
-        ui.vertical_centered_justified(|ui| {
-            View::button(ui, t!("close"), Colors::WHITE, || {
-                modal.close();
-            });
-        });
-        ui.add_space(6.0);
-    }
-
-    /// Draw language selection item content.
-    fn language_item_ui(locale: &str, ui: &mut egui::Ui, index: usize, len: usize, modal: &Modal) {
-        // Setup layout size.
-        let mut rect = ui.available_rect_before_wrap();
-        rect.set_height(50.0);
-
-        // Draw round background.
-        let bg_rect = rect.clone();
-        let item_rounding = View::item_rounding(index, len, false);
-        ui.painter().rect(bg_rect, item_rounding, Colors::FILL, View::ITEM_STROKE);
-
-        ui.vertical(|ui| {
-            ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
-                // Draw button to select language.
-                let is_current = if let Some(lang) = AppConfig::locale() {
-                    lang == locale
-                } else {
-                    rust_i18n::locale() == locale
-                };
-                if !is_current {
-                    View::item_button(ui, View::item_rounding(index, len, true), CHECK, None, || {
-                        rust_i18n::set_locale(locale);
-                        AppConfig::save_locale(locale);
-                        modal.close();
-                    });
-                } else {
-                    ui.add_space(14.0);
-                    ui.label(RichText::new(CHECK_FAT).size(20.0).color(Colors::GREEN));
-                    ui.add_space(14.0);
-                }
-
-                let layout_size = ui.available_size();
-                ui.allocate_ui_with_layout(layout_size, Layout::left_to_right(Align::Center), |ui| {
-                    ui.add_space(12.0);
-                    ui.vertical(|ui| {
-                        // Draw language name.
-                        ui.add_space(12.0);
-                        ui.label(RichText::new(t!("lang_name", locale = locale))
-                            .size(17.0)
-                            .color(Colors::TEXT));
-                        ui.add_space(3.0);
-                    });
-                });
-            });
         });
     }
 
