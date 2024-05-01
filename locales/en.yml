@@ -22,7 +22,7 @@ wallets:
   await_conf_amount: Awaiting confirmation
   await_fin_amount: Awaiting finalization
   locked_amount: Locked
-  txs_empty: 'To receive or send funds manually or through transport use %{message} or %{transport} buttons at the bottom of the screen, to change wallet settings press %{settings}.'
+  txs_empty: 'To receive funds manually or over transport use %{message} or %{transport} buttons at the bottom of the screen, to change wallet settings press %{settings} button.'
   title: Wallets
   create_desc: Create or import existing wallet from saved recovery phrase.
   add: Add wallet

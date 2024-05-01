@@ -27,6 +27,7 @@ use crate::gui::views::types::{ModalPosition, TextEditOptions};
 use crate::gui::views::wallets::wallet::types::{WalletTab, WalletTabType};
 use crate::gui::views::wallets::wallet::WalletContent;
 use crate::tor::Tor;
+use crate::wallet::types::WalletData;
 use crate::wallet::Wallet;
 
 /// Wallet transport tab content.
@@ -153,20 +154,24 @@ impl WalletTransport {
 
     /// Draw Tor transport content.
     fn tor_ui(&mut self, ui: &mut egui::Ui, wallet: &mut Wallet, cb: &dyn PlatformCallbacks) {
+        let data = wallet.get_data().unwrap();
+
         // Draw header content.
         self.tor_header_ui(ui, wallet);
 
         // Draw receive info content.
         if wallet.slatepack_address().is_some() {
-            self.tor_receive_ui(ui, wallet, cb);
+            self.tor_receive_ui(ui, wallet, &data, cb);
         }
 
         // Draw send content.
-        self.tor_send_ui(ui, cb);
+        if data.info.amount_currently_spendable > 0 {
+            self.tor_send_ui(ui, cb);
+        }
     }
 
     /// Draw Tor transport header content.
-    fn tor_header_ui(&self, ui: &mut egui::Ui, wallet: &mut Wallet) {
+    fn tor_header_ui(&self, ui: &mut egui::Ui, wallet: &Wallet) {
         // Setup layout size.
         let mut rect = ui.available_rect_before_wrap();
         rect.set_height(78.0);
@@ -245,7 +250,7 @@ impl WalletTransport {
     }
 
     /// Draw tor transport settings [`Modal`] content.
-    fn tor_settings_modal_ui(&self, ui: &mut egui::Ui, wallet: &mut Wallet, modal: &Modal) {
+    fn tor_settings_modal_ui(&self, ui: &mut egui::Ui, wallet: &Wallet, modal: &Modal) {
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("transport.tor_autorun_desc"))
@@ -268,9 +273,14 @@ impl WalletTransport {
     }
 
     /// Draw Tor send content.
-    fn tor_receive_ui(&self, ui: &mut egui::Ui, wallet: &mut Wallet, cb: &dyn PlatformCallbacks) {
+    fn tor_receive_ui(&self,
+                      ui: &mut egui::Ui,
+                      wallet: &Wallet,
+                      data: &WalletData,
+                      cb: &dyn PlatformCallbacks) {
         let slatepack_addr = wallet.slatepack_address().unwrap();
         let service_id = &wallet.identifier();
+        let can_send = data.info.amount_currently_spendable > 0;
 
         // Setup layout size.
         let mut rect = ui.available_rect_before_wrap();
@@ -278,13 +288,21 @@ impl WalletTransport {
 
         // Draw round background.
         let bg_rect = rect.clone();
-        let item_rounding = View::item_rounding(1, 3, false);
+        let item_rounding = if can_send {
+            View::item_rounding(1, 3, false)
+        } else {
+            View::item_rounding(1, 2, false)
+        };
         ui.painter().rect(bg_rect, item_rounding, Colors::BUTTON, View::ITEM_STROKE);
 
         ui.vertical(|ui| {
             ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
                 // Draw button to setup Tor transport.
-                let button_rounding = View::item_rounding(1, 3, true);
+                let button_rounding = if can_send {
+                    View::item_rounding(1, 3, true)
+                } else {
+                    View::item_rounding(1, 2, true)
+                };
                 View::item_button(ui, button_rounding, QR_CODE, None, || {
                     //TODO: qr for address
                 });

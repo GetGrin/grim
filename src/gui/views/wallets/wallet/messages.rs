@@ -148,7 +148,7 @@ impl WalletMessages {
         ui.add_space(3.0);
 
         // Show creation of request to send or receive funds.
-        self.request_ui(ui, cb);
+        self.request_ui(ui, wallet, cb);
 
         ui.add_space(12.0);
         View::horizontal_line(ui, Colors::ITEM_STROKE);
@@ -183,48 +183,61 @@ impl WalletMessages {
     /// Draw creation of request to send or receive funds.
     fn request_ui(&mut self,
                   ui: &mut egui::Ui,
+                  wallet: &Wallet,
                   cb: &dyn PlatformCallbacks) {
         ui.label(RichText::new(t!("wallets.create_request_desc"))
             .size(16.0)
             .color(Colors::INACTIVE_TEXT));
         ui.add_space(7.0);
 
-        // Setup spacing between buttons.
-        ui.spacing_mut().item_spacing = egui::Vec2::new(6.0, 0.0);
+        // Show send button only if balance is not empty.
+        let data = wallet.get_data().unwrap();
+        if data.info.amount_currently_spendable > 0 {
+            // Setup spacing between buttons.
+            ui.spacing_mut().item_spacing = egui::Vec2::new(6.0, 0.0);
 
-        ui.columns(2, |columns| {
-            columns[0].vertical_centered_justified(|ui| {
-                // Draw send request creation button.
-                let send_text = format!("{} {}", UPLOAD_SIMPLE, t!("wallets.send"));
-                View::button(ui, send_text, Colors::BUTTON, || {
-                    // Setup modal values.
-                    self.send_request = true;
-                    self.amount_edit = "".to_string();
-                    self.request_error = None;
-                    // Show send amount modal.
-                    Modal::new(AMOUNT_MODAL)
-                        .position(ModalPosition::CenterTop)
-                        .title(t!("wallets.send"))
-                        .show();
-                    cb.show_keyboard();
+            ui.columns(2, |columns| {
+                columns[0].vertical_centered_justified(|ui| {
+                    // Draw send request creation button.
+                    let send_text = format!("{} {}", UPLOAD_SIMPLE, t!("wallets.send"));
+                    View::button(ui, send_text, Colors::BUTTON, || {
+                        // Setup modal values.
+                        self.send_request = true;
+                        self.amount_edit = "".to_string();
+                        self.request_error = None;
+                        // Show send amount modal.
+                        Modal::new(AMOUNT_MODAL)
+                            .position(ModalPosition::CenterTop)
+                            .title(t!("wallets.send"))
+                            .show();
+                        cb.show_keyboard();
+                    });
+                });
+                columns[1].vertical_centered_justified(|ui| {
+                    // Draw invoice request creation button.
+                    self.receive_button_ui(ui, cb);
                 });
             });
-            columns[1].vertical_centered_justified(|ui| {
-                // Draw invoice request creation button.
-                let receive_text = format!("{} {}", DOWNLOAD_SIMPLE, t!("wallets.receive"));
-                View::button(ui, receive_text, Colors::BUTTON, || {
-                    // Setup modal values.
-                    self.send_request = false;
-                    self.amount_edit = "".to_string();
-                    self.request_error = None;
-                    // Show receive amount modal.
-                    Modal::new(AMOUNT_MODAL)
-                        .position(ModalPosition::CenterTop)
-                        .title(t!("wallets.receive"))
-                        .show();
-                    cb.show_keyboard();
-                });
-            });
+        } else {
+            // Draw invoice creation button.
+            self.receive_button_ui(ui, cb);
+        }
+    }
+
+    /// Draw invoice request creation button.
+    fn receive_button_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
+        let receive_text = format!("{} {}", DOWNLOAD_SIMPLE, t!("wallets.receive"));
+        View::button(ui, receive_text, Colors::BUTTON, || {
+            // Setup modal values.
+            self.send_request = false;
+            self.amount_edit = "".to_string();
+            self.request_error = None;
+            // Show receive amount modal.
+            Modal::new(AMOUNT_MODAL)
+                .position(ModalPosition::CenterTop)
+                .title(t!("wallets.receive"))
+                .show();
+            cb.show_keyboard();
         });
     }
 
