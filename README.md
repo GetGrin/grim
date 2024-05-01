@@ -1,7 +1,7 @@
 # <img height="22" src="https://github.com/ardocrat/grim/blob/master/android/app/src/main/ic_launcher-playstore.png?raw=true"> Grim <img height="20" src="https://github.com/mimblewimble/site/blob/master/assets/images/grin-logo.png?raw=true"> <img height="20" src="https://github.com/ardocrat/grim/blob/master/img/logo.png?raw=true">
 Cross-platform GUI for [GRiN ツ](https://grin.mw) in [Rust](https://www.rust-lang.org/) 
-for maximum compatibility with original [Mimblewimble](https://github.com/mimblewimble) implementation.
-Initially supported platforms are Linux, Mac, Windows, limited Android and possible web support with help of [egui](https://github.com/emilk/egui) - GUI library in pure Rust.
+for maximum compatibility with original [Mimblewimble](https://github.com/mimblewimble/grin) implementation.
+Initially supported platforms are Linux, Mac, Windows, limited Android and possible web support with help of [egui](https://github.com/emilk/egui) - immediate mode GUI library in pure Rust.
 
 Named by the character [Grim](http://harrypotter.wikia.com/wiki/Grim) - the shape of a large, black, menacing, spectral giant dog.
 
