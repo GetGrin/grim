@@ -1,6 +1,9 @@
 package mw.gri.android;
 
+import android.Manifest;
 import android.content.*;
+import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Process;
 import android.system.ErrnoException;
@@ -8,17 +11,21 @@ import android.system.Os;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
+import androidx.annotation.NonNull;
 import androidx.core.graphics.Insets;
 import androidx.core.view.DisplayCutoutCompat;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import com.google.androidgamesdk.GameActivity;
+import org.jetbrains.annotations.NotNull;
 
 import static android.content.ClipDescription.MIMETYPE_TEXT_HTML;
 import static android.content.ClipDescription.MIMETYPE_TEXT_PLAIN;
 
 public class MainActivity extends GameActivity {
     public static String STOP_APP_ACTION = "STOP_APP";
+
+    private static final int NOTIFICATIONS_PERMISSION_CODE = 1;
 
     static {
         System.loadLibrary("grim");
@@ -49,9 +56,6 @@ public class MainActivity extends GameActivity {
         // Register receiver to finish activity from the BackgroundService.
         registerReceiver(mBroadcastReceiver, new IntentFilter(STOP_APP_ACTION));
 
-        // Start notification service.
-        BackgroundService.start(this);
-
         // Listener for display insets (cutouts) to pass values into native code.
         View content = getWindow().getDecorView().findViewById(android.R.id.content);
         ViewCompat.setOnApplyWindowInsetsListener(content, (v, insets) -> {
@@ -81,6 +85,32 @@ public class MainActivity extends GameActivity {
 
             return insets;
         });
+
+        findViewById(android.R.id.content).post(() -> {
+            // Request notifications permissions.
+            if (Build.VERSION.SDK_INT >= 33) {
+                String notificationsPermission = Manifest.permission.POST_NOTIFICATIONS;
+                if (checkSelfPermission(notificationsPermission) != PackageManager.PERMISSION_GRANTED) {
+                    requestPermissions(new String[] { notificationsPermission }, NOTIFICATIONS_PERMISSION_CODE);
+                } else {
+                    // Start notification service.
+                    BackgroundService.start(this);
+                }
+            } else {
+                // Start notification service.
+                BackgroundService.start(this);
+            }
+        });
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull @NotNull String[] permissions, @NonNull @NotNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == NOTIFICATIONS_PERMISSION_CODE && grantResults.length != 0 &&
+                grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            // Start notification service.
+            BackgroundService.start(this);
+        }
     }
 
     @Override
