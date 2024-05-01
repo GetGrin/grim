@@ -41,10 +41,12 @@ then
   yes | mkdir -p android/app/src/main/jniLibs/${arch} && cp -f target/${platform}/${type}/libgrim.so android/app/src/main/jniLibs/${arch}
   cd android
   ./gradlew clean
+  #./gradlew assembleRelease
   ./gradlew build
   # Install on several devices
   for SERIAL in $(adb devices | grep -v List | cut -f 1);
     do
+      #adb -s $SERIAL install app/build/outputs/apk/release/app-release.apk
       adb -s $SERIAL install app/build/outputs/apk/debug/app-debug.apk
       sleep 1s
       adb -s $SERIAL shell am start -n mw.gri.android/.MainActivity;
