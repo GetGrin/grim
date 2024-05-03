@@ -78,7 +78,7 @@ impl CameraContent {
                 ui.vertical_centered(|ui| {
                     egui::Image::from_texture(sized_image)
                         // Setup to make image cropped at center of square.
-                        .uv(Rect::from([Pos2::new(0.125, 0.0), Pos2::new(1.125, 1.0)]))
+                        .uv(Rect::from([Pos2::new(0.25, 0.0), Pos2::new(1.0, 1.0)]))
                         .max_height(ui.available_width())
                         .maintain_aspect_ratio(false)
                         .shrink_to_fit()
