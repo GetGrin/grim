@@ -12,7 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use lazy_static::lazy_static;
+use std::sync::{Arc, RwLock};
+use jni::JNIEnv;
+use jni::objects::{JByteArray, JObject, JString, JValue};
+
 use winit::platform::android::activity::AndroidApp;
+
 use crate::gui::platform::PlatformCallbacks;
 
 #[derive(Clone)]
@@ -26,6 +32,19 @@ impl Android {
             android_app: app,
         }
     }
+    fn call_java_method(&self, name: &str, sig: &str, args: &[JValue]) -> Option<jni::sys::jvalue> {
+        use jni::objects::{JObject};
+
+        let vm = unsafe { jni::JavaVM::from_raw(self.android_app.vm_as_ptr() as _) }.unwrap();
+        let mut env = vm.attach_current_thread().unwrap();
+        let activity = unsafe {
+            JObject::from_raw(self.android_app.activity_as_ptr() as jni::sys::jobject)
+        };
+        if let Ok(result) = env.call_method(activity, name, sig, args) {
+           return Some(result.as_jni().clone());
+        }
+        None
+    }
 }
 
 impl PlatformCallbacks for Android {
@@ -33,75 +52,89 @@ impl PlatformCallbacks for Android {
         // Disable NDK soft input show call before fix for egui.
         // self.android_app.show_soft_input(false);
 
-        use jni::objects::{JObject};
-
-        let vm = unsafe { jni::JavaVM::from_raw(self.android_app.vm_as_ptr() as _) }.unwrap();
-        let mut env = vm.attach_current_thread().unwrap();
-        let activity = unsafe {
-            JObject::from_raw(self.android_app.activity_as_ptr() as jni::sys::jobject)
-        };
-        let _ = env.call_method(
-            activity,
-            "showKeyboard",
-            "()V",
-            &[]
-        ).unwrap();
+        self.call_java_method("showKeyboard", "()V", &[]).unwrap();
     }
 
     fn hide_keyboard(&self) {
         // Disable NDK soft input hide call before fix for egui.
         // self.android_app.hide_soft_input(false);
 
-        use jni::objects::{JObject};
-
-        let vm = unsafe { jni::JavaVM::from_raw(self.android_app.vm_as_ptr() as _) }.unwrap();
-        let mut env = vm.attach_current_thread().unwrap();
-        let activity = unsafe {
-            JObject::from_raw(self.android_app.activity_as_ptr() as jni::sys::jobject)
-        };
-        let _ = env.call_method(
-            activity,
-            "hideKeyboard",
-            "()V",
-            &[]
-        ).unwrap();
+        self.call_java_method("hideKeyboard", "()V", &[]).unwrap();
     }
 
     fn copy_string_to_buffer(&self, data: String) {
-        use jni::objects::{JObject, JValue};
-
         let vm = unsafe { jni::JavaVM::from_raw(self.android_app.vm_as_ptr() as _) }.unwrap();
         let mut env = vm.attach_current_thread().unwrap();
-        let activity = unsafe {
-            JObject::from_raw(self.android_app.activity_as_ptr() as jni::sys::jobject)
-        };
         let arg_value = env.new_string(data).unwrap();
-        let _ = env.call_method(
-            activity,
-            "copyText",
-            "(Ljava/lang/String;)V",
-            &[JValue::Object(&JObject::from(arg_value))]
-        ).unwrap();
+        self.call_java_method("copyText",
+                              "(Ljava/lang/String;)V",
+                              &[JValue::Object(&JObject::from(arg_value))]).unwrap();
     }
 
     fn get_string_from_buffer(&self) -> String {
-        use jni::objects::{JObject, JString};
-
+        let result = self.call_java_method("pasteText", "()Ljava/lang/String;", &[]).unwrap();
         let vm = unsafe { jni::JavaVM::from_raw(self.android_app.vm_as_ptr() as _) }.unwrap();
         let mut env = vm.attach_current_thread().unwrap();
-        let activity = unsafe {
-            JObject::from_raw(self.android_app.activity_as_ptr() as jni::sys::jobject)
-        };
-        let result = env.call_method(
-            activity,
-            "pasteText",
-            "()Ljava/lang/String;",
-            &[]
-        ).unwrap();
-        let j_object: jni::sys::jobject = unsafe { result.as_jni().l };
+        let j_object: jni::sys::jobject = unsafe { result.l };
         let paste_data: String = unsafe {
             env.get_string(JString::from(JObject::from_raw(j_object)).as_ref()).unwrap().into()
         };
         paste_data
+    }
+
+    fn cameras_amount(&self) -> u32 {
+        let result = self.call_java_method("camerasAmount", "()I", &[]).unwrap();
+        let amount = unsafe { result.i };
+        amount as u32
+    }
+
+    fn switch_camera(&self) {
+        self.call_java_method("switchCamera", "()V", &[]).unwrap();
+    }
+
+    fn start_camera(&self) {
+        // Clear image.
+        let mut w_image = LAST_CAMERA_IMAGE.write().unwrap();
+        *w_image = None;
+        // Start camera.
+        self.call_java_method("startCamera", "()V", &[]).unwrap();
+    }
+
+    fn stop_camera(&self) {
+        // Stop camera.
+        self.call_java_method("stopCamera", "()V", &[]).unwrap();
+        // Clear image.
+        let mut w_image = LAST_CAMERA_IMAGE.write().unwrap();
+        *w_image = None;
+    }
+
+    fn camera_image(&self) -> Option<(Vec<u8>, u32)> {
+        let r_image = LAST_CAMERA_IMAGE.read().unwrap();
+        if r_image.is_some() {
+            return Some(r_image.clone().unwrap());
+        }
+        None
+    }
+}
+
+lazy_static! {
+    static ref LAST_CAMERA_IMAGE: Arc<RwLock<Option<(Vec<u8>, u32)>>> = Arc::new(RwLock::new(None));
+}
+
+#[allow(dead_code)]
+#[cfg(target_os = "android")]
+#[allow(non_snake_case)]
+#[no_mangle]
+/// Callback from Java code with last entered character from soft keyboard.
+pub extern "C" fn Java_mw_gri_android_MainActivity_onCameraImage(
+    env: JNIEnv,
+    _class: JObject,
+    buff: jni::sys::jbyteArray,
+    rotation: jni::sys::jint,
+) {
+    let arr = unsafe { JByteArray::from_raw(buff) };
+    let image : Vec<u8> = env.convert_byte_array(arr).unwrap();
+    if let Ok(mut w_image) = LAST_CAMERA_IMAGE.write() {
+        *w_image = Some((image, rotation as u32));
     }
 }

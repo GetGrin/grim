@@ -26,4 +26,9 @@ pub trait PlatformCallbacks {
     fn hide_keyboard(&self);
     fn copy_string_to_buffer(&self, data: String);
     fn get_string_from_buffer(&self) -> String;
+    fn cameras_amount(&self) -> u32;
+    fn switch_camera(&self);
+    fn start_camera(&self);
+    fn stop_camera(&self);
+    fn camera_image(&self) -> Option<(Vec<u8>, u32)>;
 }

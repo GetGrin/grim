@@ -7,13 +7,13 @@ def keystoreProperties = new Properties()
 keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
 
 android {
-    compileSdk 33
+    compileSdk 34
     ndkVersion '26.0.10792818'
 
     defaultConfig {
         applicationId "mw.gri.android"
         minSdk 24
-        targetSdk 33
+        targetSdk 34
         versionCode 1
         versionName "0.1.0"
     }
@@ -48,19 +48,12 @@ android {
 dependencies {
     implementation 'androidx.appcompat:appcompat:1.6.1'
 
-    // To use the Android Frame Pacing library
-    //implementation "androidx.games:games-frame-pacing:1.9.1"
-
-    // To use the Android Performance Tuner
-    //implementation "androidx.games:games-performance-tuner:1.5.0"
-
     // To use the Games Activity library
     implementation "androidx.games:games-activity:2.0.2"
 
-    // To use the Games Controller Library
-    //implementation "androidx.games:games-controller:1.1.0"
-
-    // To use the Games Text Input Library
-    //implementation "androidx.games:games-text-input:1.1.0"
+    // Android Camera
+    implementation 'androidx.camera:camera-core:1.2.3'
+    implementation 'androidx.camera:camera-camera2:1.2.3'
+    implementation 'androidx.camera:camera-lifecycle:1.2.3'
 }
 

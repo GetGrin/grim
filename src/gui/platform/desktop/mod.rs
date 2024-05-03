@@ -31,4 +31,21 @@ impl PlatformCallbacks for Desktop {
         let mut clipboard = arboard::Clipboard::new().unwrap();
         clipboard.get_text().unwrap_or("".to_string())
     }
+
+    fn camera_image(&self) -> Option<(Vec<u8>, u32)> {
+        Some((vec![].into(), 0))
+    }
+
+    fn cameras_amount(&self) -> u32 {
+        0
+    }
+
+    fn start_camera(&self) {
+    }
+
+    fn stop_camera(&self) {
+    }
+
+    fn switch_camera(&self) {
+    }
 }

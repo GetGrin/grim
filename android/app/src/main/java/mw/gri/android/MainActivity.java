@@ -3,21 +3,29 @@ package mw.gri.android;
 import android.Manifest;
 import android.content.*;
 import android.content.pm.PackageManager;
+import android.content.res.Configuration;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Process;
 import android.system.ErrnoException;
 import android.system.Os;
+import android.util.Size;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 import androidx.annotation.NonNull;
+import androidx.camera.core.*;
+import androidx.camera.lifecycle.ProcessCameraProvider;
+import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.DisplayCutoutCompat;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import com.google.androidgamesdk.GameActivity;
-import org.jetbrains.annotations.NotNull;
+import com.google.common.util.concurrent.ListenableFuture;
+
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import static android.content.ClipDescription.MIMETYPE_TEXT_HTML;
 import static android.content.ClipDescription.MIMETYPE_TEXT_PLAIN;
@@ -26,6 +34,7 @@ public class MainActivity extends GameActivity {
     public static String STOP_APP_ACTION = "STOP_APP";
 
     private static final int NOTIFICATIONS_PERMISSION_CODE = 1;
+    private static final int CAMERA_PERMISSION_CODE = 2;
 
     static {
         System.loadLibrary("grim");
@@ -41,9 +50,19 @@ public class MainActivity extends GameActivity {
         }
     };
 
+    private final ImageAnalysis mImageAnalysis = new ImageAnalysis.Builder()
+            .setTargetResolution(new Size(640, 480))
+            .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+            .build();
+
+    private ListenableFuture<ProcessCameraProvider> mCameraProviderFuture = null;
+    private ProcessCameraProvider mCameraProvider = null;
+    private ExecutorService mCameraExecutor = null;
+    private boolean mUseBackCamera = true;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        // Setup HOME environment variable for native code configurations.
+        // Setup environment variables for native code.
         try {
             Os.setenv("HOME", getExternalFilesDir("").getPath(), true);
             Os.setenv("XDG_CACHE_HOME", getExternalCacheDir().getPath(), true);
@@ -87,7 +106,7 @@ public class MainActivity extends GameActivity {
         });
 
         findViewById(android.R.id.content).post(() -> {
-            // Request notifications permissions.
+            // Request notifications permissions if needed.
             if (Build.VERSION.SDK_INT >= 33) {
                 String notificationsPermission = Manifest.permission.POST_NOTIFICATIONS;
                 if (checkSelfPermission(notificationsPermission) != PackageManager.PERMISSION_GRANTED) {
@@ -104,12 +123,30 @@ public class MainActivity extends GameActivity {
     }
 
     @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull @NotNull String[] permissions, @NonNull @NotNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == NOTIFICATIONS_PERMISSION_CODE && grantResults.length != 0 &&
-                grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-            // Start notification service.
-            BackgroundService.start(this);
+    public void onConfigurationChanged(Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        // Called on screen orientation change to restart camera.
+        if (mCameraProvider != null) {
+            stopCamera();
+            startCamera();
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] results) {
+        super.onRequestPermissionsResult(requestCode, permissions, results);
+        if (results.length != 0 && results[0] == PackageManager.PERMISSION_GRANTED) {
+            switch (requestCode) {
+                case NOTIFICATIONS_PERMISSION_CODE: {
+                    // Start notification service.
+                    BackgroundService.start(this);
+                    return;
+                }
+                case CAMERA_PERMISSION_CODE: {
+                    // Start camera.
+                    startCamera();
+                }
+            }
         }
     }
 
@@ -121,7 +158,7 @@ public class MainActivity extends GameActivity {
                 onInput(event.getCharacters());
                 return false;
             }
-        // Pass any other input values into native code.
+            // Pass any other input values into native code.
         } else if (event.getAction() == KeyEvent.ACTION_UP &&
                 event.getKeyCode() != KeyEvent.KEYCODE_ENTER &&
                 event.getKeyCode() != KeyEvent.KEYCODE_BACK) {
@@ -201,13 +238,98 @@ public class MainActivity extends GameActivity {
         return text;
     }
 
+    // Called from native code to show keyboard.
     public void showKeyboard() {
-        InputMethodManager imm = (InputMethodManager )getSystemService(Context.INPUT_METHOD_SERVICE);
+        InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
         imm.showSoftInput(getWindow().getDecorView(), InputMethodManager.SHOW_IMPLICIT);
     }
 
+    // Called from native code to hide keyboard.
     public void hideKeyboard() {
-        InputMethodManager imm = (InputMethodManager )getSystemService(Context.INPUT_METHOD_SERVICE);
+        InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
         imm.hideSoftInputFromWindow(getWindow().getDecorView().getWindowToken(), 0);
     }
+
+    // Called from native code to start camera.
+    public void startCamera() {
+        // Check permissions.
+        String notificationsPermission = Manifest.permission.CAMERA;
+        if (checkSelfPermission(notificationsPermission) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[] { notificationsPermission }, CAMERA_PERMISSION_CODE);
+        } else {
+            // Start .
+            if (mCameraProviderFuture == null) {
+                mCameraProviderFuture = ProcessCameraProvider.getInstance(this);
+                mCameraProviderFuture.addListener(() -> {
+                    try {
+                        mCameraProvider = mCameraProviderFuture.get();
+                        // Launch camera.
+                        openCamera();
+                    } catch (Exception e) {
+                        View content = findViewById(android.R.id.content);
+                        if (content != null) {
+                            content.post(this::stopCamera);
+                        }
+                    }
+                }, ContextCompat.getMainExecutor(this));
+            } else {
+                View content = findViewById(android.R.id.content);
+                if (content != null) {
+                    content.post(this::openCamera);
+                }
+            }
+        }
+    }
+
+    // Open camera after initialization or start after stop.
+    private void openCamera() {
+        // Set up the image analysis use case which will process frames in real time.
+        if (mCameraExecutor == null) {
+            mCameraExecutor = Executors.newSingleThreadExecutor();
+            mImageAnalysis.setAnalyzer(mCameraExecutor, image -> {
+                // Convert image to JPEG.
+                byte[] data = Utils.convertCameraImage(image);
+                // Send image to native code.
+                onCameraImage(data, image.getImageInfo().getRotationDegrees());
+                image.close();
+            });
+        }
+
+        // Select back camera initially.
+        CameraSelector cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA;
+        if (!mUseBackCamera) {
+            cameraSelector = CameraSelector.DEFAULT_FRONT_CAMERA;
+        }
+        // Apply declared configs to CameraX using the same lifecycle owner
+        mCameraProvider.unbindAll();
+        mCameraProvider.bindToLifecycle(this, cameraSelector, mImageAnalysis);
+    }
+
+    // Called from native code to stop camera.
+    public void stopCamera() {
+        View content = findViewById(android.R.id.content);
+        if (content != null) {
+            content.post(() -> {
+                mCameraProvider.unbindAll();
+            });
+        }
+    }
+
+    // Called from native code to get number of cameras.
+    public int camerasAmount() {
+        if (mCameraProvider == null) {
+            return 0;
+        }
+        return mCameraProvider.getAvailableCameraInfos().size();
+    }
+
+    // Called from native code to switch camera.
+    public void switchCamera() {
+        mUseBackCamera = true;
+        stopCamera();
+        startCamera();
+    }
+
+    // Pass image from camera into native code.
+    public native void onCameraImage(byte[] buff, int rotation);
 }

@@ -31,3 +31,6 @@ pub use network::*;
 
 mod wallets;
 pub use wallets::*;
+
+mod camera;
+pub use camera::*;

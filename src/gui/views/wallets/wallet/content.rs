@@ -21,7 +21,7 @@ use crate::AppConfig;
 use crate::gui::Colors;
 use crate::gui::icons::{BRIDGE, CHAT_CIRCLE_TEXT, CHECK, CHECK_FAT, FOLDER_USER, GEAR_FINE, GRAPH, PACKAGE, PATH, POWER, REPEAT, SCAN, USERS_THREE};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Modal, Root, View};
+use crate::gui::views::{CameraContent, Modal, Root, View};
 use crate::gui::views::types::{ModalPosition, TextEditOptions};
 use crate::gui::views::wallets::{WalletTransactions, WalletMessages, WalletTransport, WalletSettings};
 use crate::gui::views::wallets::types::{GRIN, WalletTab, WalletTabType};
@@ -41,8 +41,13 @@ pub struct WalletContent {
     /// Flag to check if error occurred during account creation at [`Modal`].
     account_creation_error: bool,
 
+    /// Camera content for QR scan [`Modal`].
+    camera_content: CameraContent,
+    /// QR code scan result
+    qr_scan_result: Option<String>,
+
     /// Current tab content to show.
-    pub current_tab: Box<dyn WalletTab>,
+    pub current_tab: Box<dyn WalletTab>
 }
 
 impl Default for WalletContent {
@@ -52,6 +57,8 @@ impl Default for WalletContent {
             account_creating: false,
             account_label_edit: "".to_string(),
             account_creation_error: false,
+            camera_content: CameraContent::default(),
+            qr_scan_result: None,
             current_tab: Box::new(WalletTransactions::default())
         }
     }
@@ -59,6 +66,9 @@ impl Default for WalletContent {
 
 /// Identifier for account list [`Modal`].
 const ACCOUNT_LIST_MODAL: &'static str = "account_list_modal";
+
+/// Identifier for QR code scan [`Modal`].
+const QR_CODE_SCAN_MODAL: &'static str = "qr_code_scan_modal";
 
 impl WalletContent {
     pub fn ui(&mut self,
@@ -156,6 +166,11 @@ impl WalletContent {
                             self.account_list_modal_ui(ui, wallet, modal, cb);
                         });
                     }
+                    QR_CODE_SCAN_MODAL => {
+                        Modal::ui(ui.ctx(), |ui, modal| {
+                            self.scan_qr_modal_ui(ui, wallet, modal, cb);
+                        });
+                    }
                     _ => {}
                 }
             }
@@ -177,7 +192,15 @@ impl WalletContent {
         ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
             // Draw button to scan QR code.
             View::item_button(ui, View::item_rounding(0, 2, true), SCAN, None, || {
-                //TODO: Scan with QR code.
+                // Load accounts.
+                self.qr_scan_result = None;
+                // Show account list modal.
+                Modal::new(QR_CODE_SCAN_MODAL)
+                    .position(ModalPosition::CenterTop)
+                    .title(t!("scan_qr"))
+                    .closeable(false)
+                    .show();
+                cb.start_camera();
             });
 
             // Draw button to show list of accounts.
@@ -334,6 +357,36 @@ impl WalletContent {
             });
             ui.add_space(6.0);
         }
+    }
+
+    /// Draw QR scanner [`Modal`] content.
+    fn scan_qr_modal_ui(&mut self,
+                             ui: &mut egui::Ui,
+                             wallet: &mut Wallet,
+                             modal: &Modal,
+                             cb: &dyn PlatformCallbacks) {
+        ui.add_space(6.0);
+        if let Some(result) = &self.qr_scan_result {
+            ui.vertical_centered(|ui| {
+                ui.label(RichText::new(result).size(16.0).color(Colors::INACTIVE_TEXT));
+            });
+        } else if let Some(result) = self.camera_content.qr_scan_result() {
+            ///TODO: parse result and show
+            cb.stop_camera();
+            self.camera_content.clear_state();
+            println!("result: {}", result);
+            self.qr_scan_result = Some(result);
+        } else {
+            self.camera_content.ui(ui, cb);
+        }
+        ui.add_space(6.0);
+        ui.vertical_centered_justified(|ui| {
+            View::button(ui, t!("modal.cancel"), Colors::WHITE, || {
+                cb.stop_camera();
+                modal.close();
+            });
+        });
+        ui.add_space(6.0);
     }
 
     /// Draw tab buttons in the bottom of the screen.

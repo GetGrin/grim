@@ -17,6 +17,7 @@ settings: Настройки
 language: Язык
 scan: Сканировать
 qr_code: QR-код
+scan_qr: Сканировать QR-код
 repeat: Повторить
 wallets:
   await_conf_amount: Ожидает подтверждения

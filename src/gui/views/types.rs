@@ -137,3 +137,20 @@ impl TextEditOptions {
         self
     }
 }
+
+/// QR code scanning state.
+pub struct QrScanState {
+    // Flag to check if image is processing to find QR code.
+    pub(crate) image_processing: bool,
+    // Found QR code content.
+    pub qr_scan_result: Option<String>
+}
+
+impl Default for QrScanState {
+    fn default() -> Self {
+        Self {
+            image_processing: false,
+            qr_scan_result: None,
+        }
+    }
+}

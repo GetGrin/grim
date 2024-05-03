@@ -521,9 +521,12 @@ impl View {
         });
     }
 
+    /// Size of big loading spinner.
+    pub const BIG_SPINNER_SIZE: f32 = 104.0;
+
     /// Draw big gold loading spinner.
     pub fn big_loading_spinner(ui: &mut egui::Ui) {
-        Spinner::new().size(104.0).color(Colors::GOLD).ui(ui);
+        Spinner::new().size(Self::BIG_SPINNER_SIZE).color(Colors::GOLD).ui(ui);
     }
 
     /// Draw small gold loading spinner.

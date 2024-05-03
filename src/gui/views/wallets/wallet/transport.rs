@@ -401,7 +401,6 @@ impl WalletTransport {
     }
 
     /// Draw amount input [`Modal`] content to send over Tor.
-    /// Draw amount input [`Modal`] content to send over Tor.
     fn send_tor_modal_ui(&mut self,
                        ui: &mut egui::Ui,
                        wallet: &mut Wallet,
