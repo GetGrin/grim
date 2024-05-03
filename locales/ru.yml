@@ -71,6 +71,7 @@ wallets:
   tx_receiving: Получение
   tx_confirming: Ожидает подтверждения
   tx_canceled: Отменено
+  tx_cancelling: Отмена
   tx_finalizing: Завершение
   tx_confirmed: Подтверждено
   txs: Транзакции

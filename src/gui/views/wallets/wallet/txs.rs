@@ -365,15 +365,25 @@ impl WalletTransactions {
                         } else if tx.posting {
                             format!("{} {}", DOTS_THREE_CIRCLE, t!("wallets.tx_finalizing"))
                         } else {
-                            match tx.data.tx_type {
-                                TxLogEntryType::TxReceived => {
-                                    format!("{} {}", DOTS_THREE_CIRCLE, t!("wallets.tx_receiving"))
-                                },
-                                TxLogEntryType::TxSent => {
-                                    format!("{} {}", DOTS_THREE_CIRCLE, t!("wallets.tx_sending"))
-                                },
-                                _ => {
-                                    format!("{} {}", DOTS_THREE_CIRCLE, t!("wallets.tx_confirmed"))
+                            if tx.cancelling {
+                                format!("{} {}", DOTS_THREE_CIRCLE, t!("wallets.tx_cancelling"))
+                            } else {
+                                match tx.data.tx_type {
+                                    TxLogEntryType::TxReceived => {
+                                        format!("{} {}",
+                                                DOTS_THREE_CIRCLE,
+                                                t!("wallets.tx_receiving"))
+                                    },
+                                    TxLogEntryType::TxSent => {
+                                        format!("{} {}",
+                                                DOTS_THREE_CIRCLE,
+                                                t!("wallets.tx_sending"))
+                                    },
+                                    _ => {
+                                        format!("{} {}",
+                                                DOTS_THREE_CIRCLE,
+                                                t!("wallets.tx_confirmed"))
+                                    }
                                 }
                             }
                         }

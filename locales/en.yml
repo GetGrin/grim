@@ -71,6 +71,7 @@ wallets:
   tx_receiving: Receiving
   tx_confirming: Awaiting confirmation
   tx_canceled: Canceled
+  tx_cancelling: Cancelling
   tx_finalizing: Finalizing
   tx_confirmed: Confirmed
   txs: Transactions
