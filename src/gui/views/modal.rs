@@ -13,7 +13,7 @@
 // limitations under the License.
 
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::RwLock;
+use std::sync::{Arc, RwLock};
 
 use egui::{Align2, Rect, RichText, Rounding, Stroke, Vec2};
 use egui::epaint::RectShape;
@@ -25,19 +25,18 @@ use crate::gui::views::types::{ModalPosition, ModalState};
 
 lazy_static! {
     /// Showing [`Modal`] state to be accessible from different ui parts.
-    static ref MODAL_STATE: RwLock<ModalState> = RwLock::new(ModalState::default());
+    static ref MODAL_STATE: Arc<RwLock<ModalState>> = Arc::new(RwLock::new(ModalState::default()));
 }
 
 /// Stores data to draw modal [`egui::Window`] at ui.
+#[derive(Clone)]
 pub struct Modal {
     /// Identifier for modal.
     pub(crate) id: &'static str,
     /// Position on the screen.
     position: ModalPosition,
-    /// Flag to show the content.
-    open: AtomicBool,
     /// To check if it can be closed.
-    closeable: AtomicBool,
+    closeable: Arc<AtomicBool>,
     /// Title text
     title: Option<String>
 }
@@ -48,13 +47,12 @@ impl Modal {
     /// Maximum width of the content.
     const DEFAULT_WIDTH: f32 = Root::SIDE_PANEL_WIDTH - (2.0 * Self::DEFAULT_MARGIN);
 
-    /// Create opened and closeable [`Modal`] with center position.
+    /// Create closeable [`Modal`] with center position.
     pub fn new(id: &'static str) -> Self {
         Self {
             id,
             position: ModalPosition::Center,
-            open: AtomicBool::new(true),
-            closeable: AtomicBool::new(true),
+            closeable: Arc::new(AtomicBool::new(true)),
             title: None
         }
     }
@@ -65,14 +63,10 @@ impl Modal {
         self
     }
 
-    /// Check if [`Modal`] is open.
-    pub fn is_open(&self) -> bool {
-        self.open.load(Ordering::Relaxed)
-    }
-
     /// Mark [`Modal`] closed.
     pub fn close(&self) {
-        self.open.store(false, Ordering::Relaxed);
+        let mut w_nav = MODAL_STATE.write().unwrap();
+        w_nav.modal = None;
     }
 
     /// Setup possibility to close [`Modal`].
@@ -119,37 +113,32 @@ impl Modal {
         true
     }
 
-    /// Return id of opened [`Modal`] or remove its instance from [`ModalState`] if it was closed.
+    /// Return id of opened [`Modal`].
     pub fn opened() -> Option<&'static str> {
-        // Check if Modal is showing.
+        // Check if modal is showing.
         {
             if MODAL_STATE.read().unwrap().modal.is_none() {
                 return None;
             }
         }
 
-        // Check if Modal is open.
-        let (is_open, id) = {
-            let r_state = MODAL_STATE.read().unwrap();
-            let modal = r_state.modal.as_ref().unwrap();
-            (modal.is_open(), modal.id)
-        };
-
-        // If Modal is not open, remove it from navigator state.
-        if !is_open {
-            let mut w_state = MODAL_STATE.write().unwrap();
-            w_state.modal = None;
-            return None;
-        }
-        Some(id)
+        // Get identifier of opened modal.
+        let r_state = MODAL_STATE.read().unwrap();
+        let modal = r_state.modal.as_ref().unwrap();
+        Some(modal.id)
     }
 
     /// Draw opened [`Modal`] content.
     pub fn ui(ctx: &egui::Context, add_content: impl FnOnce(&mut egui::Ui, &Modal)) {
-        if let Some(modal) = &MODAL_STATE.read().unwrap().modal {
-            if modal.is_open() {
-                modal.window_ui(ctx, add_content);
-            }
+        let has_modal = {
+            MODAL_STATE.read().unwrap().modal.is_some()
+        };
+        if has_modal {
+            let modal = {
+                let r_state = MODAL_STATE.read().unwrap();
+                r_state.modal.clone().unwrap()
+            };
+            modal.window_ui(ctx, add_content);
         }
     }
 

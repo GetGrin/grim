@@ -32,6 +32,7 @@ pub enum TitleContentType {
 }
 
 /// Position of [`Modal`] on the screen.
+#[derive(Clone)]
 pub enum ModalPosition {
     CenterTop,
     Center
@@ -40,7 +41,8 @@ pub enum ModalPosition {
 /// Global [`Modal`] state.
 #[derive(Default)]
 pub struct ModalState {
-    pub modal: Option<Modal>
+    /// Opened [`Modal`].
+    pub modal: Option<Modal>,
 }
 
 /// Contains identifiers to draw opened [`Modal`] content for current ui container.
@@ -138,12 +140,23 @@ impl TextEditOptions {
     }
 }
 
-/// QR code scanning state.
+/// QR code scan result.
+#[derive(Clone)]
+pub enum QrScanResult {
+    /// Slatepack message.
+    Slatepack(String),
+    /// Slatepack address.
+    Address(String),
+    /// Parsed text.
+    Text(String)
+}
+
+/// QR code scan state.
 pub struct QrScanState {
     // Flag to check if image is processing to find QR code.
     pub(crate) image_processing: bool,
     // Found QR code content.
-    pub qr_scan_result: Option<String>
+    pub qr_scan_result: Option<QrScanResult>
 }
 
 impl Default for QrScanState {
