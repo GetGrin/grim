@@ -53,21 +53,6 @@ impl PlatformCallbacks for Desktop {
         clipboard.get_text().unwrap_or("".to_string())
     }
 
-    fn cameras_amount(&self) -> u32 {
-        let devices = PlatformContext::default().devices();
-        if devices.is_ok() {
-            return devices.unwrap().len() as u32;
-        }
-        0
-    }
-
-    fn switch_camera(&self) {
-        let amount = self.cameras_amount();
-        if amount < 2 {
-            return;
-        }
-    }
-
     fn start_camera(&self) {
         // Clear image.
         {
@@ -156,6 +141,14 @@ impl PlatformCallbacks for Desktop {
             return Some(r_image.clone().unwrap());
         }
         None
+    }
+
+    fn can_switch_camera(&self) -> bool {
+        false
+    }
+
+    fn switch_camera(&self) {
+        return;
     }
 }
 

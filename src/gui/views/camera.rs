@@ -13,9 +13,12 @@
 // limitations under the License.
 
 use std::sync::{Arc, RwLock};
+use eframe::emath::Align;
 use egui::load::SizedTexture;
-use egui::{Pos2, Rect, TextureOptions, Widget};
+use egui::{Layout, Pos2, Rect, TextureOptions, Widget};
 use image::{DynamicImage, EncodableLayout, ImageFormat};
+use crate::gui::Colors;
+use crate::gui::icons::CAMERA_ROTATE;
 
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::types::QrScanState;
@@ -52,7 +55,7 @@ impl CameraContent {
                     _ => img
                 };
                 // Convert to ColorImage to add at content.
-                let color_image = match &img {
+                let color_img = match &img {
                     DynamicImage::ImageRgb8(image) => {
                         egui::ColorImage::from_rgb(
                             [image.width() as usize, image.height() as usize],
@@ -69,21 +72,37 @@ impl CameraContent {
                 };
                 // Create image texture.
                 let texture = ui.ctx().load_texture("camera_image",
-                                                    color_image.clone(),
+                                                    color_img.clone(),
                                                     TextureOptions::default());
-                let image_size = egui::emath::vec2(color_image.width() as f32,
-                                                   color_image.height() as f32);
-                let sized_image = SizedTexture::new(texture.id(), image_size);
+                let img_size = egui::emath::vec2(color_img.width() as f32,
+                                                 color_img.height() as f32);
+                let sized_img = SizedTexture::new(texture.id(), img_size);
                 // Add image to content.
                 ui.vertical_centered(|ui| {
-                    egui::Image::from_texture(sized_image)
-                        // Setup to make image cropped at center of square.
-                        .uv(Rect::from([Pos2::new(0.25, 0.0), Pos2::new(1.0, 1.0)]))
+                    egui::Image::from_texture(sized_img)
+                        // Setup to crop image at square.
+                        .uv(Rect::from([
+                            Pos2::new(1.0 - (img_size.y / img_size.x), 0.0),
+                            Pos2::new(1.0, 1.0)
+                        ]))
                         .max_height(ui.available_width())
                         .maintain_aspect_ratio(false)
                         .shrink_to_fit()
                         .ui(ui);
                 });
+
+                // Show button to switch cameras.
+                if cb.can_switch_camera() {
+                    ui.add_space(-52.0);
+                    let mut size = ui.available_size();
+                    size.y = 48.0;
+                    ui.allocate_ui_with_layout(size, Layout::right_to_left(Align::Max), |ui| {
+                        ui.add_space(4.0);
+                        View::button(ui, CAMERA_ROTATE.to_string(), Colors::WHITE, || {
+                            cb.switch_camera();
+                        });
+                    });
+                }
             } else {
                 self.loading_content_ui(ui);
             }
@@ -137,7 +156,7 @@ impl CameraContent {
                 for g in grids {
                     if let Ok((meta, text)) = g.decode() {
                         println!("12345 ecc: {}, text: {}", meta.ecc_level, text.clone());
-                        if !text.is_empty() {
+                        if !text.trim().is_empty() {
                             let mut w_scan = self.qr_scan_state.write().unwrap();
                             w_scan.qr_scan_result = Some(text);
                         }

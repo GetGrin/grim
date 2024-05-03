@@ -82,16 +82,6 @@ impl PlatformCallbacks for Android {
         paste_data
     }
 
-    fn cameras_amount(&self) -> u32 {
-        let result = self.call_java_method("camerasAmount", "()I", &[]).unwrap();
-        let amount = unsafe { result.i };
-        amount as u32
-    }
-
-    fn switch_camera(&self) {
-        self.call_java_method("switchCamera", "()V", &[]).unwrap();
-    }
-
     fn start_camera(&self) {
         // Clear image.
         let mut w_image = LAST_CAMERA_IMAGE.write().unwrap();
@@ -114,6 +104,16 @@ impl PlatformCallbacks for Android {
             return Some(r_image.clone().unwrap());
         }
         None
+    }
+
+    fn can_switch_camera(&self) -> bool {
+        let result = self.call_java_method("camerasAmount", "()I", &[]).unwrap();
+        let amount = unsafe { result.i };
+        amount > 1
+    }
+
+    fn switch_camera(&self) {
+        self.call_java_method("switchCamera", "()V", &[]).unwrap();
     }
 }
 

@@ -325,7 +325,7 @@ public class MainActivity extends GameActivity {
 
     // Called from native code to switch camera.
     public void switchCamera() {
-        mUseBackCamera = true;
+        mUseBackCamera = !mUseBackCamera;
         stopCamera();
         startCamera();
     }
