@@ -241,7 +241,7 @@ impl NodeSetup {
         });
         ui.add_space(8.0);
 
-        if saved_chain_type != selected_chain_type {
+        if saved_chain_type != selected_chain_type && !Node::is_restarting() {
             AppConfig::change_chain_type(&selected_chain_type);
             if Node::is_running() {
                 Node::restart();
