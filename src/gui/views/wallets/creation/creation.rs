@@ -338,7 +338,7 @@ impl WalletCreation {
                     Step::SetupConnection => {
                         // Redraw if node is running.
                         if Node::is_running() {
-                            ui.ctx().request_repaint();
+                            ui.ctx().request_repaint_after(Node::STATS_UPDATE_DELAY);
                         }
                         self.network_setup.create_ui(ui, frame, cb)
                     }
