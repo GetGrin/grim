@@ -491,7 +491,8 @@ impl WalletTransactions {
         }
 
         // Show transaction Slatepack message response or finalization input.
-        if !tx.posting && !tx.data.confirmed && (tx.data.tx_type == TxLogEntryType::TxSent ||
+        if !tx.posting && !tx.data.confirmed && !tx.cancelling &&
+            (tx.data.tx_type == TxLogEntryType::TxSent ||
             tx.data.tx_type == TxLogEntryType::TxReceived) {
             self.tx_info_modal_slate_ui(ui, tx, wallet, modal, cb);
         }
