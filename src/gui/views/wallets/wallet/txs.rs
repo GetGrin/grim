@@ -31,18 +31,21 @@ use crate::wallet::Wallet;
 
 /// Wallet transactions tab content.
 pub struct WalletTransactions {
-    /// Transaction identifier to user at [`Modal`].
+    /// Transaction identifier to use at info [`Modal`].
     tx_info_id: Option<u32>,
-    /// Transaction [`Slate`] to use at [`Modal`].
+    /// Transaction [`Slate`] to use at info [`Modal`].
     tx_info_slate: Option<Slate>,
-    /// Response Slatepack message input value at [`Modal`].
+    /// Response Slatepack message input value at info [`Modal`].
     tx_info_response_edit: String,
-    /// Finalization Slatepack message input value at [`Modal`].
+    /// Finalization Slatepack message input value at info [`Modal`].
     tx_info_finalize_edit: String,
-    /// Flag to check if error happened during transaction finalization at [`Modal`].
+    /// Flag to check if error happened during transaction finalization at info [`Modal`].
     tx_info_finalize_error: bool,
-    /// Flag to check if tx finalization requested at [`Modal`].
+    /// Flag to check if tx finalization requested at info [`Modal`].
     tx_info_finalize: bool,
+
+    /// Transaction identifier to use at confirmation[`Modal`].
+    confirm_cancel_tx_id: Option<u32>
 }
 
 impl Default for WalletTransactions {
@@ -54,6 +57,7 @@ impl Default for WalletTransactions {
             tx_info_finalize_edit: "".to_string(),
             tx_info_finalize_error: false,
             tx_info_finalize: false,
+            confirm_cancel_tx_id: None,
         }
     }
 }
@@ -99,6 +103,9 @@ impl WalletTab for WalletTransactions {
 
 /// Identifier for transaction information [`Modal`].
 const TX_INFO_MODAL: &'static str = "tx_info_modal";
+
+/// Identifier for transaction cancellation confirmation [`Modal`].
+const CANCEL_TX_CONFIRMATION_MODAL: &'static str = "cancel_tx_conf_modal";
 
 /// Height of transaction list item.
 const TX_ITEM_HEIGHT: f32 = 76.0;
@@ -204,6 +211,11 @@ impl WalletTransactions {
                             self.tx_info_modal_ui(ui, wallet, modal, cb);
                         });
                     }
+                    CANCEL_TX_CONFIRMATION_MODAL => {
+                        Modal::ui(ui.ctx(), |ui, modal| {
+                            self.cancel_confirmation_modal(ui, wallet, modal);
+                        });
+                    }
                     _ => {}
                 }
             }
@@ -276,7 +288,12 @@ impl WalletTransactions {
                     rounding
                 };
                 View::item_button(ui, cancel_rounding, PROHIBIT, Some(Colors::RED), || {
-                    wallet.cancel(tx.data.id);
+                    self.confirm_cancel_tx_id = Some(tx.data.id);
+                    // Show transaction cancellation confirmation modal.
+                    Modal::new(CANCEL_TX_CONFIRMATION_MODAL)
+                        .position(ModalPosition::Center)
+                        .title(t!("modal.confirmation"))
+                        .show();
                 });
             }
 
@@ -691,6 +708,59 @@ impl WalletTransactions {
                 self.tx_info_finalize_error = true;
             }
         }
+    }
+
+    /// Confirmation [`Modal`] to cancel transaction.
+    fn cancel_confirmation_modal(&mut self, ui: &mut egui::Ui, wallet: &mut Wallet, modal: &Modal) {
+        ui.add_space(6.0);
+        ui.vertical_centered(|ui| {
+            // Setup confirmation text.
+            let data = wallet.get_data().unwrap();
+            let txs = data.txs.iter()
+                .filter(|tx| tx.data.id == self.confirm_cancel_tx_id.unwrap())
+                .collect::<Vec<&WalletTransaction>>();
+            if txs.is_empty() {
+                modal.close();
+                return;
+            }
+            let tx = txs.get(0).unwrap();
+            let amount = amount_to_hr_string(tx.amount, true);
+            let text = match tx.data.tx_type {
+                TxLogEntryType::TxReceived => {
+                    t!("wallets.tx_receive_cancel_conf", "amount" => amount)
+                },
+                _ => {
+                    t!("wallets.tx_send_cancel_conf", "amount" => amount)
+                }
+            };
+            ui.label(RichText::new(text)
+                .size(17.0)
+                .color(Colors::TEXT));
+            ui.add_space(8.0);
+        });
+
+        // Show modal buttons.
+        ui.scope(|ui| {
+            // Setup spacing between buttons.
+            ui.spacing_mut().item_spacing = egui::Vec2::new(6.0, 0.0);
+
+            ui.columns(2, |columns| {
+                columns[0].vertical_centered_justified(|ui| {
+                    View::button(ui, t!("modal.cancel"), Colors::WHITE, || {
+                        self.confirm_cancel_tx_id = None;
+                        modal.close();
+                    });
+                });
+                columns[1].vertical_centered_justified(|ui| {
+                    View::button(ui, "OK".to_string(), Colors::WHITE, || {
+                        wallet.cancel(self.confirm_cancel_tx_id.unwrap());
+                        self.confirm_cancel_tx_id = None;
+                        modal.close();
+                    });
+                });
+            });
+            ui.add_space(6.0);
+        });
     }
 }
 
