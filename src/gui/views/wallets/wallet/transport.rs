@@ -364,7 +364,7 @@ impl WalletTransport {
         ui.add_space(6.0);
 
         // Show address.
-        View::ellipsize_text(ui, text, 15.0, Colors::TEXT);
+        View::ellipsize_text(ui, text, 16.0, Colors::GRAY);
         ui.add_space(6.0);
 
         ui.vertical_centered_justified(|ui| {
