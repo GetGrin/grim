@@ -53,7 +53,7 @@ impl CameraContent {
                 img = match img_data.1 {
                     90 => img.rotate90(),
                     180 => img.rotate180(),
-                    279 => img.rotate270(),
+                    270 => img.rotate270(),
                     _ => img
                 };
                 // Convert to ColorImage to add at content.
