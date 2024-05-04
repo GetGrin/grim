@@ -19,7 +19,7 @@ use grin_core::core::amount_to_hr_string;
 
 use crate::AppConfig;
 use crate::gui::Colors;
-use crate::gui::icons::{BRIDGE, CHAT_CIRCLE_TEXT, CHECK, CHECK_FAT, FOLDER_USER, GEAR_FINE, GRAPH, PACKAGE, PATH, POWER, REPEAT, SCAN, USERS_THREE};
+use crate::gui::icons::{BRIDGE, CHAT_CIRCLE_TEXT, CHECK, CHECK_FAT, COPY, FOLDER_USER, GEAR_FINE, GRAPH, PACKAGE, PATH, POWER, REPEAT, SCAN, USERS_THREE};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{CameraContent, Modal, Root, View};
 use crate::gui::views::types::{ModalPosition, QrScanResult, TextEditOptions};
@@ -366,48 +366,105 @@ impl WalletContent {
                              modal: &Modal,
                              cb: &dyn PlatformCallbacks) {
         ui.add_space(6.0);
+        // Show scan result if exists or show camera content while scanning.
         if let Some(result) = &self.qr_scan_result {
-            let result_text = match result {
+            let mut result_text = match result {
                 QrScanResult::Slatepack(t) => t,
                 QrScanResult::Address(t) => t,
                 QrScanResult::Text(t) => t
-            };
+            }.clone();
+            View::horizontal_line(ui, Colors::ITEM_STROKE);
+            ui.add_space(3.0);
+            ScrollArea::vertical()
+                .max_height(128.0)
+                .id_source(Id::from("qr_scan_result_input").with(wallet.get_config().id))
+                .auto_shrink([false; 2])
+                .show(ui, |ui| {
+                    ui.add_space(7.0);
+                    egui::TextEdit::multiline(&mut result_text)
+                        .font(egui::TextStyle::Small)
+                        .desired_rows(5)
+                        .interactive(false)
+                        .desired_width(f32::INFINITY)
+                        .show(ui);
+                    ui.add_space(6.0);
+                });
+            ui.add_space(2.0);
+            View::horizontal_line(ui, Colors::ITEM_STROKE);
+            ui.add_space(10.0);
+
+            // Show copy button.
             ui.vertical_centered(|ui| {
-                ui.label(RichText::new(result_text).size(16.0).color(Colors::INACTIVE_TEXT));
+                let copy_text = format!("{} {}", COPY, t!("copy"));
+                View::button(ui, copy_text, Colors::BUTTON, || {
+                    cb.copy_string_to_buffer(result_text);
+                    self.qr_scan_result = None;
+                    modal.close();
+                });
             });
+            ui.add_space(6.0);
         } else if let Some(result) = self.camera_content.qr_scan_result() {
             cb.stop_camera();
             self.camera_content.clear_state();
             match &result {
                 QrScanResult::Slatepack(message) => {
+                    // Redirect to messages to handle parsed message.
                     let mut messages =
                         WalletMessages::new(wallet.can_use_dandelion(), Some(message.clone()));
                     messages.parse_message(wallet);
-                    self.current_tab = Box::new(messages);
                     modal.close();
+                    self.current_tab = Box::new(messages);
+                    return;
                 }
                 QrScanResult::Address(receiver) => {
                     if wallet.get_data().unwrap().info.amount_currently_spendable > 0 {
+                        // Redirect to send amount with Tor.
                         let addr = wallet.slatepack_address().unwrap();
                         let mut transport = WalletTransport::new(addr.clone());
                         transport.show_send_tor_modal(cb, Some(receiver.clone()));
+                        modal.close();
                         self.current_tab = Box::new(transport);
+                        return;
                     }
                 }
-                QrScanResult::Text(_) => {
-                    self.qr_scan_result = Some(result);
-                }
+                QrScanResult::Text(_) => {}
             }
+
+            // Set result and rename modal title.
+            self.qr_scan_result = Some(result);
+            Modal::set_title(t!("scan_result"));
         } else {
             self.camera_content.ui(ui, cb);
+            ui.add_space(6.0);
         }
-        ui.add_space(6.0);
-        ui.vertical_centered_justified(|ui| {
-            View::button(ui, t!("modal.cancel"), Colors::WHITE, || {
-                cb.stop_camera();
-                modal.close();
+
+        if self.qr_scan_result.is_some() {
+            // Setup spacing between buttons.
+            ui.spacing_mut().item_spacing = egui::Vec2::new(6.0, 0.0);
+
+            ui.columns(2, |columns| {
+                columns[0].vertical_centered_justified(|ui| {
+                    View::button(ui, t!("close"), Colors::WHITE, || {
+                        self.qr_scan_result = None;
+                        modal.close();
+                    });
+                });
+                columns[1].vertical_centered_justified(|ui| {
+                    View::button(ui, t!("repeat"), Colors::WHITE, || {
+                        Modal::set_title(t!("scan_qr"));
+                        cb.start_camera();
+                        self.qr_scan_result = None;
+                    });
+                });
             });
-        });
+        } else {
+            ui.vertical_centered_justified(|ui| {
+                View::button(ui, t!("modal.cancel"), Colors::WHITE, || {
+                    cb.stop_camera();
+                    modal.close();
+                });
+            });
+        }
         ui.add_space(6.0);
     }
 
