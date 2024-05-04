@@ -128,6 +128,17 @@ impl Modal {
         Some(modal.id)
     }
 
+    /// Set title text for current opened [`Modal`].
+    pub fn set_title(title: String) {
+        // Save state.
+        let mut w_state = MODAL_STATE.write().unwrap();
+        if w_state.modal.is_some() {
+            let mut modal = w_state.modal.clone().unwrap();
+            modal.title = Some(title.to_uppercase());
+            w_state.modal = Some(modal);
+        }
+    }
+
     /// Draw opened [`Modal`] content.
     pub fn ui(ctx: &egui::Context, add_content: impl FnOnce(&mut egui::Ui, &Modal)) {
         let has_modal = {
