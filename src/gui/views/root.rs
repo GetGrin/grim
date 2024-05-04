@@ -23,7 +23,7 @@ use crate::gui::views::{Modal, NetworkContent, NodeSetup, View, WalletsContent};
 use crate::gui::views::types::ModalContainer;
 use crate::node::Node;
 use crate::AppConfig;
-use crate::gui::icons::{CHECK, CHECK_FAT, GLOBE_SIMPLE};
+use crate::gui::icons::{CHECK, CHECK_FAT};
 
 lazy_static! {
     /// Global state to check if [`NetworkContent`] panel is open.
@@ -271,7 +271,7 @@ impl Root {
         ui.add_space(6.0);
 
         ui.vertical_centered(|ui| {
-            ui.label(RichText::new(format!("{} {}", GLOBE_SIMPLE, t!("language")).to_uppercase())
+            ui.label(RichText::new(format!("{}:", t!("language")))
                 .size(16.0)
                 .color(Colors::GRAY)
             );
