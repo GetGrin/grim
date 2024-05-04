@@ -24,6 +24,7 @@ use crate::gui::views::types::{ModalPosition, TextEditOptions};
 use crate::gui::views::wallets::creation::MnemonicSetup;
 use crate::gui::views::wallets::creation::types::Step;
 use crate::gui::views::wallets::setup::ConnectionSetup;
+use crate::node::Node;
 use crate::wallet::{ExternalConnection, Wallet};
 use crate::wallet::types::PhraseMode;
 
@@ -334,7 +335,13 @@ impl WalletCreation {
                 match step {
                     Step::EnterMnemonic => self.mnemonic_setup.ui(ui, frame, cb),
                     Step::ConfirmMnemonic => self.mnemonic_setup.confirm_ui(ui, frame, cb),
-                    Step::SetupConnection => self.network_setup.create_ui(ui, frame, cb)
+                    Step::SetupConnection => {
+                        // Redraw if node is running.
+                        if Node::is_running() {
+                            ui.ctx().request_repaint();
+                        }
+                        self.network_setup.create_ui(ui, frame, cb)
+                    }
                 }
             }
         }
