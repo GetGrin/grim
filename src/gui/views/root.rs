@@ -140,8 +140,7 @@ impl Root {
             });
 
         // Show integrated node warning on Android if needed.
-        if self.first_draw && OperatingSystem::from_target_os() == OperatingSystem::Android &&
-            AppConfig::android_integrated_node_warning_needed() {
+        if self.first_draw {
             Modal::new(Self::ANDROID_INTEGRATED_NODE_WARNING_MODAL)
                 .title(t!("network.node"))
                 .show();
@@ -347,7 +346,7 @@ impl Root {
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network.android_warning"))
-                .size(17.0)
+                .size(15.0)
                 .color(Colors::TEXT));
         });
         ui.add_space(8.0);
