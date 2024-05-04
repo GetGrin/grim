@@ -13,20 +13,22 @@
 // limitations under the License.
 
 use std::sync::{Arc, RwLock};
+use std::thread;
 use eframe::emath::Align;
 use egui::load::SizedTexture;
 use egui::{Layout, Pos2, Rect, TextureOptions, Widget};
+use grin_wallet_libwallet::SlatepackAddress;
 use image::{DynamicImage, EncodableLayout, ImageFormat};
 use crate::gui::Colors;
 use crate::gui::icons::CAMERA_ROTATE;
 
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::types::QrScanState;
+use crate::gui::views::types::{QrScanResult, QrScanState};
 use crate::gui::views::View;
 
-/// Camera scanner content.
+/// Camera QR code scanner.
 pub struct CameraContent {
-    // QR code scanning progress and result.
+    /// QR code scanning progress and result.
     qr_scan_state: Arc<RwLock<QrScanState>>
 }
 
@@ -126,7 +128,7 @@ impl CameraContent {
 
     /// Check if image is processing to find QR code.
     fn image_processing(&self) -> bool {
-        let mut r_scan = self.qr_scan_state.read().unwrap();
+        let r_scan = self.qr_scan_state.read().unwrap();
         r_scan.image_processing
     }
 
@@ -142,39 +144,60 @@ impl CameraContent {
             w_scan.image_processing = true;
         }
         // Launch scanner at separate thread.
-        tokio::runtime::Builder::new_multi_thread()
-            .enable_all()
-            .build()
-            .unwrap()
-            .block_on(async {
-                // Prepare image data.
-                let img = data.to_luma8();
-                let mut img: rqrr::PreparedImage<image::GrayImage>
-                    = rqrr::PreparedImage::prepare(img);
-                // Scan and save results.
-                let grids = img.detect_grids();
-                for g in grids {
-                    if let Ok((meta, text)) = g.decode() {
-                        println!("12345 ecc: {}, text: {}", meta.ecc_level, text.clone());
-                        if !text.trim().is_empty() {
-                            let mut w_scan = self.qr_scan_state.write().unwrap();
-                            w_scan.qr_scan_result = Some(text);
+        let data = data.clone();
+        let qr_scan_state = self.qr_scan_state.clone();
+        thread::spawn(move || {
+            tokio::runtime::Builder::new_multi_thread()
+                .enable_all()
+                .build()
+                .unwrap()
+                .block_on(async {
+                    // Prepare image data.
+                    let img = data.to_luma8();
+                    let mut img: rqrr::PreparedImage<image::GrayImage>
+                        = rqrr::PreparedImage::prepare(img);
+                    // Scan and save results.
+                    let grids = img.detect_grids();
+                    for g in grids {
+                        if let Ok((_, text)) = g.decode() {
+                            let text = text.trim();
+                            if !text.is_empty() {
+                                let result = Self::parse_scan_result(text);
+                                let mut w_scan = qr_scan_state.write().unwrap();
+                                w_scan.qr_scan_result = Some(result);
+                            }
                         }
                     }
-                }
-                // Setup scanning flag.
-                {
-                    let mut w_scan = self.qr_scan_state.write().unwrap();
-                    w_scan.image_processing = false;
-                }
-            });
+                    // Setup scanning flag.
+                    {
+                        let mut w_scan = qr_scan_state.write().unwrap();
+                        w_scan.image_processing = false;
+                    }
+                });
+        });
+    }
+
+    fn parse_scan_result(text: &str) -> QrScanResult {
+        // Check if string starts with Grin address prefix.
+        if text.starts_with("tgrin") || text.starts_with("grin") {
+            if SlatepackAddress::try_from(text).is_ok() {
+                return QrScanResult::Address(text.to_string())
+            }
+        }
+
+        // Check if string contains Slatepack message prefix and postfix.
+        if text.starts_with("BEGINSLATEPACK.") && text.ends_with("ENDSLATEPACK.") {
+            return QrScanResult::Slatepack(text.to_string())
+        }
+
+        QrScanResult::Text(text.to_string())
     }
 
     /// Get QR code scan result.
-    pub fn qr_scan_result(&self) -> Option<String> {
+    pub fn qr_scan_result(&self) -> Option<QrScanResult> {
         let r_scan = self.qr_scan_state.read().unwrap();
         if r_scan.qr_scan_result.is_some() {
-            return Some(r_scan.qr_scan_result.as_ref().unwrap().clone());
+            return Some(r_scan.qr_scan_result.clone().unwrap());
         }
         None
     }

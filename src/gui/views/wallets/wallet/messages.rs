@@ -77,22 +77,6 @@ pub struct WalletMessages {
 /// Identifier for amount input [`Modal`].
 const AMOUNT_MODAL: &'static str = "amount_modal";
 
-impl WalletMessages {
-    pub fn new(dandelion: bool) -> Self {
-        Self {
-            send_request: false,
-            message_edit: "".to_string(),
-            message_slate: None,
-            message_error: None,
-            response_edit: "".to_string(),
-            dandelion,
-            amount_edit: "".to_string(),
-            request_edit: "".to_string(),
-            request_error: None,
-        }
-    }
-}
-
 impl WalletTab for WalletMessages {
     fn get_type(&self) -> WalletTabType {
         WalletTabType::Messages
@@ -140,6 +124,21 @@ impl WalletTab for WalletMessages {
 }
 
 impl WalletMessages {
+    /// Create new content instance, put message into input if provided.
+    pub fn new(dandelion: bool, message: Option<String>) -> Self {
+        Self {
+            send_request: false,
+            message_edit: message.unwrap_or("".to_string()),
+            message_slate: None,
+            message_error: None,
+            response_edit: "".to_string(),
+            dandelion,
+            amount_edit: "".to_string(),
+            request_edit: "".to_string(),
+            request_error: None,
+        }
+    }
+
     /// Draw manual wallet transaction interaction content.
     pub fn ui(&mut self,
               ui: &mut egui::Ui,
@@ -452,7 +451,7 @@ impl WalletMessages {
     }
 
     /// Parse message input into [`Slate`] updating slate and response input.
-    fn parse_message(&mut self, wallet: &mut Wallet) {
+    pub fn parse_message(&mut self, wallet: &mut Wallet) {
         self.message_error = None;
         if self.message_edit.is_empty() {
            return;

@@ -22,7 +22,7 @@ use grin_wallet_libwallet::SlatepackAddress;
 use crate::gui::Colors;
 use crate::gui::icons::{CHECK_CIRCLE, COMPUTER_TOWER, COPY, DOTS_THREE_CIRCLE, EXPORT, GEAR_SIX, GLOBE_SIMPLE, POWER, QR_CODE, WARNING_CIRCLE, X_CIRCLE};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Modal, Root, View};
+use crate::gui::views::{Modal, QrCodeContent, Root, View};
 use crate::gui::views::types::{ModalPosition, TextEditOptions};
 use crate::gui::views::wallets::wallet::types::{WalletTab, WalletTabType};
 use crate::gui::views::wallets::wallet::WalletContent;
@@ -46,20 +46,9 @@ pub struct WalletTransport {
     address_error: bool,
     /// Flag to check if [`Modal`] was just opened to focus on first field.
     modal_just_opened: bool,
-}
 
-impl Default for WalletTransport {
-    fn default() -> Self {
-        Self {
-            tor_sending: Arc::new(RwLock::new(false)),
-            tor_send_error: Arc::new(RwLock::new(false)),
-            tor_success: Arc::new(RwLock::new(false)),
-            amount_edit: "".to_string(),
-            address_edit: "".to_string(),
-            address_error: false,
-            modal_just_opened: false,
-        }
-    }
+    /// QR code address image [`Modal`] content.
+    qr_code_content: QrCodeContent,
 }
 
 impl WalletTab for WalletTransport {
@@ -114,7 +103,24 @@ const SEND_TOR_MODAL: &'static str = "send_tor_modal";
 /// Identifier for [`Modal`] to setup Tor service.
 const TOR_SETTINGS_MODAL: &'static str = "tor_settings_modal";
 
+/// Identifier for [`Modal`] to show QR code address image.
+const QR_ADDRESS_MODAL: &'static str = "qr_address_modal";
+
 impl WalletTransport {
+    /// Create new content instance from provided Slatepack address text.
+    pub fn new(addr: String) -> Self {
+        Self {
+            tor_sending: Arc::new(RwLock::new(false)),
+            tor_send_error: Arc::new(RwLock::new(false)),
+            tor_success: Arc::new(RwLock::new(false)),
+            amount_edit: "".to_string(),
+            address_edit: "".to_string(),
+            address_error: false,
+            modal_just_opened: false,
+            qr_code_content: QrCodeContent::new(addr),
+        }
+    }
+
     /// Draw wallet transport content.
     pub fn ui(&mut self, ui: &mut egui::Ui, wallet: &mut Wallet, cb: &dyn PlatformCallbacks) {
         ui.add_space(3.0);
@@ -144,6 +150,11 @@ impl WalletTransport {
                     TOR_SETTINGS_MODAL => {
                         Modal::ui(ui.ctx(), |ui, modal| {
                             self.tor_settings_modal_ui(ui, wallet, modal);
+                        });
+                    }
+                    QR_ADDRESS_MODAL => {
+                        Modal::ui(ui.ctx(), |ui, modal| {
+                            self.qr_address_modal_ui(ui, modal);
                         });
                     }
                     _ => {}
@@ -186,7 +197,7 @@ impl WalletTransport {
                 // Draw button to setup Tor transport.
                 let button_rounding = View::item_rounding(0, 2, true);
                 View::item_button(ui, button_rounding, GEAR_SIX, None, || {
-                    // Show modal.
+                    // Show Tor settings modal.
                     Modal::new(TOR_SETTINGS_MODAL)
                         .position(ModalPosition::CenterTop)
                         .title(t!("transport.tor_settings"))
@@ -273,7 +284,7 @@ impl WalletTransport {
     }
 
     /// Draw Tor send content.
-    fn tor_receive_ui(&self,
+    fn tor_receive_ui(&mut self,
                       ui: &mut egui::Ui,
                       wallet: &Wallet,
                       data: &WalletData,
@@ -304,7 +315,12 @@ impl WalletTransport {
                     View::item_rounding(1, 2, true)
                 };
                 View::item_button(ui, button_rounding, QR_CODE, None, || {
-                    //TODO: qr for address
+                    // Show QR code image address modal.
+                    self.qr_code_content.clear_state();
+                    Modal::new(QR_ADDRESS_MODAL)
+                        .position(ModalPosition::CenterTop)
+                        .title(t!("network_mining.address"))
+                        .show();
                 });
 
                 // Show button to enable/disable Tor listener for current wallet.
@@ -338,6 +354,28 @@ impl WalletTransport {
         });
     }
 
+    /// Draw QR code image address [`Modal`] content.
+    fn qr_address_modal_ui(&mut self, ui: &mut egui::Ui, modal: &Modal) {
+        ui.add_space(6.0);
+
+        // Draw QR code content.
+        let text = self.qr_code_content.text.clone();
+        self.qr_code_content.ui(ui, text.clone());
+        ui.add_space(6.0);
+
+        // Show address.
+        View::ellipsize_text(ui, text, 15.0, Colors::TEXT);
+        ui.add_space(6.0);
+
+        ui.vertical_centered_justified(|ui| {
+            View::button(ui, t!("close"), Colors::WHITE, || {
+                self.qr_code_content.clear_state();
+                modal.close();
+            });
+            ui.add_space(6.0);
+        });
+    }
+
     /// Draw Tor receive content.
     fn tor_send_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         // Setup layout size.
@@ -355,14 +393,14 @@ impl WalletTransport {
                 // Draw button to open sending modal.
                 let send_text = format!("{} {}", EXPORT, t!("wallets.send"));
                 View::button(ui, send_text, Colors::WHITE, || {
-                    self.show_send_tor_modal(cb);
+                    self.show_send_tor_modal(cb, None);
                 });
             });
         });
     }
 
     /// Show [`Modal`] to send over Tor.
-    fn show_send_tor_modal(&mut self, cb: &dyn PlatformCallbacks) {
+    pub fn show_send_tor_modal(&mut self, cb: &dyn PlatformCallbacks, address: Option<String>) {
         // Setup modal values.
         let mut w_send_err = self.tor_send_error.write().unwrap();
         *w_send_err = false;
@@ -372,7 +410,7 @@ impl WalletTransport {
         *w_success = false;
         self.modal_just_opened = true;
         self.amount_edit = "".to_string();
-        self.address_edit = "".to_string();
+        self.address_edit = address.unwrap_or("".to_string());
         self.address_error = false;
         // Show modal.
         Modal::new(SEND_TOR_MODAL)

@@ -167,3 +167,20 @@ impl Default for QrScanState {
         }
     }
 }
+
+/// QR code image creation state.
+pub struct QrCreationState {
+    // Flag to check if QR code image is creating.
+    pub creating: bool,
+    // Found QR code content.
+    pub svg: Option<Vec<u8>>
+}
+
+impl Default for QrCreationState {
+    fn default() -> Self {
+        Self {
+            creating: false,
+            svg: None,
+        }
+    }
+}

@@ -34,3 +34,6 @@ pub use wallets::*;
 
 mod camera;
 pub use camera::*;
+
+mod qr;
+pub use qr::*;

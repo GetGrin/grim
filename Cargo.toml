@@ -34,7 +34,7 @@ grin_wallet_controller = "5.3.0"
 
 ## ui
 egui = { version = "0.27.2", default-features = false }
-egui_extras = { version = "0.27.2", features = ["image"] }
+egui_extras = { version = "0.27.2", features = ["image", "svg"] }
 rust-i18n = "2.3.1"
 
 ## other
@@ -53,8 +53,9 @@ rand = "0.8.5"
 serde_derive = "1.0.197"
 serde_json = "1.0.115"
 tokio = { version = "1.37.0", features = ["full"] }
-image = { version = "0.25.1" }
+image = "0.25.1"
 rqrr = "0.7.1"
+qrcodegen = "1.8.0"
 
 ## tor
 arti = { version = "1.2.0", features = ["pt-client", "static"] }

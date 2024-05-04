@@ -22,7 +22,7 @@ use crate::gui::Colors;
 use crate::gui::icons::{BRIDGE, CHAT_CIRCLE_TEXT, CHECK, CHECK_FAT, FOLDER_USER, GEAR_FINE, GRAPH, PACKAGE, PATH, POWER, REPEAT, SCAN, USERS_THREE};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{CameraContent, Modal, Root, View};
-use crate::gui::views::types::{ModalPosition, TextEditOptions};
+use crate::gui::views::types::{ModalPosition, QrScanResult, TextEditOptions};
 use crate::gui::views::wallets::{WalletTransactions, WalletMessages, WalletTransport, WalletSettings};
 use crate::gui::views::wallets::types::{GRIN, WalletTab, WalletTabType};
 use crate::node::Node;
@@ -44,7 +44,7 @@ pub struct WalletContent {
     /// Camera content for QR scan [`Modal`].
     camera_content: CameraContent,
     /// QR code scan result
-    qr_scan_result: Option<String>,
+    qr_scan_result: Option<QrScanResult>,
 
     /// Current tab content to show.
     pub current_tab: Box<dyn WalletTab>
@@ -367,15 +367,37 @@ impl WalletContent {
                              cb: &dyn PlatformCallbacks) {
         ui.add_space(6.0);
         if let Some(result) = &self.qr_scan_result {
+            let result_text = match result {
+                QrScanResult::Slatepack(t) => t,
+                QrScanResult::Address(t) => t,
+                QrScanResult::Text(t) => t
+            };
             ui.vertical_centered(|ui| {
-                ui.label(RichText::new(result).size(16.0).color(Colors::INACTIVE_TEXT));
+                ui.label(RichText::new(result_text).size(16.0).color(Colors::INACTIVE_TEXT));
             });
         } else if let Some(result) = self.camera_content.qr_scan_result() {
-            ///TODO: parse result and show
             cb.stop_camera();
             self.camera_content.clear_state();
-            println!("result: {}", result);
-            self.qr_scan_result = Some(result);
+            match &result {
+                QrScanResult::Slatepack(message) => {
+                    let mut messages =
+                        WalletMessages::new(wallet.can_use_dandelion(), Some(message.clone()));
+                    messages.parse_message(wallet);
+                    self.current_tab = Box::new(messages);
+                    modal.close();
+                }
+                QrScanResult::Address(receiver) => {
+                    if wallet.get_data().unwrap().info.amount_currently_spendable > 0 {
+                        let addr = wallet.slatepack_address().unwrap();
+                        let mut transport = WalletTransport::new(addr.clone());
+                        transport.show_send_tor_modal(cb, Some(receiver.clone()));
+                        self.current_tab = Box::new(transport);
+                    }
+                }
+                QrScanResult::Text(_) => {
+                    self.qr_scan_result = Some(result);
+                }
+            }
         } else {
             self.camera_content.ui(ui, cb);
         }
@@ -409,13 +431,14 @@ impl WalletContent {
                     let is_messages = current_type == WalletTabType::Messages;
                     View::tab_button(ui, CHAT_CIRCLE_TEXT, is_messages, || {
                         self.current_tab = Box::new(
-                            WalletMessages::new(wallet.can_use_dandelion())
+                            WalletMessages::new(wallet.can_use_dandelion(), None)
                         );
                     });
                 });
                 columns[2].vertical_centered_justified(|ui| {
                     View::tab_button(ui, BRIDGE, current_type == WalletTabType::Transport, || {
-                        self.current_tab = Box::new(WalletTransport::default());
+                        let addr = wallet.slatepack_address().unwrap();
+                        self.current_tab = Box::new(WalletTransport::new(addr));
                     });
                 });
                 columns[3].vertical_centered_justified(|ui| {
