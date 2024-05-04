@@ -16,7 +16,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, RwLock};
 
 use egui::{Align2, Rect, RichText, Rounding, Stroke, Vec2};
-use egui::epaint::RectShape;
+use egui::epaint::{RectShape, Shadow};
 use lazy_static::lazy_static;
 
 use crate::gui::Colors;
@@ -184,6 +184,12 @@ impl Modal {
             .default_width(width)
             .anchor(content_align, content_offset)
             .frame(egui::Frame {
+                shadow: Shadow {
+                    offset: Default::default(),
+                    blur: 30.0,
+                    spread: 3.0,
+                    color: egui::Color32::from_black_alpha(32),
+                },
                 rounding: Rounding::same(8.0),
                 fill: Colors::YELLOW,
                 ..Default::default()
