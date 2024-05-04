@@ -190,7 +190,7 @@ impl Root {
     /// Show exit confirmation modal.
     pub fn show_exit_modal() {
         Modal::new(Self::EXIT_MODAL_ID)
-            .title(t!("modal_exit.exit"))
+            .title(t!("modal.confirmation"))
             .show();
     }
 
@@ -240,6 +240,7 @@ impl Root {
                             } else {
                                 Node::stop(true);
                                 modal.disable_closing();
+                                Modal::set_title(t!("modal_exit.exit"));
                                 self.show_exit_progress = true;
                             }
                         });
