@@ -365,7 +365,6 @@ impl WalletContent {
                              wallet: &mut Wallet,
                              modal: &Modal,
                              cb: &dyn PlatformCallbacks) {
-        ui.add_space(6.0);
         // Show scan result if exists or show camera content while scanning.
         if let Some(result) = &self.qr_scan_result {
             let mut result_text = match result {
@@ -391,7 +390,7 @@ impl WalletContent {
                 });
             ui.add_space(2.0);
             View::horizontal_line(ui, Colors::ITEM_STROKE);
-            ui.add_space(10.0);
+            ui.add_space(6.0);
 
             // Show copy button.
             ui.vertical_centered(|ui| {
@@ -434,6 +433,7 @@ impl WalletContent {
             self.qr_scan_result = Some(result);
             Modal::set_title(t!("scan_result"));
         } else {
+            ui.add_space(6.0);
             self.camera_content.ui(ui, cb);
             ui.add_space(6.0);
         }
@@ -452,8 +452,8 @@ impl WalletContent {
                 columns[1].vertical_centered_justified(|ui| {
                     View::button(ui, t!("repeat"), Colors::WHITE, || {
                         Modal::set_title(t!("scan_qr"));
-                        cb.start_camera();
                         self.qr_scan_result = None;
+                        cb.start_camera();
                     });
                 });
             });
