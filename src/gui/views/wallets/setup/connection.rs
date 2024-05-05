@@ -149,28 +149,28 @@ impl ConnectionSetup {
 
         ui.add_space(2.0);
         View::sub_title(ui, format!("{} {}", GLOBE, t!("wallets.conn_method")));
-        View::horizontal_line(ui, Colors::ITEM_STROKE);
-        ui.add_space(4.0);
+        View::horizontal_line(ui, Colors::STROKE);
+        ui.add_space(6.0);
 
         ui.vertical_centered(|ui| {
             // Show integrated node selection.
             ui.add_space(6.0);
             self.integrated_node_item_ui(ui);
 
+            // Show external connections.
+            ui.add_space(8.0);
+            ui.label(RichText::new(t!("wallets.ext_conn")).size(16.0).color(Colors::GRAY));
+            ui.add_space(6.0);
+
+            // Show button to add new external node connection.
+            let add_node_text = format!("{} {}", PLUS_CIRCLE, t!("wallets.add_node"));
+            View::button(ui, add_node_text, Colors::WHITE, || {
+                self.show_add_ext_conn_modal(cb);
+            });
+            ui.add_space(12.0);
+
             let ext_conn_list = ConnectionsConfig::ext_conn_list();
             if !ext_conn_list.is_empty() {
-                ui.add_space(6.0);
-                ui.label(RichText::new(t!("wallets.ext_conn")).size(16.0).color(Colors::GRAY));
-                ui.add_space(6.0);
-
-                // Show button to add new external node connection.
-                let add_node_text = format!("{} {}", PLUS_CIRCLE, t!("wallets.add_node"));
-                View::button(ui, add_node_text, Colors::WHITE, || {
-                    self.show_add_ext_conn_modal(cb);
-                });
-                ui.add_space(12.0);
-
-                // Show external connections.
                 for (index, conn) in ext_conn_list.iter().enumerate() {
                     ui.horizontal_wrapped(|ui| {
                         // Draw connection list item.
@@ -179,6 +179,9 @@ impl ConnectionSetup {
                 }
             }
         });
+
+        ui.add_space(10.0);
+        View::horizontal_line(ui, Colors::STROKE);
     }
 
     /// Draw integrated node connection item content.

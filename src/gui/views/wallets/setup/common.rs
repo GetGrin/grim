@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::{Align, Id, Layout, RichText, TextStyle, Widget};
+use egui::{Id, RichText, Widget};
 
 use crate::gui::Colors;
-use crate::gui::icons::{CLOCK_COUNTDOWN, EYE, EYE_SLASH, PASSWORD, PENCIL};
+use crate::gui::icons::{CLOCK_COUNTDOWN, PASSWORD, PENCIL};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, View};
 use crate::gui::views::types::{ModalPosition, TextEditOptions};
@@ -131,7 +131,7 @@ impl CommonSetup {
             });
 
             ui.add_space(12.0);
-            View::horizontal_line(ui, Colors::ITEM_STROKE);
+            View::horizontal_line(ui, Colors::STROKE);
             ui.add_space(4.0);
         });
     }

@@ -17,7 +17,7 @@ use url::Url;
 
 use crate::AppConfig;
 use crate::gui::Colors;
-use crate::gui::icons::{CARET_RIGHT, CHECK_CIRCLE, COMPUTER_TOWER, DOTS_THREE_CIRCLE, GLOBE_SIMPLE, PENCIL, POWER, TRASH, X_CIRCLE};
+use crate::gui::icons::{CARET_RIGHT, CHECK_CIRCLE, COMPUTER_TOWER, DOTS_THREE_CIRCLE, GLOBE_SIMPLE, PENCIL, PLUS_CIRCLE, POWER, TRASH, X_CIRCLE};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, NodeSetup, View};
 use crate::gui::views::types::{ModalContainer, ModalPosition, TextEditOptions};
@@ -100,11 +100,20 @@ impl ConnectionsContent {
         Self::integrated_node_item_ui(ui);
 
         // Show external connections.
+        ui.add_space(8.0);
+        ui.label(RichText::new(t!("wallets.ext_conn")).size(16.0).color(Colors::GRAY));
+        ui.add_space(6.0);
+
+        // Show button to add new external node connection.
+        let add_node_text = format!("{} {}", PLUS_CIRCLE, t!("wallets.add_node"));
+        View::button(ui, add_node_text, Colors::WHITE, || {
+            self.show_add_ext_conn_modal(None, cb);
+        });
+
+        ui.add_space(12.0);
+
         let ext_conn_list = ConnectionsConfig::ext_conn_list();
         if !ext_conn_list.is_empty() {
-            ui.add_space(6.0);
-            ui.label(RichText::new(t!("wallets.ext_conn")).size(16.0).color(Colors::GRAY));
-            ui.add_space(6.0);
             for (index, conn) in ext_conn_list.iter().enumerate() {
                 ui.horizontal_wrapped(|ui| {
                     // Draw connection list item.

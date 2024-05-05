@@ -16,7 +16,7 @@ use egui::{Margin, RichText, ScrollArea, Stroke};
 
 use crate::AppConfig;
 use crate::gui::Colors;
-use crate::gui::icons::{BRIEFCASE, DATABASE, DOTS_THREE_OUTLINE_VERTICAL, FACTORY, FADERS, GAUGE, PLUS_CIRCLE, POWER};
+use crate::gui::icons::{BRIEFCASE, DATABASE, DOTS_THREE_OUTLINE_VERTICAL, FACTORY, FADERS, GAUGE, POWER};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{ConnectionsContent, NetworkMetrics, NetworkMining, NetworkNode, NetworkSettings, Root, TitlePanel, View};
 use crate::gui::views::network::types::{NetworkTab, NetworkTabType};
@@ -211,10 +211,6 @@ impl NetworkContent {
                     if AppConfig::show_connections_network_panel() {
                         ExternalConnection::start_ext_conn_availability_check();
                     }
-                });
-            } else {
-                View::title_button(ui, PLUS_CIRCLE, || {
-                    self.connections.show_add_ext_conn_modal(None, cb);
                 });
             }
         }, |ui, _| {
