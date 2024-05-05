@@ -347,7 +347,7 @@ impl View {
             }
 
             // Setup scan QR code button.
-            if options.paste {
+            if options.scan_qr {
                 let scan_icon = SCAN.to_string();
                 View::button(ui, scan_icon, Colors::WHITE, || {
                     //TODO: open scanner
