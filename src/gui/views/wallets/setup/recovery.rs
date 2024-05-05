@@ -76,17 +76,18 @@ impl RecoverySetup {
                     .color(Colors::RED));
             } else if !wallet.is_repairing() {
                 ui.add_space(6.0);
+
                 // Draw button to repair the wallet.
                 let repair_text = format!("{} {}", STETHOSCOPE, t!("wallets.repair_wallet"));
                 View::button(ui, repair_text, Colors::GOLD, || {
                     wallet.repair();
                 });
-            }
 
-            ui.add_space(6.0);
-            ui.label(RichText::new(t!("wallets.repair_desc"))
-                .size(16.0)
-                .color(Colors::INACTIVE_TEXT));
+                ui.add_space(6.0);
+                ui.label(RichText::new(t!("wallets.repair_desc"))
+                    .size(16.0)
+                    .color(Colors::INACTIVE_TEXT));
+            }
 
             ui.add_space(6.0);
             View::horizontal_line(ui, Colors::ITEM_STROKE);
