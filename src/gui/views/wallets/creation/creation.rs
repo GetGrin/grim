@@ -14,10 +14,11 @@
 
 use egui::{Id, Margin, RichText, ScrollArea, TextStyle, vec2, Widget};
 use egui_extras::{RetainedImage, Size, StripBuilder};
+use grin_util::ZeroingString;
 
 use crate::built_info;
 use crate::gui::Colors;
-use crate::gui::icons::{CHECK, CLIPBOARD_TEXT, COPY, EYE, EYE_SLASH, FOLDER_PLUS, SHARE_FAT};
+use crate::gui::icons::{CHECK, CLIPBOARD_TEXT, COPY, EYE, EYE_SLASH, FOLDER_PLUS, SCAN, SHARE_FAT};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, Root, View};
 use crate::gui::views::types::{ModalPosition, TextEditOptions};
@@ -178,28 +179,30 @@ impl WalletCreation {
             }
             if step == Step::EnterMnemonic {
                 ui.add_space(4.0);
-                if !step_available {
-                    self.copy_or_paste_button_ui(ui, cb);
-                    ui.add_space(4.0);
-                } else {
-                    // Setup spacing between buttons.
-                    ui.spacing_mut().item_spacing = egui::Vec2::new(8.0, 0.0);
 
-                    ui.columns(2, |columns| {
-                        // Show copy or paste button for mnemonic phrase step.
-                        columns[0].vertical_centered_justified(|ui| {
-                            self.copy_or_paste_button_ui(ui, cb);
-                        });
+                // Setup spacing between buttons.
+                ui.spacing_mut().item_spacing = egui::Vec2::new(8.0, 0.0);
 
-                        // Show next step button if there are no empty words.
+                ui.columns(2, |columns| {
+                    // Show copy or paste button for mnemonic phrase step.
+                    columns[0].vertical_centered_justified(|ui| {
+                        self.copy_or_paste_button_ui(ui, cb);
+                    });
+
+                    columns[1].vertical_centered_justified(|ui| {
                         if step_available {
-                            columns[1].vertical_centered_justified(|ui| {
-                                self.next_step_button_ui(ui, step, on_create);
+                            // Show next step button if there are no empty words.
+                            self.next_step_button_ui(ui, step, on_create);
+                        } else {
+                            // Show QR code scan button.
+                            let scan_text = format!("{} {}", SCAN, t!("scan").to_uppercase());
+                            View::button(ui, scan_text, Colors::WHITE, || {
+                                self.mnemonic_setup.show_qr_scan_modal(cb);
                             });
                         }
                     });
-                    ui.add_space(4.0);
-                }
+                });
+                ui.add_space(4.0);
             } else {
                 if step_available {
                     ui.add_space(4.0);
@@ -225,7 +228,8 @@ impl WalletCreation {
                 // Show paste button.
                 let p_t = format!("{} {}", CLIPBOARD_TEXT, t!("paste").to_uppercase());
                 View::button(ui, p_t, Colors::WHITE, || {
-                    self.mnemonic_setup.mnemonic.import_text(cb.get_string_from_buffer());
+                    let data = ZeroingString::from(cb.get_string_from_buffer());
+                    self.mnemonic_setup.mnemonic.import_text(&data);
                 });
             }
         }

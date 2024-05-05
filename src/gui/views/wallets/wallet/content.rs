@@ -192,9 +192,8 @@ impl WalletContent {
         ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
             // Draw button to scan QR code.
             View::item_button(ui, View::item_rounding(0, 2, true), SCAN, None, || {
-                // Load accounts.
                 self.qr_scan_result = None;
-                // Show account list modal.
+                // Show QR code scan modal.
                 Modal::new(QR_CODE_SCAN_MODAL)
                     .position(ModalPosition::CenterTop)
                     .title(t!("scan_qr"))
@@ -359,7 +358,7 @@ impl WalletContent {
         }
     }
 
-    /// Draw QR scanner [`Modal`] content.
+    /// Draw QR code scan [`Modal`] content.
     fn scan_qr_modal_ui(&mut self,
                              ui: &mut egui::Ui,
                              wallet: &mut Wallet,
@@ -371,7 +370,7 @@ impl WalletContent {
                 QrScanResult::Slatepack(t) => t,
                 QrScanResult::Address(t) => t,
                 QrScanResult::Text(t) => t
-            }.clone();
+            }.to_string();
             View::horizontal_line(ui, Colors::ITEM_STROKE);
             ui.add_space(3.0);
             ScrollArea::vertical()
@@ -396,7 +395,7 @@ impl WalletContent {
             ui.vertical_centered(|ui| {
                 let copy_text = format!("{} {}", COPY, t!("copy"));
                 View::button(ui, copy_text, Colors::BUTTON, || {
-                    cb.copy_string_to_buffer(result_text);
+                    cb.copy_string_to_buffer(result_text.to_string());
                     self.qr_scan_result = None;
                     modal.close();
                 });
@@ -409,7 +408,7 @@ impl WalletContent {
                 QrScanResult::Slatepack(message) => {
                     // Redirect to messages to handle parsed message.
                     let mut messages =
-                        WalletMessages::new(wallet.can_use_dandelion(), Some(message.clone()));
+                        WalletMessages::new(wallet.can_use_dandelion(), Some(message.to_string()));
                     messages.parse_message(wallet);
                     modal.close();
                     self.current_tab = Box::new(messages);
@@ -420,7 +419,7 @@ impl WalletContent {
                         // Redirect to send amount with Tor.
                         let addr = wallet.slatepack_address().unwrap();
                         let mut transport = WalletTransport::new(addr.clone());
-                        transport.show_send_tor_modal(cb, Some(receiver.clone()));
+                        transport.show_send_tor_modal(cb, Some(receiver.to_string()));
                         modal.close();
                         self.current_tab = Box::new(transport);
                         return;

@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use grin_keychain::mnemonic::{from_entropy, search, to_entropy};
+use grin_util::ZeroingString;
 use rand::{Rng, thread_rng};
 
 use crate::wallet::types::{PhraseMode, PhraseSize};
@@ -105,7 +106,7 @@ impl Mnemonic {
     }
 
     /// Set words from provided text if possible.
-    pub fn import_text(&mut self, text: String) {
+    pub fn import_text(&mut self, text: &ZeroingString) {
         if self.mode != PhraseMode::Import {
             return;
         }

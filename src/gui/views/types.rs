@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use grin_util::ZeroingString;
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::Modal;
 
@@ -144,11 +145,11 @@ impl TextEditOptions {
 #[derive(Clone)]
 pub enum QrScanResult {
     /// Slatepack message.
-    Slatepack(String),
+    Slatepack(ZeroingString),
     /// Slatepack address.
-    Address(String),
+    Address(ZeroingString),
     /// Parsed text.
-    Text(String)
+    Text(ZeroingString)
 }
 
 /// QR code scan state.

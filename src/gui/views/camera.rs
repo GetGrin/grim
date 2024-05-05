@@ -17,6 +17,7 @@ use std::thread;
 use eframe::emath::Align;
 use egui::load::SizedTexture;
 use egui::{Layout, Pos2, Rect, TextureOptions, Widget};
+use grin_util::ZeroingString;
 use grin_wallet_libwallet::SlatepackAddress;
 use image::{DynamicImage, EncodableLayout, ImageFormat};
 use crate::gui::Colors;
@@ -181,16 +182,16 @@ impl CameraContent {
         // Check if string starts with Grin address prefix.
         if text.starts_with("tgrin") || text.starts_with("grin") {
             if SlatepackAddress::try_from(text).is_ok() {
-                return QrScanResult::Address(text.to_string())
+                return QrScanResult::Address(ZeroingString::from(text))
             }
         }
 
         // Check if string contains Slatepack message prefix and postfix.
         if text.starts_with("BEGINSLATEPACK.") && text.ends_with("ENDSLATEPACK.") {
-            return QrScanResult::Slatepack(text.to_string())
+            return QrScanResult::Slatepack(ZeroingString::from(text))
         }
 
-        QrScanResult::Text(text.to_string())
+        QrScanResult::Text(ZeroingString::from(text))
     }
 
     /// Get QR code scan result.
