@@ -180,9 +180,6 @@ impl ConnectionSetup {
                 }
             }
         });
-
-        ui.add_space(10.0);
-        View::horizontal_line(ui, Colors::STROKE);
     }
 
     /// Draw integrated node connection item content.

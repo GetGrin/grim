@@ -59,6 +59,8 @@ impl RecoverySetup {
         // Show modal content for this ui container.
         self.modal_content_ui(ui, wallet, cb);
 
+        ui.add_space(10.0);
+        View::horizontal_line(ui, Colors::STROKE);
         ui.add_space(6.0);
         View::sub_title(ui, format!("{} {}", WRENCH, t!("wallets.recovery")));
         View::horizontal_line(ui, Colors::STROKE);
