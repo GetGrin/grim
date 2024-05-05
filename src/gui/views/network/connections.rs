@@ -110,10 +110,11 @@ impl ConnectionsContent {
             self.show_add_ext_conn_modal(None, cb);
         });
 
-        ui.add_space(12.0);
+        ui.add_space(4.0);
 
         let ext_conn_list = ConnectionsConfig::ext_conn_list();
         if !ext_conn_list.is_empty() {
+            ui.add_space(8.0);
             for (index, conn) in ext_conn_list.iter().enumerate() {
                 ui.horizontal_wrapped(|ui| {
                     // Draw connection list item.
