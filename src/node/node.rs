@@ -14,18 +14,20 @@
 
 use std::{fs, thread};
 use std::path::PathBuf;
-use std::sync::{Arc, RwLock, RwLockReadGuard};
+use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
-
+use lazy_static::lazy_static;
+use parking_lot::RwLock;
 use futures::channel::oneshot;
+
 use grin_chain::SyncStatus;
 use grin_core::global;
 use grin_core::global::ChainTypes;
 use grin_servers::{Server, ServerStats, StratumServerConfig, StratumStats};
 use grin_servers::common::types::Error;
-use lazy_static::lazy_static;
-use crate::node::NodeConfig;
+
+use crate::node::{NodeConfig, NodeError};
 use crate::node::stratum::{StratumStopState, StratumServer};
 
 lazy_static! {
@@ -35,28 +37,27 @@ lazy_static! {
 
 /// Provides [`Server`] control, holds current status and statistics.
 pub struct Node {
-    /// Node [`Server`] statistics for UI.
+    /// Node [`Server`] statistics information.
     stats: Arc<RwLock<Option<ServerStats>>>,
-    /// [`StratumServer`] statistics.
+
+    /// [`StratumServer`] statistics information.
     stratum_stats: Arc<grin_util::RwLock<StratumStats>>,
+    /// Flag to start [`StratumServer`].
+    start_stratum_needed: AtomicBool,
     /// State to stop [`StratumServer`] from outside.
     stratum_stop_state: Arc<StratumStopState>,
-    /// Running API [`Server`] address.
-    api_addr: Arc<RwLock<Option<String>>>,
-    /// Running P2P [`grin_p2p::Server`] port.
-    p2p_port: Arc<RwLock<Option<u16>>>,
+
     /// Indicator if node [`Server`] is starting.
     starting: AtomicBool,
-    /// Thread flag to stop the [`Server`] and start it again.
+    /// Flag to stop the [`Server`] and start it again.
     restart_needed: AtomicBool,
-    /// Thread flag to stop the [`Server`].
+    /// Flag to stop the [`Server`].
     stop_needed: AtomicBool,
     /// Flag to check if app exit is needed after [`Server`] stop.
     exit_after_stop: AtomicBool,
-    /// Thread flag to start [`StratumServer`].
-    start_stratum_needed: AtomicBool,
-    /// Error on [`Server`] start.
-    init_error: Option<Error>
+
+    /// An error occurred on [`Server`] start.
+    error: Arc<RwLock<Option<Error>>>
 }
 
 impl Default for Node {
@@ -65,14 +66,12 @@ impl Default for Node {
             stats: Arc::new(RwLock::new(None)),
             stratum_stats: Arc::new(grin_util::RwLock::new(StratumStats::default())),
             stratum_stop_state: Arc::new(StratumStopState::default()),
-            api_addr: Arc::new(RwLock::new(None)),
-            p2p_port: Arc::new(RwLock::new(None)),
             starting: AtomicBool::new(false),
             restart_needed: AtomicBool::new(false),
             stop_needed: AtomicBool::new(false),
             exit_after_stop: AtomicBool::new(false),
             start_stratum_needed: AtomicBool::new(false),
-            init_error: None
+            error: Arc::new(RwLock::new(None))
         }
     }
 }
@@ -100,26 +99,6 @@ impl Node {
             NODE_STATE.restart_needed.store(true, Ordering::Relaxed);
         } else {
             Node::start();
-        }
-    }
-
-    /// Get API [`Server`] address if [`Node`] is running.
-    pub fn get_api_addr() -> Option<String> {
-        let r_api_addr = NODE_STATE.api_addr.read().unwrap();
-        if r_api_addr.is_some() {
-            Some(r_api_addr.as_ref().unwrap().clone())
-        } else {
-            None
-        }
-    }
-
-    /// Get P2P [`grin_p2p::Server`] port if node is running.
-    pub fn get_p2p_port() -> Option<u16> {
-        let r_p2p_port = NODE_STATE.p2p_port.read().unwrap();
-        if r_p2p_port.is_some() {
-            Some(r_p2p_port.unwrap())
-        } else {
-            None
         }
     }
 
@@ -170,7 +149,7 @@ impl Node {
 
     /// Get node [`Server`] statistics.
     pub fn get_stats() -> Option<ServerStats> {
-        NODE_STATE.stats.read().unwrap().clone()
+        NODE_STATE.stats.read().clone()
     }
 
     /// Check if [`Server`] is not syncing (disabled or just running after synchronization).
@@ -201,6 +180,45 @@ impl Node {
         None
     }
 
+    /// Get [`Server`] error.
+    pub fn get_error() -> Option<NodeError> {
+        let r_err = NODE_STATE.error.read();
+        if r_err.is_some() {
+            let e = r_err.as_ref().unwrap();
+            // Setup a flag to show an error to clean up data.
+            let store_err = match e {
+                Error::Store(_) => true,
+                Error::Chain(_) => true,
+                _ => false
+            };
+            if store_err {
+                return Some(NodeError::Storage);
+            }
+
+            // Setup a flag to show P2P or API server error.
+            let p2p_api_err = match e {
+                Error::P2P(_) => Some(NodeError::P2P),
+                Error::API(_) => Some(NodeError::API),
+                _ => None
+            };
+            if p2p_api_err.is_some() {
+                return p2p_api_err;
+            }
+
+            // Setup a flag to show configuration error.
+            let config_err = match e {
+                Error::Configuration(_) => true,
+                _ => false
+            };
+            return if config_err {
+                Some(NodeError::Configuration)
+            } else {
+                Some(NodeError::Unknown)
+            }
+        }
+        None
+    }
+
     /// Start the [`Server`] at separate thread to update state with stats and handle statuses.
     fn start_server_thread() {
         thread::spawn(move || {
@@ -226,7 +244,13 @@ impl Node {
                                     NODE_STATE.restart_needed.store(false, Ordering::Relaxed);
                                 }
                                 Err(e) => {
-                                    Self::on_start_error(&e);
+                                    // Setup an error.
+                                    {
+                                        let mut w_err = NODE_STATE.error.write();
+                                        *w_err = Some(e);
+                                    }
+                                    // Reset server state.
+                                    Self::reset_server_state(true);
                                     break;
                                 }
                             }
@@ -234,8 +258,7 @@ impl Node {
                             // Stop the server.
                             server.stop();
                             // Clean stats and statuses.
-                            Self::on_thread_stop();
-                            // Exit thread loop.
+                            Self::reset_server_state(false);
                             break;
                         }
 
@@ -256,7 +279,7 @@ impl Node {
                         // Update server stats.
                         if let Ok(stats) = server.get_server_stats() {
                             {
-                                let mut w_stats = NODE_STATE.stats.write().unwrap();
+                                let mut w_stats = NODE_STATE.stats.write();
                                 *w_stats = Some(stats.clone());
                             }
 
@@ -274,14 +297,20 @@ impl Node {
                     }
                 }
                 Err(e) => {
-                    Self::on_start_error(&e);
+                    // Setup an error.
+                    {
+                        let mut w_err = NODE_STATE.error.write();
+                        *w_err = Some(e);
+                    }
+                    // Reset server state.
+                    Self::reset_server_state(true);
                 }
             }
         });
     }
 
-    /// Reset stats and statuses on [`Server`] thread stop.
-    fn on_thread_stop() {
+    /// Clean up [`Server`] stats and statuses.
+    fn reset_server_state(has_error: bool) {
         NODE_STATE.starting.store(false, Ordering::Relaxed);
         NODE_STATE.restart_needed.store(false, Ordering::Relaxed);
         NODE_STATE.start_stratum_needed.store(false, Ordering::Relaxed);
@@ -292,91 +321,40 @@ impl Node {
             let mut w_stratum_stats = NODE_STATE.stratum_stats.write();
             *w_stratum_stats = StratumStats::default();
         }
-        // Clean server stats.
+        // Reset server stats.
         {
-            let mut w_stats = NODE_STATE.stats.write().unwrap();
+            let mut w_stats = NODE_STATE.stats.write();
             *w_stats = None;
         }
-        // Clean launched API server address.
-        {
-            let mut w_api_addr = NODE_STATE.api_addr.write().unwrap();
-            *w_api_addr = None;
-        }
-        // Clean launched P2P server port.
-        {
-            let mut w_p2p_port = NODE_STATE.p2p_port.write().unwrap();
-            *w_p2p_port = None;
+        // Reset an error if needed.
+        if !has_error {
+            let mut w_err = NODE_STATE.error.write();
+            *w_err = None;
         }
     }
 
-    /// Handle node [`Server`] error on start.
-    fn on_start_error(e: &Error) {
-        Self::on_thread_stop();
+    /// Clean-up [`Server`] data if server is not running.
+    pub fn clean_up_data() {
+        if Self::is_running() {
+            return;
+        }
+        let config = NodeConfig::node_server_config();
+        let server_config = config.server.clone();
 
-        //TODO: Create error
-        // NODE_STATE.init_error = Some(e);
+        // Remove lock file if exists.
+        let mut lock_path = PathBuf::from(&server_config.db_root);
+        lock_path.push("grin.lock");
+        if lock_path.exists() {
+            fs::remove_file(lock_path).unwrap();
+        }
 
-        // // Clean-up server data on data init error.
-        // // TODO: Ask user to clean-up data
-        // let clean_server_and_recreate = || -> Server {
-        //     let mut db_path = PathBuf::from(&server_config.db_root);
-        //     db_path.push("grin.lock");
-        //     fs::remove_file(db_path).unwrap();
-        //
-        //     // Remove chain data on server start error
-        //     let dirs_to_remove: Vec<&str> = vec!["header", "lmdb", "txhashset"];
-        //     for dir in dirs_to_remove {
-        //         let mut path = PathBuf::from(&server_config.db_root);
-        //         path.push(dir);
-        //         fs::remove_dir_all(path).unwrap();
-        //     }
-        //
-        //     // Recreate server
-        //     let api_chan: &'static mut (oneshot::Sender<()>, oneshot::Receiver<()>) =
-        //         Box::leak(Box::new(oneshot::channel::<()>()));
-        //     server_result = Server::new(server_config.clone(), None, api_chan);
-        //     server_result.unwrap()
-        // };
-
-        // Show err on server init error.
-        // TODO: Ask user to clean-up data
-        let show_error = |err: String| {
-            println!("Node server creation error:\n{}", err);
-            //TODO don't panic maybe
-            panic!("{}", err);
-        };
-
-        //TODO: Better error handling
-        match e {
-            Error::Store(e) => {
-                //TODO: Set err to ask user to clean data
-                panic!("{}", e);
-                //(clean_server_and_recreate)()
-            }
-            Error::Chain(e) => {
-                //TODO: Set err to ask user to clean data
-                panic!("{}", e);
-                //(clean_server_and_recreate)()
-            }
-            //TODO: Handle P2P error (Show config error msg)
-            Error::P2P(ref e) => {
-                (show_error)("P2P error".to_string());
-            }
-            //TODO: Handle API error (Show config error msg)
-            Error::API(ref e) => {
-                (show_error)(e.to_string());
-            }
-            //TODO: Seems like another node instance running?
-            Error::IOError(ref e) => {
-                (show_error)(e.to_string());
-            }
-            //TODO: Show config error msg
-            Error::Configuration(ref e) => {
-                (show_error)(e.to_string());
-            }
-            //TODO: Unknown error
-            _ => {
-                (show_error)("Unknown error".to_string());
+        // Remove chain data.
+        let dirs_to_remove: Vec<&str> = vec!["header", "lmdb", "txhashset"];
+        for dir in dirs_to_remove {
+            let mut path = PathBuf::from(&server_config.db_root);
+            path.push(dir);
+            if path.exists() {
+                fs::remove_dir_all(path).unwrap();
             }
         }
     }
@@ -564,26 +542,20 @@ fn start_node_server() -> Result<Server, Error>  {
         global::set_global_future_time_limit(future_time_limit);
     }
 
-    let api_chan: &'static mut (oneshot::Sender<()>, oneshot::Receiver<()>) =
-        Box::leak(Box::new(oneshot::channel::<()>()));
-
-    // Set launching API server address from config to state.
-    {
-        let mut w_api_addr = NODE_STATE.api_addr.write().unwrap();
-        *w_api_addr = Some(config.server.api_http_addr);
-    }
-
-    // Set launching P2P server port from config to state.
-    {
-        let mut w_p2p_port = NODE_STATE.p2p_port.write().unwrap();
-        *w_p2p_port = Some(config.server.p2p_config.port);
-    }
-
     // Put flag to start stratum server if autorun is available.
     if NodeConfig::is_stratum_autorun_enabled() {
         NODE_STATE.start_stratum_needed.store(true, Ordering::Relaxed);
     }
 
+    // Reset an error.
+    {
+        let mut w_err = NODE_STATE.error.write();
+        *w_err = None;
+    }
+
+    // Start integrated node server.
+    let api_chan: &'static mut (oneshot::Sender<()>, oneshot::Receiver<()>) =
+        Box::leak(Box::new(oneshot::channel::<()>()));
     let server_result = Server::new(server_config, None, api_chan);
 
     // Delay after server start.

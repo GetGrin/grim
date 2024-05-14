@@ -1,4 +1,4 @@
-// Copyright 2023 The Grim Developers
+// Copyright 2024 The Grim Developers
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,14 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-mod stratum;
-mod mine_block;
-
-mod node;
-pub use node::Node;
-
-mod config;
-pub use config::*;
-
-mod types;
-pub use types::*;
+/// Integrated node error type.
+#[derive(Clone)]
+pub enum NodeError {
+    /// Storage issue.
+    Storage,
+    /// P2P server issue.
+    P2P,
+    /// API server issue.
+    API,
+    /// Configuration issue.
+    Configuration,
+    /// Unknown error.
+    Unknown
+}

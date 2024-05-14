@@ -13,15 +13,16 @@
 // limitations under the License.
 
 use egui::{Margin, RichText, ScrollArea, Stroke};
+use grin_servers::common::types::Error;
 
 use crate::AppConfig;
 use crate::gui::Colors;
-use crate::gui::icons::{BRIEFCASE, DATABASE, DOTS_THREE_OUTLINE_VERTICAL, FACTORY, FADERS, GAUGE, POWER};
+use crate::gui::icons::{ARROWS_COUNTER_CLOCKWISE, BRIEFCASE, DATABASE, DOTS_THREE_OUTLINE_VERTICAL, FACTORY, FADERS, GAUGE, POWER};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{ConnectionsContent, NetworkMetrics, NetworkMining, NetworkNode, NetworkSettings, Root, TitlePanel, View};
 use crate::gui::views::network::types::{NetworkTab, NetworkTabType};
 use crate::gui::views::types::{TitleContentType, TitleType};
-use crate::node::Node;
+use crate::node::{Node, NodeError};
 use crate::wallet::ExternalConnection;
 
 /// Network content.
@@ -266,5 +267,74 @@ impl NetworkContent {
         View::checkbox(ui, autostart, t!("network.autorun"), || {
             AppConfig::toggle_node_autostart();
         });
+    }
+
+    /// Draw integrated node error content.
+    pub fn node_error_ui(ui: &mut egui::Ui, e: NodeError) {
+        match e {
+            NodeError::Storage => {
+                View::center_content(ui, 156.0, |ui| {
+                    ui.label(RichText::new(t!("network_node.error_clean"))
+                        .size(16.0)
+                        .color(Colors::RED)
+                    );
+                    ui.add_space(8.0);
+                    let btn_txt = format!("{} {}",
+                                          ARROWS_COUNTER_CLOCKWISE,
+                                          t!("network_node.resync"));
+                    View::button(ui, btn_txt, Colors::GOLD, || {
+                        Node::clean_up_data();
+                        Node::start();
+                    });
+                    ui.add_space(2.0);
+                });
+                return;
+            }
+            NodeError::P2P | NodeError::API => {
+                let msg_type = match e {
+                    NodeError::API => "API",
+                    _ => "P2P"
+                };
+                View::center_content(ui, 106.0, |ui| {
+                    let text = t!(
+                        "network_node.error_p2p_api",
+                        "p2p_api" => msg_type,
+                        "settings" => FADERS
+                    );
+                    ui.label(RichText::new(text)
+                        .size(16.0)
+                        .color(Colors::RED)
+                    );
+                    ui.add_space(2.0);
+                });
+                return;
+            }
+            NodeError::Configuration => {
+                View::center_content(ui, 106.0, |ui| {
+                    ui.label(RichText::new(t!("network_node.error_config", "settings" => FADERS))
+                        .size(16.0)
+                        .color(Colors::RED)
+                    );
+                    ui.add_space(2.0);
+                });
+            }
+            NodeError::Unknown => {
+                View::center_content(ui, 156.0, |ui| {
+                    ui.label(RichText::new(t!("network_node.error_unknown", "settings" => FADERS))
+                        .size(16.0)
+                        .color(Colors::RED)
+                    );
+                    ui.add_space(8.0);
+                    let btn_txt = format!("{} {}",
+                                          ARROWS_COUNTER_CLOCKWISE,
+                                          t!("network_node.resync"));
+                    View::button(ui, btn_txt, Colors::GOLD, || {
+                        Node::clean_up_data();
+                        Node::start();
+                    });
+                    ui.add_space(2.0);
+                });
+            }
+        }
     }
 }

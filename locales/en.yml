@@ -183,6 +183,11 @@ network_node:
   data: Data
   size: Size (GB)
   peers: Peers
+  error_clean: Node data got corrupted, resync required.
+  resync: Resync
+  error_p2p_api: 'An error occurred during %{p2p_api} server initialization, check %{p2p_api} settings by selecting %{settings} at the bottom of the screen.'
+  error_config: 'An error occurred during configuration initialization, check settings by selecting %{settings} at the bottom of the screen.'
+  error_unknown: 'An error occurred during initialization, check integrated node settings by selecting %{settings} at the bottom of the screen or resync.'
 network_metrics:
   loading: Metrics will be available after the synchronization
   emission: Emission

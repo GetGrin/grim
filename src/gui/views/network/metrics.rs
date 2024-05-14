@@ -36,7 +36,13 @@ impl NetworkTab for NetworkMetrics {
     }
 
     fn ui(&mut self, ui: &mut egui::Ui, _: &mut eframe::Frame, _: &dyn PlatformCallbacks) {
-        let server_stats = Node::get_stats();
+        // Show an error content when available.
+        let node_err = Node::get_error();
+        if node_err.is_some() {
+            NetworkContent::node_error_ui(ui, node_err.unwrap());
+            return;
+        }
+
         // Show message to enable node when it's not running.
         if !Node::is_running() {
             NetworkContent::disabled_node_ui(ui);
@@ -50,6 +56,7 @@ impl NetworkTab for NetworkMetrics {
         }
 
         // Show message when metrics are not available.
+        let server_stats = Node::get_stats();
         if server_stats.is_none() || Node::is_restarting()
             || server_stats.as_ref().unwrap().diff_stats.height == 0 {
             NetworkContent::loading_ui(ui, Some(t!("network_metrics.loading")));

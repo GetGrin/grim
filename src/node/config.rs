@@ -17,6 +17,8 @@ use std::io::{BufRead, BufReader, Write};
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4, TcpListener, ToSocketAddrs};
 use std::path::PathBuf;
 use std::str::FromStr;
+use local_ip_address::list_afinet_netifas;
+use serde::{Deserialize, Serialize};
 
 use grin_config::{config, ConfigError, ConfigMembers, GlobalConfig};
 use grin_config::config::{API_SECRET_FILE_NAME, FOREIGN_API_SECRET_FILE_NAME, SERVER_CONFIG_FILE_NAME};
@@ -24,8 +26,7 @@ use grin_core::global::ChainTypes;
 use grin_p2p::{PeerAddr, Seeding};
 use grin_p2p::msg::PeerAddrs;
 use grin_servers::common::types::ChainValidationMode;
-use local_ip_address::list_afinet_netifas;
-use serde::{Deserialize, Serialize};
+use rand::Rng;
 
 use crate::{AppConfig, Settings};
 use crate::node::Node;
@@ -68,7 +69,7 @@ impl PeersConfig {
     }
 
     /// Load saved peers to node server [`ConfigMembers`] config.
-    fn load_to_server_config() {
+    pub(crate) fn load_to_server_config() {
         let mut w_node_config = Settings::node_config_to_update();
         // Load seeds.
         for seed in w_node_config.peers.seeds.clone() {
@@ -111,7 +112,6 @@ impl PeersConfig {
                 denied.peers.insert(denied.peers.len(), p);
                 w_node_config.node.server.p2p_config.peers_deny = Some(denied);
             }
-
         }
         // Load preferred peers.
         for peer in &w_node_config.peers.preferred.clone() {
@@ -175,11 +175,33 @@ impl NodeConfig {
     fn save_default_node_server_config(chain_type: &ChainTypes) -> ConfigMembers {
         let sub_dir = Some(chain_type.shortname());
         let path = Settings::get_config_path(SERVER_CONFIG_FILE_NAME, sub_dir.clone());
+
         let mut default_config = GlobalConfig::for_chain(chain_type);
         default_config.update_paths(&Settings::get_base_path(sub_dir));
-        let config = default_config.members.unwrap();
+        let mut config = default_config.members.unwrap();
+        Self::setup_default_ports(&mut config);
+
         Settings::write_to_file(&config, path);
         config
+    }
+
+    /// Generate random p2p and api ports in ranges based on [`ChainTypes`].
+    fn setup_default_ports(config: &mut ConfigMembers) {
+        let (api, p2p) = match config.server.chain_type {
+            ChainTypes::Mainnet => {
+                let api = rand::thread_rng().gen_range(30000..33000);
+                let p2p = rand::thread_rng().gen_range(33000..37000);
+                (api, p2p)
+            },
+            _ => {
+                let api = rand::thread_rng().gen_range(40000..43000);
+                let p2p = rand::thread_rng().gen_range(43000..47000);
+                (api, p2p)
+            }
+        };
+        let api_addr = config.server.api_http_addr.split_once(":").unwrap().0;
+        config.server.api_http_addr = format!("{}:{}", api_addr, api);
+        config.server.p2p_config.port = p2p;
     }
 
     /// Save default peers config for specified [`ChainTypes`].
@@ -200,7 +222,6 @@ impl NodeConfig {
 
     /// Get server config to use for node server before start.
     pub fn node_server_config() -> ConfigMembers {
-        PeersConfig::load_to_server_config();
         let r_config = Settings::node_config_to_read();
         r_config.node.clone()
     }
@@ -444,11 +465,7 @@ impl NodeConfig {
     pub fn is_api_port_available(ip: &String, port: &String) -> bool {
         if Node::is_running() {
             // Check if API server with same address is running.
-            let same_running = if let Some(running_addr) = Node::get_api_addr() {
-                running_addr == format!("{}:{}", ip, port)
-            } else {
-                false
-            };
+            let same_running = NodeConfig::get_api_address() == format!("{}:{}", ip, port);
             if same_running || Self::is_host_port_available(ip, port) {
                 return &Self::get_p2p_port() != port;
             }
@@ -598,8 +615,6 @@ impl NodeConfig {
         w_node_config.save();
     }
 
-    // P2P settings
-
     /// Get P2P server port.
     pub fn get_p2p_port() -> String {
         Settings::node_config_to_read().node.server.p2p_config.port.to_string()
@@ -613,11 +628,7 @@ impl NodeConfig {
         let (_, api_port) = Self::get_api_ip_port();
         if Node::is_running() {
             // Check if P2P server with same port is running.
-            let same_running = if let Some(running_port) = Node::get_p2p_port() {
-                &running_port.to_string() == port
-            } else {
-                false
-            };
+            let same_running = &NodeConfig::get_p2p_port() == port;
             if same_running || Self::is_port_available(port) {
                 return &api_port != port;
             }

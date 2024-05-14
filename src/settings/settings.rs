@@ -15,12 +15,13 @@
 use std::fs::{self, File};
 use std::io::Write;
 use std::path::PathBuf;
-use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
-
-use grin_config::ConfigError;
+use std::sync::Arc;
 use lazy_static::lazy_static;
+use parking_lot::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
+
+use grin_config::ConfigError;
 
 use crate::node::NodeConfig;
 use crate::settings::AppConfig;
@@ -81,42 +82,42 @@ impl Settings {
 
     /// Get node configuration to read values.
     pub fn node_config_to_read() -> RwLockReadGuard<'static, NodeConfig> {
-        SETTINGS_STATE.node_config.read().unwrap()
+        SETTINGS_STATE.node_config.read()
     }
 
     /// Get node configuration to update values.
     pub fn node_config_to_update() -> RwLockWriteGuard<'static, NodeConfig> {
-        SETTINGS_STATE.node_config.write().unwrap()
+        SETTINGS_STATE.node_config.write()
     }
 
     /// Get app configuration to read values.
     pub fn app_config_to_read() -> RwLockReadGuard<'static, AppConfig> {
-        SETTINGS_STATE.app_config.read().unwrap()
+        SETTINGS_STATE.app_config.read()
     }
 
     /// Get app configuration to update values.
     pub fn app_config_to_update() -> RwLockWriteGuard<'static, AppConfig> {
-        SETTINGS_STATE.app_config.write().unwrap()
+        SETTINGS_STATE.app_config.write()
     }
 
     /// Get connections configuration to read values.
     pub fn conn_config_to_read() -> RwLockReadGuard<'static, ConnectionsConfig> {
-        SETTINGS_STATE.conn_config.read().unwrap()
+        SETTINGS_STATE.conn_config.read()
     }
 
     /// Get connections configuration to update values.
     pub fn conn_config_to_update() -> RwLockWriteGuard<'static, ConnectionsConfig> {
-        SETTINGS_STATE.conn_config.write().unwrap()
+        SETTINGS_STATE.conn_config.write()
     }
 
     /// Get tor server configuration to read values.
     pub fn tor_config_to_read() -> RwLockReadGuard<'static, TorConfig> {
-        SETTINGS_STATE.tor_config.read().unwrap()
+        SETTINGS_STATE.tor_config.read()
     }
 
     /// Get tor server configuration to update values.
     pub fn tor_config_to_update() -> RwLockWriteGuard<'static, TorConfig> {
-        SETTINGS_STATE.tor_config.write().unwrap()
+        SETTINGS_STATE.tor_config.write()
     }
 
     /// Get base directory path for configuration.

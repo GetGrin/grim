@@ -44,7 +44,12 @@ impl NetworkTab for NetworkMining {
     }
 
     fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame, cb: &dyn PlatformCallbacks) {
-        let server_stats = Node::get_stats();
+        // Show an error content when available.
+        let node_err = Node::get_error();
+        if node_err.is_some() {
+            NetworkContent::node_error_ui(ui, node_err.unwrap());
+            return;
+        }
 
         // Show message to enable node when it's not running.
         if !Node::is_running() {
@@ -59,6 +64,7 @@ impl NetworkTab for NetworkMining {
         }
 
         // Show message when mining is not available.
+        let server_stats = Node::get_stats();
         if server_stats.is_none() || Node::is_restarting()
             || Node::get_sync_status().unwrap() != SyncStatus::NoSync {
             NetworkContent::loading_ui(ui, Some(t!("network_mining.loading")));

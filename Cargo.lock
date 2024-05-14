@@ -3794,6 +3794,7 @@ dependencies = [
  "local-ip-address",
  "log",
  "openssl-sys",
+ "parking_lot 0.12.1",
  "qrcodegen",
  "rand 0.8.5",
  "rqrr",
