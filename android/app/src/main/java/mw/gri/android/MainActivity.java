@@ -310,7 +310,9 @@ public class MainActivity extends GameActivity {
         View content = findViewById(android.R.id.content);
         if (content != null) {
             content.post(() -> {
-                mCameraProvider.unbindAll();
+                if (mCameraProvider != null) {
+                    mCameraProvider.unbindAll();
+                }
             });
         }
     }
