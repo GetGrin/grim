@@ -13,11 +13,10 @@
 // limitations under the License.
 
 use egui::{RichText, Rounding, ScrollArea};
-use grin_servers::common::types::Error;
 use grin_servers::PeerStats;
 
 use crate::gui::Colors;
-use crate::gui::icons::{ARROWS_COUNTER_CLOCKWISE, AT, CUBE, DEVICES, FLOW_ARROW, HANDSHAKE, PACKAGE, PLUGS_CONNECTED, SHARE_NETWORK};
+use crate::gui::icons::{AT, CUBE, DEVICES, FLOW_ARROW, HANDSHAKE, PACKAGE, PLUGS_CONNECTED, SHARE_NETWORK};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{NetworkContent, Root, View};
 use crate::gui::views::network::types::{NetworkTab, NetworkTabType};

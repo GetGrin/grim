@@ -12,13 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::{Id, Margin, RichText, ScrollArea, TextStyle, vec2, Widget};
-use egui_extras::{RetainedImage, Size, StripBuilder};
+use egui::{Id, Margin, RichText, ScrollArea, vec2};
 use grin_util::ZeroingString;
 
 use crate::built_info;
 use crate::gui::Colors;
-use crate::gui::icons::{CHECK, CLIPBOARD_TEXT, COPY, EYE, EYE_SLASH, FOLDER_PLUS, SCAN, SHARE_FAT};
+use crate::gui::icons::{CHECK, CLIPBOARD_TEXT, COPY, FOLDER_PLUS, SCAN, SHARE_FAT};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, Root, View};
 use crate::gui::views::types::{ModalPosition, TextEditOptions};

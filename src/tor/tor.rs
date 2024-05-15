@@ -225,7 +225,6 @@ impl Tor {
                     runtime
                         .spawn(async move {
                             loop {
-                                println!("start loop");
                                 // Create client.
                                 let (client, _) = Self::build_client(client_runtime.clone()).await;
     
@@ -234,19 +233,16 @@ impl Tor {
                                 let tor_connector = ArtiHttpConnector::new(client, tls_connector);
                                 let http = hyper::Client::builder().build::<_, Body>(tor_connector);
     
-                                println!("start get {}", url);
                                 match http.get(Uri::from_str(url.as_str()).unwrap()).await {
                                     Ok(_) => {
                                         // Remove service from starting.
                                         let mut w_services = TOR_SERVER_STATE.starting_services.write().unwrap();
                                         w_services.remove(&service_id);
-                                        println!("OK");
                                     },
                                     Err(e) => {
                                         // Put service to starting.
                                         let mut w_services = TOR_SERVER_STATE.starting_services.write().unwrap();
                                         w_services.insert(service_id.clone());
-                                        println!("err: {}", e);
                                     },
                                 }
                                 if !Self::is_service_running(&service_id) &&
@@ -305,7 +301,6 @@ impl Tor {
                         w_services.remove(&id);
                     }
                     Err(e) => {
-                        eprintln!("service err: {}", e);
                         // Remove service from running.
                         let mut w_services =
                             TOR_SERVER_STATE.running_services.write().unwrap();

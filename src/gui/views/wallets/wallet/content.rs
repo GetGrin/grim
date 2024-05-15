@@ -13,7 +13,7 @@
 // limitations under the License.
 
 use std::time::Duration;
-use egui::{Align, Id, Layout, Margin, RichText, ScrollArea, Widget};
+use egui::{Align, Id, Layout, Margin, RichText, ScrollArea};
 use grin_chain::SyncStatus;
 use grin_core::core::amount_to_hr_string;
 

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::{Id, RichText, Widget};
+use egui::{Id, RichText};
 
 use crate::gui::Colors;
 use crate::gui::icons::{CLOCK_COUNTDOWN, PASSWORD, PENCIL};
@@ -201,7 +201,7 @@ impl CommonSetup {
                 });
                 columns[1].vertical_centered_justified(|ui| {
                     // Save button callback.
-                    let mut on_save = || {
+                    let on_save = || {
                         if !self.name_edit.is_empty() {
                             wallet.change_name(self.name_edit.clone());
                             cb.hide_keyboard();
@@ -358,7 +358,7 @@ impl CommonSetup {
                 });
                 columns[1].vertical_centered_justified(|ui| {
                     // Save button callback.
-                    let mut on_save = || {
+                    let on_save = || {
                         if let Ok(min_conf) = self.min_confirmations_edit.parse::<u64>() {
                             wallet.update_min_confirmations(min_conf);
                             cb.hide_keyboard();

@@ -13,7 +13,7 @@
 // limitations under the License.
 
 use std::time::Duration;
-use egui::{Align, Id, Layout, Margin, RichText, Rounding, ScrollArea, Widget};
+use egui::{Align, Id, Layout, Margin, RichText, Rounding, ScrollArea};
 
 use crate::AppConfig;
 use crate::gui::Colors;
@@ -272,7 +272,7 @@ impl WalletsContent {
         };
 
         // Draw title panel.
-        TitlePanel::ui(title_content, |ui, frame| {
+        TitlePanel::ui(title_content, |ui, _| {
             if show_wallet && !dual_panel {
                 View::title_button(ui, ARROW_LEFT, || {
                     self.wallets.select(None);
@@ -296,7 +296,7 @@ impl WalletsContent {
                     Root::toggle_network_panel();
                 });
             };
-        }, |ui, frame| {
+        }, |ui, _| {
             View::title_button(ui, GEAR, || {
                 // Show settings modal.
                 Modal::new(Root::SETTINGS_MODAL)

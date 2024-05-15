@@ -13,7 +13,6 @@
 // limitations under the License.
 
 use egui::{Margin, RichText, ScrollArea, Stroke};
-use grin_servers::common::types::Error;
 
 use crate::AppConfig;
 use crate::gui::Colors;
@@ -193,7 +192,7 @@ impl NetworkContent {
                 ui: &mut egui::Ui,
                 frame: &mut eframe::Frame,
                 show_connections: bool,
-                cb: &dyn PlatformCallbacks) {
+                _: &dyn PlatformCallbacks) {
         // Setup values for title panel.
         let title_text = self.node_tab_content.get_type().title().to_uppercase();
         let subtitle_text = Node::get_sync_status_text();

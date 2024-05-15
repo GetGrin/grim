@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::{Id, RichText, Widget};
+use egui::{Id, RichText};
 use grin_chain::SyncStatus;
 use grin_util::ZeroingString;
 

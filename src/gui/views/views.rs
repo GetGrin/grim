@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::ops::Add;
 use std::sync::atomic::{AtomicI32, Ordering};
 use std::sync::Arc;
 use parking_lot::RwLock;
@@ -558,7 +557,6 @@ impl View {
     pub fn radio_value<T: PartialEq>(ui: &mut egui::Ui, current: &mut T, value: T, text: String) {
         let mut response = ui.radio(*current == value, text)
             .on_hover_cursor(CursorIcon::PointingHand);
-        ;
         if Self::touched(ui, response.clone()) && *current != value {
             *current = value;
             response.mark_changed();
@@ -650,7 +648,7 @@ pub extern "C" fn Java_mw_gri_android_MainActivity_onInput(
     _class: jni::objects::JObject,
     char: jni::sys::jstring
 ) {
-    use jni::objects::{JString};
+    use jni::objects::JString;
 
     unsafe {
         let j_obj = JString::from_raw(char);

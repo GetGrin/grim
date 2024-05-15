@@ -40,7 +40,7 @@ impl TitlePanel {
                 };
                 (Id::from(text.clone()), false)
             },
-            TitleType::Dual(first, second) => {
+            TitleType::Dual(first, _) => {
                 let first_text = match first {
                     TitleContentType::Title(text) => text,
                     TitleContentType::WithSubTitle(text, _, _) => text

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::{Align, Id, Layout, RichText, Rounding, Widget};
+use egui::{Align, Id, Layout, RichText, Rounding};
 use url::Url;
 
 use crate::gui::Colors;
@@ -412,7 +412,7 @@ impl ConnectionSetup {
                             ui: &mut egui::Ui,
                             wallet: &Wallet,
                             modal: &Modal,
-                            cb: &dyn PlatformCallbacks) {
+                            _: &dyn PlatformCallbacks) {
         ui.add_space(8.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("wallets.change_server_confirmation"))
