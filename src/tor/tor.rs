@@ -16,6 +16,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::str::FromStr;
 use std::sync::{Arc, RwLock};
+use std::thread;
 use std::time::Duration;
 use arti_client::config::pt::TransportConfigBuilder;
 use lazy_static::lazy_static;
@@ -193,13 +194,24 @@ impl Tor {
                 .unwrap();
             let (service, request) = client.launch_onion_service(service_config).unwrap();
 
+            // Launch service proxy.
+            let addr = SocketAddr::new(IpAddr::from(Ipv4Addr::LOCALHOST), port);
+            tokio::spawn(
+                Self::run_service_proxy(addr, client, service.clone(), request, hs_nickname.clone())
+            ).await.unwrap();
+
             // Check service availability.
-            let service_check = service.clone();
+            let url = format!("http://{}", service.onion_name().unwrap().to_string());
             std::thread::spawn(move || {
+                thread::sleep(Duration::from_millis(3000));
                 let runtime = TokioNativeTlsRuntime::create().unwrap();
                 let runtime_client = runtime.clone();
                 runtime.spawn(async move {
                     loop {
+                        if !Self::is_service_running(&service_id) &&
+                            !Self::is_service_starting(&service_id) {
+                            break;
+                        }
                         // Create client.
                         let (client, _) = Self::build_client(runtime_client.clone()).await;
 
@@ -208,33 +220,29 @@ impl Tor {
                         let tor_connector = ArtiHttpConnector::new(client, tls_connector);
                         let http = hyper::Client::builder().build::<_, Body>(tor_connector);
 
-                        let url = format!("http://{}", service_check.onion_name().unwrap().to_string());
                         match http.get(Uri::from_str(url.as_str()).unwrap()).await {
                             Ok(_) => {
                                 // Remove service from starting.
                                 let mut w_services = TOR_SERVER_STATE.starting_services.write().unwrap();
                                 w_services.remove(&service_id);
 
-                                println!("success");
+                                println!("check success");
                             },
                             Err(e) => {
                                 // Put service to starting.
                                 let mut w_services = TOR_SERVER_STATE.starting_services.write().unwrap();
                                 w_services.insert(service_id.clone());
 
-                                println!("err: {}", e);
+                                println!("check err: {}", e);
                             },
                         }
-                        sleep(Duration::from_millis(5000)).await;
+                        if !Self::is_service_running(&service_id) &&
+                            !Self::is_service_starting(&service_id) {
+                            break;
+                        }
                     }
                 }).unwrap();
             });
-
-            // Launch service proxy.
-            let addr = SocketAddr::new(IpAddr::from(Ipv4Addr::LOCALHOST), port);
-            tokio::spawn(
-                Self::run_service_proxy(addr, client, service.clone(), request, hs_nickname.clone())
-            ).await.unwrap();
         }).unwrap();
     }
 
@@ -274,12 +282,14 @@ impl Tor {
                     .handle_requests(runtime, nickname.clone(), request)
                     .await {
                     Ok(()) => {
+                        println!("service stopped");
                         // Remove service from running.
                         let mut w_services =
                             TOR_SERVER_STATE.running_services.write().unwrap();
                         w_services.remove(&id);
                     }
                     Err(e) => {
+                        eprintln!("service err: {}", e);
                         // Remove service from running.
                         let mut w_services =
                             TOR_SERVER_STATE.running_services.write().unwrap();
