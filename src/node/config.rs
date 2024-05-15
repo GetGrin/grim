@@ -49,6 +49,8 @@ impl PeersConfig {
         let chain_type = AppConfig::chain_type();
         let config_path = Settings::get_config_path(Self::FILE_NAME, Some(chain_type.shortname()));
         Settings::write_to_file(self, config_path);
+        // Load changes to node server config.
+        Self::load_to_server_config();
     }
 
     /// Convert string to [`PeerAddr`] if address is in correct format (`host:port`) and available.
