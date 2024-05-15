@@ -12,17 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use parking_lot::RwLock;
 use std::thread;
 use eframe::emath::Align;
 use egui::load::SizedTexture;
 use egui::{Layout, Pos2, Rect, TextureOptions, Widget};
+use image::{DynamicImage, EncodableLayout, ImageFormat};
+
 use grin_util::ZeroingString;
 use grin_wallet_libwallet::SlatepackAddress;
-use image::{DynamicImage, EncodableLayout, ImageFormat};
+
 use crate::gui::Colors;
 use crate::gui::icons::CAMERA_ROTATE;
-
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::types::{QrScanResult, QrScanState};
 use crate::gui::views::View;
@@ -129,7 +131,7 @@ impl CameraContent {
 
     /// Check if image is processing to find QR code.
     fn image_processing(&self) -> bool {
-        let r_scan = self.qr_scan_state.read().unwrap();
+        let r_scan = self.qr_scan_state.read();
         r_scan.image_processing
     }
 
@@ -141,7 +143,7 @@ impl CameraContent {
         }
         // Setup scanning flag.
         {
-            let mut w_scan = self.qr_scan_state.write().unwrap();
+            let mut w_scan = self.qr_scan_state.write();
             w_scan.image_processing = true;
         }
         // Launch scanner at separate thread.
@@ -164,14 +166,14 @@ impl CameraContent {
                             let text = text.trim();
                             if !text.is_empty() {
                                 let result = Self::parse_scan_result(text);
-                                let mut w_scan = qr_scan_state.write().unwrap();
+                                let mut w_scan = qr_scan_state.write();
                                 w_scan.qr_scan_result = Some(result);
                             }
                         }
                     }
                     // Setup scanning flag.
                     {
-                        let mut w_scan = qr_scan_state.write().unwrap();
+                        let mut w_scan = qr_scan_state.write();
                         w_scan.image_processing = false;
                     }
                 });
@@ -196,7 +198,7 @@ impl CameraContent {
 
     /// Get QR code scan result.
     pub fn qr_scan_result(&self) -> Option<QrScanResult> {
-        let r_scan = self.qr_scan_state.read().unwrap();
+        let r_scan = self.qr_scan_state.read();
         if r_scan.qr_scan_result.is_some() {
             return Some(r_scan.qr_scan_result.clone().unwrap());
         }
@@ -205,7 +207,7 @@ impl CameraContent {
 
     /// Reset camera content state to default.
     pub fn clear_state(&mut self) {
-        let mut w_scan = self.qr_scan_state.write().unwrap();
+        let mut w_scan = self.qr_scan_state.write();
         *w_scan = QrScanState::default();
     }
 }
