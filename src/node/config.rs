@@ -181,7 +181,13 @@ impl NodeConfig {
         let mut default_config = GlobalConfig::for_chain(chain_type);
         default_config.update_paths(&Settings::get_base_path(sub_dir));
         let mut config = default_config.members.unwrap();
+
+        // Generate random p2p and api ports.
         Self::setup_default_ports(&mut config);
+
+        // Increase default amount of peers.
+        config.server.p2p_config.peer_max_outbound_count = Some(24);
+        config.server.p2p_config.peer_min_preferred_outbound_count = Some(18);
 
         Settings::write_to_file(&config, path);
         config
