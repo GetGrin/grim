@@ -14,7 +14,8 @@
 
 use std::ops::Add;
 use std::sync::atomic::{AtomicI32, Ordering};
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use parking_lot::RwLock;
 use lazy_static::lazy_static;
 
 use egui::{Align, Button, CursorIcon, Layout, PointerState, Rect, Response, RichText, Sense, Spinner, TextBuffer, TextStyle, Widget};
@@ -384,7 +385,7 @@ impl View {
                 // Apply text from input on Android as temporary fix for egui.
                 let os = OperatingSystem::from_target_os();
                 if os == OperatingSystem::Android && text_edit_resp.has_focus() {
-                    let mut w_input = LAST_SOFT_KEYBOARD_INPUT.write().unwrap();
+                    let mut w_input = LAST_SOFT_KEYBOARD_INPUT.write();
 
                     if !w_input.is_empty() {
                         let mut state = TextEditState::load(ui.ctx(), options.id).unwrap();
@@ -656,7 +657,7 @@ pub extern "C" fn Java_mw_gri_android_MainActivity_onInput(
         let j_str = _env.get_string_unchecked(j_obj.as_ref()).unwrap();
         match j_str.to_str() {
             Ok(str) => {
-                let mut w_input = LAST_SOFT_KEYBOARD_INPUT.write().unwrap();
+                let mut w_input = LAST_SOFT_KEYBOARD_INPUT.write();
                 *w_input = w_input.clone().add(str);
             }
             Err(_) => {}
