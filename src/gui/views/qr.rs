@@ -12,11 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use parking_lot::RwLock;
 use std::thread;
 use egui::{SizeHint, TextureHandle, TextureOptions};
 use egui::load::SizedTexture;
-use egui_extras::image::{load_svg_bytes, load_svg_bytes_with_size};
+use egui_extras::image::load_svg_bytes_with_size;
 
 use crate::gui::views::types::QrCreationState;
 use crate::gui::views::View;
@@ -53,7 +54,7 @@ impl QrCodeContent {
             self.create_image(text);
         } else {
             // Create image from SVG data.
-            let r_create = self.qr_creation_state.read().unwrap();
+            let r_create = self.qr_creation_state.read();
             let svg = r_create.svg.as_ref().unwrap();
             let size = SizeHint::Size(ui.available_width() as u32, ui.available_width() as u32);
             let color_img = load_svg_bytes_with_size(svg, Some(size)).unwrap();
@@ -74,13 +75,13 @@ impl QrCodeContent {
 
     /// Check if image is creating.
     fn creating(&self) -> bool {
-        let r_create = self.qr_creation_state.read().unwrap();
+        let r_create = self.qr_creation_state.read();
         r_create.creating
     }
 
     /// Check if image was created.
     fn has_image(&self) -> bool {
-        let r_create = self.qr_creation_state.read().unwrap();
+        let r_create = self.qr_creation_state.read();
         r_create.svg.is_some()
     }
 
@@ -92,7 +93,7 @@ impl QrCodeContent {
                 let qr = qrcodegen::QrCode::encode_text(text.as_str(),
                                                         qrcodegen::QrCodeEcc::Medium).unwrap();
                 let svg = Self::qr_to_svg(qr, 0);
-                let mut w_create = qr_creation_state.write().unwrap();
+                let mut w_create = qr_creation_state.write();
                 w_create.creating = false;
                 w_create.svg = Some(svg.into_bytes());
             });
@@ -126,7 +127,7 @@ impl QrCodeContent {
 
     /// Reset QR code image content state to default.
     pub fn clear_state(&mut self) {
-        let mut w_create = self.qr_creation_state.write().unwrap();
+        let mut w_create = self.qr_creation_state.write();
         *w_create = QrCreationState::default();
     }
 }
