@@ -18,6 +18,8 @@ use egui::{Align, Id, Layout, Margin, RichText, Rounding, ScrollArea};
 use egui::os::OperatingSystem;
 use egui::scroll_area::ScrollBarVisibility;
 use parking_lot::RwLock;
+use tor_rtcompat::BlockOn;
+use tor_rtcompat::tokio::TokioNativeTlsRuntime;
 use grin_core::core::{amount_from_hr_string, amount_to_hr_string};
 use grin_wallet_libwallet::SlatepackAddress;
 
@@ -402,7 +404,7 @@ impl WalletTransport {
         ui.add_space(6.0);
     }
 
-    /// Draw Tor send content.
+    /// Draw Tor receive content.
     fn tor_receive_ui(&mut self,
                       ui: &mut egui::Ui,
                       wallet: &Wallet,
@@ -495,7 +497,7 @@ impl WalletTransport {
         });
     }
 
-    /// Draw Tor receive content.
+    /// Draw Tor send content.
     fn tor_send_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         // Setup layout size.
         let mut rect = ui.available_rect_before_wrap();
@@ -684,12 +686,13 @@ impl WalletTransport {
                                     let send_success = self.tor_success.clone();
                                     let mut wallet = wallet.clone();
                                     thread::spawn(move || {
-                                        tokio::runtime::Builder::new_multi_thread()
-                                            .enable_all()
-                                            .build()
-                                            .unwrap()
+                                        let runtime = TokioNativeTlsRuntime::create().unwrap();
+                                        let runtime_tor = runtime.clone();
+                                        runtime
                                             .block_on(async {
-                                                if wallet.send_tor(a, &addr).await.is_some() {
+                                                if wallet.send_tor(a, &addr, runtime_tor)
+                                                    .await
+                                                    .is_some() {
                                                     let mut w_send_success = send_success.write();
                                                     *w_send_success = true;
                                                 } else {
@@ -742,15 +745,16 @@ impl WalletTransport {
                                 let send_success = self.tor_success.clone();
                                 let mut wallet = wallet.clone();
                                 thread::spawn(move || {
-                                    tokio::runtime::Builder::new_multi_thread()
-                                        .enable_all()
-                                        .build()
-                                        .unwrap()
+                                    let runtime = TokioNativeTlsRuntime::create().unwrap();
+                                    let runtime_tor = runtime.clone();
+                                    runtime
                                         .block_on(async {
                                             let addr_str = addr_text.as_str();
                                             let addr = &SlatepackAddress::try_from(addr_str)
                                                 .unwrap();
-                                            if wallet.send_tor(a, &addr).await.is_some() {
+                                            if wallet.send_tor(a, &addr, runtime_tor)
+                                                .await
+                                                .is_some() {
                                                 let mut w_send_success = send_success.write();
                                                 *w_send_success = true;
                                             } else {

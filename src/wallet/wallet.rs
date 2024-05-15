@@ -24,6 +24,8 @@ use std::thread::Thread;
 use std::time::Duration;
 use futures::channel::oneshot;
 use serde_json::{json, Value};
+use tor_rtcompat::tokio::TokioNativeTlsRuntime;
+use rand::Rng;
 
 use grin_api::{ApiServer, Router};
 use grin_chain::SyncStatus;
@@ -40,7 +42,6 @@ use grin_wallet_impls::{DefaultLCProvider, DefaultWalletImpl, HTTPNodeClient};
 use grin_wallet_libwallet::{address, Error, InitTxArgs, IssueInvoiceTxArgs, NodeClient, RetrieveTxQueryArgs, RetrieveTxQuerySortField, RetrieveTxQuerySortOrder, Slate, SlatepackAddress, SlateState, SlateVersion, StatusMessage, TxLogEntry, TxLogEntryType, VersionedSlate, WalletInst, WalletLCProvider};
 use grin_wallet_libwallet::api_impl::owner::{cancel_tx, retrieve_summary_info, retrieve_txs};
 use grin_wallet_util::OnionV3Address;
-use rand::Rng;
 
 use crate::AppConfig;
 use crate::node::{Node, NodeConfig};
@@ -675,7 +676,9 @@ impl Wallet {
     }
 
     /// Send amount to provided address with Tor transport.
-    pub async fn send_tor(&mut self, amount: u64, addr: &SlatepackAddress) -> Option<Slate> {
+    pub async fn send_tor(&mut self,
+                          amount: u64, addr: &SlatepackAddress,
+                          runtime: TokioNativeTlsRuntime) -> Option<Slate> {
         // Initialize transaction.
         let send_res = self.send(amount);
 
@@ -706,7 +709,7 @@ impl Wallet {
 			}).to_string();
 
         // Send request to receiver.
-        let req_res = Tor::post(body, url).await;
+        let req_res = Tor::post(body, url, runtime).await;
         if req_res.is_none() {
             cancel_tx();
             return None;
