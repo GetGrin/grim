@@ -287,6 +287,12 @@ impl Node {
                                 NODE_STATE.starting.store(false, Ordering::Relaxed);
                                 first_start = false;
                             }
+
+                            // Restart node on running status and 0 peers (usual case for Mobile).
+                            if stats.peer_count == 0 && stats.sync_status == SyncStatus::NoSync {
+                                Node::restart();
+                                continue;
+                            }
                         }
 
                         if stratum_start_requested && NODE_STATE.stratum_stats.read().is_running {
