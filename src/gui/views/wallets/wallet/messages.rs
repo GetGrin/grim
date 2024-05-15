@@ -306,13 +306,17 @@ impl WalletMessages {
             .auto_shrink([false; 2])
             .show(ui, |ui| {
                 ui.add_space(7.0);
-                egui::TextEdit::multiline(message)
+                let resp = egui::TextEdit::multiline(message)
                     .font(egui::TextStyle::Small)
                     .desired_rows(5)
                     .interactive(response_empty)
                     .hint_text(SLATEPACK_MESSAGE_HINT)
                     .desired_width(f32::INFINITY)
                     .show(ui);
+                // Show soft keyboard on click.
+                if response_empty && resp.response.clicked() {
+                    cb.show_keyboard();
+                }
                 ui.add_space(6.0);
             });
         ui.add_space(2.0);
@@ -360,7 +364,7 @@ impl WalletMessages {
                         View::button(ui, paste, Colors::BUTTON, || {
                             let buf = cb.get_string_from_buffer();
                             let previous = self.message_edit.clone();
-                            self.message_edit = buf.clone();
+                            self.message_edit = buf.clone().trim().to_string();
                             // Parse Slatepack message resetting message error.
                             if buf != previous {
                                 self.parse_message(wallet);
@@ -456,9 +460,11 @@ impl WalletMessages {
         if self.message_edit.is_empty() {
            return;
         }
-        if let Ok(mut slate) = wallet.parse_slatepack(&self.message_edit) {
-            println!("parse_message: {}", slate);
+        // Trim message.
+        self.message_edit = self.message_edit.trim().to_string();
 
+        // Parse message.
+        if let Ok(mut slate) = wallet.parse_slatepack(&self.message_edit) {
             // Try to setup empty amount from transaction by id.
             if slate.amount == 0 {
                 let _ = wallet.get_data().unwrap().txs.clone().iter().map(|tx| {
