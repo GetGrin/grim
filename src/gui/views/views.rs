@@ -649,6 +649,7 @@ pub extern "C" fn Java_mw_gri_android_MainActivity_onInput(
     char: jni::sys::jstring
 ) {
     use jni::objects::JString;
+    use std::ops::Add;
 
     unsafe {
         let j_obj = JString::from_raw(char);
