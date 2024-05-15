@@ -635,7 +635,7 @@ pub extern "C" fn Java_mw_gri_android_MainActivity_onDisplayInsets(
 }
 
 lazy_static! {
-    static ref LAST_SOFT_KEYBOARD_INPUT: Arc<RwLock<String>> = Arc::new(RwLock::new("".to_string()));
+    pub static ref LAST_SOFT_KEYBOARD_INPUT: Arc<RwLock<String>> = Arc::new(RwLock::new("".into()));
 }
 
 #[allow(dead_code)]

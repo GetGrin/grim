@@ -12,8 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::{Id, Margin, RichText, ScrollArea};
+use egui::{Id, Margin, RichText, ScrollArea, TextBuffer};
+use egui::os::OperatingSystem;
 use egui::scroll_area::ScrollBarVisibility;
+use egui::text_edit::TextEditState;
 use grin_core::core::{amount_from_hr_string, amount_to_hr_string};
 use grin_wallet_libwallet::{Slate, SlateState};
 use log::error;
@@ -23,6 +25,7 @@ use crate::gui::icons::{BROOM, CLIPBOARD_TEXT, COPY, DOWNLOAD_SIMPLE, PROHIBIT, 
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, Root, View};
 use crate::gui::views::types::{ModalPosition, TextEditOptions};
+use crate::gui::views::views::LAST_SOFT_KEYBOARD_INPUT;
 use crate::gui::views::wallets::wallet::types::{SLATEPACK_MESSAGE_HINT, WalletTab, WalletTabType};
 use crate::gui::views::wallets::wallet::WalletContent;
 use crate::wallet::types::WalletTransaction;
@@ -295,27 +298,66 @@ impl WalletMessages {
 
         View::horizontal_line(ui, Colors::ITEM_STROKE);
         ui.add_space(3.0);
+        let scroll_id = Id::from(
+            if response_empty {
+                "message_input"
+            } else {
+                "response_input"
+            }).with(wallet.get_config().id);
         ScrollArea::vertical()
             .max_height(128.0)
-            .id_source(Id::from(
-                if response_empty {
-                    "message_input"
-                } else {
-                    "response_input"
-                }).with(wallet.get_config().id))
+            .id_source(scroll_id)
             .auto_shrink([false; 2])
             .show(ui, |ui| {
                 ui.add_space(7.0);
+                let input_id = scroll_id.with("_input");
                 let resp = egui::TextEdit::multiline(message)
+                    .id(input_id)
                     .font(egui::TextStyle::Small)
                     .desired_rows(5)
                     .interactive(response_empty)
                     .hint_text(SLATEPACK_MESSAGE_HINT)
                     .desired_width(f32::INFINITY)
-                    .show(ui);
+                    .show(ui)
+                    .response;
                 // Show soft keyboard on click.
-                if response_empty && resp.response.clicked() {
+                if response_empty && resp.clicked() {
                     cb.show_keyboard();
+                }
+                if response_empty {
+                    // Apply text from input on Android as temporary fix for egui.
+                    let os = OperatingSystem::from_target_os();
+                    if os == OperatingSystem::Android && resp.has_focus() {
+                        let mut w_input = LAST_SOFT_KEYBOARD_INPUT.write();
+
+                        if !w_input.is_empty() {
+                            let mut state = TextEditState::load(ui.ctx(), input_id).unwrap();
+                            match state.cursor.char_range() {
+                                None => {}
+                                Some(range) => {
+                                    let mut r = range.clone();
+
+                                    let mut index = r.primary.index;
+
+                                    message.insert_text(w_input.as_str(), index);
+                                    index = index + 1;
+
+                                    if index == 0 {
+                                        r.primary.index = message.len();
+                                        r.secondary.index = r.primary.index;
+                                    } else {
+                                        r.primary.index = index;
+                                        r.secondary.index = r.primary.index;
+                                    }
+                                    state.cursor.set_char_range(Some(r));
+                                    TextEditState::store(state, ui.ctx(), input_id);
+                                }
+                            }
+                        }
+
+                        *w_input = "".to_string();
+                        ui.ctx().request_repaint();
+                    }
                 }
                 ui.add_space(6.0);
             });
@@ -719,18 +761,20 @@ impl WalletMessages {
                 ui.add_space(3.0);
 
                 // Draw output Slatepack message text.
-                let input_id = if self.send_request {
-                    Id::from("send_request_output").with(wallet.get_config().id)
+                let scroll_id = if self.send_request {
+                    Id::from("send_request").with(wallet.get_config().id)
                 } else {
-                    Id::from("receive_request_output").with(wallet.get_config().id)
+                    Id::from("receive_request").with(wallet.get_config().id)
                 };
                 ScrollArea::vertical()
                     .max_height(128.0)
-                    .id_source(input_id)
+                    .id_source(scroll_id)
                     .auto_shrink([false; 2])
                     .show(ui, |ui| {
                         ui.add_space(7.0);
+                        let input_id =  Id::from(scroll_id).with("_input");
                         egui::TextEdit::multiline(&mut self.request_edit)
+                            .id(input_id)
                             .font(egui::TextStyle::Small)
                             .desired_rows(5)
                             .interactive(false)
