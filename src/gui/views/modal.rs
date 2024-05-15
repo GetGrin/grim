@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use lazy_static::lazy_static;
+use std::sync::Arc;
+use parking_lot::RwLock;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, RwLock};
-
 use egui::{Align2, Rect, RichText, Rounding, Stroke, Vec2};
 use egui::epaint::{RectShape, Shadow};
-use lazy_static::lazy_static;
 
 use crate::gui::Colors;
 use crate::gui::views::{Root, View};
@@ -65,7 +65,7 @@ impl Modal {
 
     /// Mark [`Modal`] closed.
     pub fn close(&self) {
-        let mut w_nav = MODAL_STATE.write().unwrap();
+        let mut w_nav = MODAL_STATE.write();
         w_nav.modal = None;
     }
 
@@ -93,14 +93,14 @@ impl Modal {
 
     /// Set [`Modal`] instance into state to show at ui.
     pub fn show(self) {
-        let mut w_nav = MODAL_STATE.write().unwrap();
+        let mut w_nav = MODAL_STATE.write();
         w_nav.modal = Some(self);
     }
 
     /// Remove [`Modal`] from [`ModalState`] if it's showing and can be closed.
     /// Return `false` if Modal existed in [`ModalState`] before call.
     pub fn on_back() -> bool {
-        let mut w_state = MODAL_STATE.write().unwrap();
+        let mut w_state = MODAL_STATE.write();
 
         // If Modal is showing and closeable, remove it from state.
         if w_state.modal.is_some() {
@@ -117,13 +117,13 @@ impl Modal {
     pub fn opened() -> Option<&'static str> {
         // Check if modal is showing.
         {
-            if MODAL_STATE.read().unwrap().modal.is_none() {
+            if MODAL_STATE.read().modal.is_none() {
                 return None;
             }
         }
 
         // Get identifier of opened modal.
-        let r_state = MODAL_STATE.read().unwrap();
+        let r_state = MODAL_STATE.read();
         let modal = r_state.modal.as_ref().unwrap();
         Some(modal.id)
     }
@@ -131,7 +131,7 @@ impl Modal {
     /// Set title text for current opened [`Modal`].
     pub fn set_title(title: String) {
         // Save state.
-        let mut w_state = MODAL_STATE.write().unwrap();
+        let mut w_state = MODAL_STATE.write();
         if w_state.modal.is_some() {
             let mut modal = w_state.modal.clone().unwrap();
             modal.title = Some(title.to_uppercase());
@@ -142,11 +142,11 @@ impl Modal {
     /// Draw opened [`Modal`] content.
     pub fn ui(ctx: &egui::Context, add_content: impl FnOnce(&mut egui::Ui, &Modal)) {
         let has_modal = {
-            MODAL_STATE.read().unwrap().modal.is_some()
+            MODAL_STATE.read().modal.is_some()
         };
         if has_modal {
             let modal = {
-                let r_state = MODAL_STATE.read().unwrap();
+                let r_state = MODAL_STATE.read();
                 r_state.modal.clone().unwrap()
             };
             modal.window_ui(ctx, add_content);
