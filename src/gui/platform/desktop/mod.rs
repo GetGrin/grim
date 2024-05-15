@@ -13,7 +13,8 @@
 // limitations under the License.
 
 use lazy_static::lazy_static;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use parking_lot::RwLock;
 use std::sync::atomic::{AtomicBool, AtomicI32, Ordering};
 use std::thread;
 use eye::hal::PlatformContext;
@@ -56,7 +57,7 @@ impl PlatformCallbacks for Desktop {
     fn start_camera(&self) {
         // Clear image.
         {
-            let mut w_image = LAST_CAMERA_IMAGE.write().unwrap();
+            let mut w_image = LAST_CAMERA_IMAGE.write();
             *w_image = None;
         }
 
@@ -107,17 +108,17 @@ impl PlatformCallbacks for Desktop {
                                 // Get data from frame.
                                 if let Ok(frame_data) = frame {
                                     // Save image.
-                                    let mut w_image = LAST_CAMERA_IMAGE.write().unwrap();
+                                    let mut w_image = LAST_CAMERA_IMAGE.write();
                                     *w_image = Some((frame_data.to_vec(), 0));
                                 } else {
                                     // Clear image.
-                                    let mut w_image = LAST_CAMERA_IMAGE.write().unwrap();
+                                    let mut w_image = LAST_CAMERA_IMAGE.write();
                                     *w_image = None;
                                     break;
                                 }
                             } else {
                                 // Clear image.
-                                let mut w_image = LAST_CAMERA_IMAGE.write().unwrap();
+                                let mut w_image = LAST_CAMERA_IMAGE.write();
                                 *w_image = None;
                                 break;
                             }
@@ -131,14 +132,14 @@ impl PlatformCallbacks for Desktop {
         // Stop camera.
         self.stop_camera.store(true, Ordering::Relaxed);
         // Clear image.
-        let mut w_image = LAST_CAMERA_IMAGE.write().unwrap();
+        let mut w_image = LAST_CAMERA_IMAGE.write();
         *w_image = None;
     }
 
     fn camera_image(&self) -> Option<(Vec<u8>, u32)> {
-        let r_image = LAST_CAMERA_IMAGE.read().unwrap();
+        let r_image = LAST_CAMERA_IMAGE.read();
         if r_image.is_some() {
-            return Some(r_image.clone().unwrap());
+            return r_image.clone();
         }
         None
     }

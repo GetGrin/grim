@@ -13,10 +13,11 @@
 // limitations under the License.
 
 use lazy_static::lazy_static;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use parking_lot::RwLock;
+
 use jni::JNIEnv;
 use jni::objects::{JByteArray, JObject, JString, JValue};
-
 use winit::platform::android::activity::AndroidApp;
 
 use crate::gui::platform::PlatformCallbacks;
@@ -84,7 +85,7 @@ impl PlatformCallbacks for Android {
 
     fn start_camera(&self) {
         // Clear image.
-        let mut w_image = LAST_CAMERA_IMAGE.write().unwrap();
+        let mut w_image = LAST_CAMERA_IMAGE.write();
         *w_image = None;
         // Start camera.
         self.call_java_method("startCamera", "()V", &[]).unwrap();
@@ -94,12 +95,12 @@ impl PlatformCallbacks for Android {
         // Stop camera.
         self.call_java_method("stopCamera", "()V", &[]).unwrap();
         // Clear image.
-        let mut w_image = LAST_CAMERA_IMAGE.write().unwrap();
+        let mut w_image = LAST_CAMERA_IMAGE.write();
         *w_image = None;
     }
 
     fn camera_image(&self) -> Option<(Vec<u8>, u32)> {
-        let r_image = LAST_CAMERA_IMAGE.read().unwrap();
+        let r_image = LAST_CAMERA_IMAGE.read();
         if r_image.is_some() {
             return Some(r_image.clone().unwrap());
         }
@@ -134,7 +135,6 @@ pub extern "C" fn Java_mw_gri_android_MainActivity_onCameraImage(
 ) {
     let arr = unsafe { JByteArray::from_raw(buff) };
     let image : Vec<u8> = env.convert_byte_array(arr).unwrap();
-    if let Ok(mut w_image) = LAST_CAMERA_IMAGE.write() {
-        *w_image = Some((image, rotation as u32));
-    }
+    let mut w_image = LAST_CAMERA_IMAGE.write();
+    *w_image = Some((image, rotation as u32));
 }
