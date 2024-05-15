@@ -22,7 +22,7 @@ use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, View};
 use crate::gui::views::network::settings::NetworkSettings;
 use crate::gui::views::types::{ModalContainer, ModalPosition, TextEditOptions};
-use crate::node::{NodeConfig, PeersConfig};
+use crate::node::{Node, NodeConfig, PeersConfig};
 
 /// Type of peer.
 #[derive(Eq, PartialEq)]
@@ -309,6 +309,10 @@ impl P2PSetup {
                     // Save port at config if it's available.
                     if available {
                         NodeConfig::save_p2p_port(self.port_edit.parse::<u16>().unwrap());
+
+                        if Node::is_running() {
+                            Node::restart();
+                        }
 
                         self.is_port_available = true;
                         cb.hide_keyboard();

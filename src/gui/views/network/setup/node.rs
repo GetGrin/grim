@@ -318,6 +318,10 @@ impl NodeSetup {
                     // Save port at config if it's available.
                     NodeConfig::save_api_address(&api_ip, &self.api_port_edit);
 
+                    if Node::is_running() {
+                        Node::restart();
+                    }
+
                     self.is_api_port_available = true;
                     cb.hide_keyboard();
                     modal.close();
