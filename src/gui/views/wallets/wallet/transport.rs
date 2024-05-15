@@ -293,6 +293,7 @@ impl WalletTransport {
 
                 // Draw checkbox to enable/disable bridges.
                 View::checkbox(ui, bridge.is_some(), t!("transport.bridges"), || {
+                    // Save value.
                     let value = if bridge.is_some() {
                         None
                     } else {
@@ -301,6 +302,13 @@ impl WalletTransport {
                         Some(b)
                     };
                     TorConfig::save_bridge(value);
+                    // Restart service.
+                    if let Ok(key) = wallet.secret_key() {
+                        let service_id = &wallet.identifier();
+                        Tor::stop_service(service_id);
+                        let api_port = wallet.foreign_api_port().unwrap();
+                        Tor::start_service(api_port, key, service_id);
+                    }
                 });
             });
 
@@ -330,10 +338,17 @@ impl WalletTransport {
                 if current_bridge != bridge {
                     TorConfig::save_bridge(Some(bridge.clone()));
                     self.bridge_bin_path_edit = bridge.binary_path();
+                    // Restart service.
+                    if let Ok(key) = wallet.secret_key() {
+                        let service_id = &wallet.identifier();
+                        Tor::stop_service(service_id);
+                        let api_port = wallet.foreign_api_port().unwrap();
+                        Tor::start_service(api_port, key, service_id);
+                    }
                 }
 
                 // Draw binary path text edit.
-                let bin_edit_id = Id::from(modal.id).with(wallet.get_config().id).with("_bridge_bin");
+                let bin_edit_id = Id::from(modal.id).with(wallet.get_config().id).with("_bin_edit");
                 let bin_edit_opts = TextEditOptions::new(bin_edit_id).paste();
                 let bin_edit_before = self.bridge_bin_path_edit.clone();
                 ui.vertical_centered(|ui| {
@@ -351,6 +366,13 @@ impl WalletTransport {
                         }
                     };
                     TorConfig::save_bridge(Some(b));
+                    // Restart service.
+                    if let Ok(key) = wallet.secret_key() {
+                        let service_id = &wallet.identifier();
+                        Tor::stop_service(service_id);
+                        let api_port = wallet.foreign_api_port().unwrap();
+                        Tor::start_service(api_port, key, service_id);
+                    }
                 }
                 ui.add_space(2.0);
             }

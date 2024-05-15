@@ -17,3 +17,6 @@ pub use config::TorConfig;
 
 mod tor;
 pub use tor::Tor;
+
+mod types;
+pub use types::*;

@@ -14,19 +14,27 @@
 
 use std::path::PathBuf;
 use serde_derive::{Deserialize, Serialize};
+
 use crate::Settings;
+use crate::tor::TorBridge;
 
 /// Tor configuration.
 #[derive(Serialize, Deserialize, Clone)]
 pub struct TorConfig {
-    // Flag to check if Tor bridges usage is needed.
-    pub(crate) use_bridges: Option<bool>
+    /// Selected bridge type.
+    bridge: Option<TorBridge>,
+    /// Obfs4 bridge type.
+    obfs4: TorBridge,
+    /// Snowflake bridge type.
+    snowflake: TorBridge,
 }
 
 impl Default for TorConfig {
     fn default() -> Self {
         Self {
-            use_bridges: Some(false)
+            bridge: None,
+            obfs4: TorBridge::Obfs4(TorBridge::DEFAULT_OBFS4_BIN_PATH.to_string()),
+            snowflake: TorBridge::Snowflake(TorBridge::DEFAULT_SNOWFLAKE_BIN_PATH.to_string()),
         }
     }
 }
@@ -72,5 +80,41 @@ impl TorConfig {
         let mut base = PathBuf::from(Self::state_path());
         base.push(Self::KEYSTORE_DIR);
         base.to_str().unwrap().to_string()
+    }
+
+    /// Save Tor bridge.
+    pub fn save_bridge(bridge: Option<TorBridge>) {
+        let mut w_tor_config = Settings::tor_config_to_update();
+        w_tor_config.bridge = bridge.clone();
+        if bridge.is_some() {
+            let bridge = bridge.unwrap();
+            match &bridge {
+               TorBridge::Snowflake(_) => {
+                   w_tor_config.snowflake = bridge
+               }
+               TorBridge::Obfs4(_) => {
+                   w_tor_config.obfs4 = bridge
+               }
+           }
+        }
+        w_tor_config.save();
+    }
+
+    /// Get current Tor bridge if enabled.
+    pub fn get_bridge() -> Option<TorBridge> {
+        let r_config = Settings::tor_config_to_read();
+        r_config.bridge.clone()
+    }
+
+    /// Get saved Obfs4 bridge.
+    pub fn get_obfs4() -> TorBridge {
+        let r_config = Settings::tor_config_to_read();
+        r_config.obfs4.clone()
+    }
+
+    /// Get saved Snowflake bridge.
+    pub fn get_snowflake() -> TorBridge {
+        let r_config = Settings::tor_config_to_read();
+        r_config.snowflake.clone()
     }
 }

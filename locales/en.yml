@@ -132,6 +132,8 @@ transport:
   tor_autorun_desc: Whether to launch Tor service on wallet opening to receive transactions synchronously.
   tor_sending: 'Sending %{amount} ツ over Tor'
   tor_settings: Tor Settings
+  bridges: Bridges
+  bridges_desc: Setup bridges to bypass Tor network censorship if usual connection is not working.
 network:
   self: Network
   type: 'Network type:'
