@@ -17,6 +17,7 @@ use std::io::{BufRead, BufReader, Write};
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4, TcpListener, ToSocketAddrs};
 use std::path::PathBuf;
 use std::str::FromStr;
+use egui::os::OperatingSystem;
 use local_ip_address::list_afinet_netifas;
 use serde::{Deserialize, Serialize};
 
@@ -185,7 +186,14 @@ impl NodeConfig {
         // Generate random p2p and api ports.
         Self::setup_default_ports(&mut config);
 
-        // Increase default amount of peers.
+        // Change default amount of peers.
+        let os = OperatingSystem::from_target_os();
+        let max_inbound = if os == OperatingSystem::Android {
+            24
+        } else {
+            96
+        };
+        config.server.p2p_config.peer_max_inbound_count = Some(max_inbound);
         config.server.p2p_config.peer_max_outbound_count = Some(24);
         config.server.p2p_config.peer_min_preferred_outbound_count = Some(18);
 
