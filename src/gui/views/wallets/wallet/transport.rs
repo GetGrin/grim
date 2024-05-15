@@ -12,10 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 use std::thread;
 use egui::{Align, Id, Layout, Margin, RichText, Rounding, ScrollArea};
+use egui::os::OperatingSystem;
 use egui::scroll_area::ScrollBarVisibility;
+use parking_lot::RwLock;
 use grin_core::core::{amount_from_hr_string, amount_to_hr_string};
 use grin_wallet_libwallet::SlatepackAddress;
 
@@ -26,7 +28,7 @@ use crate::gui::views::{Modal, QrCodeContent, Root, View};
 use crate::gui::views::types::{ModalPosition, TextEditOptions};
 use crate::gui::views::wallets::wallet::types::{WalletTab, WalletTabType};
 use crate::gui::views::wallets::wallet::WalletContent;
-use crate::tor::Tor;
+use crate::tor::{Tor, TorBridge, TorConfig};
 use crate::wallet::types::WalletData;
 use crate::wallet::Wallet;
 
@@ -49,6 +51,9 @@ pub struct WalletTransport {
 
     /// QR code address image [`Modal`] content.
     qr_code_content: QrCodeContent,
+
+    /// Tor bridge binary path edit text.
+    bridge_bin_path_edit: String,
 }
 
 impl WalletTab for WalletTransport {
@@ -109,6 +114,13 @@ const QR_ADDRESS_MODAL: &'static str = "qr_address_modal";
 impl WalletTransport {
     /// Create new content instance from provided Slatepack address text.
     pub fn new(addr: String) -> Self {
+        // Setup Tor bridge binary path edit text.
+        let bridge = TorConfig::get_bridge();
+        let bridge_bin_path_edit = if let Some(b) = bridge {
+            b.binary_path()
+        } else {
+            "".to_string()
+        };
         Self {
             tor_sending: Arc::new(RwLock::new(false)),
             tor_send_error: Arc::new(RwLock::new(false)),
@@ -118,6 +130,7 @@ impl WalletTransport {
             address_error: false,
             modal_just_opened: false,
             qr_code_content: QrCodeContent::new(addr),
+            bridge_bin_path_edit
         }
     }
 
@@ -149,7 +162,7 @@ impl WalletTransport {
                     }
                     TOR_SETTINGS_MODAL => {
                         Modal::ui(ui.ctx(), |ui, modal| {
-                            self.tor_settings_modal_ui(ui, wallet, modal);
+                            self.tor_settings_modal_ui(ui, wallet, modal, cb);
                         });
                     }
                     QR_ADDRESS_MODAL => {
@@ -261,8 +274,92 @@ impl WalletTransport {
     }
 
     /// Draw tor transport settings [`Modal`] content.
-    fn tor_settings_modal_ui(&self, ui: &mut egui::Ui, wallet: &Wallet, modal: &Modal) {
+    fn tor_settings_modal_ui(&mut self,
+                             ui: &mut egui::Ui,
+                             wallet: &Wallet,
+                             modal: &Modal,
+                             cb: &dyn PlatformCallbacks) {
+        // Do not show bridges setup on Android.
+        let os = OperatingSystem::from_target_os();
+        let show_bridges = os != OperatingSystem::Android;
+
         ui.add_space(6.0);
+        if show_bridges {
+            let bridge = TorConfig::get_bridge();
+            ui.vertical_centered(|ui| {
+                ui.label(RichText::new(t!("transport.bridges_desc"))
+                    .size(17.0)
+                    .color(Colors::INACTIVE_TEXT));
+
+                // Draw checkbox to enable/disable bridges.
+                View::checkbox(ui, bridge.is_some(), t!("transport.bridges"), || {
+                    let value = if bridge.is_some() {
+                        None
+                    } else {
+                        let b = TorConfig::get_snowflake();
+                        self.bridge_bin_path_edit = b.binary_path();
+                        Some(b)
+                    };
+                    TorConfig::save_bridge(value);
+                });
+            });
+
+            // Draw bridges selection and path.
+            if bridge.is_some() {
+                let current_bridge = bridge.unwrap();
+                let mut bridge = current_bridge.clone();
+
+                ui.add_space(6.0);
+                ui.columns(2, |columns| {
+                    columns[0].vertical_centered(|ui| {
+                        // Draw Snowflake bridge selector.
+                        let snowflake = TorConfig::get_snowflake();
+                        let name = snowflake.protocol_name().to_uppercase();
+                        View::radio_value(ui, &mut bridge, snowflake, name);
+                    });
+                    columns[1].vertical_centered(|ui| {
+                        // Draw Obfs4 bridge selector.
+                        let obfs4 = TorConfig::get_obfs4();
+                        let name = obfs4.protocol_name().to_uppercase();
+                        View::radio_value(ui, &mut bridge, obfs4, name);
+                    });
+                });
+                ui.add_space(12.0);
+
+                // Check if bridge type was changed to save.
+                if current_bridge != bridge {
+                    TorConfig::save_bridge(Some(bridge.clone()));
+                    self.bridge_bin_path_edit = bridge.binary_path();
+                }
+
+                // Draw binary path text edit.
+                let bin_edit_id = Id::from(modal.id).with(wallet.get_config().id).with("_bridge_bin");
+                let bin_edit_opts = TextEditOptions::new(bin_edit_id).paste();
+                let bin_edit_before = self.bridge_bin_path_edit.clone();
+                ui.vertical_centered(|ui| {
+                    View::text_edit(ui, cb, &mut self.bridge_bin_path_edit, bin_edit_opts);
+                });
+
+                // Check if text was changed to save bin path.
+                if bin_edit_before != self.bridge_bin_path_edit {
+                    let b = match bridge {
+                        TorBridge::Snowflake(_) => {
+                            TorBridge::Snowflake(self.bridge_bin_path_edit.clone())
+                        },
+                        TorBridge::Obfs4(_) => {
+                            TorBridge::Obfs4(self.bridge_bin_path_edit.clone())
+                        }
+                    };
+                    TorConfig::save_bridge(Some(b));
+                }
+                ui.add_space(2.0);
+            }
+
+            ui.add_space(6.0);
+            View::horizontal_line(ui, Colors::ITEM_STROKE);
+            ui.add_space(6.0);
+        }
+
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("transport.tor_autorun_desc"))
                 .size(17.0)
@@ -279,8 +376,8 @@ impl WalletTransport {
             View::button(ui, t!("close"), Colors::WHITE, || {
                 modal.close();
             });
-            ui.add_space(6.0);
         });
+        ui.add_space(6.0);
     }
 
     /// Draw Tor send content.
@@ -402,12 +499,14 @@ impl WalletTransport {
     /// Show [`Modal`] to send over Tor.
     pub fn show_send_tor_modal(&mut self, cb: &dyn PlatformCallbacks, address: Option<String>) {
         // Setup modal values.
-        let mut w_send_err = self.tor_send_error.write().unwrap();
-        *w_send_err = false;
-        let mut w_sending = self.tor_sending.write().unwrap();
-        *w_sending = false;
-        let mut w_success = self.tor_success.write().unwrap();
-        *w_success = false;
+        {
+            let mut w_send_err = self.tor_send_error.write();
+            *w_send_err = false;
+            let mut w_sending = self.tor_sending.write();
+            *w_sending = false;
+            let mut w_success = self.tor_success.write();
+            *w_success = false;
+        }
         self.modal_just_opened = true;
         self.amount_edit = "".to_string();
         self.address_edit = address.unwrap_or("".to_string());
@@ -422,19 +521,19 @@ impl WalletTransport {
 
     /// Check if error occurred during sending over Tor at [`Modal`].
     fn has_tor_send_error(&self) -> bool {
-        let r_send_err = self.tor_send_error.read().unwrap();
+        let r_send_err = self.tor_send_error.read();
         r_send_err.clone()
     }
 
     /// Check if transaction is sending over Tor to show progress at [`Modal`].
     fn tor_sending(&self) -> bool {
-        let r_sending = self.tor_sending.read().unwrap();
+        let r_sending = self.tor_sending.read();
         r_sending.clone()
     }
 
     /// Check if transaction sent over Tor with success at [`Modal`].
     fn tor_success(&self) -> bool {
-        let r_success = self.tor_success.read().unwrap();
+        let r_success = self.tor_success.read();
         r_success.clone()
     }
 
@@ -556,7 +655,7 @@ impl WalletTransport {
                             if let Ok(a) = amount_from_hr_string(self.amount_edit.as_str()) {
                                 cb.hide_keyboard();
                                 modal.disable_closing();
-                                let mut w_sending = self.tor_sending.write().unwrap();
+                                let mut w_sending = self.tor_sending.write();
                                 *w_sending = true;
                                 {
                                     let send_error = self.tor_send_error.clone();
@@ -569,12 +668,10 @@ impl WalletTransport {
                                             .unwrap()
                                             .block_on(async {
                                                 if wallet.send_tor(a, &addr).await.is_some() {
-                                                    let mut w_send_success
-                                                        = send_success.write().unwrap();
+                                                    let mut w_send_success = send_success.write();
                                                     *w_send_success = true;
                                                 } else {
-                                                    let mut w_send_error
-                                                        = send_error.write().unwrap();
+                                                    let mut w_send_error = send_error.write();
                                                     *w_send_error = true;
                                                 }
                                             });
@@ -613,9 +710,9 @@ impl WalletTransport {
                     View::button(ui, t!("repeat"), Colors::WHITE, || {
                         // Parse amount and send over Tor.
                         if let Ok(a) = amount_from_hr_string(self.amount_edit.as_str()) {
-                            let mut w_send_error = self.tor_send_error.write().unwrap();
+                            let mut w_send_error = self.tor_send_error.write();
                             *w_send_error = false;
-                            let mut w_sending = self.tor_sending.write().unwrap();
+                            let mut w_sending = self.tor_sending.write();
                             *w_sending = true;
                             {
                                 let addr_text = self.address_edit.clone();
@@ -632,12 +729,10 @@ impl WalletTransport {
                                             let addr = &SlatepackAddress::try_from(addr_str)
                                                 .unwrap();
                                             if wallet.send_tor(a, &addr).await.is_some() {
-                                                let mut w_send_success
-                                                    = send_success.write().unwrap();
+                                                let mut w_send_success = send_success.write();
                                                 *w_send_success = true;
                                             } else {
-                                                let mut w_send_error
-                                                    = send_error.write().unwrap();
+                                                let mut w_send_error = send_error.write();
                                                 *w_send_error = true;
                                             }
                                         });
