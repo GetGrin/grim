@@ -288,12 +288,12 @@ impl Tor {
                                             // Remove service from starting.
                                             let mut w_services = TOR_SERVER_STATE.starting_services.write();
                                             w_services.remove(&service_id);
-                                            // Check again after 5 seconds.
-                                            Duration::from_millis(5000)
+                                            // Check again after 10 seconds.
+                                            Duration::from_millis(10000)
                                         },
                                         Err(_) => {
                                             // Restart service on 3rd error.
-                                            let duration = if errors_count == MAX_ERRORS - 1 {
+                                            if errors_count == MAX_ERRORS - 1 {
                                                 errors_count = 0;
                                                 let key = key.clone();
                                                 let service_id = service_id.clone();
@@ -305,12 +305,10 @@ impl Tor {
                                                     *w_client = client_config;
                                                     Self::start_service(port, key, &service_id);
                                                 });
-                                                Duration::from_millis(5000)
                                             } else {
                                                 errors_count += 1;
-                                                Duration::from_millis(1000)
-                                            };
-                                            duration
+                                            }
+                                            Duration::from_millis(5000)
                                         },
                                     };    
                                     sleep(duration).await;
