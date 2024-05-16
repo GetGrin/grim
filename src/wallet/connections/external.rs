@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use grin_util::to_base64;
 use serde_derive::{Deserialize, Serialize};
 use tor_rtcompat::BlockOn;
 use tor_rtcompat::tokio::TokioNativeTlsRuntime;
@@ -57,26 +58,35 @@ impl ExternalConnection {
             runtime.block_on(async {
                 let url = url::Url::parse(conn.url.as_str()).unwrap();
                 if let Ok(_) = url.socket_addrs(|| None) {
+                    let addr = format!("{}v2/foreign", url.to_string());
+                    // Setup http client.
                     let client = hyper::Client::builder()
                         .build::<_, hyper::Body>(hyper_tls::HttpsConnector::new());
-                    let req = hyper::Request::builder()
-                        .method(hyper::Method::GET)
-                        .uri(format!("{}/v2/owner", url.to_string()))
-                        .body(hyper::Body::from(
-                            r#"{"id":1,"jsonrpc":"2.0","method":"get_status","params":{} }"#)
-                        )
-                        .unwrap();
+                    let mut req_setup = hyper::Request::builder()
+                        .method(hyper::Method::POST)
+                        .uri(addr.clone());
+                    // Setup secret key auth.
+                    if let Some(key) = conn.secret {
+                        let basic_auth = format!("Basic {}", to_base64(&format!("grin:{}", key)));
+                        req_setup = req_setup
+                            .header(hyper::header::AUTHORIZATION, basic_auth.clone());
+                        println!("{} auth: {}", addr, basic_auth);
+                    }
+                    let req = req_setup.body(hyper::Body::from(
+                        r#"{"id":1,"jsonrpc":"2.0","method":"get_version","params":{} }"#)
+                    ).unwrap();
+                    // Send request.
                     match client.request(req).await {
                         Ok(res) => {
                             let status = res.status().as_u16();
-                            // Available on 200 and 401 status code.
-                            if status == 200 || status == 401 {
+                            // Available on 200 HTTP status code.
+                            if status == 200 {
                                 ConnectionsConfig::update_ext_conn_availability(conn.id, true);
                             } else {
                                 ConnectionsConfig::update_ext_conn_availability(conn.id, false);
                             }
                         }
-                        Err(e) => {
+                        Err(_) => {
                             ConnectionsConfig::update_ext_conn_availability(conn.id, false);
                         }
                     }
