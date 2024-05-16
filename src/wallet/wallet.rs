@@ -1047,31 +1047,6 @@ fn start_sync(mut wallet: Wallet) -> Thread {
             }
         }
 
-        // Start Foreign API listener if API server is not running.
-        let mut api_server_running = {
-            wallet.foreign_api_server.read().is_some()
-        };
-        if !api_server_running && wallet.is_open() {
-            match start_api_server(&mut wallet) {
-                Ok(api_server) => {
-                    let mut api_server_w = wallet.foreign_api_server.write();
-                    *api_server_w = Some(api_server);
-                    api_server_running = true;
-                }
-                Err(_) => {}
-            }
-        }
-
-        // Start Tor service if API server is running and wallet is open.
-        if wallet.auto_start_tor_listener() && wallet.is_open() && api_server_running &&
-            !Tor::is_service_running(&wallet.identifier()) {
-            let r_foreign_api = wallet.foreign_api_server.read();
-            let api = r_foreign_api.as_ref().unwrap();
-            if let Ok(sec_key) = wallet.secret_key() {
-                Tor::start_service(api.1, sec_key, &wallet.identifier());
-            }
-        }
-
         // Scan outputs if repair is needed or sync data if there is no error.
         if !wallet.sync_error() {
             if wallet.is_repairing() {
@@ -1093,8 +1068,38 @@ fn start_sync(mut wallet: Wallet) -> Thread {
             return;
         }
 
-        // Repeat after default or attempt delay if synchronization was not successful.
+        // Setup flag to check if sync was failed.
         let failed_sync = wallet.sync_error() || wallet.get_sync_attempts() != 0;
+
+        // Start Foreign API server and Tor service only if first sync was successful.
+        if !failed_sync {
+            // Start Foreign API listener if API server is not running.
+            let mut api_server_running = {
+                wallet.foreign_api_server.read().is_some()
+            };
+            if !api_server_running && wallet.is_open() {
+                match start_api_server(&mut wallet) {
+                    Ok(api_server) => {
+                        let mut api_server_w = wallet.foreign_api_server.write();
+                        *api_server_w = Some(api_server);
+                        api_server_running = true;
+                    }
+                    Err(_) => {}
+                }
+            }
+    
+            // Start Tor service if API server is running and wallet is open.
+            if wallet.auto_start_tor_listener() && wallet.is_open() && api_server_running &&
+                !Tor::is_service_running(&wallet.identifier()) {
+                let r_foreign_api = wallet.foreign_api_server.read();
+                let api = r_foreign_api.as_ref().unwrap();
+                if let Ok(sec_key) = wallet.secret_key() {
+                    Tor::start_service(api.1, sec_key, &wallet.identifier());
+                }
+            }
+        }
+
+        // Repeat after default or attempt delay if synchronization was not successful.
         let delay = if failed_sync {
             ATTEMPT_DELAY
         } else {

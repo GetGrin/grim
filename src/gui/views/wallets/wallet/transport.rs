@@ -285,6 +285,19 @@ impl WalletTransport {
         let os = OperatingSystem::from_target_os();
         let show_bridges = os != OperatingSystem::Android;
 
+        // Restart running service or rebuild client.
+        let restart_or_rebuild = || {
+            let service_id = &wallet.identifier();
+            if Tor::is_service_running(service_id) {
+                if let Ok(key) = wallet.secret_key() {
+                    let api_port = wallet.foreign_api_port().unwrap();
+                    Tor::restart_service(api_port, key, service_id);
+                }
+            } else {
+                Tor::rebuild_client();
+            }
+        };
+
         ui.add_space(6.0);
         if show_bridges {
             let bridge = TorConfig::get_bridge();
@@ -304,14 +317,8 @@ impl WalletTransport {
                         Some(b)
                     };
                     TorConfig::save_bridge(value);
-                    // Restart service.
-                    if let Ok(key) = wallet.secret_key() {
-                        let service_id = &wallet.identifier();
-                        Tor::stop_service(service_id);
-                        Tor::rebuild_client();
-                        let api_port = wallet.foreign_api_port().unwrap();
-                        Tor::start_service(api_port, key, service_id);
-                    }
+                    // Restart running service or rebuild client.
+                    restart_or_rebuild();
                 });
             });
 
@@ -341,14 +348,8 @@ impl WalletTransport {
                 if current_bridge != bridge {
                     TorConfig::save_bridge(Some(bridge.clone()));
                     self.bridge_bin_path_edit = bridge.binary_path();
-                    // Restart service.
-                    if let Ok(key) = wallet.secret_key() {
-                        let service_id = &wallet.identifier();
-                        Tor::stop_service(service_id);
-                        Tor::rebuild_client();
-                        let api_port = wallet.foreign_api_port().unwrap();
-                        Tor::start_service(api_port, key, service_id);
-                    }
+                    // Restart running service or rebuild client.
+                    restart_or_rebuild();
                 }
 
                 // Draw binary path text edit.
@@ -370,13 +371,8 @@ impl WalletTransport {
                         }
                     };
                     TorConfig::save_bridge(Some(b));
-                    // Restart service.
-                    if let Ok(key) = wallet.secret_key() {
-                        let service_id = &wallet.identifier();
-                        Tor::stop_service(service_id);
-                        let api_port = wallet.foreign_api_port().unwrap();
-                        Tor::start_service(api_port, key, service_id);
-                    }
+                    // Restart running service or rebuild client.
+                    restart_or_rebuild();
                 }
                 ui.add_space(2.0);
             }

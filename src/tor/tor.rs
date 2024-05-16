@@ -18,7 +18,6 @@ use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
 use arti_client::config::pt::TransportConfigBuilder;
-use grin_api::client;
 use lazy_static::lazy_static;
 use futures::task::SpawnExt;
 
@@ -34,7 +33,7 @@ use sha2::Sha512;
 use tokio::time::sleep;
 use tor_config::CfgPath;
 use tor_rtcompat::tokio::TokioNativeTlsRuntime;
-use tor_rtcompat::{BlockOn, Runtime};
+use tor_rtcompat::Runtime;
 use tor_hsrproxy::OnionServiceReverseProxy;
 use tor_hsrproxy::config::{Encapsulation, ProxyAction, ProxyPattern, ProxyRule, TargetAddr, ProxyConfigBuilder};
 use tor_hsservice::config::OnionServiceConfigBuilder;
@@ -115,7 +114,7 @@ impl Tor {
              .unwrap(), config)
     }
 
-    /// Recreate Tor client on configuration change.
+    /// Recreate Tor client.
     pub fn rebuild_client() {
         let client_config = Self::build_client(TokioNativeTlsRuntime::create().unwrap());
         let mut w_client = TOR_SERVER_STATE.client_config.write();
@@ -182,6 +181,13 @@ impl Tor {
         r_services.contains(id)
     }
 
+    // Restart Onion service.
+    pub fn restart_service(port: u16, key: SecretKey, id: &String) {
+        Self::stop_service(id);
+        Self::rebuild_client();
+        Self::start_service(port, key, id)
+    }
+
     /// Stop running Onion service.
     pub fn stop_service(id: &String) {
         let mut w_services = TOR_SERVER_STATE.running_services.write();
@@ -237,9 +243,9 @@ impl Tor {
                     }
                     let url = format!("http://{}/v2/foreign", service.onion_name().unwrap().to_string());
                     thread::spawn(move || {
-                        // Wait 5 seconds to start.
-                        thread::sleep(Duration::from_millis(5000));
-                        let runtime = TokioNativeTlsRuntime::create().unwrap();
+                        // Wait 1 second to start.
+                        thread::sleep(Duration::from_millis(1000));
+                        let runtime = client_thread.runtime();
                         let client_runtime = runtime.clone();
                         // Put service to checking.
                         {
@@ -248,9 +254,10 @@ impl Tor {
                         }
                         runtime
                             .spawn(async move {
+                                const MAX_ERRORS: i32 = 3;
+                                let mut errors_count = 0;
                                 loop {
-                                    if !Self::is_service_running(&service_id) &&
-                                        !Self::is_service_starting(&service_id) {
+                                    if !Self::is_service_running(&service_id) {
                                         // Remove service from checking.
                                         let mut w_services = TOR_SERVER_STATE.checking_services.write();
                                         w_services.remove(&service_id);
@@ -276,29 +283,37 @@ impl Tor {
                                         .body(Body::from(data))
                                         .unwrap();
                                     // Send request.
-                                    match http.request(req).await {
-                                        Ok(r) => {
-                                            match hyper::body::to_bytes(r).await {
-                                                Ok(_) => {
-                                                    // Remove service from starting.
-                                                    let mut w_services = TOR_SERVER_STATE.starting_services.write();
-                                                    w_services.remove(&service_id);
-                                                },
-                                                Err(_) => {
-                                                    // Put service to starting.
-                                                    let mut w_services = TOR_SERVER_STATE.starting_services.write();
-                                                    w_services.insert(service_id.clone());
-                                                },
-                                            }
+                                    let duration = match http.request(req).await {
+                                        Ok(_) => {
+                                            // Remove service from starting.
+                                            let mut w_services = TOR_SERVER_STATE.starting_services.write();
+                                            w_services.remove(&service_id);
+                                            // Check again after 5 seconds.
+                                            Duration::from_millis(5000)
                                         },
                                         Err(_) => {
-                                             // Put service to starting.
-                                             let mut w_services = TOR_SERVER_STATE.starting_services.write();
-                                             w_services.insert(service_id.clone());
+                                            // Restart service on 3rd error.
+                                            let duration = if errors_count == MAX_ERRORS - 1 {
+                                                errors_count = 0;
+                                                let key = key.clone();
+                                                let service_id = service_id.clone();
+                                                let client_runtime = client_runtime.clone();
+                                                thread::spawn(move || {
+                                                    Self::stop_service(&service_id);
+                                                    let client_config = Self::build_client(client_runtime);
+                                                    let mut w_client = TOR_SERVER_STATE.client_config.write();
+                                                    *w_client = client_config;
+                                                    Self::start_service(port, key, &service_id);
+                                                });
+                                                Duration::from_millis(5000)
+                                            } else {
+                                                errors_count += 1;
+                                                Duration::from_millis(1000)
+                                            };
+                                            duration
                                         },
-                                    }
-                                    // Check once per 5 second.
-                                    sleep(Duration::from_millis(5000)).await;
+                                    };    
+                                    sleep(duration).await;
                                 }
                             }).unwrap();
                     });
