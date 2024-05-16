@@ -419,8 +419,8 @@ impl WalletContent {
                         // Redirect to send amount with Tor.
                         let addr = wallet.slatepack_address().unwrap();
                         let mut transport = WalletTransport::new(addr.clone());
-                        transport.show_send_tor_modal(cb, Some(receiver.to_string()));
                         modal.close();
+                        transport.show_send_tor_modal(cb, Some(receiver.to_string()));
                         self.current_tab = Box::new(transport);
                         return;
                     }
