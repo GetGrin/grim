@@ -12,11 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::time::Duration;
-
 use serde_derive::{Deserialize, Serialize};
+use tor_rtcompat::BlockOn;
+use tor_rtcompat::tokio::TokioNativeTlsRuntime;
 
-use crate::AppConfig;
 use crate::wallet::ConnectionsConfig;
 
 /// External connection for the wallet.
@@ -38,9 +37,6 @@ impl ExternalConnection {
     /// Default external node URL for main network.
     pub const DEFAULT_MAIN_URL: &'static str = "https://grinnode.live:3413";
 
-    /// External connections availability check delay.
-    const AV_CHECK_DELAY: Duration = Duration::from_millis(60 * 1000);
-
     /// Create default external connection.
     pub fn default_main() -> Self {
         Self { id: 1, url: Self::DEFAULT_MAIN_URL.to_string(), secret: None, available: None }
@@ -57,19 +53,38 @@ impl ExternalConnection {
         // Check every connection at separate thread.
         let conn = self.clone();
         std::thread::spawn(move || {
-            let url = url::Url::parse(conn.url.as_str()).unwrap();
-            if let Ok(addr) = url.socket_addrs(|| None) {
-                match std::net::TcpStream::connect_timeout(&addr[0], Self::AV_CHECK_DELAY) {
-                    Ok(_) => {
-                        ConnectionsConfig::update_ext_conn_availability(conn.id, true);
+            let runtime = TokioNativeTlsRuntime::create().unwrap();
+            runtime.block_on(async {
+                let url = url::Url::parse(conn.url.as_str()).unwrap();
+                if let Ok(_) = url.socket_addrs(|| None) {
+                    let client = hyper::Client::builder()
+                        .build::<_, hyper::Body>(hyper_tls::HttpsConnector::new());
+                    let req = hyper::Request::builder()
+                        .method(hyper::Method::GET)
+                        .uri(format!("{}/v2/owner", url.to_string()))
+                        .body(hyper::Body::from(
+                            r#"{"id":1,"jsonrpc":"2.0","method":"get_status","params":{} }"#)
+                        )
+                        .unwrap();
+                    match client.request(req).await {
+                        Ok(res) => {
+                            let status = res.status().as_u16();
+                            // Available on 200 and 401 status code.
+                            if status == 200 || status == 401 {
+                                ConnectionsConfig::update_ext_conn_availability(conn.id, true);
+                            } else {
+                                ConnectionsConfig::update_ext_conn_availability(conn.id, false);
+                            }
+                        }
+                        Err(e) => {
+                            ConnectionsConfig::update_ext_conn_availability(conn.id, false);
+                        }
                     }
-                    Err(_) => {
-                        ConnectionsConfig::update_ext_conn_availability(conn.id, false);
-                    }
+                } else {
+                    ConnectionsConfig::update_ext_conn_availability(conn.id, false);
                 }
-            } else {
-                ConnectionsConfig::update_ext_conn_availability(conn.id, false);
-            }
+            });
+
         });
     }
 

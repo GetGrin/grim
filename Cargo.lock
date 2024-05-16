@@ -3788,6 +3788,7 @@ dependencies = [
  "grin_wallet_libwallet",
  "grin_wallet_util",
  "hyper 0.14.28",
+ "hyper-tls 0.5.0",
  "image 0.25.1",
  "jni",
  "lazy_static",
@@ -4675,6 +4676,19 @@ dependencies = [
  "native-tls",
  "tokio 0.2.25",
  "tokio-tls",
+]
+
+[[package]]
+name = "hyper-tls"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d6183ddfa99b85da61a140bea0efc93fdf56ceaa041b37d553518030827f9905"
+dependencies = [
+ "bytes 1.6.0",
+ "hyper 0.14.28",
+ "native-tls",
+ "tokio 1.37.0",
+ "tokio-native-tls",
 ]
 
 [[package]]
@@ -7385,7 +7399,7 @@ dependencies = [
  "http-body 0.3.1",
  "hyper 0.13.10",
  "hyper-rustls 0.21.0",
- "hyper-tls",
+ "hyper-tls 0.4.3",
  "ipnet",
  "js-sys",
  "lazy_static",
@@ -9006,6 +9020,16 @@ dependencies = [
  "proc-macro2 1.0.81",
  "quote 1.0.36",
  "syn 2.0.60",
+]
+
+[[package]]
+name = "tokio-native-tls"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bbae76ab933c85776efabc971569dd6119c580d8f5d448769dec1764bf796ef2"
+dependencies = [
+ "native-tls",
+ "tokio 1.37.0",
 ]
 
 [[package]]
