@@ -676,9 +676,7 @@ impl Wallet {
     }
 
     /// Send amount to provided address with Tor transport.
-    pub async fn send_tor(&mut self,
-                          amount: u64, addr: &SlatepackAddress,
-                          runtime: TokioNativeTlsRuntime) -> Option<Slate> {
+    pub async fn send_tor(&mut self, amount: u64, addr: &SlatepackAddress) -> Option<Slate> {
         // Initialize transaction.
         let send_res = self.send(amount);
 
@@ -690,7 +688,30 @@ impl Wallet {
         // Function to cancel initialized tx in case of error.
         let cancel_tx = || {
             let instance = self.instance.clone().unwrap();
-            let _ = cancel_tx(instance, None, &None, None, Some(slate.clone().id));
+            let id = slate.clone().id;
+            cancel_tx(instance, None, &None, None, Some(id.clone())).unwrap();
+            // Setup posting flag, and ability to finalize.
+            {
+                let mut w_data = self.data.write();
+                let mut data = w_data.clone().unwrap();
+                let txs = data.txs.iter_mut().map(|tx| {
+                    if tx.data.tx_slate_id == Some(id) {
+                        tx.cancelling = false;
+                        tx.posting = false;
+                        tx.can_finalize = false;
+                        tx.data.tx_type = if tx.data.tx_type == TxLogEntryType::TxReceived {
+                            TxLogEntryType::TxReceivedCancelled
+                        } else {
+                            TxLogEntryType::TxSentCancelled
+                        };
+                    }
+                    tx.clone()
+                }).collect::<Vec<WalletTransaction>>();
+                data.txs = txs;
+                *w_data = Some(data);
+            }
+            // Refresh wallet info to update statuses.
+            self.sync();
         };
 
         // Initialize parameters.
@@ -709,7 +730,7 @@ impl Wallet {
 			}).to_string();
 
         // Send request to receiver.
-        let req_res = Tor::post(body, url, runtime).await;
+        let req_res = Tor::post(body, url).await;
         if req_res.is_none() {
             cancel_tx();
             return None;
@@ -886,7 +907,7 @@ impl Wallet {
         let wallet = self.clone();
         thread::spawn(move || {
             let instance = wallet.instance.clone().unwrap();
-            let _ = cancel_tx(instance, None, &None, Some(id), None);
+            cancel_tx(instance, None, &None, Some(id), None).unwrap();
             // Setup posting flag, and ability to finalize.
             let mut w_data = wallet.data.write();
             let mut data = w_data.clone().unwrap();
@@ -1337,12 +1358,9 @@ fn start_api_server(wallet: &mut Wallet) -> Result<(ApiServer, u16), Error> {
         Box::leak(Box::new(oneshot::channel::<()>()));
 
     let mut apis = ApiServer::new();
-    println!("Starting HTTP Foreign listener API server at {}.", api_addr);
     let socket_addr: SocketAddr = api_addr.parse().unwrap();
     let _ = apis.start(socket_addr, router, None, api_chan)
         .map_err(|_| Error::GenericError("API thread failed to start".to_string()))?;
-
-    println!("HTTP Foreign listener started.");
     Ok((apis, free_port))
 }
 

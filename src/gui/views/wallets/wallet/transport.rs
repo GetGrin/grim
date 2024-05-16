@@ -308,6 +308,7 @@ impl WalletTransport {
                     if let Ok(key) = wallet.secret_key() {
                         let service_id = &wallet.identifier();
                         Tor::stop_service(service_id);
+                        Tor::rebuild_client();
                         let api_port = wallet.foreign_api_port().unwrap();
                         Tor::start_service(api_port, key, service_id);
                     }
@@ -344,6 +345,7 @@ impl WalletTransport {
                     if let Ok(key) = wallet.secret_key() {
                         let service_id = &wallet.identifier();
                         Tor::stop_service(service_id);
+                        Tor::rebuild_client();
                         let api_port = wallet.foreign_api_port().unwrap();
                         Tor::start_service(api_port, key, service_id);
                     }
@@ -687,10 +689,9 @@ impl WalletTransport {
                                     let mut wallet = wallet.clone();
                                     thread::spawn(move || {
                                         let runtime = TokioNativeTlsRuntime::create().unwrap();
-                                        let runtime_tor = runtime.clone();
                                         runtime
                                             .block_on(async {
-                                                if wallet.send_tor(a, &addr, runtime_tor)
+                                                if wallet.send_tor(a, &addr)
                                                     .await
                                                     .is_some() {
                                                     let mut w_send_success = send_success.write();
@@ -746,13 +747,12 @@ impl WalletTransport {
                                 let mut wallet = wallet.clone();
                                 thread::spawn(move || {
                                     let runtime = TokioNativeTlsRuntime::create().unwrap();
-                                    let runtime_tor = runtime.clone();
                                     runtime
                                         .block_on(async {
                                             let addr_str = addr_text.as_str();
                                             let addr = &SlatepackAddress::try_from(addr_str)
                                                 .unwrap();
-                                            if wallet.send_tor(a, &addr, runtime_tor)
+                                            if wallet.send_tor(a, &addr)
                                                 .await
                                                 .is_some() {
                                                 let mut w_send_success = send_success.write();
