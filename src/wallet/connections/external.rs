@@ -70,7 +70,6 @@ impl ExternalConnection {
                         let basic_auth = format!("Basic {}", to_base64(&format!("grin:{}", key)));
                         req_setup = req_setup
                             .header(hyper::header::AUTHORIZATION, basic_auth.clone());
-                        println!("{} auth: {}", addr, basic_auth);
                     }
                     let req = req_setup.body(hyper::Body::from(
                         r#"{"id":1,"jsonrpc":"2.0","method":"get_version","params":{} }"#)
