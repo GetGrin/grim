@@ -30,6 +30,7 @@ use curve25519_dalek::digest::Digest;
 use parking_lot::RwLock;
 use serde_json::json;
 use sha2::Sha512;
+use tokio::time::sleep;
 use tor_config::CfgPath;
 use tor_rtcompat::tokio::TokioNativeTlsRuntime;
 use tor_rtcompat::Runtime;
@@ -219,6 +220,7 @@ impl Tor {
                 }
                 let url = format!("http://{}/v2/foreign", service.onion_name().unwrap().to_string());
                 thread::spawn(move || {
+                    // Wait 5 seconds for service to start.
                     thread::sleep(Duration::from_millis(5000));
                     let runtime = TokioNativeTlsRuntime::create().unwrap();
                     let client_runtime = runtime.clone();
@@ -230,6 +232,13 @@ impl Tor {
                     runtime
                         .spawn(async move {
                             loop {
+                                if !Self::is_service_running(&service_id) &&
+                                    !Self::is_service_starting(&service_id) {
+                                    // Remove service from checking.
+                                    let mut w_services = TOR_SERVER_STATE.checking_services.write();
+                                    w_services.remove(&service_id);
+                                    break;
+                                }
                                 let data = json!({
                                     "id": 1,
                                     "jsonrpc": "2.0",
@@ -248,13 +257,8 @@ impl Tor {
                                         w_services.insert(service_id.clone());
                                     },
                                 }
-                                if !Self::is_service_running(&service_id) &&
-                                    !Self::is_service_starting(&service_id) {
-                                    // Remove service from checking.
-                                    let mut w_services = TOR_SERVER_STATE.checking_services.write();
-                                    w_services.remove(&service_id);
-                                    break;
-                                }
+                                // Ping once per 10 second.
+                                sleep(Duration::from_millis(10000)).await;
                             }
                         }).unwrap();
                 });
