@@ -24,7 +24,6 @@ use std::thread::Thread;
 use std::time::Duration;
 use futures::channel::oneshot;
 use serde_json::{json, Value};
-use tor_rtcompat::tokio::TokioNativeTlsRuntime;
 use rand::Rng;
 
 use grin_api::{ApiServer, Router};
@@ -739,10 +738,6 @@ impl Wallet {
         // Parse response and finalize transaction.
         let res: Value = serde_json::from_str(&req_res.unwrap()).unwrap();
         if res["error"] != json!(null) {
-            let report = format!(
-                "Posting transaction slate: Error: {}, Message: {}",
-                res["error"]["code"], res["error"]["message"]
-            );
             cancel_tx();
             return None;
         }
@@ -1271,7 +1266,7 @@ fn sync_wallet_data(wallet: &Wallet) {
                             // Setup reposting height.
                             let mut repost_height = None;
                             if posting {
-                                if let Some(mut data) = wallet.get_data() {
+                                if let Some(data) = wallet.get_data() {
                                     for t in data.txs {
                                         if t.data.id == tx.id {
                                             repost_height = t.repost_height;
@@ -1374,7 +1369,7 @@ fn update_accounts(wallet: &Wallet, current_height: u64, current_spendable: Opti
     // Update only current account if list is not empty.
     if current_spendable.is_some() {
         let mut accounts = wallet.accounts.read().clone();
-        for mut a in accounts.iter_mut() {
+        for a in accounts.iter_mut() {
             if a.label == wallet.get_config().account {
                 a.spendable_amount = current_spendable.unwrap();
             }

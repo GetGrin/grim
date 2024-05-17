@@ -153,7 +153,7 @@ impl PlatformCallbacks for Desktop {
     }
 }
 
-/// Last captured image from started camera.
 lazy_static! {
+    /// Last captured image from started camera.
     static ref LAST_CAMERA_IMAGE: Arc<RwLock<Option<(Vec<u8>, u32)>>> = Arc::new(RwLock::new(None));
 }

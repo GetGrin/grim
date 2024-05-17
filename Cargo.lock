@@ -3757,7 +3757,6 @@ version = "0.1.0"
 dependencies = [
  "android-activity 0.6.0",
  "android_logger",
- "anyhow",
  "arboard",
  "arti",
  "arti-client",

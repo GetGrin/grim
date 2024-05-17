@@ -74,7 +74,7 @@ impl ConnectionsConfig {
         }
         let mut w_config = Settings::conn_config_to_update();
         let mut exists = false;
-        for mut c in w_config.external.iter_mut() {
+        for c in w_config.external.iter_mut() {
             // Update connection if config exists.
             if c.id == conn.id {
                 c.url = conn.url.clone();
@@ -104,7 +104,7 @@ impl ConnectionsConfig {
     /// Set [`ExternalConnection`] availability flag.
     pub fn update_ext_conn_availability(id: i64, available: bool) {
         let mut w_config = Settings::conn_config_to_update();
-        for mut c in w_config.external.iter_mut() {
+        for c in w_config.external.iter_mut() {
             if c.id == id {
                 c.available = Some(available);
                 w_config.save();
