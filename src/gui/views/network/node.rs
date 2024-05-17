@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use egui::{RichText, Rounding, ScrollArea};
+use egui::scroll_area::ScrollBarVisibility;
 use grin_servers::PeerStats;
 
 use crate::gui::Colors;
@@ -54,6 +55,7 @@ impl NetworkTab for NetworkNode {
 
         ScrollArea::vertical()
             .id_source("integrated_node")
+            .scroll_bar_visibility(ScrollBarVisibility::AlwaysHidden)
             .auto_shrink([false; 2])
             .show(ui, |ui| {
                 ui.add_space(2.0);

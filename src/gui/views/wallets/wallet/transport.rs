@@ -94,8 +94,8 @@ impl WalletTab for WalletTransport {
             })
             .show_inside(ui, |ui| {
                 ScrollArea::vertical()
-                    .scroll_bar_visibility(ScrollBarVisibility::AlwaysVisible)
                     .id_source(Id::from("wallet_transport").with(wallet.get_config().id))
+                    .scroll_bar_visibility(ScrollBarVisibility::AlwaysHidden)
                     .auto_shrink([false; 2])
                     .show(ui, |ui| {
                         ui.vertical_centered(|ui| {

@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use egui::{RichText, Rounding, ScrollArea};
+use egui::scroll_area::ScrollBarVisibility;
 use grin_chain::SyncStatus;
 use grin_servers::WorkerStats;
 
@@ -76,6 +77,7 @@ impl NetworkTab for NetworkMining {
         if !stratum_stats.is_running {
             ScrollArea::vertical()
                 .id_source("stratum_setup_scroll")
+                .scroll_bar_visibility(ScrollBarVisibility::AlwaysHidden)
                 .auto_shrink([false; 2])
                 .show(ui, |ui| {
                     ui.add_space(1.0);
@@ -176,8 +178,9 @@ impl NetworkTab for NetworkMining {
             View::horizontal_line(ui, Colors::ITEM_STROKE);
             ui.add_space(4.0);
             ScrollArea::vertical()
-                .auto_shrink([false; 2])
                 .id_source("stratum_workers_scroll")
+                .scroll_bar_visibility(ScrollBarVisibility::AlwaysHidden)
+                .auto_shrink([false; 2])
                 .show_rows(
                     ui,
                     WORKER_ITEM_HEIGHT,

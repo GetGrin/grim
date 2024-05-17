@@ -14,6 +14,7 @@
 
 use std::time::Duration;
 use egui::{Align, Id, Layout, Margin, RichText, Rounding, ScrollArea};
+use egui::scroll_area::ScrollBarVisibility;
 
 use crate::AppConfig;
 use crate::gui::Colors;
@@ -343,6 +344,7 @@ impl WalletsContent {
             // Draw list of wallets.
             ScrollArea::vertical()
                 .id_source("wallet_list")
+                .scroll_bar_visibility(ScrollBarVisibility::AlwaysHidden)
                 .auto_shrink([false; 2])
                 .show(ui, |ui| {
                     ui.vertical_centered(|ui| {

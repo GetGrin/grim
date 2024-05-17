@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use egui::{Margin, RichText, ScrollArea, Stroke};
+use egui::scroll_area::ScrollBarVisibility;
 
 use crate::AppConfig;
 use crate::gui::Colors;
@@ -130,6 +131,7 @@ impl NetworkContent {
                 }
                 ScrollArea::vertical()
                     .id_source("connections_content")
+                    .scroll_bar_visibility(ScrollBarVisibility::AlwaysHidden)
                     .auto_shrink([false; 2])
                     .show(ui, |ui| {
                         ui.add_space(1.0);

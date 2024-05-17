@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use egui::{Id, Margin, ScrollArea};
+use egui::scroll_area::ScrollBarVisibility;
 
 use crate::gui::Colors;
 use crate::gui::platform::PlatformCallbacks;
@@ -77,6 +78,7 @@ impl WalletTab for WalletSettings {
                 ScrollArea::vertical()
                     .id_source(Id::from("wallet_settings_scroll").with(wallet.get_config().id))
                     .auto_shrink([false; 2])
+                    .scroll_bar_visibility(ScrollBarVisibility::AlwaysHidden)
                     .show(ui, |ui| {
                         ui.vertical_centered(|ui| {
                             View::max_width_ui(ui, Root::SIDE_PANEL_WIDTH * 1.3, |ui| {

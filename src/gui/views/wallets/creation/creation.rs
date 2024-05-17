@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use egui::{Id, Margin, RichText, ScrollArea, vec2};
+use egui::scroll_area::ScrollBarVisibility;
 use grin_util::ZeroingString;
 
 use crate::built_info;
@@ -115,6 +116,7 @@ impl WalletCreation {
                 };
                 ScrollArea::vertical()
                     .id_source(id)
+                    .scroll_bar_visibility(ScrollBarVisibility::AlwaysHidden)
                     .auto_shrink([false; 2])
                     .show(ui, |ui| {
                         ui.vertical_centered(|ui| {

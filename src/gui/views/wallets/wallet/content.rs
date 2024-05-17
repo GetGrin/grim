@@ -14,6 +14,7 @@
 
 use std::time::Duration;
 use egui::{Align, Id, Layout, Margin, RichText, ScrollArea};
+use egui::scroll_area::ScrollBarVisibility;
 use grin_chain::SyncStatus;
 use grin_core::core::amount_to_hr_string;
 
@@ -239,7 +240,7 @@ impl WalletContent {
 
                     // Show confirmed height.
                     let height_text = format!("{} {}", PACKAGE, data.info.last_confirmed_height);
-                    ui.label(RichText::new(height_text).size(15.0).color(Colors::GRAY));
+                    View::animate_text(ui, height_text, 15.0, Colors::GRAY, wallet.syncing());
                 })
             });
         });
@@ -316,8 +317,9 @@ impl WalletContent {
             // Show list of accounts.
             let size = self.accounts.len();
             ScrollArea::vertical()
-                .max_height(266.0)
                 .id_source("account_list_modal_scroll")
+                .scroll_bar_visibility(ScrollBarVisibility::AlwaysHidden)
+                .max_height(266.0)
                 .auto_shrink([true; 2])
                 .show_rows(ui, ACCOUNT_ITEM_HEIGHT, size, |ui, row_range| {
                     for index in row_range {
@@ -374,8 +376,9 @@ impl WalletContent {
             View::horizontal_line(ui, Colors::ITEM_STROKE);
             ui.add_space(3.0);
             ScrollArea::vertical()
-                .max_height(128.0)
                 .id_source(Id::from("qr_scan_result_input").with(wallet.get_config().id))
+                .scroll_bar_visibility(ScrollBarVisibility::AlwaysHidden)
+                .max_height(128.0)
                 .auto_shrink([false; 2])
                 .show(ui, |ui| {
                     ui.add_space(7.0);

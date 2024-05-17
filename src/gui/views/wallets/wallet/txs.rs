@@ -46,7 +46,10 @@ pub struct WalletTransactions {
     tx_info_finalize: bool,
 
     /// Transaction identifier to use at confirmation[`Modal`].
-    confirm_cancel_tx_id: Option<u32>
+    confirm_cancel_tx_id: Option<u32>,
+
+    /// Flag to check if sync of wallet was initiated manually.
+    manual_sync: bool
 }
 
 impl Default for WalletTransactions {
@@ -59,6 +62,7 @@ impl Default for WalletTransactions {
             tx_info_finalize_error: false,
             tx_info_finalize: false,
             confirm_cancel_tx_id: None,
+            manual_sync: false,
         }
     }
 }
@@ -118,17 +122,17 @@ impl WalletTransactions {
               wallet: &mut Wallet,
               data: &WalletData,
               cb: &dyn PlatformCallbacks) {
-        let amount_awaiting_conf = data.info.amount_awaiting_confirmation;
-        let amount_awaiting_fin = data.info.amount_awaiting_finalization;
+        let amount_conf = data.info.amount_awaiting_confirmation;
+        let amount_fin = data.info.amount_awaiting_finalization;
         let amount_locked = data.info.amount_locked;
 
         // Show transactions info.
         View::max_width_ui(ui, Root::SIDE_PANEL_WIDTH * 1.3, |ui| {
 
             // Show non-zero awaiting confirmation amount.
-            if amount_awaiting_conf != 0 {
-                let awaiting_conf = amount_to_hr_string(amount_awaiting_conf, true);
-                let rounding = if amount_awaiting_fin != 0 || amount_locked != 0 {
+            if amount_conf != 0 {
+                let awaiting_conf = amount_to_hr_string(amount_conf, true);
+                let rounding = if amount_fin != 0 || amount_locked != 0 {
                     [false, false, false, false]
                 } else {
                     [false, false, true, true]
@@ -140,8 +144,8 @@ impl WalletTransactions {
             }
 
             // Show non-zero awaiting finalization amount.
-            if amount_awaiting_fin != 0 {
-                let awaiting_conf = amount_to_hr_string(amount_awaiting_fin, true);
+            if amount_fin != 0 {
+                let awaiting_conf = amount_to_hr_string(amount_fin, true);
                 let rounding = if amount_locked != 0 {
                     [false, false, false, false]
                 } else {
@@ -177,32 +181,40 @@ impl WalletTransactions {
             }
         });
 
-        // Show list of transactions.
         ui.add_space(4.0);
 
-        let refresh_resp = PullToRefresh::new(wallet.syncing()).scroll_area_ui(ui, |ui| {
-            ScrollArea::vertical()
-                .scroll_bar_visibility(ScrollBarVisibility::AlwaysVisible)
-                .id_source(Id::from("txs_content").with(wallet.get_config().id))
-                .auto_shrink([false; 2])
-                .show_rows(ui, TX_ITEM_HEIGHT, data.txs.len(), |ui, row_range| {
-                    ui.add_space(3.0);
-                    View::max_width_ui(ui, Root::SIDE_PANEL_WIDTH * 1.3, |ui| {
-                        let extra_padding = amount_awaiting_conf != 0 || amount_awaiting_fin != 0 ||
-                            amount_locked != 0;
-                        for index in row_range {
-                            // Show transaction item.
-                            let tx = data.txs.get(index).unwrap();
-                            let rounding = View::item_rounding(index, data.txs.len(), false);
-                            self.tx_item_ui(ui, tx, rounding, extra_padding, true, &data, wallet, cb);
-                        }
-                    });
-                })
-        });
+        // Show list of transactions.
+        let syncing = wallet.syncing();
+        // Reset manual sync flag when wallet is not syncing.
+        if !syncing {
+            self.manual_sync = false;
+        }
+        let refresh_resp = PullToRefresh::new(syncing && self.manual_sync)
+            .min_refresh_distance(70.0)
+            .can_refresh(!wallet.syncing())
+            .scroll_area_ui(ui, |ui| {
+                ScrollArea::vertical()
+                    .id_source(Id::from("txs_content").with(wallet.get_config().id))
+                    .scroll_bar_visibility(ScrollBarVisibility::AlwaysHidden)
+                    .auto_shrink([false; 2])
+                    .show_rows(ui, TX_ITEM_HEIGHT, data.txs.len(), |ui, row_range| {
+                        ui.add_space(3.0);
+                        View::max_width_ui(ui, Root::SIDE_PANEL_WIDTH * 1.3, |ui| {
+                            let padding = amount_conf != 0 || amount_fin != 0 || amount_locked != 0;
+                            for index in row_range {
+                                // Show transaction item.
+                                let tx = data.txs.get(index).unwrap();
+                                let rounding = View::item_rounding(index, data.txs.len(), false);
+                                self.tx_item_ui(ui, tx, rounding, padding, true, &data, wallet, cb);
+                            }
+                        });
+                    })
+            });
 
         // Sync wallet on refresh.
         if refresh_resp.should_refresh() {
             wallet.sync();
+            self.manual_sync = true;
         }
     }
 
@@ -640,8 +652,9 @@ impl WalletTransactions {
             View::horizontal_line(ui, Colors::ITEM_STROKE);
             ui.add_space(3.0);
             ScrollArea::vertical()
-                .max_height(128.0)
                 .id_source(input_id)
+                .scroll_bar_visibility(ScrollBarVisibility::AlwaysHidden)
+                .max_height(128.0)
                 .auto_shrink([false; 2])
                 .show(ui, |ui| {
                     ui.add_space(7.0);

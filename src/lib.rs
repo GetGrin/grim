@@ -142,6 +142,9 @@ pub fn setup_visuals(ctx: &Context) {
     visuals.widgets.noninteractive.bg_stroke = Stroke::NONE;
     // Setup stroke around inactive widgets.
     visuals.widgets.inactive.bg_stroke = View::DEFAULT_STROKE;
+    // Setup background and foreground stroke color for widgets like pull-to-refresher.
+    visuals.widgets.inactive.bg_fill = Colors::YELLOW;
+    visuals.widgets.inactive.fg_stroke.color = Colors::ITEM_BUTTON;
     // Setup visuals
     ctx.set_visuals(visuals);
 }

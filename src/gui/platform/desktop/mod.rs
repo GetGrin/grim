@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use eye::hal::traits::{Context, Device, Stream};
+use eye::hal::PlatformContext;
 use lazy_static::lazy_static;
-use std::sync::Arc;
 use parking_lot::RwLock;
 use std::sync::atomic::{AtomicBool, AtomicI32, Ordering};
+use std::sync::Arc;
 use std::thread;
-use eye::hal::PlatformContext;
-use eye::hal::traits::{Context, Device, Stream};
 
 use crate::gui::platform::PlatformCallbacks;
 
@@ -27,14 +27,14 @@ pub struct Desktop {
     /// Camera index.
     camera_index: AtomicI32,
     /// Flag to check if camera stop is needed.
-    stop_camera: Arc<AtomicBool>
+    stop_camera: Arc<AtomicBool>,
 }
 
 impl Default for Desktop {
     fn default() -> Self {
         Self {
             camera_index: AtomicI32::new(0),
-            stop_camera: Arc::new(AtomicBool::new(false))
+            stop_camera: Arc::new(AtomicBool::new(false)),
         }
     }
 }
@@ -61,8 +61,19 @@ impl PlatformCallbacks for Desktop {
             *w_image = None;
         }
 
+        // Setup stop camera flag.
+        let stop_camera = self.stop_camera.clone();
+        stop_camera.store(false, Ordering::Relaxed);
+
+        // Create a context
+        let ctx = if let Some(ctx) = PlatformContext::all().next() {
+            ctx
+        } else {
+            PlatformContext::default()
+        };
+
         // Query for available devices.
-        let devices = PlatformContext::default().devices();
+        let devices = ctx.devices();
         if devices.is_err() {
             return;
         }
@@ -77,12 +88,6 @@ impl PlatformCallbacks for Desktop {
             saved_index
         };
 
-        // Setup stop camera flag.
-        let stop_camera = self.stop_camera.clone();
-        stop_camera.store(false, Ordering::Relaxed);
-
-        let devices = devices.clone();
-
         // Capture images at separate thread.
         thread::spawn(move || {
             tokio::runtime::Builder::new_multi_thread()
@@ -91,8 +96,7 @@ impl PlatformCallbacks for Desktop {
                 .unwrap()
                 .block_on(async {
                     // Open camera.
-                    let context = PlatformContext::default();
-                    if let Ok(dev) = context.open_device(&devices[camera_index as usize].uri) {
+                    if let Ok(dev) = ctx.open_device(&devices[camera_index as usize].uri) {
                         let streams = dev.streams().unwrap();
                         let stream_desc = streams[0].clone();
                         println!("Camera stream: {:?}", stream_desc);

@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use egui::{RichText, ScrollArea};
+use egui::scroll_area::ScrollBarVisibility;
 
 use crate::gui::Colors;
 use crate::gui::icons::ARROW_COUNTER_CLOCKWISE;
@@ -86,6 +87,7 @@ impl NetworkTab for NetworkSettings {
 
         ScrollArea::vertical()
             .id_source("network_settings")
+            .scroll_bar_visibility(ScrollBarVisibility::AlwaysHidden)
             .auto_shrink([false; 2])
             .show(ui, |ui| {
                 ui.add_space(1.0);

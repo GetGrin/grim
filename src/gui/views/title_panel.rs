@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::{Margin, Color32, Id, lerp, Rgba};
+use egui::{Margin, Id};
 use egui_extras::{Size, Strip, StripBuilder};
 
 use crate::gui::Colors;
@@ -154,23 +154,7 @@ impl TitlePanel {
                 });
                 strip.cell(|ui| {
                     ui.centered_and_justified(|ui| {
-                        // Setup text color animation if needed.
-                        let (dark, bright) = (0.3, 1.0);
-                        let color_factor = if animate_sub {
-                            lerp(dark..=bright, ui.input(|i| i.time).cos().abs()) as f32
-                        } else {
-                            bright as f32
-                        };
-
-                        // Draw subtitle text.
-                        let sub_color_rgba = Rgba::from(Colors::TEXT) * color_factor;
-                        let sub_color = Color32::from(sub_color_rgba);
-                        View::ellipsize_text(ui, subtitle, 15.0, sub_color);
-
-                        // Repaint delay based on animation status.
-                        if animate_sub {
-                            ui.ctx().request_repaint();
-                        }
+                        View::animate_text(ui, subtitle, 15.0, Colors::TEXT, animate_sub);
                     });
                 });
             });

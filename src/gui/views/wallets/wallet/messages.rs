@@ -112,7 +112,7 @@ impl WalletTab for WalletMessages {
             })
             .show_inside(ui, |ui| {
                 ScrollArea::vertical()
-                    .scroll_bar_visibility(ScrollBarVisibility::AlwaysVisible)
+                    .scroll_bar_visibility(ScrollBarVisibility::AlwaysHidden)
                     .id_source(Id::from("wallet_messages").with(wallet.get_config().id))
                     .auto_shrink([false; 2])
                     .show(ui, |ui| {
@@ -305,8 +305,9 @@ impl WalletMessages {
                 "response_input"
             }).with(wallet.get_config().id);
         ScrollArea::vertical()
-            .max_height(128.0)
             .id_source(scroll_id)
+            .scroll_bar_visibility(ScrollBarVisibility::AlwaysHidden)
+            .max_height(128.0)
             .auto_shrink([false; 2])
             .show(ui, |ui| {
                 ui.add_space(7.0);
@@ -767,8 +768,9 @@ impl WalletMessages {
                     Id::from("receive_request").with(wallet.get_config().id)
                 };
                 ScrollArea::vertical()
-                    .max_height(128.0)
                     .id_source(scroll_id)
+                    .scroll_bar_visibility(ScrollBarVisibility::AlwaysHidden)
+                    .max_height(128.0)
                     .auto_shrink([false; 2])
                     .show(ui, |ui| {
                         ui.add_space(7.0);

@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use egui::{RichText, Rounding, ScrollArea, vec2};
+use egui::scroll_area::ScrollBarVisibility;
 use grin_servers::{DiffBlock, ServerStats};
 
 use crate::gui::Colors;
@@ -141,6 +142,7 @@ fn blocks_ui(ui: &mut egui::Ui, stats: &ServerStats) {
     ui.add_space(4.0);
     ScrollArea::vertical()
         .id_source("difficulty_scroll")
+        .scroll_bar_visibility(ScrollBarVisibility::AlwaysHidden)
         .auto_shrink([false; 2])
         .stick_to_bottom(true)
         .show_rows(

@@ -17,7 +17,7 @@ use std::sync::Arc;
 use parking_lot::RwLock;
 use lazy_static::lazy_static;
 
-use egui::{Align, Button, CursorIcon, Layout, PointerState, Rect, Response, RichText, Sense, Spinner, TextBuffer, TextStyle, Widget};
+use egui::{Align, Button, CursorIcon, Layout, lerp, PointerState, Rect, Response, Rgba, RichText, Sense, Spinner, TextBuffer, TextStyle, Widget};
 use egui::epaint::{Color32, FontId, RectShape, Rounding, Stroke};
 use egui::epaint::text::TextWrapping;
 use egui::os::OperatingSystem;
@@ -116,9 +116,30 @@ impl View {
         job
     }
 
-    /// Show ellipsized text.
+    /// Draw ellipsized text.
     pub fn ellipsize_text(ui: &mut egui::Ui, text: String, size: f32, color: Color32) {
         ui.label(Self::ellipsize(text, size, color));
+    }
+
+    /// Draw animated ellipsized text.
+    pub fn animate_text(ui: &mut egui::Ui, text: String, size: f32, color: Color32, animate: bool) {
+        // Setup text color animation if needed.
+        let (dark, bright) = (0.3, 1.0);
+        let color_factor = if animate {
+            lerp(dark..=bright, ui.input(|i| i.time).cos().abs()) as f32
+        } else {
+            bright as f32
+        };
+
+        // Draw subtitle text.
+        let sub_color_rgba = Rgba::from(color) * color_factor;
+        let sub_color = Color32::from(sub_color_rgba);
+        View::ellipsize_text(ui, text, size, sub_color);
+
+        // Repaint delay based on animation status.
+        if animate {
+            ui.ctx().request_repaint();
+        }
     }
 
     /// Draw horizontally centered sub-title with space below.
@@ -555,12 +576,17 @@ impl View {
     /// Show a [`RadioButton`]. It is selected if `*current_value == selected_value`.
     /// If clicked, `selected_value` is assigned to `*current_value`.
     pub fn radio_value<T: PartialEq>(ui: &mut egui::Ui, current: &mut T, value: T, text: String) {
-        let mut response = ui.radio(*current == value, text)
-            .on_hover_cursor(CursorIcon::PointingHand);
-        if Self::touched(ui, response.clone()) && *current != value {
-            *current = value;
-            response.mark_changed();
-        }
+        ui.scope(|ui| {
+            // Setup background color.
+            ui.visuals_mut().widgets.inactive.bg_fill = Colors::FILL_DARK;
+            // Draw radio button.
+            let mut response = ui.radio(*current == value, text)
+                .on_hover_cursor(CursorIcon::PointingHand);
+            if Self::touched(ui, response.clone()) && *current != value {
+                *current = value;
+                response.mark_changed();
+            }
+        });
     }
 
     /// Draw horizontal line.
