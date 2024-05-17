@@ -54,8 +54,12 @@ pub struct WalletTransport {
     /// QR code address image [`Modal`] content.
     qr_code_content: QrCodeContent,
 
+    /// Flag to check if Tor settings were changed.
+    tor_settings_changed: bool,
     /// Tor bridge binary path edit text.
     bridge_bin_path_edit: String,
+    /// Tor bridge connection line edit text.
+    bridge_conn_line_edit: String,
 }
 
 impl WalletTab for WalletTransport {
@@ -118,10 +122,10 @@ impl WalletTransport {
     pub fn new(addr: String) -> Self {
         // Setup Tor bridge binary path edit text.
         let bridge = TorConfig::get_bridge();
-        let bridge_bin_path_edit = if let Some(b) = bridge {
-            b.binary_path()
+        let (bin_path, conn_line) = if let Some(b) = bridge {
+            (b.binary_path(), b.connection_line())
         } else {
-            "".to_string()
+            ("".to_string(), "".to_string())
         };
         Self {
             tor_sending: Arc::new(RwLock::new(false)),
@@ -132,7 +136,9 @@ impl WalletTransport {
             address_error: false,
             modal_just_opened: false,
             qr_code_content: QrCodeContent::new(addr),
-            bridge_bin_path_edit
+            tor_settings_changed: false,
+            bridge_bin_path_edit: bin_path,
+            bridge_conn_line_edit: conn_line,
         }
     }
 
@@ -197,7 +203,7 @@ impl WalletTransport {
     }
 
     /// Draw Tor transport header content.
-    fn tor_header_ui(&self, ui: &mut egui::Ui, wallet: &Wallet) {
+    fn tor_header_ui(&mut self, ui: &mut egui::Ui, wallet: &Wallet) {
         // Setup layout size.
         let mut rect = ui.available_rect_before_wrap();
         rect.set_height(78.0);
@@ -212,10 +218,12 @@ impl WalletTransport {
                 // Draw button to setup Tor transport.
                 let button_rounding = View::item_rounding(0, 2, true);
                 View::item_button(ui, button_rounding, GEAR_SIX, None, || {
+                    self.tor_settings_changed = false;
                     // Show Tor settings modal.
                     Modal::new(TOR_SETTINGS_MODAL)
                         .position(ModalPosition::CenterTop)
                         .title(t!("transport.tor_settings"))
+                        .closeable(false)
                         .show();
                 });
 
@@ -285,19 +293,6 @@ impl WalletTransport {
         let os = OperatingSystem::from_target_os();
         let show_bridges = os != OperatingSystem::Android;
 
-        // Restart running service or rebuild client.
-        let restart_or_rebuild = || {
-            let service_id = &wallet.identifier();
-            if Tor::is_service_running(service_id) {
-                if let Ok(key) = wallet.secret_key() {
-                    let api_port = wallet.foreign_api_port().unwrap();
-                    Tor::restart_service(api_port, key, service_id);
-                }
-            } else {
-                Tor::rebuild_client();
-            }
-        };
-
         ui.add_space(6.0);
         if show_bridges {
             let bridge = TorConfig::get_bridge();
@@ -312,13 +307,13 @@ impl WalletTransport {
                     let value = if bridge.is_some() {
                         None
                     } else {
-                        let b = TorConfig::get_snowflake();
-                        self.bridge_bin_path_edit = b.binary_path();
-                        Some(b)
+                        let default_bridge = TorConfig::get_obfs4();
+                        self.bridge_bin_path_edit = default_bridge.binary_path();
+                        self.bridge_conn_line_edit = default_bridge.connection_line();
+                        Some(default_bridge)
                     };
                     TorConfig::save_bridge(value);
-                    // Restart running service or rebuild client.
-                    restart_or_rebuild();
+                    self.tor_settings_changed = true;
                 });
             });
 
@@ -330,50 +325,79 @@ impl WalletTransport {
                 ui.add_space(6.0);
                 ui.columns(2, |columns| {
                     columns[0].vertical_centered(|ui| {
-                        // Draw Snowflake bridge selector.
-                        let snowflake = TorConfig::get_snowflake();
-                        let name = snowflake.protocol_name().to_uppercase();
-                        View::radio_value(ui, &mut bridge, snowflake, name);
-                    });
-                    columns[1].vertical_centered(|ui| {
                         // Draw Obfs4 bridge selector.
                         let obfs4 = TorConfig::get_obfs4();
                         let name = obfs4.protocol_name().to_uppercase();
                         View::radio_value(ui, &mut bridge, obfs4, name);
+                    });
+                    columns[1].vertical_centered(|ui| {
+                        // Draw Snowflake bridge selector.
+                        let snowflake = TorConfig::get_snowflake();
+                        let name = snowflake.protocol_name().to_uppercase();
+                        View::radio_value(ui, &mut bridge, snowflake, name);
                     });
                 });
                 ui.add_space(12.0);
 
                 // Check if bridge type was changed to save.
                 if current_bridge != bridge {
+                    self.tor_settings_changed = true;
                     TorConfig::save_bridge(Some(bridge.clone()));
                     self.bridge_bin_path_edit = bridge.binary_path();
-                    // Restart running service or rebuild client.
-                    restart_or_rebuild();
+                    self.bridge_conn_line_edit = bridge.connection_line();
                 }
 
                 // Draw binary path text edit.
-                let bin_edit_id = Id::from(modal.id).with(wallet.get_config().id).with("_bin_edit");
-                let bin_edit_opts = TextEditOptions::new(bin_edit_id).paste();
+                let bin_edit_id = Id::from(modal.id)
+                    .with(wallet.get_config().id)
+                    .with("_bin_edit");
+                let bin_edit_opts = TextEditOptions::new(bin_edit_id)
+                    .paste()
+                    .no_focus();
                 let bin_edit_before = self.bridge_bin_path_edit.clone();
                 ui.vertical_centered(|ui| {
+                    ui.label(RichText::new(t!("transport.bin_file"))
+                        .size(17.0)
+                        .color(Colors::INACTIVE_TEXT));
+                    ui.add_space(6.0);
                     View::text_edit(ui, cb, &mut self.bridge_bin_path_edit, bin_edit_opts);
+                    ui.add_space(6.0);
                 });
 
-                // Check if text was changed to save bin path.
-                if bin_edit_before != self.bridge_bin_path_edit {
+                // Draw connection line text edit.
+                let conn_edit_id = Id::from(modal.id)
+                    .with(wallet.get_config().id)
+                    .with("_conn_edit");
+                let conn_edit_opts = TextEditOptions::new(conn_edit_id)
+                    .paste()
+                    .scan_qr()
+                    .no_focus();
+                let conn_edit_before = self.bridge_conn_line_edit.clone();
+                ui.vertical_centered(|ui| {
+                    ui.label(RichText::new(t!("transport.conn_line"))
+                        .size(17.0)
+                        .color(Colors::INACTIVE_TEXT));
+                    ui.add_space(6.0);
+                    View::text_edit(ui, cb, &mut self.bridge_conn_line_edit, conn_edit_opts);
+                });
+
+                // Check if bin path or connection line text was changed to save bridge.
+                if conn_edit_before != self.bridge_conn_line_edit ||
+                    bin_edit_before != self.bridge_bin_path_edit {
+                    let bin_path = self.bridge_bin_path_edit.clone();
+                    let conn_line = self.bridge_conn_line_edit.clone();
                     let b = match bridge {
-                        TorBridge::Snowflake(_) => {
-                            TorBridge::Snowflake(self.bridge_bin_path_edit.clone())
+                        TorBridge::Snowflake(_, _) => {
+                            TorBridge::Snowflake(bin_path, conn_line)
                         },
-                        TorBridge::Obfs4(_) => {
-                            TorBridge::Obfs4(self.bridge_bin_path_edit.clone())
+                        TorBridge::Obfs4(_, _) => {
+                            TorBridge::Obfs4(bin_path, conn_line)
                         }
                     };
                     TorConfig::save_bridge(Some(b));
-                    // Restart running service or rebuild client.
-                    restart_or_rebuild();
+                    self.tor_settings_changed = true;
                 }
+
                 ui.add_space(2.0);
             }
 
@@ -396,6 +420,19 @@ impl WalletTransport {
         ui.add_space(6.0);
         ui.vertical_centered_justified(|ui| {
             View::button(ui, t!("close"), Colors::WHITE, || {
+                if self.tor_settings_changed {
+                    self.tor_settings_changed = false;
+                    // Restart running service or rebuild client.
+                    let service_id = &wallet.identifier();
+                    if Tor::is_service_running(service_id) {
+                        if let Ok(key) = wallet.secret_key() {
+                            let api_port = wallet.foreign_api_port().unwrap();
+                            Tor::restart_service(api_port, key, service_id);
+                        }
+                    } else {
+                        Tor::rebuild_client();
+                    }
+                }
                 modal.close();
             });
         });

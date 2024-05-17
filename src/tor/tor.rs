@@ -104,8 +104,12 @@ impl Tor {
         let bridge = TorConfig::get_bridge();
         if let Some(b) = bridge {
             match b {
-                super::TorBridge::Snowflake(path) => Self::build_snowflake(&mut builder, path),
-                super::TorBridge::Obfs4(path) => Self::build_obfs4(&mut builder, path),
+                super::TorBridge::Snowflake(path, conn) => {
+                    Self::build_snowflake(&mut builder, path, conn)
+                },
+                super::TorBridge::Obfs4(path, conn) => {
+                    Self::build_obfs4(&mut builder, path, conn)
+                },
             }
         }
         // Setup address filter.
@@ -184,6 +188,7 @@ impl Tor {
 
     // Restart Onion service.
     pub fn restart_service(port: u16, key: SecretKey, id: &String) {
+        println!("restart service");
         Self::stop_service(id);
         Self::rebuild_client();
         Self::start_service(port, key, id)
@@ -283,8 +288,10 @@ impl Tor {
                                         .body(Body::from(data))
                                         .unwrap();
                                     // Send request.
+                                    println!("Send request");
                                     let duration = match http.request(req).await {
                                         Ok(_) => {
+                                            println!("OK!");
                                             // Remove service from starting.
                                             let mut w_services = TOR_SERVER_STATE.starting_services.write();
                                             w_services.remove(&service_id);
@@ -292,6 +299,7 @@ impl Tor {
                                             Duration::from_millis(15000)
                                         },
                                         Err(e) => {
+                                            println!("err: {}", e);
                                             // Restart service on 3rd error.
                                             errors_count += 1;
                                             if errors_count == MAX_ERRORS {
@@ -349,6 +357,8 @@ impl Tor {
         // Save running service.
         let mut w_services = TOR_SERVER_STATE.running_services.write();
         w_services.insert(id.clone(), (service.clone(), proxy.clone()));
+
+        println!("run_service_proxy done");
 
         // Start proxy for launched service.
         client
@@ -417,77 +427,35 @@ impl Tor {
             .unwrap();
     }
 
-    fn build_snowflake(builder: &mut TorClientConfigBuilder, bin_path: String) {
-        // Add a single bridge to the list of bridges, from a bridge line.
-        // This line comes from https://gitlab.torproject.org/tpo/applications/tor-browser-build/-/blob/main/projects/common/bridges_list.snowflake.txt
-        // this is a real bridge line you can use as-is, after making sure it's still up to date with
-        // above link.
-        const BRIDGE1_LINE : &str = "Bridge snowflake 192.0.2.4:80 8838024498816A039FCBBAB14E6F40A0843051FA fingerprint=8838024498816A039FCBBAB14E6F40A0843051FA url=https://1098762253.rsc.cdn77.org/ fronts=www.cdn77.com,www.phpmyadmin.net ice=stun:stun.l.google.com:19302,stun:stun.antisip.com:3478,stun:stun.bluesip.net:3478,stun:stun.dus.net:3478,stun:stun.epygi.com:3478,stun:stun.sonetel.net:3478,stun:stun.uls.co.za:3478,stun:stun.voipgate.com:3478,stun:stun.voys.nl:3478 utls-imitate=hellorandomizedalpn";
-        let bridge_1: BridgeConfigBuilder = BRIDGE1_LINE.parse().unwrap();
-        builder.bridges().bridges().push(bridge_1);
-
-        // Add a second bridge, built by hand. We use the 2nd bridge line from above, but modify some
-        // parameters to use AMP Cache instead of Fastly as a signaling channel. The difference in
-        // configuration is detailed in
-        // https://gitlab.torproject.org/tpo/anti-censorship/pluggable-transports/snowflake/-/tree/main/client#amp-cache
-        // let mut bridge2_builder = BridgeConfigBuilder::default();
-        // bridge2_builder
-        //     .transport("snowflake")
-        //     .push_setting(
-        //         "fingerprint",
-        //         "8838024498816A039FCBBAB14E6F40A0843051FA"
-        //     )
-        //     .push_setting("url", "https://snowflake-broker.torproject.net/")
-        //     .push_setting("ampcache", "https://cdn.ampproject.org/")
-        //     .push_setting("front", "www.google.com")
-        //     .push_setting(
-        //         "ice",
-        //         "stun:stun.l.google.com:19302,stun:stun.antisip.com:3478,stun:stun.bluesip.net:3478,stun:stun.dus.net:3478,stun:stun.epygi.com:3478,stun:stun.sonetel.net:3478,stun:stun.uls.co.za:3478,stun:stun.voipgate.com:3478,stun:stun.voys.nl:3478",
-        //     )
-        //     .push_setting("utls-imitate", "hellorandomizedalpn");
-        // bridge2_builder.set_addrs(vec!["192.0.2.4:80".parse().unwrap()]);
-        // bridge2_builder.set_ids(vec!["8838024498816A039FCBBAB14E6F40A0843051FA".parse().unwrap()]);
-        // // Now insert the second bridge into our config builder.
-        // builder.bridges().bridges().push(bridge2_builder);
+    fn build_snowflake(builder: &mut TorClientConfigBuilder, bin_path: String, conn_line: String) {
+        let bridge_line = format!("Bridge {}", conn_line);
+        if let Ok(bridge) = bridge_line.parse() {
+            builder.bridges().bridges().push(bridge);
+        }
 
         // Now configure an snowflake transport. (Requires the "pt-client" feature)
         let mut transport = TransportConfigBuilder::default();
         transport
             .protocols(vec!["snowflake".parse().unwrap()])
-            // this might be named differently on some systems, this should work on Debian, but Archlinux is known to use `snowflake-pt-client` instead for instance.
+            // this might be named differently on some systems, this should work on Debian,
+            // but Archlinux is known to use `snowflake-pt-client` instead for instance.
             .path(CfgPath::new(bin_path.into()))
             .run_on_startup(true);
         builder.bridges().set_transports(vec![transport]);
     }
 
-    fn build_obfs4(builder: &mut TorClientConfigBuilder, bin_path: String) {
-        // This bridge line is made up for demonstration, and won't work.
-        const BRIDGE1_LINE : &str = "Bridge obfs4 82.64.231.149:9300 1B4382D598392D72F85F8D3D05CE1A6BB0EF0300 cert=+NYVc7iy+d6lj/NZZY2ZPFR6IHA/Mw5XSwFxvPFSespE+A/e5BOv2kgGbJbDzkkRfCsGGg iat-mode=0";
-        let bridge_1: BridgeConfigBuilder = BRIDGE1_LINE.parse().unwrap();
-        // This is where we pass `BRIDGE1_LINE` into the BridgeConfigBuilder.
-        builder.bridges().bridges().push(bridge_1);
-
-        // Add a second bridge, built by hand.  This way is harder.
-        // This bridge is made up for demonstration, and won't work.
-        // let mut bridge2_builder = BridgeConfigBuilder::default();
-        // bridge2_builder
-        //     .transport("obfs4")
-        //     .push_setting("iat-mode", "1")
-        //     .push_setting(
-        //         "cert",
-        //         "YnV0IHNvbWV0aW1lcyB0aGV5IGFyZSByYW5kb20u8x9aQG/0cIIcx0ItBcTqiSXotQne+Q"
-        //     );
-        // bridge2_builder.set_addrs(vec!["198.51.100.25:443".parse().unwrap()]);
-        // bridge2_builder.set_ids(vec!["7DD62766BF2052432051D7B7E08A22F7E34A4543".parse().unwrap()]);
-        // // Now insert the second bridge into our config builder.
-        // builder.bridges().bridges().push(bridge2_builder);
+    fn build_obfs4(builder: &mut TorClientConfigBuilder, bin_path: String, conn_line: String) {
+        let bridge_line = format!("Bridge {}", conn_line);
+        if let Ok(bridge) = bridge_line.parse() {
+            builder.bridges().bridges().push(bridge);
+        }
 
         // Now configure an obfs4 transport. (Requires the "pt-client" feature)
         let mut transport = TransportConfigBuilder::default();
         transport
             .protocols(vec!["obfs4".parse().unwrap()])
-            // Specify either the name or the absolute path of pluggable transport client binary, this
-            // may differ from system to system.
+            // Specify either the name or the absolute path of pluggable transport client binary,
+            // this may differ from system to system.
             .path(CfgPath::new(bin_path.into()))
             .run_on_startup(true);
         builder.bridges().transports().push(transport);

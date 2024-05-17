@@ -33,8 +33,14 @@ impl Default for TorConfig {
     fn default() -> Self {
         Self {
             bridge: None,
-            obfs4: TorBridge::Obfs4(TorBridge::DEFAULT_OBFS4_BIN_PATH.to_string()),
-            snowflake: TorBridge::Snowflake(TorBridge::DEFAULT_SNOWFLAKE_BIN_PATH.to_string()),
+            obfs4: TorBridge::Obfs4(
+                TorBridge::DEFAULT_OBFS4_BIN_PATH.to_string(),
+                TorBridge::DEFAULT_OBFS4_CONN_LINE.to_string()
+            ),
+            snowflake: TorBridge::Snowflake(
+                TorBridge::DEFAULT_SNOWFLAKE_BIN_PATH.to_string(),
+                TorBridge::DEFAULT_SNOWFLAKE_CONN_LINE.to_string()
+            ),
         }
     }
 }
@@ -89,10 +95,10 @@ impl TorConfig {
         if bridge.is_some() {
             let bridge = bridge.unwrap();
             match &bridge {
-               TorBridge::Snowflake(_) => {
+               TorBridge::Snowflake(_, _) => {
                    w_tor_config.snowflake = bridge
                }
-               TorBridge::Obfs4(_) => {
+               TorBridge::Obfs4(_, _) => {
                    w_tor_config.obfs4 = bridge
                }
            }

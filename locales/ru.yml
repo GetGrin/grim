@@ -134,6 +134,8 @@ transport:
   tor_settings: Настройки Tor
   bridges: Мосты
   bridges_desc: Настройте мосты для обхода цензуры сети Tor, если обычное соединение не работает.
+  bin_file: 'Исполняемый файл:'
+  conn_line: 'Строка подключения:'
 network:
   self: Сеть
   type: 'Тип сети:'
