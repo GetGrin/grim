@@ -23,7 +23,7 @@ use futures::task::SpawnExt;
 
 use grin_util::secp::SecretKey;
 use arti_client::{TorClient, TorClientConfig};
-use arti_client::config::{BridgeConfigBuilder, TorClientConfigBuilder, CfgPath};
+use arti_client::config::{TorClientConfigBuilder, CfgPath};
 use fs_mistrust::Mistrust;
 use ed25519_dalek::hazmat::ExpandedSecretKey;
 use curve25519_dalek::digest::Digest;
@@ -79,16 +79,16 @@ impl Default for Tor {
     fn default() -> Self {
         let runtime = TokioNativeTlsRuntime::create().unwrap();
         let config = Self::build_config();
-        let client = (TorClient::with_runtime(runtime)
+        let client = TorClient::with_runtime(runtime)
              .config(config.clone())
              .create_unbootstrapped()
-             .unwrap(), config);
+             .unwrap();
         Self {
             running_services: Arc::new(RwLock::new(BTreeMap::new())),
             starting_services: Arc::new(RwLock::new(BTreeSet::new())),
             failed_services: Arc::new(RwLock::new(BTreeSet::new())),
             checking_services: Arc::new(RwLock::new(BTreeSet::new())),
-            client_config: Arc::new(RwLock::new((client))),
+            client_config: Arc::new(RwLock::new((client, config))),
         }
     }
 }
@@ -188,7 +188,6 @@ impl Tor {
 
     // Restart Onion service.
     pub fn restart_service(port: u16, key: SecretKey, id: &String) {
-        println!("restart service");
         Self::stop_service(id);
         Self::rebuild_client();
         Self::start_service(port, key, id)
@@ -288,18 +287,15 @@ impl Tor {
                                         .body(Body::from(data))
                                         .unwrap();
                                     // Send request.
-                                    println!("Send request");
                                     let duration = match http.request(req).await {
                                         Ok(_) => {
-                                            println!("OK!");
                                             // Remove service from starting.
                                             let mut w_services = TOR_SERVER_STATE.starting_services.write();
                                             w_services.remove(&service_id);
                                             // Check again after 15 seconds.
                                             Duration::from_millis(15000)
                                         },
-                                        Err(e) => {
-                                            println!("err: {}", e);
+                                        Err(_) => {
                                             // Restart service on 3rd error.
                                             errors_count += 1;
                                             if errors_count == MAX_ERRORS {
@@ -357,8 +353,6 @@ impl Tor {
         // Save running service.
         let mut w_services = TOR_SERVER_STATE.running_services.write();
         w_services.insert(id.clone(), (service.clone(), proxy.clone()));
-
-        println!("run_service_proxy done");
 
         // Start proxy for launched service.
         client
