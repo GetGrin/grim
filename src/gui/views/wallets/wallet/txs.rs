@@ -213,7 +213,7 @@ impl WalletTransactions {
 
         // Sync wallet on refresh.
         if refresh_resp.should_refresh() {
-            wallet.sync();
+            wallet.sync(true);
             self.manual_sync = true;
         }
     }

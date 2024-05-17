@@ -20,7 +20,7 @@ use grin_core::core::amount_to_hr_string;
 
 use crate::AppConfig;
 use crate::gui::Colors;
-use crate::gui::icons::{BRIDGE, CHAT_CIRCLE_TEXT, CHECK, CHECK_FAT, COPY, FOLDER_USER, GEAR_FINE, GRAPH, PACKAGE, PATH, POWER, REPEAT, SCAN, USERS_THREE};
+use crate::gui::icons::{ARROWS_CLOCKWISE, BRIDGE, CHAT_CIRCLE_TEXT, CHECK, CHECK_FAT, COPY, FOLDER_USER, GEAR_FINE, GRAPH, PACKAGE, PATH, POWER, SCAN, USERS_THREE};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{CameraContent, Modal, Root, View};
 use crate::gui::views::types::{ModalPosition, QrScanResult, TextEditOptions};
@@ -83,8 +83,9 @@ impl WalletContent {
         let data = wallet.get_data();
         let data_empty = data.is_none();
 
-        // Show wallet balance panel when data is not empty and current tab is not Settings.
-        let show_balance = self.current_tab.get_type() != WalletTabType::Settings && !data_empty;
+        // Show wallet balance panel when there is no error and data is not empty.
+        let show_balance = self.current_tab.get_type() != WalletTabType::Settings && !data_empty
+            && !wallet.sync_error();
         egui::TopBottomPanel::top("wallet_balance")
             .frame(egui::Frame {
                 fill: Colors::FILL,
@@ -561,7 +562,7 @@ impl WalletContent {
             let text = t!("wallets.wallet_loading_err", "settings" => GEAR_FINE);
             ui.label(RichText::new(text).size(16.0).color(Colors::INACTIVE_TEXT));
             ui.add_space(8.0);
-            let retry_text = format!("{} {}", REPEAT, t!("retry"));
+            let retry_text = format!("{} {}", ARROWS_CLOCKWISE, t!("retry"));
             View::button(ui, retry_text, Colors::GOLD, || {
                 wallet.set_sync_error(false);
             });

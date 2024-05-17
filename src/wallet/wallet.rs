@@ -419,7 +419,7 @@ impl Wallet {
             wallet_close.is_open.store(false, Ordering::Relaxed);
 
             // Wake up thread to exit.
-            wallet_close.sync();
+            wallet_close.sync(true);
         });
     }
 
@@ -446,7 +446,7 @@ impl Wallet {
             }
 
             // Sync wallet data.
-            self.sync();
+            self.sync(false);
             Ok(())
         })
     }
@@ -480,7 +480,7 @@ impl Wallet {
         self.txs_sync_progress.store(0, Ordering::Relaxed);
 
         // Sync wallet data.
-        self.sync();
+        self.sync(false);
         Ok(())
     }
 
@@ -542,11 +542,18 @@ impl Wallet {
         r_data.clone()
     }
 
-    /// Sync wallet data.
-    pub fn sync(&self) {
-        let thread_r = self.sync_thread.read();
-        if let Some(thread) = thread_r.as_ref() {
-            thread.unpark();
+    /// Sync wallet data from node or locally.
+    pub fn sync(&self, from_node: bool) {
+        if from_node {
+            let thread_r = self.sync_thread.read();
+            if let Some(thread) = thread_r.as_ref() {
+                thread.unpark();
+            }
+        } else {
+            let wallet = self.clone();
+            thread::spawn(move || {
+                sync_wallet_data(&wallet, false);
+            });
         }
     }
 
@@ -677,7 +684,7 @@ impl Wallet {
         let message_resp = self.create_slatepack_message(&slate)?;
 
         // Sync wallet info.
-        self.sync();
+        self.sync(false);
 
         Ok((slate, message_resp))
     }
@@ -718,7 +725,7 @@ impl Wallet {
                 *w_data = Some(data);
             }
             // Refresh wallet info to update statuses.
-            self.sync();
+            self.sync(false);
         };
 
         // Initialize parameters.
@@ -801,7 +808,7 @@ impl Wallet {
         let response = self.create_slatepack_message(&slate.clone())?;
 
         // Sync wallet info.
-        self.sync();
+        self.sync(false);
 
         Ok((slate, response))
     }
@@ -825,7 +832,7 @@ impl Wallet {
         let response = self.create_slatepack_message(&slate)?;
 
         // Sync wallet info.
-        self.sync();
+        self.sync(false);
 
         Ok(response)
     }
@@ -842,7 +849,7 @@ impl Wallet {
         let response = self.create_slatepack_message(&slate)?;
 
         // Sync wallet info.
-        self.sync();
+        self.sync(false);
 
         Ok(response)
     }
@@ -856,8 +863,6 @@ impl Wallet {
         let _ = self.create_slatepack_message(&slate)?;
         // Post transaction to blockchain.
         let _ = self.post(&slate, dandelion);
-        // Sync wallet info.
-        self.sync();
         Ok(slate)
     }
 
@@ -885,8 +890,8 @@ impl Wallet {
             }
             *w_data = Some(data);
         }
-        // Sync wallet info.
-        self.sync();
+        // Sync local wallet info.
+        self.sync(false);
         Ok(())
     }
 
@@ -912,25 +917,27 @@ impl Wallet {
             let instance = wallet.instance.clone().unwrap();
             cancel_tx(instance, None, &None, Some(id), None).unwrap();
             // Setup posting flag, and ability to finalize.
-            let mut w_data = wallet.data.write();
-            let mut data = w_data.clone().unwrap();
-            let txs = data.txs.iter_mut().map(|tx| {
-                if tx.data.id == id {
-                    tx.cancelling = false;
-                    tx.posting = false;
-                    tx.can_finalize = false;
-                    tx.data.tx_type = if tx.data.tx_type == TxLogEntryType::TxReceived {
-                        TxLogEntryType::TxReceivedCancelled
-                    } else {
-                        TxLogEntryType::TxSentCancelled
-                    };
-                }
-                tx.clone()
-            }).collect::<Vec<WalletTransaction>>();
-            data.txs = txs;
-            *w_data = Some(data);
+            {
+                let mut w_data = wallet.data.write();
+                let mut data = w_data.clone().unwrap();
+                let txs = data.txs.iter_mut().map(|tx| {
+                    if tx.data.id == id {
+                        tx.cancelling = false;
+                        tx.posting = false;
+                        tx.can_finalize = false;
+                        tx.data.tx_type = if tx.data.tx_type == TxLogEntryType::TxReceived {
+                            TxLogEntryType::TxReceivedCancelled
+                        } else {
+                            TxLogEntryType::TxSentCancelled
+                        };
+                    }
+                    tx.clone()
+                }).collect::<Vec<WalletTransaction>>();
+                data.txs = txs;
+                *w_data = Some(data);
+            }
             // Refresh wallet info to update statuses.
-            wallet.sync();
+            sync_wallet_data(&wallet, false);
         });
     }
 
@@ -945,7 +952,7 @@ impl Wallet {
     /// Initiate wallet repair by scanning its outputs.
     pub fn repair(&self) {
         self.repair_needed.store(true, Ordering::Relaxed);
-        self.sync();
+        self.sync(true);
     }
 
     /// Check if wallet is repairing.
@@ -989,7 +996,7 @@ impl Wallet {
             wallet_delete.deleted.store(true, Ordering::Relaxed);
 
             // Start sync to exit.
-            wallet_delete.sync();
+            wallet_delete.sync(true);
         });
     }
 
@@ -1066,7 +1073,11 @@ fn start_sync(mut wallet: Wallet) -> Thread {
             if wallet.is_repairing() {
                 repair_wallet(&wallet)
             } else {
-                sync_wallet_data(&wallet);
+                // Retrieve data from database first on empty data.
+                if wallet.get_data().is_none() {
+                    sync_wallet_data(&wallet, false);
+                }
+                sync_wallet_data(&wallet, true);
             }
         }
 
@@ -1120,8 +1131,8 @@ fn start_sync(mut wallet: Wallet) -> Thread {
     }).thread().clone()
 }
 
-/// Retrieve [`WalletData`] from node.
-fn sync_wallet_data(wallet: &Wallet) {
+/// Retrieve [`WalletData`] from local base or node.
+fn sync_wallet_data(wallet: &Wallet, from_node: bool) {
     let wallet_info = wallet.clone();
     let (info_tx, info_rx) = mpsc::channel::<StatusMessage>();
     // Update info sync progress at separate thread.
@@ -1150,7 +1161,7 @@ fn sync_wallet_data(wallet: &Wallet) {
             instance.clone(),
             None,
             &Some(info_tx),
-            true,
+            from_node,
             config.min_confirmations
         ) {
             // Do not retrieve txs if wallet was closed.
@@ -1158,7 +1169,7 @@ fn sync_wallet_data(wallet: &Wallet) {
                 return;
             }
 
-            if wallet.info_sync_progress() == 100 {
+            if wallet.info_sync_progress() == 100 || !from_node {
                 // Retrieve accounts data.
                 let last_height = info.1.last_confirmed_height;
                 let spendable = if wallet.get_data().is_none() {
@@ -1197,7 +1208,7 @@ fn sync_wallet_data(wallet: &Wallet) {
                 if let Ok(txs) = retrieve_txs(instance.clone(),
                                               None,
                                               &Some(txs_tx),
-                                              true,
+                                              from_node,
                                               None,
                                               None,
                                               Some(txs_args)) {
@@ -1206,7 +1217,7 @@ fn sync_wallet_data(wallet: &Wallet) {
                         return;
                     }
                     // Save data if loading was completed.
-                    if wallet.txs_sync_progress() == 100 {
+                    if wallet.txs_sync_progress() == 100 || !from_node {
                         // Reset attempts.
                         wallet.reset_sync_attempts();
 
@@ -1279,13 +1290,19 @@ fn sync_wallet_data(wallet: &Wallet) {
                                 false
                             };
 
-                            // Setup reposting height.
+                            // Setup reposting height and cancelling status.
                             let mut repost_height = None;
+                            let mut cancelling = false;
                             if posting {
                                 if let Some(data) = wallet.get_data() {
                                     for t in data.txs {
                                         if t.data.id == tx.id {
                                             repost_height = t.repost_height;
+                                            if t.cancelling &&
+                                                tx.tx_type != TxLogEntryType::TxReceivedCancelled &&
+                                                tx.tx_type != TxLogEntryType::TxSentCancelled {
+                                                cancelling = true;
+                                            }
                                             break;
                                         }
                                     }
@@ -1296,7 +1313,7 @@ fn sync_wallet_data(wallet: &Wallet) {
                             new_txs.push(WalletTransaction {
                                 data: tx.clone(),
                                 amount,
-                                cancelling: false,
+                                cancelling,
                                 posting,
                                 can_finalize,
                                 repost_height,
