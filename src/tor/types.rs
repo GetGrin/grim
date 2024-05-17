@@ -30,7 +30,7 @@ impl TorBridge {
     pub const DEFAULT_SNOWFLAKE_BIN_PATH: &'static str = "/usr/bin/snowflake-client";
 
     /// Default Obfs4 protocol connection line.
-    pub const DEFAULT_OBFS4_CONN_LINE: &'static str = "obfs4 193.11.166.194:27015 2D82C2E354D531A68469ADF7F878FA6060C6BACA cert=4TLQPJrTSaDffMK7Nbao6LC7G9OW/NHkUwIdjLSS3KYf0Nv4/nQiiI8dY2TcsQx01NniOg iat-mode=0";
+    pub const DEFAULT_OBFS4_CONN_LINE: &'static str = "obfs4 45.76.43.226:3479 7AAFDC594147E72635DD64DB47A8CD8781F463F6 cert=bJ720bjXkmFGGAD77BsCMopkDzQ/cXDj0QntOmsBYw7Fqohq7Y7yZMV7FlECQNB1tyq1AA iat-mode=0";
     /// Default Snowflake protocol connection line.
     pub const DEFAULT_SNOWFLAKE_CONN_LINE: &'static str = "snowflake 192.0.2.4:80 8838024498816A039FCBBAB14E6F40A0843051FA fingerprint=8838024498816A039FCBBAB14E6F40A0843051FA url=https://1098762253.rsc.cdn77.org/ fronts=www.cdn77.com,www.phpmyadmin.net ice=stun:stun.l.google.com:19302,stun:stun.antisip.com:3478,stun:stun.bluesip.net:3478,stun:stun.dus.net:3478,stun:stun.epygi.com:3478,stun:stun.sonetel.net:3478,stun:stun.uls.co.za:3478,stun:stun.voipgate.com:3478,stun:stun.voys.nl:3478 utls-imitate=hellorandomizedalpn";
 
