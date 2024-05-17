@@ -14,6 +14,7 @@
 
 use egui::{Align, Id, Layout, Margin, RichText, Rounding, ScrollArea};
 use egui::scroll_area::ScrollBarVisibility;
+use egui_pull_to_refresh::PullToRefresh;
 use grin_core::core::amount_to_hr_string;
 use grin_util::ToHex;
 use grin_wallet_libwallet::{Slate, SlateState, TxLogEntryType};
@@ -178,23 +179,31 @@ impl WalletTransactions {
 
         // Show list of transactions.
         ui.add_space(4.0);
-        ScrollArea::vertical()
-            .scroll_bar_visibility(ScrollBarVisibility::AlwaysVisible)
-            .id_source(Id::from("txs_content").with(wallet.get_config().id))
-            .auto_shrink([false; 2])
-            .show_rows(ui, TX_ITEM_HEIGHT, data.txs.len(), |ui, row_range| {
-                ui.add_space(3.0);
-                View::max_width_ui(ui, Root::SIDE_PANEL_WIDTH * 1.3, |ui| {
-                    let extra_padding = amount_awaiting_conf != 0 || amount_awaiting_fin != 0 ||
-                        amount_locked != 0;
-                    for index in row_range {
-                        // Show transaction item.
-                        let tx = data.txs.get(index).unwrap();
-                        let rounding = View::item_rounding(index, data.txs.len(), false);
-                        self.tx_item_ui(ui, tx, rounding, extra_padding, true, &data, wallet, cb);
-                    }
-                });
-            });
+
+        let refresh_resp = PullToRefresh::new(wallet.syncing()).scroll_area_ui(ui, |ui| {
+            ScrollArea::vertical()
+                .scroll_bar_visibility(ScrollBarVisibility::AlwaysVisible)
+                .id_source(Id::from("txs_content").with(wallet.get_config().id))
+                .auto_shrink([false; 2])
+                .show_rows(ui, TX_ITEM_HEIGHT, data.txs.len(), |ui, row_range| {
+                    ui.add_space(3.0);
+                    View::max_width_ui(ui, Root::SIDE_PANEL_WIDTH * 1.3, |ui| {
+                        let extra_padding = amount_awaiting_conf != 0 || amount_awaiting_fin != 0 ||
+                            amount_locked != 0;
+                        for index in row_range {
+                            // Show transaction item.
+                            let tx = data.txs.get(index).unwrap();
+                            let rounding = View::item_rounding(index, data.txs.len(), false);
+                            self.tx_item_ui(ui, tx, rounding, extra_padding, true, &data, wallet, cb);
+                        }
+                    });
+                })
+        });
+
+        // Sync wallet on refresh.
+        if refresh_resp.should_refresh() {
+            wallet.sync();
+        }
     }
 
     /// Draw [`Modal`] content for this ui container.
