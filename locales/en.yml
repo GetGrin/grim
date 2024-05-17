@@ -136,6 +136,8 @@ transport:
   bridges_desc: Setup bridges to bypass Tor network censorship if usual connection is not working.
   bin_file: 'Binary file:'
   conn_line: 'Connection line:'
+  bridges_disabled: Bridges disabled
+  bridge_name: 'Bridge %{b}'
 network:
   self: Network
   type: 'Network type:'

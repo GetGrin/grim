@@ -24,7 +24,7 @@ use grin_core::core::{amount_from_hr_string, amount_to_hr_string};
 use grin_wallet_libwallet::SlatepackAddress;
 
 use crate::gui::Colors;
-use crate::gui::icons::{CHECK_CIRCLE, COMPUTER_TOWER, COPY, DOTS_THREE_CIRCLE, EXPORT, GEAR_SIX, GLOBE_SIMPLE, POWER, QR_CODE, WARNING_CIRCLE, X_CIRCLE};
+use crate::gui::icons::{CHECK_CIRCLE, COPY, DOTS_THREE_CIRCLE, EXPORT, GEAR_SIX, GLOBE_SIMPLE, POWER, QR_CODE, SHIELD_CHECKERED, SHIELD_SLASH, WARNING_CIRCLE, X_CIRCLE};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, QrCodeContent, Root, View};
 use crate::gui::views::types::{ModalPosition, TextEditOptions};
@@ -254,12 +254,20 @@ impl WalletTransport {
                             .size(18.0)
                             .color(Colors::TITLE));
 
-                        // Setup wallet API address text.
-                        let port = wallet.foreign_api_port().unwrap();
-                        let address_text = format!("{} http://127.0.0.1:{}",
-                                                   COMPUTER_TOWER,
-                                                   port);
-                        ui.label(RichText::new(address_text).size(15.0).color(Colors::TEXT));
+                        // Setup bridges status text.
+                        let bridge = TorConfig::get_bridge();
+                        let bridges_text = match &bridge {
+                            None => {
+                                format!("{} {}", SHIELD_SLASH, t!("transport.bridges_disabled"))
+                            }
+                            Some(b) => {
+                                let name = b.protocol_name().to_uppercase();
+                                format!("{} {}",
+                                        SHIELD_CHECKERED,
+                                        t!("transport.bridge_name", "b" = name))
+                            }
+                        };
+                        ui.label(RichText::new(bridges_text).size(15.0).color(Colors::TEXT));
                         ui.add_space(1.0);
 
                         // Setup Tor status text.
@@ -384,8 +392,8 @@ impl WalletTransport {
                 // Check if bin path or connection line text was changed to save bridge.
                 if conn_edit_before != self.bridge_conn_line_edit ||
                     bin_edit_before != self.bridge_bin_path_edit {
-                    let bin_path = self.bridge_bin_path_edit.clone();
-                    let conn_line = self.bridge_conn_line_edit.clone();
+                    let bin_path = self.bridge_bin_path_edit.trim().to_string();
+                    let conn_line = self.bridge_conn_line_edit.trim().to_string();
                     let b = match bridge {
                         TorBridge::Snowflake(_, _) => {
                             TorBridge::Snowflake(bin_path, conn_line)
