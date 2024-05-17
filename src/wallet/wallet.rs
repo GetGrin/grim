@@ -91,6 +91,8 @@ pub struct Wallet {
     data: Arc<RwLock<Option<WalletData>>>,
     /// Attempts amount to update wallet data.
     sync_attempts: Arc<AtomicU8>,
+    /// Flag to check if wallet is syncing.
+    syncing: Arc<AtomicBool>,
 
     /// Flag to check if wallet repairing and restoring missing outputs is needed.
     repair_needed: Arc<AtomicBool>,
@@ -118,6 +120,7 @@ impl Wallet {
             accounts: Arc::new(RwLock::new(vec![])),
             data: Arc::new(RwLock::new(None)),
             sync_attempts: Arc::new(AtomicU8::new(0)),
+            syncing: Arc::new(AtomicBool::new(false)),
             repair_needed: Arc::new(AtomicBool::new(false)),
             repair_progress: Arc::new(AtomicU8::new(0))
         }
@@ -539,12 +542,17 @@ impl Wallet {
         r_data.clone()
     }
 
-    /// Wake up wallet thread to sync wallet data and update statuses.
+    /// Sync wallet data.
     pub fn sync(&self) {
         let thread_r = self.sync_thread.read();
         if let Some(thread) = thread_r.as_ref() {
             thread.unpark();
         }
+    }
+
+    /// Check if wallet is syncing.
+    pub fn syncing(&self) -> bool {
+        self.syncing.load(Ordering::Relaxed)
     }
 
     /// Get running Foreign API server port.
@@ -1007,7 +1015,24 @@ fn start_sync(mut wallet: Wallet) -> Thread {
     wallet.txs_sync_progress.store(0, Ordering::Relaxed);
     wallet.repair_progress.store(0, Ordering::Relaxed);
 
+    // To call on sync thread stop.
+    let on_thread_stop = |wallet: Wallet| {
+        // Clear thread instance.
+        let mut thread_w = wallet.sync_thread.write();
+        *thread_w = None;
+
+        // Clear wallet info.
+        let mut w_data = wallet.data.write();
+        *w_data = None;
+
+        // Clear syncing status.
+        wallet.syncing.store(false, Ordering::Relaxed);
+    };
+
     thread::spawn(move || loop {
+        // Set syncing status.
+        wallet.syncing.store(true, Ordering::Relaxed);
+
         // Close wallet on chain type change.
         if wallet.get_config().chain_type != AppConfig::chain_type() {
             wallet.close();
@@ -1015,13 +1040,7 @@ fn start_sync(mut wallet: Wallet) -> Thread {
 
         // Stop syncing if wallet was closed.
         if !wallet.is_open() {
-            // Clear thread instance.
-            let mut thread_w = wallet.sync_thread.write();
-            *thread_w = None;
-
-            // Clear wallet info.
-            let mut w_data = wallet.data.write();
-            *w_data = None;
+            on_thread_stop(wallet);
             return;
         }
 
@@ -1053,13 +1072,7 @@ fn start_sync(mut wallet: Wallet) -> Thread {
 
         // Stop sync if wallet was closed.
         if !wallet.is_open() {
-            // Clear thread instance.
-            let mut thread_w = wallet.sync_thread.write();
-            *thread_w = None;
-
-            // Clear wallet info.
-            let mut w_data = wallet.data.write();
-            *w_data = None;
+            on_thread_stop(wallet);
             return;
         }
 
@@ -1093,6 +1106,9 @@ fn start_sync(mut wallet: Wallet) -> Thread {
                 }
             }
         }
+
+        // Clear syncing status.
+        wallet.syncing.store(false, Ordering::Relaxed);
 
         // Repeat after default or attempt delay if synchronization was not successful.
         let delay = if failed_sync {
