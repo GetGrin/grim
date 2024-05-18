@@ -489,7 +489,10 @@ impl Node {
 fn start_node_server() -> Result<Server, Error>  {
     // Get saved server config.
     let config = NodeConfig::node_server_config();
-    let server_config = config.server.clone();
+    let mut server_config = config.server.clone();
+    // Fix to avoid too many opened files.
+    server_config.p2p_config.peer_min_preferred_outbound_count =
+        server_config.p2p_config.peer_max_outbound_count;
 
     // Remove temporary file dir.
     {
