@@ -55,6 +55,8 @@ pub struct Node {
     stop_needed: AtomicBool,
     /// Flag to check if app exit is needed after [`Server`] stop.
     exit_after_stop: AtomicBool,
+    /// Flag to clean-up peers and restart the [`Server`].
+    clean_up_peers: AtomicBool,
 
     /// An error occurred on [`Server`] start.
     error: Arc<RwLock<Option<Error>>>
@@ -71,7 +73,8 @@ impl Default for Node {
             stop_needed: AtomicBool::new(false),
             exit_after_stop: AtomicBool::new(false),
             start_stratum_needed: AtomicBool::new(false),
-            error: Arc::new(RwLock::new(None))
+            error: Arc::new(RwLock::new(None)),
+            clean_up_peers: AtomicBool::new(false),
         }
     }
 }
@@ -145,6 +148,11 @@ impl Node {
     /// Check if [`Node`] is restarting.
     pub fn is_restarting() -> bool {
         NODE_STATE.restart_needed.load(Ordering::Relaxed)
+    }
+
+    /// Check if clean-up of [`Server`] peers is needed.
+    fn clean_up_peers_needed() -> bool {
+        NODE_STATE.clean_up_peers.load(Ordering::Relaxed)
     }
 
     /// Get node [`Server`] statistics.
@@ -229,10 +237,17 @@ impl Node {
                 Ok(mut server) => {
                     let mut first_start = true;
                     loop {
-                        if Self::is_restarting() {
+                        // Restart server if request or peers clean up is needed
+                        let clean_up_peers = Self::clean_up_peers_needed();
+                        if Self::is_restarting() || clean_up_peers {
                             server.stop();
+                            // Wait server after stop.
                             thread::sleep(Duration::from_millis(5000));
-                            // Reset stratum stats
+                            // Clean-up peers of requested.
+                            if clean_up_peers {
+                                Node::clean_up_peers(true);
+                            }
+                            // Reset stratum stats.
                             {
                                 let mut w_stratum_stats = NODE_STATE.stratum_stats.write();
                                 *w_stratum_stats = StratumStats::default();
@@ -365,6 +380,27 @@ impl Node {
         }
     }
 
+    /// Clean-up [`Server`] peers from storage.
+    pub fn clean_up_peers(force: bool) {
+        if force || !Node::is_running() {
+            NODE_STATE.clean_up_peers.store(false, Ordering::Relaxed);
+            // Get saved server config.
+            let config = NodeConfig::node_server_config();
+            let mut server_config = config.server.clone();
+            // Remove peers folder.
+            let mut tmp_dir = PathBuf::from(&server_config.db_root);
+            tmp_dir.push("peers");
+            if tmp_dir.exists() {
+                match fs::remove_dir_all(tmp_dir) {
+                    Ok(_) => {}
+                    Err(_) => { println!("Cannot remove peers dir") }
+                }
+            }
+        } else {
+            NODE_STATE.clean_up_peers.store(true, Ordering::Relaxed);
+        }
+    }
+
     /// Get synchronization status i18n text.
     pub fn get_sync_status_text() -> String {
         if Node::is_stopping() {
@@ -493,7 +529,6 @@ fn start_node_server() -> Result<Server, Error>  {
     // Fix to avoid too many opened files.
     server_config.p2p_config.peer_min_preferred_outbound_count =
         server_config.p2p_config.peer_max_outbound_count;
-
     // Remove temporary file dir.
     {
         let mut tmp_dir = PathBuf::from(&server_config.db_root);
