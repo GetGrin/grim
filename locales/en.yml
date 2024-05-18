@@ -273,8 +273,6 @@ network_settings:
   ban_window_desc: The decision to ban is made by node, based on the correctness of the data received from the peer.
   max_inbound_count: 'Maximum number of inbound peer connections:'
   max_outbound_count: 'Maximum number of outbound peer connections:'
-  min_outbound_count: 'Minimum number of outbound peer connections:'
-  min_outbound_desc: Node server will actively keep trying to add peers until it will get to at least this number.
 modal:
   cancel: Cancel
   save: Save
