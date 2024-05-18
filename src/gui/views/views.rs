@@ -17,7 +17,7 @@ use std::sync::Arc;
 use parking_lot::RwLock;
 use lazy_static::lazy_static;
 
-use egui::{Align, Button, CursorIcon, Layout, lerp, PointerState, Rect, Response, Rgba, RichText, Sense, Spinner, TextBuffer, TextStyle, Widget};
+use egui::{Align, Button, CursorIcon, Id, Layout, lerp, PointerState, Rect, Response, Rgba, RichText, Sense, Spinner, TextBuffer, TextStyle, Ui, Widget};
 use egui::epaint::{Color32, FontId, RectShape, Rounding, Stroke};
 use egui::epaint::text::TextWrapping;
 use egui::os::OperatingSystem;
@@ -402,41 +402,49 @@ impl View {
                     text_edit_resp.request_focus();
                     cb.show_keyboard();
                 }
+
                 // Apply text from input on Android as temporary fix for egui.
-                let os = OperatingSystem::from_target_os();
-                if os == OperatingSystem::Android && text_edit_resp.has_focus() {
-                    let mut w_input = LAST_SOFT_KEYBOARD_INPUT.write();
-
-                    if !w_input.is_empty() {
-                        let mut state = TextEditState::load(ui.ctx(), options.id).unwrap();
-                        match state.cursor.char_range() {
-                            None => {}
-                            Some(range) => {
-                                let mut r = range.clone();
-
-                                let mut index = r.primary.index;
-
-                                value.insert_text(w_input.as_str(), index);
-                                index = index + 1;
-
-                                if index == 0 {
-                                    r.primary.index = value.len();
-                                    r.secondary.index = r.primary.index;
-                                } else {
-                                    r.primary.index = index;
-                                    r.secondary.index = r.primary.index;
-                                }
-                                state.cursor.set_char_range(Some(r));
-                                TextEditState::store(state, ui.ctx(), options.id);
-                            }
-                        }
-                    }
-
-                    *w_input = "".to_string();
-                    ui.ctx().request_repaint();
+                if text_edit_resp.has_focus() {
+                    Self::on_soft_input(ui, options.id, value);
                 }
             });
         });
+    }
+
+    /// Apply soft keyboard input data to provided String.
+    pub fn on_soft_input(ui: &mut Ui, id: Id, value: &mut String) {
+        let os = OperatingSystem::from_target_os();
+        if os == OperatingSystem::Android {
+            let mut w_input = LAST_SOFT_KEYBOARD_INPUT.write();
+
+            if !w_input.is_empty() {
+                let mut state = TextEditState::load(ui.ctx(), id).unwrap();
+                match state.cursor.char_range() {
+                    None => {}
+                    Some(range) => {
+                        let mut r = range.clone();
+
+                        let mut index = r.primary.index;
+
+                        value.insert_text(w_input.as_str(), index);
+                        index = index + 1;
+
+                        if index == 0 {
+                            r.primary.index = value.len();
+                            r.secondary.index = r.primary.index;
+                        } else {
+                            r.primary.index = index;
+                            r.secondary.index = r.primary.index;
+                        }
+                        state.cursor.set_char_range(Some(r));
+                        TextEditState::store(state, ui.ctx(), id);
+                    }
+                }
+            }
+
+            *w_input = "".to_string();
+            ui.ctx().request_repaint();
+        }
     }
 
     /// Calculate item background/button rounding based on item index.
