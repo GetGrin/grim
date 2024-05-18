@@ -271,10 +271,11 @@ impl WalletTransport {
 
                         // Setup Tor status text.
                         let is_running = Tor::is_service_running(service_id);
-                        let is_starting = Tor::is_service_starting(service_id) ||
-                            wallet.foreign_api_port().is_none();
+                        let is_starting = Tor::is_service_starting(service_id);
                         let has_error = Tor::is_service_failed(service_id);
-                        let (icon, text) = if is_starting {
+                        let (icon, text) = if wallet.foreign_api_port().is_none() {
+                            (DOTS_THREE_CIRCLE, t!("wallets.loading"))
+                        } else if is_starting {
                             (DOTS_THREE_CIRCLE, t!("transport.connecting"))
                         } else if has_error {
                             (WARNING_CIRCLE, t!("transport.conn_error"))
