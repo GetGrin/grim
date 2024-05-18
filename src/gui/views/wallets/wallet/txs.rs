@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::time::{SystemTime, UNIX_EPOCH};
 use egui::{Align, Id, Layout, Margin, RichText, Rounding, ScrollArea};
 use egui::scroll_area::ScrollBarVisibility;
 use egui_pull_to_refresh::PullToRefresh;
@@ -48,8 +49,8 @@ pub struct WalletTransactions {
     /// Transaction identifier to use at confirmation[`Modal`].
     confirm_cancel_tx_id: Option<u32>,
 
-    /// Flag to check if sync of wallet was initiated manually.
-    manual_sync: bool
+    /// Flag to check if sync of wallet was initiated manually at time.
+    manual_sync: Option<u128>
 }
 
 impl Default for WalletTransactions {
@@ -62,7 +63,7 @@ impl Default for WalletTransactions {
             tx_info_finalize_error: false,
             tx_info_finalize: false,
             confirm_cancel_tx_id: None,
-            manual_sync: false,
+            manual_sync: None,
         }
     }
 }
@@ -184,12 +185,10 @@ impl WalletTransactions {
         ui.add_space(4.0);
 
         // Show list of transactions.
-        let syncing = wallet.syncing();
-        // Reset manual sync flag when wallet is not syncing.
-        if !syncing {
-            self.manual_sync = false;
-        }
-        let refresh_resp = PullToRefresh::new(syncing && self.manual_sync)
+        let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis();
+        let refresh = self.manual_sync.unwrap_or(0) + 2400 > now;
+        let refresh_resp = PullToRefresh::new(refresh)
+            .can_refresh(!refresh && !wallet.syncing())
             .min_refresh_distance(70.0)
             .scroll_area_ui(ui, |ui| {
                 ScrollArea::vertical()
@@ -212,7 +211,7 @@ impl WalletTransactions {
 
         // Sync wallet on refresh.
         if refresh_resp.should_refresh() {
-            self.manual_sync = true;
+            self.manual_sync = Some(now);
             if !wallet.syncing() {
                 wallet.sync(true);
             }
