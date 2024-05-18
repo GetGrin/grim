@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::thread;
 use egui::{Id, Margin, RichText, ScrollArea, TextBuffer};
 use egui::os::OperatingSystem;
 use egui::scroll_area::ScrollBarVisibility;
@@ -19,6 +22,7 @@ use egui::text_edit::TextEditState;
 use grin_core::core::{amount_from_hr_string, amount_to_hr_string};
 use grin_wallet_libwallet::{Slate, SlateState};
 use log::error;
+use parking_lot::RwLock;
 
 use crate::gui::Colors;
 use crate::gui::icons::{BROOM, CLIPBOARD_TEXT, COPY, DOWNLOAD_SIMPLE, PROHIBIT, UPLOAD_SIMPLE};
@@ -75,6 +79,10 @@ pub struct WalletMessages {
     request_edit: String,
     /// Flag to check if there is an error happened on request creation at [`Modal`].
     request_error: Option<MessageError>,
+    /// Flag to check if request is loading at [`Modal`].
+    request_loading: Arc<AtomicBool>,
+    /// Request result if there is no error at [`Modal`].
+    request_result: Arc<RwLock<Option<Result<(Slate, String), grin_wallet_libwallet::Error>>>>,
 }
 
 /// Identifier for amount input [`Modal`].
@@ -139,6 +147,8 @@ impl WalletMessages {
             amount_edit: "".to_string(),
             request_edit: "".to_string(),
             request_error: None,
+            request_loading: Arc::new(AtomicBool::new(false)),
+            request_result: Arc::new(RwLock::new(None)),
         }
     }
 
@@ -207,10 +217,16 @@ impl WalletMessages {
                         self.send_request = true;
                         self.amount_edit = "".to_string();
                         self.request_error = None;
+                        self.request_loading.store(false, Ordering::Relaxed);
+                        {
+                            let mut w_result = self.request_result.write();
+                            *w_result = None;
+                        }
                         // Show send amount modal.
                         Modal::new(AMOUNT_MODAL)
                             .position(ModalPosition::CenterTop)
                             .title(t!("wallets.send"))
+                            .closeable(false)
                             .show();
                         cb.show_keyboard();
                     });
@@ -624,7 +640,46 @@ impl WalletMessages {
                        modal: &Modal,
                        cb: &dyn PlatformCallbacks) {
         ui.add_space(6.0);
-        if self.request_edit.is_empty() {
+        if self.request_loading.load(Ordering::Relaxed) {
+            ui.add_space(42.0);
+            ui.vertical_centered(|ui| {
+                View::big_loading_spinner(ui);
+            });
+            ui.add_space(50.0);
+
+            // Check if there is request result error.
+            if self.request_error.is_some() {
+                self.request_loading.store(false, Ordering::Relaxed);
+                return;
+            }
+
+            // Update data on request result.
+            let r_request = self.request_result.read();
+            if r_request.is_some() {
+                let message = r_request.as_ref().unwrap();
+                match message {
+                    Ok((_, message)) => {
+                        self.request_edit = message.clone();
+                    }
+                    Err(err) => {
+                        match err {
+                            grin_wallet_libwallet::Error::NotEnoughFunds { .. } => {
+                                let m = t!(
+                                    "wallets.pay_balance_error",
+                                    "amount" => self.amount_edit
+                                );
+                                self.request_error = Some(MessageError::Other(m));
+                            }
+                            _ => {
+                                let m = t!("wallets.invoice_slatepack_err");
+                                self.request_error = Some(MessageError::Other(m));
+                            }
+                        }
+                    }
+                }
+                self.request_loading.store(false, Ordering::Relaxed);
+            }
+        } else if self.request_edit.is_empty() {
             ui.vertical_centered(|ui| {
                 let enter_text = if self.send_request {
                     let data = wallet.get_data().unwrap();
@@ -712,32 +767,24 @@ impl WalletMessages {
                             return;
                         }
                         if let Ok(a) = amount_from_hr_string(self.amount_edit.as_str()) {
-                            let message = if self.send_request {
-                                wallet.send(a)
-                            } else {
-                                wallet.issue_invoice(a)
-                            };
-                            match message {
-                                Ok((_, message)) => {
-                                    self.request_edit = message;
-                                    cb.hide_keyboard();
-                                }
-                                Err(err) => {
-                                    match err {
-                                        grin_wallet_libwallet::Error::NotEnoughFunds { .. } => {
-                                            let m = t!(
-                                                    "wallets.pay_balance_error",
-                                                    "amount" => self.amount_edit
-                                                );
-                                            self.request_error = Some(MessageError::Other(m));
-                                        }
-                                        _ => {
-                                            let m = t!("wallets.invoice_slatepack_err");
-                                            self.request_error = Some(MessageError::Other(m));
-                                        }
-                                    }
-                                }
-                            }
+                            cb.hide_keyboard();
+
+                            // Setup data for request.
+                            let wallet = wallet.clone();
+                            let send_request = self.send_request.clone();
+                            let result = self.request_result.clone();
+
+                            // Send request at another thread.
+                            self.request_loading.store(true, Ordering::Relaxed);
+                            thread::spawn(move || {
+                                let message = if send_request {
+                                    wallet.send(a)
+                                } else {
+                                    wallet.issue_invoice(a)
+                                };
+                                let mut w_result = result.write();
+                                *w_result = Some(message);
+                            });
                         } else {
                             self.request_error = Some(
                                 MessageError::Other(t!("wallets.invoice_slatepack_err"))
