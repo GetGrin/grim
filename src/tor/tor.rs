@@ -12,37 +12,42 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use arti_client::config::pt::TransportConfigBuilder;
+use futures::task::SpawnExt;
+use lazy_static::lazy_static;
 use std::collections::{BTreeMap, BTreeSet};
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+use std::str::FromStr;
 use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
-use arti_client::config::pt::TransportConfigBuilder;
-use lazy_static::lazy_static;
-use futures::task::SpawnExt;
 
-use grin_util::secp::SecretKey;
+use arti_client::config::{CfgPath, TorClientConfigBuilder};
 use arti_client::{TorClient, TorClientConfig};
-use arti_client::config::{TorClientConfigBuilder, CfgPath};
-use fs_mistrust::Mistrust;
-use ed25519_dalek::hazmat::ExpandedSecretKey;
+use arti_hyper::ArtiHttpConnector;
 use curve25519_dalek::digest::Digest;
+use ed25519_dalek::hazmat::ExpandedSecretKey;
+use fs_mistrust::Mistrust;
+use grin_util::secp::SecretKey;
+use hyper::{Body, Uri};
 use parking_lot::RwLock;
 use serde_json::json;
 use sha2::Sha512;
+use tls_api::{TlsConnector as TlsConnectorTrait, TlsConnectorBuilder};
 use tokio::time::sleep;
-use tor_rtcompat::tokio::TokioNativeTlsRuntime;
-use tor_rtcompat::Runtime;
+use tor_hscrypto::pk::{HsIdKey, HsIdKeypair};
+use tor_hsrproxy::config::{
+    Encapsulation, ProxyAction, ProxyConfigBuilder, ProxyPattern, ProxyRule, TargetAddr,
+};
 use tor_hsrproxy::OnionServiceReverseProxy;
-use tor_hsrproxy::config::{Encapsulation, ProxyAction, ProxyPattern, ProxyRule, TargetAddr, ProxyConfigBuilder};
 use tor_hsservice::config::OnionServiceConfigBuilder;
-use tor_hsservice::{HsIdKeypairSpecifier, HsIdPublicKeySpecifier, HsNickname, RunningOnionService};
+use tor_hsservice::{
+    HsIdKeypairSpecifier, HsIdPublicKeySpecifier, HsNickname, RunningOnionService,
+};
 use tor_keymgr::{ArtiNativeKeystore, KeyMgrBuilder, KeystoreSelector};
 use tor_llcrypto::pk::ed25519::ExpandedKeypair;
-use tor_hscrypto::pk::{HsIdKey, HsIdKeypair};
-use arti_hyper::ArtiHttpConnector;
-use hyper::Body;
-use tls_api::{TlsConnector as TlsConnectorTrait, TlsConnectorBuilder};
+use tor_rtcompat::tokio::TokioNativeTlsRuntime;
+use tor_rtcompat::Runtime;
 
 // On aarch64-apple-darwin targets there is an issue with the native and rustls
 // tls implementation so this makes it fall back to the openssl variant.
@@ -65,14 +70,14 @@ pub struct Tor {
     /// Tor client and config.
     client_config: Arc<RwLock<(TorClient<TokioNativeTlsRuntime>, TorClientConfig)>>,
     /// Mapping of running Onion services identifiers to proxy.
-    running_services: Arc<RwLock<BTreeMap<String,
-        (Arc<RunningOnionService>, Arc<OnionServiceReverseProxy>)>>>,
+    running_services:
+        Arc<RwLock<BTreeMap<String, (Arc<RunningOnionService>, Arc<OnionServiceReverseProxy>)>>>,
     /// Starting Onion services identifiers.
     starting_services: Arc<RwLock<BTreeSet<String>>>,
     /// Failed Onion services identifiers.
     failed_services: Arc<RwLock<BTreeSet<String>>>,
     /// Checking Onion services identifiers.
-    checking_services: Arc<RwLock<BTreeSet<String>>>
+    checking_services: Arc<RwLock<BTreeSet<String>>>,
 }
 
 impl Default for Tor {
@@ -232,9 +237,8 @@ impl Tor {
                 .spawn(async move {
                     // Add service key to keystore.
                     let hs_nickname = HsNickname::new(service_id.clone()).unwrap();
-                    if let Err(_) = Self::add_service_key(config.fs_mistrust(),
-                                                          &key,
-                                                          &hs_nickname) {
+                    if let Err(_) = Self::add_service_key(config.fs_mistrust(), &key, &hs_nickname)
+                    {
                         on_error(service_id);
                         return;
                     }
@@ -265,10 +269,7 @@ impl Tor {
                             return;
                         }
                         let client_check = client_thread.clone();
-                        let url = format!(
-                            "http://{}/v2/foreign",
-                            service.onion_name().unwrap().to_string()
-                        );
+                        let url = format!("http://{}/", service.onion_name().unwrap().to_string());
                         thread::spawn(move || {
                             // Wait 1 second to start.
                             thread::sleep(Duration::from_millis(1000));
@@ -280,6 +281,13 @@ impl Tor {
                             }
                             runtime
                                 .spawn(async move {
+                                    let tls_connector =
+                                        TlsConnector::builder().unwrap().build().unwrap();
+                                    let tor_connector =
+                                        ArtiHttpConnector::new(client_check.clone(), tls_connector);
+                                    let http =
+                                        hyper::Client::builder().build::<_, Body>(tor_connector);
+
                                     const MAX_ERRORS: i32 = 3;
                                     let mut errors_count = 0;
                                     loop {
@@ -290,32 +298,26 @@ impl Tor {
                                             w_services.remove(&service_id);
                                             break;
                                         }
-                                        let data = json!({
-                                            "id": 1,
-                                            "jsonrpc": "2.0",
-                                            "method": "check_version",
-                                            "params": []
-                                        })
-                                        .to_string();
-                                        // Bootstrap client.
-                                        client_check.bootstrap().await.unwrap();
+                                        // let data = json!({
+                                        //     "id": 1,
+                                        //     "jsonrpc": "2.0",
+                                        //     "method": "check_version",
+                                        //     "params": []
+                                        // })
+                                        // .to_string();
                                         // Create http tor-powered client to post data.
-                                        let tls_connector =
-                                            TlsConnector::builder().unwrap().build().unwrap();
-                                        let tor_connector = ArtiHttpConnector::new(
-                                            client_check.clone(),
-                                            tls_connector,
-                                        );
-                                        let http = hyper::Client::builder()
-                                            .build::<_, Body>(tor_connector);
+
                                         // Create request.
-                                        let req = hyper::Request::builder()
-                                            .method(hyper::Method::POST)
-                                            .uri(url.clone())
-                                            .body(Body::from(data))
-                                            .unwrap();
+                                        // let req = hyper::Request::builder()
+                                        //     .method(hyper::Method::POST)
+                                        //     .uri(url.clone())
+                                        //     .body(Body::from(data))
+                                        //     .unwrap();
                                         // Send request.
-                                        let duration = match http.request(req).await {
+                                        let duration = match http
+                                            .get(Uri::from_str(url.clone().as_str()).unwrap())
+                                            .await
+                                        {
                                             Ok(_) => {
                                                 // Remove service from starting.
                                                 let mut w_services =
