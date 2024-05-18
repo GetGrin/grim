@@ -118,6 +118,7 @@ wallets:
   tx_send_cancel_conf: 'Are you sure you want to cancel sending of %{amount} ツ?'
   tx_receive_cancel_conf: 'Are you sure you want to cancel receiving of %{amount} ツ?'
   rec_phrase_not_found: Recovery phrase not found.
+  restore_wallet_desc: Restore wallet by deleting all files if usual repair not helped, you will need to re-open your wallet.
 transport:
   desc: 'Use transport to receive or send messages synchronously:'
   tor_network: Tor network

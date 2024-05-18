@@ -119,9 +119,17 @@ impl WalletConfig {
     /// Get current wallet data path.
     pub fn get_data_path(&self) -> String {
         let chain_type = AppConfig::chain_type();
-        let mut config_path = Self::get_base_path(chain_type);
-        config_path.push(self.id.to_string());
-        config_path.to_str().unwrap().to_string()
+        let mut data_path = Self::get_base_path(chain_type);
+        data_path.push(self.id.to_string());
+        data_path.to_str().unwrap().to_string()
+    }
+
+    /// Get wallet database data path.
+    pub fn get_db_path(&self) -> String {
+        let mut path = PathBuf::from(self.get_data_path());
+        path.push("wallet_data");
+        path.push("db");
+        path.to_str().unwrap().to_string()
     }
 
     /// Get Slatepacks data path for current wallet.

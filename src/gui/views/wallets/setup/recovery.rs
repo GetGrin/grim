@@ -17,7 +17,7 @@ use grin_chain::SyncStatus;
 use grin_util::ZeroingString;
 
 use crate::gui::Colors;
-use crate::gui::icons::{EYE, STETHOSCOPE, TRASH, WRENCH};
+use crate::gui::icons::{EYE, LIFEBUOY, STETHOSCOPE, TRASH, WRENCH};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, View};
 use crate::gui::views::types::{ModalPosition, TextEditOptions};
@@ -93,6 +93,20 @@ impl RecoverySetup {
             View::horizontal_line(ui, Colors::ITEM_STROKE);
             ui.add_space(6.0);
 
+            // Draw button to restore the wallet.
+            let recover_text = format!("{} {}", LIFEBUOY, t!("wallets.recover"));
+            View::colored_text_button(ui, recover_text, Colors::GREEN, Colors::BUTTON, || {
+                wallet.delete_db(true);
+            });
+            ui.add_space(6.0);
+            ui.label(RichText::new(t!("wallets.restore_wallet_desc"))
+                .size(16.0)
+                .color(Colors::INACTIVE_TEXT));
+
+            ui.add_space(6.0);
+            View::horizontal_line(ui, Colors::ITEM_STROKE);
+            ui.add_space(6.0);
+
             let recovery_text = format!("{}:", t!("wallets.recovery_phrase"));
             ui.label(RichText::new(recovery_text).size(16.0).color(Colors::GRAY));
             ui.add_space(6.0);
@@ -111,7 +125,7 @@ impl RecoverySetup {
 
             // Draw button to delete the wallet.
             let delete_text = format!("{} {}", TRASH, t!("wallets.delete"));
-            View::button(ui, delete_text, Colors::GOLD, || {
+            View::colored_text_button(ui, delete_text, Colors::RED, Colors::BUTTON, || {
                 Modal::new(DELETE_CONFIRMATION_MODAL)
                     .position(ModalPosition::Center)
                     .title(t!("modal.confirmation"))

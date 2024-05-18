@@ -395,7 +395,6 @@ impl Wallet {
 
         // Close wallet at separate thread.
         let wallet_close = self.clone();
-        let instance = wallet_close.instance.clone().unwrap();
         let service_id = wallet_close.identifier();
         thread::spawn(move || {
             // Stop running API server.
@@ -407,17 +406,14 @@ impl Wallet {
                 w_api_server.as_mut().unwrap().0.stop();
                 *w_api_server = None;
             }
-
             // Stop running Tor service.
             Tor::stop_service(&service_id);
-
             // Close the wallet.
+            let instance = wallet_close.instance.clone().unwrap();
             Self::close_wallet(&instance);
-
             // Mark wallet as not opened.
             wallet_close.closing.store(false, Ordering::Relaxed);
             wallet_close.is_open.store(false, Ordering::Relaxed);
-
             // Wake up thread to exit.
             wallet_close.sync(true);
         });
@@ -969,6 +965,27 @@ impl Wallet {
         self.repair_progress.load(Ordering::Relaxed)
     }
 
+    /// Deleting wallet database files.
+    pub fn delete_db(&self, reopen: bool) {
+        let wallet_delete = self.clone();
+        // Close wallet if open.
+        if self.is_open() {
+            self.close();
+        }
+        thread::spawn(move || {
+            // Wait wallet to be closed.
+            if wallet_delete.is_open() {
+                thread::sleep(Duration::from_millis(300));
+            }
+            // Remove wallet db files.
+            let _ = fs::remove_dir_all(wallet_delete.get_config().get_db_path());
+            // Start sync to close thread.
+            wallet_delete.sync(true);
+            // Mark wallet to reopen.
+            wallet_delete.set_reopen(reopen);
+        });
+    }
+
     /// Get recovery phrase.
     pub fn get_recovery(&self, password: String) -> Result<ZeroingString, Error> {
         let instance = self.instance.clone().unwrap();
@@ -979,27 +996,21 @@ impl Wallet {
 
     /// Close the wallet, delete its files and mark it as deleted.
     pub fn delete_wallet(&self) {
-        if !self.is_open() || self.instance.is_none() {
-            return;
-        }
-        self.closing.store(true, Ordering::Relaxed);
-
-        // Delete wallet at separate thread.
         let wallet_delete = self.clone();
-        let instance = wallet_delete.instance.clone().unwrap();
+        // Close wallet if open.
+        if self.is_open() {
+            self.close();
+        }
         thread::spawn(move || {
-            // Close the wallet.
-            Self::close_wallet(&instance);
-
+            // Wait wallet to be closed.
+            if wallet_delete.is_open() {
+                thread::sleep(Duration::from_millis(300));
+            }
             // Remove wallet files.
             let _ = fs::remove_dir_all(wallet_delete.get_config().get_data_path());
-
             // Mark wallet as not opened and deleted.
-            wallet_delete.closing.store(false, Ordering::Relaxed);
-            wallet_delete.is_open.store(false, Ordering::Relaxed);
             wallet_delete.deleted.store(true, Ordering::Relaxed);
-
-            // Start sync to exit.
+            // Start sync to close thread.
             wallet_delete.sync(true);
         });
     }
