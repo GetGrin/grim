@@ -914,6 +914,10 @@ impl Wallet {
 
         let wallet = self.clone();
         thread::spawn(move || {
+            // Wait sync to finish.
+            if wallet.syncing() {
+                thread::sleep(Duration::from_millis(1000));
+            }
             let instance = wallet.instance.clone().unwrap();
             cancel_tx(instance, None, &None, Some(id), None).unwrap();
             // Setup posting flag, and ability to finalize.
