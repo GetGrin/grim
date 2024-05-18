@@ -915,7 +915,7 @@ impl Wallet {
                 thread::sleep(Duration::from_millis(1000));
             }
             let instance = wallet.instance.clone().unwrap();
-            cancel_tx(instance, None, &None, Some(id), None).unwrap();
+            let _ = cancel_tx(instance, None, &None, Some(id), None);
             // Setup posting flag, and ability to finalize.
             {
                 let mut w_data = wallet.data.write();
