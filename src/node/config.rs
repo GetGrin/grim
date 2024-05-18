@@ -17,7 +17,6 @@ use std::io::{BufRead, BufReader, Write};
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4, TcpListener, ToSocketAddrs};
 use std::path::PathBuf;
 use std::str::FromStr;
-use egui::os::OperatingSystem;
 use local_ip_address::list_afinet_netifas;
 use serde::{Deserialize, Serialize};
 
@@ -185,17 +184,6 @@ impl NodeConfig {
 
         // Generate random p2p and api ports.
         Self::setup_default_ports(&mut config);
-
-        // Change default amount of peers.
-        let os = OperatingSystem::from_target_os();
-        let max_inbound = if os == OperatingSystem::Android {
-            24
-        } else {
-            96
-        };
-        config.server.p2p_config.peer_max_inbound_count = Some(max_inbound);
-        config.server.p2p_config.peer_max_outbound_count = Some(24);
-        config.server.p2p_config.peer_min_preferred_outbound_count = Some(18);
 
         Settings::write_to_file(&config, path);
         config
@@ -817,27 +805,10 @@ impl NodeConfig {
     pub fn save_max_outbound_peers(count: u32) {
         let mut w_node_config = Settings::node_config_to_update();
         w_node_config.node.server.p2p_config.peer_max_outbound_count = Some(count);
-        w_node_config.save();
-    }
-
-    /// Minimum number of outbound peer connections.
-    pub fn get_min_outbound_peers() -> String {
-        Settings::node_config_to_read()
-            .node
-            .server
-            .p2p_config
-            .peer_min_preferred_outbound_count()
-            .to_string()
-    }
-
-    /// Save minimum number of outbound peer connections.
-    pub fn save_min_outbound_peers(count: u32) {
-        let mut w_node_config = Settings::node_config_to_update();
+        // Same value for preferred.
         w_node_config.node.server.p2p_config.peer_min_preferred_outbound_count = Some(count);
         w_node_config.save();
     }
-
-    // Pool settings
 
     /// Base fee that's accepted into the pool.
     pub fn get_base_fee() -> String {

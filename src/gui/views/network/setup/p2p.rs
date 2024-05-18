@@ -17,7 +17,7 @@ use grin_core::global::ChainTypes;
 
 use crate::AppConfig;
 use crate::gui::Colors;
-use crate::gui::icons::{ARROW_FAT_LINE_UP, ARROW_FAT_LINES_DOWN, ARROW_FAT_LINES_UP, GLOBE_SIMPLE, HANDSHAKE, PLUG, PLUS_CIRCLE, PROHIBIT_INSET, TRASH};
+use crate::gui::icons::{ARROW_FAT_LINES_DOWN, ARROW_FAT_LINES_UP, GLOBE_SIMPLE, HANDSHAKE, PLUG, PLUS_CIRCLE, PROHIBIT_INSET, TRASH};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, View};
 use crate::gui::views::network::settings::NetworkSettings;
@@ -63,9 +63,6 @@ pub struct P2PSetup {
     /// Maximum number of outbound peer connections.
     max_outbound_count: String,
 
-    /// Preferred minimum number of outbound peers.
-    min_outbound_count: String,
-
     /// [`Modal`] identifiers allowed at this ui container.
     modal_ids: Vec<&'static str>
 }
@@ -86,8 +83,6 @@ pub const BAN_WINDOW_MODAL: &'static str = "p2p_ban_window";
 pub const MAX_INBOUND_MODAL: &'static str = "p2p_max_inbound";
 /// Identifier for maximum number of outbound peers [`Modal`].
 pub const MAX_OUTBOUND_MODAL: &'static str = "p2p_max_outbound";
-/// Identifier for minimum number of outbound peers [`Modal`].
-pub const MIN_OUTBOUND_MODAL: &'static str = "p2p_min_outbound";
 
 impl Default for P2PSetup {
     fn default() -> Self {
@@ -112,7 +107,6 @@ impl Default for P2PSetup {
             ban_window_edit: NodeConfig::get_p2p_ban_window(),
             max_inbound_count: NodeConfig::get_max_inbound_peers(),
             max_outbound_count: NodeConfig::get_max_outbound_peers(),
-            min_outbound_count: NodeConfig::get_min_outbound_peers(),
             modal_ids: vec![
                 PORT_MODAL,
                 CUSTOM_SEED_MODAL,
@@ -121,8 +115,7 @@ impl Default for P2PSetup {
                 PREFER_PEER_MODAL,
                 BAN_WINDOW_MODAL,
                 MAX_INBOUND_MODAL,
-                MAX_OUTBOUND_MODAL,
-                MIN_OUTBOUND_MODAL
+                MAX_OUTBOUND_MODAL
             ]
         }
     }
@@ -147,7 +140,6 @@ impl ModalContainer for P2PSetup {
             BAN_WINDOW_MODAL => self.ban_window_modal(ui, modal, cb),
             MAX_INBOUND_MODAL => self.max_inbound_modal(ui, modal, cb),
             MAX_OUTBOUND_MODAL => self.max_outbound_modal(ui, modal, cb),
-            MIN_OUTBOUND_MODAL => self.min_outbound_modal(ui, modal, cb),
             _ => {}
         }
     }
@@ -230,13 +222,6 @@ impl P2PSetup {
 
             // Show maximum outbound peers value setup.
             self.max_outbound_ui(ui, cb);
-
-            ui.add_space(6.0);
-            View::horizontal_line(ui, Colors::ITEM_STROKE);
-            ui.add_space(6.0);
-
-            // Show minimum outbound peers value setup.
-            self.min_outbound_ui(ui, cb);
         });
     }
 
@@ -717,88 +702,6 @@ impl P2PSetup {
             let on_save = || {
                 if let Ok(max_outbound) = self.max_outbound_count.parse::<u32>() {
                     NodeConfig::save_max_outbound_peers(max_outbound);
-                    cb.hide_keyboard();
-                    modal.close();
-                }
-            };
-
-            ui.columns(2, |columns| {
-                columns[0].vertical_centered_justified(|ui| {
-                    View::button(ui, t!("modal.cancel"), Colors::WHITE, || {
-                        // Close modal.
-                        cb.hide_keyboard();
-                        modal.close();
-                    });
-                });
-                columns[1].vertical_centered_justified(|ui| {
-                    View::button(ui, t!("modal.save"), Colors::WHITE, on_save);
-                });
-            });
-            ui.add_space(6.0);
-        });
-    }
-
-    /// Draw minimum number of outbound peers setup content.
-    fn min_outbound_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
-        ui.label(RichText::new(t!("network_settings.min_outbound_count"))
-            .size(16.0)
-            .color(Colors::GRAY)
-        );
-        ui.add_space(6.0);
-
-        let min_outbound = NodeConfig::get_min_outbound_peers();
-        let button_text = format!("{} {}", ARROW_FAT_LINE_UP, min_outbound.clone());
-        View::button(ui, button_text, Colors::BUTTON, || {
-            // Setup values for modal.
-            self.min_outbound_count = min_outbound;
-            // Show maximum number of outbound peers setup modal.
-            Modal::new(MIN_OUTBOUND_MODAL)
-                .position(ModalPosition::CenterTop)
-                .title(t!("network_settings.change_value"))
-                .show();
-            cb.show_keyboard();
-        });
-        ui.add_space(6.0);
-        ui.label(RichText::new(t!("network_settings.min_outbound_desc"))
-            .size(16.0)
-            .color(Colors::INACTIVE_TEXT)
-        );
-    }
-
-    /// Draw minimum number of outbound peers [`Modal`] content.
-    fn min_outbound_modal(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
-        ui.add_space(6.0);
-        ui.vertical_centered(|ui| {
-            ui.label(RichText::new(t!("network_settings.min_outbound_count"))
-                .size(17.0)
-                .color(Colors::GRAY));
-            ui.add_space(8.0);
-
-            // Draw maximum number of outbound peers text edit.
-            let text_edit_opts = TextEditOptions::new(Id::from(modal.id)).h_center();
-            View::text_edit(ui, cb, &mut self.min_outbound_count, text_edit_opts);
-
-            // Show error when specified value is not valid or reminder to restart enabled node.
-            if self.min_outbound_count.parse::<u32>().is_err() {
-                ui.add_space(12.0);
-                ui.label(RichText::new(t!("network_settings.not_valid_value"))
-                    .size(17.0)
-                    .color(Colors::RED));
-            } else {
-                NetworkSettings::node_restart_required_ui(ui);
-            }
-            ui.add_space(12.0);
-        });
-
-        // Show modal buttons.
-        ui.scope(|ui| {
-            // Setup spacing between buttons.
-            ui.spacing_mut().item_spacing = egui::Vec2::new(8.0, 0.0);
-
-            // Save button callback.
-            let on_save = || {
-                if let Ok(max_outbound) = self.min_outbound_count.parse::<u32>() {
-                    NodeConfig::save_min_outbound_peers(max_outbound);
                     cb.hide_keyboard();
                     modal.close();
                 }
