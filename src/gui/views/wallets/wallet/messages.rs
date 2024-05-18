@@ -14,11 +14,10 @@
 
 use std::sync::Arc;
 use std::thread;
-use std::time::Duration;
 use egui::{Id, Margin, RichText, ScrollArea};
 use egui::scroll_area::ScrollBarVisibility;
 use grin_core::core::{amount_from_hr_string, amount_to_hr_string};
-use grin_wallet_libwallet::{Slate, SlateState};
+use grin_wallet_libwallet::{Error, Slate, SlateState};
 use log::error;
 use parking_lot::RwLock;
 
@@ -64,7 +63,9 @@ pub struct WalletMessages {
     /// Flag to check if message request is loading.
     message_loading: bool,
     /// Message request result.
-    receive_pay_result: Arc<RwLock<Option<(Slate, Result<String, grin_wallet_libwallet::Error>)>>>,
+    receive_pay_result: Arc<RwLock<Option<(Slate, Result<String, Error>)>>>,
+    /// Message finalize or post result.
+    final_post_result: Arc<RwLock<Option<Result<(), Error>>>>,
     /// Slatepack error on finalization, parse and response creation.
     message_error: Option<MessageError>,
     /// Generated Slatepack response message.
@@ -83,7 +84,7 @@ pub struct WalletMessages {
     /// Flag to check if request is loading at [`Modal`].
     request_loading: bool,
     /// Request result if there is no error at [`Modal`].
-    request_result: Arc<RwLock<Option<Result<(Slate, String), grin_wallet_libwallet::Error>>>>,
+    request_result: Arc<RwLock<Option<Result<(Slate, String), Error>>>>,
 }
 
 /// Identifier for amount input [`Modal`].
@@ -144,6 +145,7 @@ impl WalletMessages {
             message_slate: None,
             message_loading: false,
             receive_pay_result: Arc::new(RwLock::new(None)),
+            final_post_result: Arc::new(RwLock::new(None)),
             message_error: None,
             response_edit: "".to_string(),
             dandelion,
@@ -394,12 +396,35 @@ impl WalletMessages {
                         if self.message_loading {
                             View::small_loading_spinner(ui);
 
-                            // Check message loading result.
-                            let has_message_result = {
+                            // Check receive pay result.
+                            let has_finalize_post_result = {
+                                let r_res = self.final_post_result.read();
+                                r_res.is_some()
+                            };
+                            if has_finalize_post_result {
+                                let resp = {
+                                    let r_res = self.final_post_result.read();
+                                    r_res.as_ref().unwrap().clone()
+                                };
+                                if resp.is_ok() {
+                                    self.message_edit.clear();
+                                    self.message_slate = None;
+                                } else {
+                                    self.message_error = Some(
+                                        MessageError::Finalize(
+                                            t!("wallets.finalize_slatepack_err")
+                                        )
+                                    );
+                                }
+                                self.message_loading = false;
+                            }
+
+                            // Check receive pay result.
+                            let has_receive_pay_result = {
                                 let r_res = self.receive_pay_result.read();
                                 r_res.is_some()
                             };
-                            if has_message_result {
+                            if has_receive_pay_result {
                                 let (slate, resp) = {
                                     let r_res = self.receive_pay_result.read();
                                     r_res.as_ref().unwrap().clone()
@@ -410,7 +435,7 @@ impl WalletMessages {
                                     let err = resp.as_ref().err().unwrap();
                                     match err {
                                         // Set already canceled transaction error message.
-                                        grin_wallet_libwallet::Error::TransactionWasCancelled {..}
+                                        Error::TransactionWasCancelled {..}
                                         => {
                                             self.message_error = Some(
                                                 MessageError::Response(
@@ -419,7 +444,7 @@ impl WalletMessages {
                                             );
                                         }
                                         // Set an error when there is not enough funds to pay.
-                                        grin_wallet_libwallet::Error::NotEnoughFunds {..} => {
+                                        Error::NotEnoughFunds {..} => {
                                             let m = t!(
                                                 "wallets.pay_balance_error",
                                                 "amount" => amount_to_hr_string(slate.amount, true)
@@ -503,31 +528,30 @@ impl WalletMessages {
                                 show_dandelion = true;
                                 View::button(ui, t!("wallets.finalize"), Colors::GOLD, || {
                                     let slate = self.message_slate.clone().unwrap();
-                                    if slate.state == SlateState::Invoice3 ||
-                                        slate.state == SlateState::Standard3 {
-                                        if wallet.post(&slate, self.dandelion).is_ok() {
-                                            self.message_edit.clear();
-                                            self.message_slate = None;
+                                    let dandelion = self.dandelion;
+                                    let message_edit = self.message_edit.clone();
+                                    let wallet = wallet.clone();
+                                    let result = self.final_post_result.clone();
+                                    // Finalize or post transaction at separate thread.
+                                    self.message_loading = true;
+                                    self.message_slate = None;
+                                    thread::spawn(move || {
+                                        let res = if slate.state == SlateState::Invoice3 ||
+                                            slate.state == SlateState::Standard3 {
+                                            wallet.post(&slate, dandelion)
                                         } else {
-                                            self.message_error = Some(
-                                                MessageError::Finalize(
-                                                    t!("wallets.finalize_slatepack_err")
-                                                )
-                                            );
-                                        }
-                                    } else {
-                                        let r = wallet.finalize(&self.message_edit, self.dandelion);
-                                        if r.is_ok() {
-                                            self.message_edit.clear();
-                                            self.message_slate = None;
-                                        } else {
-                                            self.message_error = Some(
-                                                MessageError::Finalize(
-                                                    t!("wallets.finalize_slatepack_err")
-                                                )
-                                            );
-                                        }
-                                    }
+                                            match wallet.finalize(&message_edit, dandelion) {
+                                                Ok(_) => {
+                                                    Ok(())
+                                                }
+                                                Err(e) => {
+                                                    Err(e)
+                                                }
+                                            }
+                                        };
+                                        let mut w_res = result.write();
+                                        *w_res = Some(res);
+                                    });
                                 });
                             }
                         } else {
@@ -607,7 +631,6 @@ impl WalletMessages {
                     // Create response to sender or receiver at separate thread.
                     self.message_loading = true;
                     thread::spawn(move || {
-                        thread::sleep(Duration::from_millis(3000));
                         let resp = if slate.state == SlateState::Standard1 {
                             wallet.receive(&message)
                         } else {
@@ -688,7 +711,7 @@ impl WalletMessages {
                     }
                     Err(err) => {
                         match err {
-                            grin_wallet_libwallet::Error::NotEnoughFunds { .. } => {
+                            Error::NotEnoughFunds { .. } => {
                                 let m = t!(
                                     "wallets.pay_balance_error",
                                     "amount" => self.amount_edit
