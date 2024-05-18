@@ -16,7 +16,7 @@
 //! them into a block and returns it.
 
 use std::panic::panic_any;
-use chrono::prelude::{DateTime, NaiveDateTime, Utc};
+use chrono::prelude::{DateTime, Utc};
 use rand::{thread_rng, Rng};
 use serde_json::{json, Value};
 use std::sync::Arc;
@@ -178,7 +178,7 @@ fn build_block(
 
     b.header.pow.nonce = thread_rng().gen();
     b.header.pow.secondary_scaling = difficulty.secondary_scaling;
-    b.header.timestamp = DateTime::<Utc>::from_utc(NaiveDateTime::from_timestamp(now_sec, 0), Utc);
+    b.header.timestamp = DateTime::from_timestamp(now_sec, 0).unwrap();
 
     debug!(
 		"Built new block with {} inputs and {} outputs, block difficulty: {}, cumulative difficulty {}",

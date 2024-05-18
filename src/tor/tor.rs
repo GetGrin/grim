@@ -31,7 +31,6 @@ use fs_mistrust::Mistrust;
 use grin_util::secp::SecretKey;
 use hyper::{Body, Uri};
 use parking_lot::RwLock;
-use serde_json::json;
 use sha2::Sha512;
 use tls_api::{TlsConnector as TlsConnectorTrait, TlsConnectorBuilder};
 use tokio::time::sleep;
@@ -298,21 +297,6 @@ impl Tor {
                                             w_services.remove(&service_id);
                                             break;
                                         }
-                                        // let data = json!({
-                                        //     "id": 1,
-                                        //     "jsonrpc": "2.0",
-                                        //     "method": "check_version",
-                                        //     "params": []
-                                        // })
-                                        // .to_string();
-                                        // Create http tor-powered client to post data.
-
-                                        // Create request.
-                                        // let req = hyper::Request::builder()
-                                        //     .method(hyper::Method::POST)
-                                        //     .uri(url.clone())
-                                        //     .body(Body::from(data))
-                                        //     .unwrap();
                                         // Send request.
                                         let duration = match http
                                             .get(Uri::from_str(url.clone().as_str()).unwrap())

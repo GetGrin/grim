@@ -384,7 +384,7 @@ impl Node {
         if force || !Node::is_running() {
             // Get saved server config.
             let config = NodeConfig::node_server_config();
-            let mut server_config = config.server.clone();
+            let server_config = config.server.clone();
             // Remove peers folder.
             let mut peers_dir = PathBuf::from(&server_config.db_root);
             peers_dir.push("peer");

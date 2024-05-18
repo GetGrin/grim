@@ -646,7 +646,7 @@ async fn accept_connections(listen_addr: SocketAddr,
                             stop_state: Arc<StratumStopState>) {
     info!("Start tokio stratum server");
 
-    let state_check = stop_state.clone();
+    let _state_check = stop_state.clone();
 
     // let task = async move {
     //
@@ -812,7 +812,7 @@ impl WorkersList {
 
     pub fn login(&self, worker_id: usize, login: String, agent: String) -> Result<(), RpcError> {
         let mut wl = self.workers_list.write();
-        let mut worker = wl
+        let worker = wl
             .get_mut(&worker_id)
             .ok_or_else(RpcError::internal_error)?;
         worker.login = Some(login);

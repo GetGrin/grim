@@ -89,16 +89,16 @@ impl WalletList {
         list.insert(0, wallet);
     }
 
-    /// Remove [`Wallet`] with provided identifier.
-    pub fn remove(&mut self, id: i64) {
-        let list = self.mut_list();
-        for (index, wallet) in list.iter().enumerate() {
-            if wallet.get_config().id == id {
-                list.remove(index);
-                return;
-            }
-        }
-    }
+    // /// Remove [`Wallet`] with provided identifier.
+    // pub fn remove(&mut self, id: i64) {
+    //     let list = self.mut_list();
+    //     for (index, wallet) in list.iter().enumerate() {
+    //         if wallet.get_config().id == id {
+    //             list.remove(index);
+    //             return;
+    //         }
+    //     }
+    // }
 
     /// Select [`Wallet`] with provided identifier.
     pub fn select(&mut self, id: Option<i64>) {
