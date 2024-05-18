@@ -191,7 +191,6 @@ impl WalletTransactions {
         }
         let refresh_resp = PullToRefresh::new(syncing && self.manual_sync)
             .min_refresh_distance(70.0)
-            .can_refresh(!wallet.syncing())
             .scroll_area_ui(ui, |ui| {
                 ScrollArea::vertical()
                     .id_source(Id::from("txs_content").with(wallet.get_config().id))
@@ -213,8 +212,10 @@ impl WalletTransactions {
 
         // Sync wallet on refresh.
         if refresh_resp.should_refresh() {
-            wallet.sync(true);
             self.manual_sync = true;
+            if !wallet.syncing() {
+                wallet.sync(true);
+            }
         }
     }
 

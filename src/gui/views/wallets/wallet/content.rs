@@ -83,9 +83,10 @@ impl WalletContent {
         let data = wallet.get_data();
         let data_empty = data.is_none();
 
-        // Show wallet balance panel when there is no error and data is not empty.
+        // Show wallet balance panel not on Settings tab, when wallet is not repairing,
+        // there is no error and data is not empty.
         let show_balance = self.current_tab.get_type() != WalletTabType::Settings && !data_empty
-            && !wallet.sync_error();
+            && !wallet.sync_error() && !wallet.is_repairing();
         egui::TopBottomPanel::top("wallet_balance")
             .frame(egui::Frame {
                 fill: Colors::FILL,

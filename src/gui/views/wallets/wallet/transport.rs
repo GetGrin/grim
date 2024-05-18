@@ -197,7 +197,7 @@ impl WalletTransport {
         }
 
         // Draw send content.
-        if data.info.amount_currently_spendable > 0 {
+        if data.info.amount_currently_spendable > 0 && wallet.foreign_api_port().is_some() {
             self.tor_send_ui(ui, cb);
         }
     }
@@ -229,9 +229,8 @@ impl WalletTransport {
 
                 // Draw button to enable/disable Tor listener for current wallet.
                 let service_id = &wallet.identifier();
-                if  !Tor::is_service_starting(service_id) {
-                    if !Tor::is_service_running(service_id) &&
-                        wallet.foreign_api_port().is_some() {
+                if  !Tor::is_service_starting(service_id) && wallet.foreign_api_port().is_some() {
+                    if !Tor::is_service_running(service_id) {
                         View::item_button(ui, Rounding::default(), POWER, Some(Colors::GREEN), || {
                             if let Ok(key) = wallet.secret_key() {
                                 let api_port = wallet.foreign_api_port().unwrap();
@@ -272,7 +271,8 @@ impl WalletTransport {
 
                         // Setup Tor status text.
                         let is_running = Tor::is_service_running(service_id);
-                        let is_starting = Tor::is_service_starting(service_id);
+                        let is_starting = Tor::is_service_starting(service_id) ||
+                            wallet.foreign_api_port().is_none();
                         let has_error = Tor::is_service_failed(service_id);
                         let (icon, text) = if is_starting {
                             (DOTS_THREE_CIRCLE, t!("transport.connecting"))
@@ -499,7 +499,8 @@ impl WalletTransport {
                         ui.add_space(3.0);
 
                         // Show wallet Slatepack address.
-                        let address_color = if Tor::is_service_starting(service_id) {
+                        let address_color = if Tor::is_service_starting(service_id) ||
+                            wallet.foreign_api_port().is_none() {
                             Colors::INACTIVE_TEXT
                         } else if Tor::is_service_running(service_id) {
                             Colors::GREEN

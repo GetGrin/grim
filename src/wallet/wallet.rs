@@ -1164,8 +1164,8 @@ fn sync_wallet_data(wallet: &Wallet, from_node: bool) {
             from_node,
             config.min_confirmations
         ) {
-            // Do not retrieve txs if wallet was closed.
-            if !wallet.is_open() {
+            // Do not retrieve txs if wallet was closed or its first sync from local database.
+            if !wallet.is_open() || !from_node && info.1.last_confirmed_height == 0 {
                 return;
             }
 
