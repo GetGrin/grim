@@ -80,9 +80,9 @@ impl Default for Tor {
         let runtime = TokioNativeTlsRuntime::create().unwrap();
         let config = Self::build_config();
         let client = TorClient::with_runtime(runtime)
-             .config(config.clone())
-             .create_unbootstrapped()
-             .unwrap();
+            .config(config.clone())
+            .create_unbootstrapped()
+            .unwrap();
         Self {
             running_services: Arc::new(RwLock::new(BTreeMap::new())),
             starting_services: Arc::new(RwLock::new(BTreeSet::new())),
@@ -97,19 +97,18 @@ impl Tor {
     /// Create Tor client configuration.
     fn build_config() -> TorClientConfig {
         // Create Tor client config.
-        let mut builder =
-            TorClientConfigBuilder::from_directories(TorConfig::state_path(),
-                                                     TorConfig::cache_path());
+        let mut builder = TorClientConfigBuilder::from_directories(
+            TorConfig::state_path(),
+            TorConfig::cache_path(),
+        );
         // Setup bridges.
         let bridge = TorConfig::get_bridge();
         if let Some(b) = bridge {
             match b {
                 super::TorBridge::Snowflake(path, conn) => {
                     Self::build_snowflake(&mut builder, path, conn)
-                },
-                super::TorBridge::Obfs4(path, conn) => {
-                    Self::build_obfs4(&mut builder, path, conn)
-                },
+                }
+                super::TorBridge::Obfs4(path, conn) => Self::build_obfs4(&mut builder, path, conn),
             }
         }
         // Setup address filter.
@@ -123,7 +122,10 @@ impl Tor {
     pub fn rebuild_client() {
         let config = Self::build_config();
         let r_client = TOR_SERVER_STATE.client_config.read();
-        r_client.0.reconfigure(&config, tor_config::Reconfigure::AllOrNothing).unwrap();
+        r_client
+            .0
+            .reconfigure(&config, tor_config::Reconfigure::AllOrNothing)
+            .unwrap();
     }
 
     /// Send post request using Tor.
@@ -144,15 +146,11 @@ impl Tor {
         // Send request.
         let mut resp = None;
         match http.request(req).await {
-            Ok(r) => {
-                match hyper::body::to_bytes(r).await {
-                    Ok(raw) => {
-                        resp = Some(String::from_utf8_lossy(&raw).to_string())
-                    },
-                    Err(_) => {},
-                }
+            Ok(r) => match hyper::body::to_bytes(r).await {
+                Ok(raw) => resp = Some(String::from_utf8_lossy(&raw).to_string()),
+                Err(_) => {}
             },
-            Err(_) => {},
+            Err(_) => {}
         }
         resp
     }
@@ -218,111 +216,143 @@ impl Tor {
 
         let service_id = id.clone();
         thread::spawn(move || {
+            let on_error = |service_id: String| {
+                // Remove service from starting.
+                let mut w_services = TOR_SERVER_STATE.starting_services.write();
+                w_services.remove(&service_id);
+                // Save failed service.
+                let mut w_services = TOR_SERVER_STATE.failed_services.write();
+                w_services.insert(service_id);
+            };
+
             let (client, config) = Self::client_config();
             let client_thread = client.clone();
-            client.runtime().spawn(async move {
-                // Add service key to keystore.
-                let hs_nickname = HsNickname::new(service_id.clone()).unwrap();
-                Self::add_service_key(config.fs_mistrust(), &key, &hs_nickname);
-                // Bootstrap client.
-                client_thread.bootstrap().await.unwrap();
-                // Launch Onion service.
-                let service_config = OnionServiceConfigBuilder::default()
-                    .nickname(hs_nickname.clone())
-                    .build()
-                    .unwrap();
-                if let Ok((service, request)) = client_thread.launch_onion_service(service_config) {
-                    // Launch service proxy.
-                    let addr = SocketAddr::new(IpAddr::from(Ipv4Addr::LOCALHOST), port);
-                    tokio::spawn(
-                        Self::run_service_proxy(addr,
-                                                client_thread.clone(),
-                                                service.clone(),
-                                                request,
-                                                hs_nickname.clone())
-                    ).await.unwrap();
-
-                    // Check service availability if not checking.
-                    if Self::is_service_checking(&service_id) {
+            client
+                .runtime()
+                .spawn(async move {
+                    // Add service key to keystore.
+                    let hs_nickname = HsNickname::new(service_id.clone()).unwrap();
+                    if let Err(_) = Self::add_service_key(config.fs_mistrust(),
+                                                          &key,
+                                                          &hs_nickname) {
+                        on_error(service_id);
                         return;
                     }
-                    let client_check = client_thread.clone();
-                    let url = format!("http://{}/v2/foreign", service.onion_name().unwrap().to_string());
-                    thread::spawn(move || {
-                        // Wait 1 second to start.
-                        thread::sleep(Duration::from_millis(1000));
-                        let runtime = client_thread.runtime();
-                        // Put service to checking.
-                        {
-                            let mut w_services = TOR_SERVER_STATE.checking_services.write();
-                            w_services.insert(service_id.clone());
-                        }
-                        runtime
-                            .spawn(async move {
-                                const MAX_ERRORS: i32 = 3;
-                                let mut errors_count = 0;
-                                loop {
-                                    if !Self::is_service_running(&service_id) {
-                                        // Remove service from checking.
-                                        let mut w_services = TOR_SERVER_STATE.checking_services.write();
-                                        w_services.remove(&service_id);
-                                        break;
-                                    }
-                                    let data = json!({
-                                        "id": 1,
-                                        "jsonrpc": "2.0",
-                                        "method": "check_version",
-                                        "params": []
-                                    }).to_string();
-                                    // Bootstrap client.
-                                    client_check.bootstrap().await.unwrap();
-                                    // Create http tor-powered client to post data.
-                                    let tls_connector = TlsConnector::builder().unwrap().build().unwrap();
-                                    let tor_connector = ArtiHttpConnector::new(client_check.clone(), tls_connector);
-                                    let http = hyper::Client::builder().build::<_, Body>(tor_connector);
-                                    // Create request.
-                                    let req = hyper::Request::builder()
-                                        .method(hyper::Method::POST)
-                                        .uri(url.clone())
-                                        .body(Body::from(data))
-                                        .unwrap();
-                                    // Send request.
-                                    let duration = match http.request(req).await {
-                                        Ok(_) => {
-                                            // Remove service from starting.
-                                            let mut w_services = TOR_SERVER_STATE.starting_services.write();
-                                            w_services.remove(&service_id);
-                                            // Check again after 15 seconds.
-                                            Duration::from_millis(15000)
-                                        },
-                                        Err(_) => {
-                                            // Restart service on 3rd error.
-                                            errors_count += 1;
-                                            if errors_count == MAX_ERRORS {
-                                                errors_count = 0;
-                                                let key = key.clone();
-                                                let service_id = service_id.clone();
-                                                thread::spawn(move || {
-                                                    Self::restart_service(port, key, &service_id);
-                                                });
-                                            }
-                                            Duration::from_millis(5000)
-                                        },
-                                    };    
-                                    sleep(duration).await;
-                                }
-                            }).unwrap();
-                    });
-                } else {
-                    // Remove service from starting.
-                    let mut w_services = TOR_SERVER_STATE.starting_services.write();
-                    w_services.remove(&service_id);
-                    // Save failed service.
-                    let mut w_services = TOR_SERVER_STATE.failed_services.write();
-                    w_services.insert(service_id);
-                }
+                    // Bootstrap client.
+                    client_thread.bootstrap().await.unwrap();
+                    // Launch Onion service.
+                    let service_config = OnionServiceConfigBuilder::default()
+                        .nickname(hs_nickname.clone())
+                        .build()
+                        .unwrap();
+                    if let Ok((service, request)) =
+                        client_thread.launch_onion_service(service_config)
+                    {
+                        // Launch service proxy.
+                        let addr = SocketAddr::new(IpAddr::from(Ipv4Addr::LOCALHOST), port);
+                        tokio::spawn(Self::run_service_proxy(
+                            addr,
+                            client_thread.clone(),
+                            service.clone(),
+                            request,
+                            hs_nickname.clone(),
+                        ))
+                        .await
+                        .unwrap();
 
-            }).unwrap();
+                        // Check service availability if not checking.
+                        if Self::is_service_checking(&service_id) {
+                            return;
+                        }
+                        let client_check = client_thread.clone();
+                        let url = format!(
+                            "http://{}/v2/foreign",
+                            service.onion_name().unwrap().to_string()
+                        );
+                        thread::spawn(move || {
+                            // Wait 1 second to start.
+                            thread::sleep(Duration::from_millis(1000));
+                            let runtime = client_thread.runtime();
+                            // Put service to checking.
+                            {
+                                let mut w_services = TOR_SERVER_STATE.checking_services.write();
+                                w_services.insert(service_id.clone());
+                            }
+                            runtime
+                                .spawn(async move {
+                                    const MAX_ERRORS: i32 = 3;
+                                    let mut errors_count = 0;
+                                    loop {
+                                        if !Self::is_service_running(&service_id) {
+                                            // Remove service from checking.
+                                            let mut w_services =
+                                                TOR_SERVER_STATE.checking_services.write();
+                                            w_services.remove(&service_id);
+                                            break;
+                                        }
+                                        let data = json!({
+                                            "id": 1,
+                                            "jsonrpc": "2.0",
+                                            "method": "check_version",
+                                            "params": []
+                                        })
+                                        .to_string();
+                                        // Bootstrap client.
+                                        client_check.bootstrap().await.unwrap();
+                                        // Create http tor-powered client to post data.
+                                        let tls_connector =
+                                            TlsConnector::builder().unwrap().build().unwrap();
+                                        let tor_connector = ArtiHttpConnector::new(
+                                            client_check.clone(),
+                                            tls_connector,
+                                        );
+                                        let http = hyper::Client::builder()
+                                            .build::<_, Body>(tor_connector);
+                                        // Create request.
+                                        let req = hyper::Request::builder()
+                                            .method(hyper::Method::POST)
+                                            .uri(url.clone())
+                                            .body(Body::from(data))
+                                            .unwrap();
+                                        // Send request.
+                                        let duration = match http.request(req).await {
+                                            Ok(_) => {
+                                                // Remove service from starting.
+                                                let mut w_services =
+                                                    TOR_SERVER_STATE.starting_services.write();
+                                                w_services.remove(&service_id);
+                                                // Check again after 15 seconds.
+                                                Duration::from_millis(15000)
+                                            }
+                                            Err(_) => {
+                                                // Restart service on 3rd error.
+                                                errors_count += 1;
+                                                if errors_count == MAX_ERRORS {
+                                                    errors_count = 0;
+                                                    let key = key.clone();
+                                                    let service_id = service_id.clone();
+                                                    thread::spawn(move || {
+                                                        Self::restart_service(
+                                                            port,
+                                                            key,
+                                                            &service_id,
+                                                        );
+                                                    });
+                                                }
+                                                Duration::from_millis(5000)
+                                            }
+                                        };
+                                        // Wait to check service again.
+                                        sleep(duration).await;
+                                    }
+                                })
+                                .unwrap();
+                        });
+                        return;
+                    }
+                    on_error(service_id);
+                })
+                .unwrap();
         });
     }
 
@@ -332,11 +362,10 @@ impl Tor {
         client: TorClient<R>,
         service: Arc<RunningOnionService>,
         request: S,
-        nickname: HsNickname
-    )
-        where
-            R: Runtime,
-            S: futures::Stream<Item = tor_hsservice::RendRequest> + Unpin + Send + 'static,
+        nickname: HsNickname,
+    ) where
+        R: Runtime,
+        S: futures::Stream<Item = tor_hsservice::RendRequest> + Unpin + Send + 'static,
     {
         let id = nickname.to_string();
         let runtime = client.runtime().clone();
@@ -360,65 +389,60 @@ impl Tor {
             .spawn(async move {
                 match proxy
                     .handle_requests(runtime, nickname.clone(), request)
-                    .await {
+                    .await
+                {
                     Ok(()) => {
                         // Remove service from running.
-                        let mut w_services =
-                            TOR_SERVER_STATE.running_services.write();
+                        let mut w_services = TOR_SERVER_STATE.running_services.write();
                         w_services.remove(&id);
                     }
                     Err(_) => {
                         // Remove service from running.
-                        let mut w_services =
-                            TOR_SERVER_STATE.running_services.write();
+                        let mut w_services = TOR_SERVER_STATE.running_services.write();
                         w_services.remove(&id);
                         // Save failed service.
-                        let mut w_services =
-                            TOR_SERVER_STATE.failed_services.write();
+                        let mut w_services = TOR_SERVER_STATE.failed_services.write();
                         w_services.insert(id);
                     }
                 }
-            }).unwrap();
+            })
+            .unwrap();
     }
 
     /// Save Onion service key to keystore.
-    fn add_service_key(mistrust: &Mistrust, key: &SecretKey, hs_nickname: &HsNickname) {
+    fn add_service_key(
+        mistrust: &Mistrust,
+        key: &SecretKey,
+        hs_nickname: &HsNickname,
+    ) -> tor_keymgr::Result<()> {
         let arti_store =
-            ArtiNativeKeystore::from_path_and_mistrust(TorConfig::keystore_path(), &mistrust)
-                .unwrap();
+            ArtiNativeKeystore::from_path_and_mistrust(TorConfig::keystore_path(), &mistrust)?;
 
         let key_manager = KeyMgrBuilder::default()
             .default_store(Box::new(arti_store))
             .build()
             .unwrap();
 
-        let expanded_sk = ExpandedSecretKey::from_bytes(
-            Sha512::default()
-                .chain_update(key)
-                .finalize()
-                .as_ref(),
-        );
+        let expanded_sk =
+            ExpandedSecretKey::from_bytes(Sha512::default().chain_update(key).finalize().as_ref());
 
         let mut sk_bytes = [0_u8; 64];
         sk_bytes[0..32].copy_from_slice(&expanded_sk.scalar.to_bytes());
         sk_bytes[32..64].copy_from_slice(&expanded_sk.hash_prefix);
         let expanded_kp = ExpandedKeypair::from_secret_key_bytes(sk_bytes).unwrap();
 
-        key_manager
-            .insert(
-                HsIdKey::from(expanded_kp.public().clone()),
-                &HsIdPublicKeySpecifier::new(hs_nickname.clone()),
-                KeystoreSelector::Default,
-            )
-            .unwrap();
+        key_manager.insert(
+            HsIdKey::from(expanded_kp.public().clone()),
+            &HsIdPublicKeySpecifier::new(hs_nickname.clone()),
+            KeystoreSelector::Default,
+        )?;
 
-        key_manager
-            .insert(
-                HsIdKeypair::from(expanded_kp),
-                &HsIdKeypairSpecifier::new(hs_nickname.clone()),
-                KeystoreSelector::Default,
-            )
-            .unwrap();
+        key_manager.insert(
+            HsIdKeypair::from(expanded_kp),
+            &HsIdKeypairSpecifier::new(hs_nickname.clone()),
+            KeystoreSelector::Default,
+        )?;
+        Ok(())
     }
 
     fn build_snowflake(builder: &mut TorClientConfigBuilder, bin_path: String, conn_line: String) {
