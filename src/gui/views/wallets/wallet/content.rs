@@ -196,6 +196,7 @@ impl WalletContent {
             // Draw button to scan QR code.
             View::item_button(ui, View::item_rounding(0, 2, true), SCAN, None, || {
                 self.qr_scan_result = None;
+                self.camera_content.clear_state();
                 // Show QR code scan modal.
                 Modal::new(QR_CODE_SCAN_MODAL)
                     .position(ModalPosition::CenterTop)
