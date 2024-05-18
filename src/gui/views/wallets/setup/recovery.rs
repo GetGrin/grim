@@ -95,6 +95,7 @@ impl RecoverySetup {
 
             // Draw button to restore the wallet.
             let recover_text = format!("{} {}", LIFEBUOY, t!("wallets.recover"));
+            ui.add_space(4.0);
             View::colored_text_button(ui, recover_text, Colors::GREEN, Colors::BUTTON, || {
                 wallet.delete_db(true);
             });

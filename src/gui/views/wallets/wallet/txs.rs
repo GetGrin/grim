@@ -186,7 +186,7 @@ impl WalletTransactions {
 
         // Show list of transactions.
         let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis();
-        let refresh = self.manual_sync.unwrap_or(0) + 2400 > now;
+        let refresh = self.manual_sync.unwrap_or(0) + 1600 > now;
         let refresh_resp = PullToRefresh::new(refresh)
             .can_refresh(!refresh && !wallet.syncing())
             .min_refresh_distance(70.0)
