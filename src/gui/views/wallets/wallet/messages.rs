@@ -13,12 +13,10 @@
 // limitations under the License.
 
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
-use egui::{Id, Margin, RichText, ScrollArea, TextBuffer};
-use egui::os::OperatingSystem;
+use std::time::Duration;
+use egui::{Id, Margin, RichText, ScrollArea};
 use egui::scroll_area::ScrollBarVisibility;
-use egui::text_edit::TextEditState;
 use grin_core::core::{amount_from_hr_string, amount_to_hr_string};
 use grin_wallet_libwallet::{Slate, SlateState};
 use log::error;
@@ -29,7 +27,6 @@ use crate::gui::icons::{BROOM, CLIPBOARD_TEXT, COPY, DOWNLOAD_SIMPLE, PROHIBIT, 
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, Root, View};
 use crate::gui::views::types::{ModalPosition, TextEditOptions};
-use crate::gui::views::views::LAST_SOFT_KEYBOARD_INPUT;
 use crate::gui::views::wallets::wallet::types::{SLATEPACK_MESSAGE_HINT, WalletTab, WalletTabType};
 use crate::gui::views::wallets::wallet::WalletContent;
 use crate::wallet::types::WalletTransaction;
@@ -64,6 +61,10 @@ pub struct WalletMessages {
     message_edit: String,
     /// Parsed Slatepack message.
     message_slate: Option<Slate>,
+    /// Flag to check if message request is loading.
+    message_loading: bool,
+    /// Message request result.
+    receive_pay_result: Arc<RwLock<Option<(Slate, Result<String, grin_wallet_libwallet::Error>)>>>,
     /// Slatepack error on finalization, parse and response creation.
     message_error: Option<MessageError>,
     /// Generated Slatepack response message.
@@ -80,7 +81,7 @@ pub struct WalletMessages {
     /// Flag to check if there is an error happened on request creation at [`Modal`].
     request_error: Option<MessageError>,
     /// Flag to check if request is loading at [`Modal`].
-    request_loading: Arc<AtomicBool>,
+    request_loading: bool,
     /// Request result if there is no error at [`Modal`].
     request_result: Arc<RwLock<Option<Result<(Slate, String), grin_wallet_libwallet::Error>>>>,
 }
@@ -141,13 +142,15 @@ impl WalletMessages {
             send_request: false,
             message_edit: message.unwrap_or("".to_string()),
             message_slate: None,
+            message_loading: false,
+            receive_pay_result: Arc::new(RwLock::new(None)),
             message_error: None,
             response_edit: "".to_string(),
             dandelion,
             amount_edit: "".to_string(),
             request_edit: "".to_string(),
             request_error: None,
-            request_loading: Arc::new(AtomicBool::new(false)),
+            request_loading: false,
             request_result: Arc::new(RwLock::new(None)),
         }
     }
@@ -217,7 +220,7 @@ impl WalletMessages {
                         self.send_request = true;
                         self.amount_edit = "".to_string();
                         self.request_error = None;
-                        self.request_loading.store(false, Ordering::Relaxed);
+                        self.request_loading = false;
                         {
                             let mut w_result = self.request_result.write();
                             *w_result = None;
@@ -332,7 +335,7 @@ impl WalletMessages {
                     .id(input_id)
                     .font(egui::TextStyle::Small)
                     .desired_rows(5)
-                    .interactive(response_empty)
+                    .interactive(response_empty && !self.message_loading)
                     .hint_text(SLATEPACK_MESSAGE_HINT)
                     .desired_width(f32::INFINITY)
                     .show(ui)
@@ -341,40 +344,9 @@ impl WalletMessages {
                 if response_empty && resp.clicked() {
                     cb.show_keyboard();
                 }
-                if response_empty {
+                if response_empty && resp.has_focus() {
                     // Apply text from input on Android as temporary fix for egui.
-                    let os = OperatingSystem::from_target_os();
-                    if os == OperatingSystem::Android && resp.has_focus() {
-                        let mut w_input = LAST_SOFT_KEYBOARD_INPUT.write();
-
-                        if !w_input.is_empty() {
-                            let mut state = TextEditState::load(ui.ctx(), input_id).unwrap();
-                            match state.cursor.char_range() {
-                                None => {}
-                                Some(range) => {
-                                    let mut r = range.clone();
-
-                                    let mut index = r.primary.index;
-
-                                    message.insert_text(w_input.as_str(), index);
-                                    index = index + 1;
-
-                                    if index == 0 {
-                                        r.primary.index = message.len();
-                                        r.secondary.index = r.primary.index;
-                                    } else {
-                                        r.primary.index = index;
-                                        r.secondary.index = r.primary.index;
-                                    }
-                                    state.cursor.set_char_range(Some(r));
-                                    TextEditState::store(state, ui.ctx(), input_id);
-                                }
-                            }
-                        }
-
-                        *w_input = "".to_string();
-                        ui.ctx().request_repaint();
-                    }
+                    View::on_soft_input(ui, input_id, message);
                 }
                 ui.add_space(6.0);
             });
@@ -389,7 +361,7 @@ impl WalletMessages {
 
         // Draw buttons to clear/copy/paste.
         let fields_empty = self.message_edit.is_empty() && self.response_edit.is_empty();
-        let columns_num = if fields_empty { 1 } else { 2 };
+        let columns_num = if fields_empty || self.message_loading { 1 } else { 2 };
         let mut show_dandelion = false;
         ui.scope(|ui| {
             // Setup spacing between buttons.
@@ -419,16 +391,98 @@ impl WalletMessages {
                             });
                         }
                     } else {
-                        let paste = format!("{} {}", CLIPBOARD_TEXT, t!("paste"));
-                        View::button(ui, paste, Colors::BUTTON, || {
-                            let buf = cb.get_string_from_buffer();
-                            let previous = self.message_edit.clone();
-                            self.message_edit = buf.clone().trim().to_string();
-                            // Parse Slatepack message resetting message error.
-                            if buf != previous {
-                                self.parse_message(wallet);
+                        if self.message_loading {
+                            View::small_loading_spinner(ui);
+
+                            // Check message loading result.
+                            let has_message_result = {
+                                let r_res = self.receive_pay_result.read();
+                                r_res.is_some()
+                            };
+                            if has_message_result {
+                                let (slate, resp) = {
+                                    let r_res = self.receive_pay_result.read();
+                                    r_res.as_ref().unwrap().clone()
+                                };
+                                if resp.is_ok() {
+                                    self.response_edit = resp.as_ref().unwrap().clone();
+                                } else {
+                                    let err = resp.as_ref().err().unwrap();
+                                    match err {
+                                        // Set already canceled transaction error message.
+                                        grin_wallet_libwallet::Error::TransactionWasCancelled {..}
+                                        => {
+                                            self.message_error = Some(
+                                                MessageError::Response(
+                                                    t!("wallets.resp_canceled_err")
+                                                )
+                                            );
+                                        }
+                                        // Set an error when there is not enough funds to pay.
+                                        grin_wallet_libwallet::Error::NotEnoughFunds {..} => {
+                                            let m = t!(
+                                                "wallets.pay_balance_error",
+                                                "amount" => amount_to_hr_string(slate.amount, true)
+                                            );
+                                            self.message_error = Some(MessageError::Response(m));
+                                        }
+                                        // Set default error message.
+                                        _ => {
+                                            self.message_error = Some(
+                                                MessageError::Response(
+                                                    t!("wallets.resp_slatepack_err")
+                                                )
+                                            );
+                                        }
+                                    }
+                                    // Check if tx with same slate id already exists.
+                                    if self.message_error.is_none() {
+                                        let exists_tx = wallet.tx_by_slate(&slate).is_some();
+                                        if exists_tx {
+                                            let mut sl = slate.clone();
+                                            sl.state = if sl.state == SlateState::Standard1 {
+                                                SlateState::Standard2
+                                            } else {
+                                                SlateState::Invoice2
+                                            };
+                                            match wallet.read_slatepack(&sl) {
+                                                None => {
+                                                    self.message_error = Some(
+                                                        MessageError::Response(
+                                                            t!("wallets.resp_slatepack_err")
+                                                        )
+                                                    );
+                                                }
+                                                Some(sp) => {
+                                                    self.response_edit = sp;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                // Setup message slate.
+                                if self.message_error.is_none() {
+                                    self.message_slate = Some(slate);
+                                }
+                                // Clear message loading result and status.
+                                {
+                                    let mut w_res = self.receive_pay_result.write();
+                                    *w_res = None;
+                                }
+                                self.message_loading = false;
                             }
-                        });
+                        } else {
+                            let paste = format!("{} {}", CLIPBOARD_TEXT, t!("paste"));
+                            View::button(ui, paste, Colors::BUTTON, || {
+                                let buf = cb.get_string_from_buffer();
+                                let previous = self.message_edit.clone();
+                                self.message_edit = buf.clone().trim().to_string();
+                                // Parse Slatepack message resetting message error.
+                                if buf != previous {
+                                    self.parse_message(wallet);
+                                }
+                            });
+                        }
                     }
                 };
                 if columns_num == 1 {
@@ -546,52 +600,23 @@ impl WalletMessages {
             // Make operation based on incoming state status.
             match slate.state {
                 SlateState::Standard1 | SlateState::Invoice1 => {
-                    let resp = if slate.state == SlateState::Standard1 {
-                        wallet.receive(&self.message_edit)
-                    } else {
-                        wallet.pay(&self.message_edit)
-                    };
-                    if resp.is_ok() {
-                        self.response_edit = resp.unwrap();
-                    } else {
-                        match resp.err().unwrap() {
-                            grin_wallet_libwallet::Error::TransactionWasCancelled {..} => {
-                                // Set already canceled transaction error message.
-                                self.message_error = Some(
-                                    MessageError::Response(t!("wallets.resp_canceled_err"))
-                                );
-                                return;
-                            }
-                            _ => {}
-                        }
-                        // Check if tx with same slate id already exists.
-                        let exists_tx = wallet.tx_by_slate(&slate).is_some();
-                        if exists_tx {
-                            let mut sl = slate.clone();
-                            sl.state = if sl.state == SlateState::Standard1 {
-                                SlateState::Standard2
-                            } else {
-                                SlateState::Invoice2
-                            };
-                            match wallet.read_slatepack(&sl) {
-                                None => {
-                                    self.message_error = Some(
-                                        MessageError::Response(t!("wallets.resp_slatepack_err"))
-                                    );
-                                }
-                                Some(sp) => {
-                                    self.message_slate = Some(slate);
-                                    self.response_edit = sp;
-                                }
-                            }
-                            return;
-                        }
-
-                        // Set default response error message.
-                        self.message_error = Some(
-                            MessageError::Response(t!("wallets.resp_slatepack_err"))
-                        );
-                    }
+                    let slate = slate.clone();
+                    let message = self.message_edit.clone();
+                    let message_result = self.receive_pay_result.clone();
+                    let wallet = wallet.clone();
+                    // Create response to sender or receiver at separate thread.
+                    self.message_loading = true;
+                    thread::spawn(move || {
+                        thread::sleep(Duration::from_millis(3000));
+                        let resp = if slate.state == SlateState::Standard1 {
+                            wallet.receive(&message)
+                        } else {
+                            wallet.pay(&message)
+                        };
+                        let mut w_res = message_result.write();
+                        *w_res = Some((slate, resp));
+                    });
+                    return;
                 }
                 SlateState::Standard2 | SlateState::Invoice2 => {
                     // Check if slatepack with same id and state already exists.
@@ -640,7 +665,7 @@ impl WalletMessages {
                        modal: &Modal,
                        cb: &dyn PlatformCallbacks) {
         ui.add_space(6.0);
-        if self.request_loading.load(Ordering::Relaxed) {
+        if self.request_loading {
             ui.add_space(42.0);
             ui.vertical_centered(|ui| {
                 View::big_loading_spinner(ui);
@@ -649,7 +674,7 @@ impl WalletMessages {
 
             // Check if there is request result error.
             if self.request_error.is_some() {
-                self.request_loading.store(false, Ordering::Relaxed);
+                self.request_loading = false;
                 return;
             }
 
@@ -677,7 +702,7 @@ impl WalletMessages {
                         }
                     }
                 }
-                self.request_loading.store(false, Ordering::Relaxed);
+                self.request_loading = false;
             }
         } else if self.request_edit.is_empty() {
             ui.vertical_centered(|ui| {
@@ -775,7 +800,7 @@ impl WalletMessages {
                             let result = self.request_result.clone();
 
                             // Send request at another thread.
-                            self.request_loading.store(true, Ordering::Relaxed);
+                            self.request_loading = true;
                             thread::spawn(move || {
                                 let message = if send_request {
                                     wallet.send(a)
