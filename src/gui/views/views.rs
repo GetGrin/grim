@@ -17,7 +17,7 @@ use std::sync::Arc;
 use parking_lot::RwLock;
 use lazy_static::lazy_static;
 
-use egui::{Align, Button, CursorIcon, Id, Layout, lerp, PointerState, Rect, Response, Rgba, RichText, Sense, Spinner, TextBuffer, TextStyle, Ui, Widget};
+use egui::{Align, Button, CursorIcon, Id, Layout, lerp, PointerState, Rect, Response, Rgba, RichText, Sense, Spinner, TextBuffer, TextStyle, Widget};
 use egui::epaint::{Color32, FontId, RectShape, Rounding, Stroke};
 use egui::epaint::text::TextWrapping;
 use egui::os::OperatingSystem;
@@ -412,7 +412,7 @@ impl View {
     }
 
     /// Apply soft keyboard input data to provided String.
-    pub fn on_soft_input(ui: &mut Ui, id: Id, value: &mut String) {
+    pub fn on_soft_input(ui: &mut egui::Ui, id: Id, value: &mut String) {
         let os = OperatingSystem::from_target_os();
         if os == OperatingSystem::Android {
             let mut w_input = LAST_SOFT_KEYBOARD_INPUT.write();
@@ -669,7 +669,7 @@ pub extern "C" fn Java_mw_gri_android_MainActivity_onDisplayInsets(
 }
 
 lazy_static! {
-    pub static ref LAST_SOFT_KEYBOARD_INPUT: Arc<RwLock<String>> = Arc::new(RwLock::new("".into()));
+    static ref LAST_SOFT_KEYBOARD_INPUT: Arc<RwLock<String>> = Arc::new(RwLock::new("".into()));
 }
 
 #[allow(dead_code)]
