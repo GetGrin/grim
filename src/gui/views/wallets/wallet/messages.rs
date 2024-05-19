@@ -24,8 +24,8 @@ use parking_lot::RwLock;
 use crate::gui::Colors;
 use crate::gui::icons::{BROOM, CLIPBOARD_TEXT, COPY, DOWNLOAD_SIMPLE, PROHIBIT, QR_CODE, SCAN, UPLOAD_SIMPLE};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Modal, Root, View};
-use crate::gui::views::types::{ModalPosition, TextEditOptions};
+use crate::gui::views::{CameraContent, Modal, Root, View};
+use crate::gui::views::types::{ModalPosition, QrScanResult, TextEditOptions};
 use crate::gui::views::wallets::wallet::types::{SLATEPACK_MESSAGE_HINT, WalletTab, WalletTabType};
 use crate::gui::views::wallets::wallet::WalletContent;
 use crate::wallet::types::WalletTransaction;
@@ -85,10 +85,18 @@ pub struct WalletMessages {
     request_loading: bool,
     /// Request result if there is no error at [`Modal`].
     request_result: Arc<RwLock<Option<Result<(Slate, String), Error>>>>,
+
+    /// Camera content for Slatepack message QR code scanning [`Modal`].
+    message_camera_content: CameraContent,
+    /// Flag to check if there is an error on scanning Slatepack message QR code at [`Modal`].
+    message_scan_error: bool,
 }
 
 /// Identifier for amount input [`Modal`].
 const AMOUNT_MODAL: &'static str = "amount_modal";
+
+/// Identifier for QR code Slatepack message scan [`Modal`].
+const QR_SLATEPACK_SCAN_MODAL: &'static str = "qr_slatepack_scan_modal";
 
 impl WalletTab for WalletMessages {
     fn get_type(&self) -> WalletTabType {
@@ -154,6 +162,8 @@ impl WalletMessages {
             request_error: None,
             request_loading: false,
             request_result: Arc::new(RwLock::new(None)),
+            message_camera_content: CameraContent::default(),
+            message_scan_error: false,
         }
     }
 
@@ -189,6 +199,11 @@ impl WalletMessages {
                     AMOUNT_MODAL => {
                         Modal::ui(ui.ctx(), |ui, modal| {
                             self.amount_modal_ui(ui, wallet, modal, cb);
+                        });
+                    }
+                    QR_SLATEPACK_SCAN_MODAL => {
+                        Modal::ui(ui.ctx(), |ui, modal| {
+                            self.scan_qr_modal_ui(ui, modal, wallet, cb);
                         });
                     }
                     _ => {}
@@ -454,7 +469,7 @@ impl WalletMessages {
                             // Draw button to scan Slatepack message QR code.
                             let scan_text = format!("{} {}", SCAN, t!("scan"));
                             View::button(ui, scan_text, Colors::BUTTON, || {
-                                //TODO: scan code
+                                self.show_qr_scan_modal(cb);
                             });
                         }
                     });
@@ -498,6 +513,82 @@ impl WalletMessages {
                 wallet.update_use_dandelion(self.dandelion);
             });
         }
+    }
+
+    /// Show QR code recovery phrase scanner [`Modal`].
+    pub fn show_qr_scan_modal(&mut self, cb: &dyn PlatformCallbacks) {
+        self.message_scan_error = false;
+        // Show QR code scan modal.
+        Modal::new(QR_SLATEPACK_SCAN_MODAL)
+            .position(ModalPosition::CenterTop)
+            .title(t!("scan_qr"))
+            .closeable(false)
+            .show();
+        cb.start_camera();
+    }
+
+    /// Draw QR code scan [`Modal`] content.
+    fn scan_qr_modal_ui(&mut self,
+                        ui: &mut egui::Ui,
+                        modal: &Modal,
+                        wallet: &Wallet,
+                        cb: &dyn PlatformCallbacks) {
+        if self.message_scan_error {
+            ui.add_space(6.0);
+            ui.vertical_centered(|ui| {
+                let err_text = format!("{}", t!("wallets.parse_slatepack_err")).replace(":", "");
+                ui.label(RichText::new(err_text)
+                    .size(17.0)
+                    .color(Colors::RED));
+            });
+            ui.add_space(6.0);
+
+            // Setup spacing between buttons.
+            ui.spacing_mut().item_spacing = egui::Vec2::new(6.0, 0.0);
+
+            ui.columns(2, |columns| {
+                columns[0].vertical_centered_justified(|ui| {
+                    View::button(ui, t!("close"), Colors::WHITE, || {
+                        self.message_scan_error = false;
+                        modal.close();
+                    });
+                });
+                columns[1].vertical_centered_justified(|ui| {
+                    View::button(ui, t!("repeat"), Colors::WHITE, || {
+                        Modal::set_title(t!("scan_qr"));
+                        self.message_scan_error = false;
+                        cb.start_camera();
+                    });
+                });
+            });
+            ui.add_space(6.0);
+            return;
+        } else if let Some(result) = self.message_camera_content.qr_scan_result() {
+            cb.stop_camera();
+            self.message_camera_content.clear_state();
+            match &result {
+                QrScanResult::Slatepack(text) => {
+                    self.message_edit = text.to_string();
+                    self.parse_message(wallet);
+                    modal.close();
+                }
+                _ => {
+                    self.message_scan_error = true;
+                }
+            }
+        } else {
+            ui.add_space(6.0);
+            self.message_camera_content.ui(ui, cb);
+            ui.add_space(6.0);
+        }
+
+        ui.vertical_centered_justified(|ui| {
+            View::button(ui, t!("modal.cancel"), Colors::WHITE, || {
+                cb.stop_camera();
+                modal.close();
+            });
+        });
+        ui.add_space(6.0);
     }
 
     /// Check Slatepack message request loading result.
@@ -605,7 +696,7 @@ impl WalletMessages {
     }
 
     /// Parse message input into [`Slate`] updating slate and response input.
-    pub fn parse_message(&mut self, wallet: &mut Wallet) {
+    pub fn parse_message(&mut self, wallet: &Wallet) {
         self.message_error = None;
         if self.message_edit.is_empty() {
            return;
