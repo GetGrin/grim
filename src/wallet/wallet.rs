@@ -1184,6 +1184,15 @@ fn sync_wallet_data(wallet: &Wallet, from_node: bool) {
                     }
                 }
 
+                // Setup accounts data.
+                let last_height = info.1.last_confirmed_height;
+                let spendable = if wallet.get_data().is_none() {
+                    None
+                } else {
+                    Some(info.1.amount_currently_spendable)
+                };
+                update_accounts(wallet, last_height, spendable);
+
                 // Update wallet info.
                 {
                     let mut w_data = wallet.data.write();
@@ -1194,15 +1203,6 @@ fn sync_wallet_data(wallet: &Wallet, from_node: bool) {
                     };
                     *w_data = Some(WalletData { info: info.1.clone(), txs });
                 }
-
-                // Setup accounts data.
-                let last_height = info.1.last_confirmed_height;
-                let spendable = if wallet.get_data().is_none() {
-                    None
-                } else {
-                    Some(info.1.amount_currently_spendable)
-                };
-                update_accounts(wallet, last_height, spendable);
 
                 // Update txs sync progress at separate thread.
                 let wallet_txs = wallet.clone();
