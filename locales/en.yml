@@ -81,7 +81,7 @@ wallets:
   transport: Transport
   input_finalize_desc: 'Enter message to finalize the transaction:'
   input_slatepack_desc: 'Enter message to create response or finalize the transaction:'
-  parse_slatepack_err: 'An error occurred during reading of the message, check input data:'
+  parse_slatepack_err: 'An error occurred during reading of the message, check input:'
   pay_balance_error: 'Account balance is insufficient to pay %{amount} ツ and network fee.'
   parse_i1_slatepack_desc: 'To pay %{amount} ツ send this message to the receiver:'
   parse_i2_slatepack_desc: 'Finalize transaction to receive %{amount} ツ'
@@ -89,15 +89,15 @@ wallets:
   parse_s1_slatepack_desc: 'To receive %{amount} ツ send this message to the sender:'
   parse_s2_slatepack_desc: 'Finalize transaction to send %{amount} ツ'
   parse_s3_slatepack_desc: 'Post transaction to finalize sending of %{amount} ツ'
-  resp_slatepack_err: 'An error occurred during creation of the response, check input data:'
+  resp_slatepack_err: 'An error occurred during creation of the response, check input:'
   resp_exists_err: Such transaction already exists.
   resp_canceled_err: Such transaction was already canceled.
   create_request_desc: 'Create request to send or receive the funds:'
   send_request_desc: 'You have created a request to send %{amount} ツ. Send this message to the receiver:'
-  send_slatepack_err: An error occurred during creation of request to send funds, check input data.
+  send_slatepack_err: An error occurred during creation of request to send funds, check input.
   invoice_desc: 'You have created request to receive %{amount} ツ. Send this message to the sender:'
-  invoice_slatepack_err: An error occurred during issuing of the invoice, check input data.
-  finalize_slatepack_err: 'An error occurred during finalization, check input data:'
+  invoice_slatepack_err: An error occurred during issuing of the invoice, check input.
+  finalize_slatepack_err: 'An error occurred during finalization, check input:'
   finalize: Finalize
   use_dandelion: Use Dandelion
   enter_amount_send: 'You have %{amount} ツ. Enter amount to send:'
