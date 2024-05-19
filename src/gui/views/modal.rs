@@ -80,6 +80,11 @@ impl Modal {
         self.closeable.store(false, Ordering::Relaxed);
     }
 
+    /// Enable possibility to close [`Modal`].
+    pub fn enable_closing(&self) {
+        self.closeable.store(true, Ordering::Relaxed);
+    }
+
     /// Check if [`Modal`] is closeable.
     pub fn is_closeable(&self) -> bool {
         self.closeable.load(Ordering::Relaxed)
