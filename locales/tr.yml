@@ -1,0 +1,229 @@
+copy: Kopyala
+paste: Yapıştır
+continue: Devam
+complete: Tamamla
+error: Hata
+retry: Tekrar Dene
+close: Kapa
+change: Değiştir
+show: Göster
+delete: Sil
+clear: Temizle
+create: Oluştur
+wallets:
+  await_conf_amount: Onay bekleniyor
+  await_fin_amount: Tamamlanma bekleniyor
+  locked_amount: Kilitli
+  txs_empty: 'Koinleri al/gönder için ekranın altında bulunan   %{receive}/%{send} sekmeleri, cüzdan ayarlar için %{settings} sekmesini kullanın.'
+  title: Cüzdanlar
+  create_desc: Yeni cüzdan oluştur veya var olan bakiyeli cüzdanınızı kurtarma kelimelerinizle canlandır.
+  add: Cüzdan ekle
+  name: 'adı:'
+  pass: 'Şifre:'
+  pass_empty: Cüzdan şifresini girin
+  current_pass: 'Şu anki şifre:'
+  new_pass: 'Yeni şifre:'
+  min_tx_conf_count: 'Tx işlem için Minimum onay:'
+  recover: Restore et
+  recovery_phrase: Kurtarma kelimeleri
+  words_count: 'Kelime sayısı:'
+  enter_word: 'Kelimeyi gir #%{sıra}:'
+  not_valid_word: Girilen kelime yanlış
+  not_valid_phrase: Girilen kurtarma kelimeleri geçerli değil
+  create_phrase_desc: Kurtarma kelimelerini yazın ve güvenle saklayın!
+  restore_phrase_desc: Kaydettiğiniz kurtarma kelimelerini gir.
+  setup_conn_desc: Cüzdan ağ bağlanma şeklini Seç.
+  conn_method: Bağlantı metodu
+  ext_conn: 'Harici bağlantılar:'
+  add_node: Node ekle
+  node_url: 'Node URL:'
+  node_secret: 'API Secret (optional):'
+  invalid_url: Girilen URL geçersiz
+  open: Cüzdanı Aç
+  wrong_pass: Girilen şifre yanlış
+  locked: Kilitli
+  unlocked: Kilitsiz
+  enable_node: 'Cüzdanı kullanmak için tümleşik node etkinleştirin veya ekranın altındaki %{settings} öğesini seçerek  başka bağlantı metodu seçin.'
+  node_loading: 'Cüzdan tümleşik node senkronize olunca yüklenecektir, ekranın altından bağlanma metod %{settings} değiştirebilirsiniz.'
+  loading: Yükleniyor
+  closing: Kapanıyor
+  checking: Denetleniyor
+  wallet_loading: Cüzdan yükleniyor
+  wallet_closing: Cüzdan kapanıyor
+  wallet_checking: Cüzdan denetleniyor
+  tx_loading: İşlemler yükleniyor
+  default_account: Varsayılan hesap
+  create_account: Hesap oluştur
+  accounts: Hesaplar
+  tx_sent: Gönderildi
+  tx_received: Alındı
+  tx_sending: Gönderiliyor
+  tx_receiving: Alınıyor
+  tx_confirming: Onay bekleniyor
+  tx_cancelling: İptal ediliyor
+  tx_canceled: İptal edildi
+  tx_confirmed: Onaylandı
+  manually: Manuel olarak
+  receive_paste_slatepack: 'Cevaplamak için gönderilen slateapack mesajını girin.:'
+  receive_send_slatepack: 'İşlemi tamamlaması için Slatepacki karşı tarafa gönder.:'
+  receive_slatepack_err: 'An error occurred during creation of the response, check input data:'
+  create_response: Cevap slatepacki oluştur.
+  invoice: Fatura
+  issue_invoice: Fatura düzenle
+  issue_invoice_desc: 'Almak istediğiniz gerekli para tutarını girerek bir talep oluşturun:'
+  invoice_desc: 'Almak istediğiniz tutar %{amount} ツ talebiniz. Slatepack mesajını göndericiye ilet:'
+  invoice_finalize_desc: 'İşlemi tamamlamak için göndericiden gelen Slatepack mesajını girin:'
+  invoice_slatepack_err: Fatura düzenlenirken bir hata oluştu, girilen bilgiyi kontrol edin  .
+  finalize_slatepack_err: 'TX işlemi tamamlanırken hata oluştu, girilen bilgiyi kontrol edin:'
+  finalize: Tamamla
+  enter_amount: 'Miktar gir:'
+  recovery: Kurtarma
+  repair_wallet: Cüzdanı Onar
+  repair_desc: Cüzdanı check et,yapılmış, görünmeyen işlemler için resynch biraz zaman alır.
+  repair_unavailable: Cüzdanı yeniden tam senkronize etmek için Node bağlantısı aktif olmalı .
+  delete: Cüzdanı Sil
+  delete_conf: Cüzdanı silinecektir, emin misiniz?
+  delete_desc: Gelecekte bakiyeli cüzdanınızı tekrar açmak için kurtarma kelimerinizi mutlaka saklayın..
+  wallet_loading_err: 'Cüzdan senkronize edilirken hata oluştu, tekrar deneyin veya ekranın altında bulunan ayarlar  %{settings} öğesinden bağlantı metodunu değiştirin..'
+  wallet: Cüzdan
+  send: Gönder
+  receive: AL
+  settings: Cüzdan ayarlar
+  change_server_confirmation: Yeni bağlantı ayarlar geçerli olması için cüzdanı tekrar açmak gerek.Şimdi açılsın mı?
+network:
+  self: Network
+  type: 'Network tipi:'
+  connections: Bağlantılar
+  node: Tümleşik node
+  metrics: Metrikler
+  mining: Madencilik
+  settings: Node ayarlar
+  enable_node: Nodu BAŞLAT
+  autorun: Autorun
+  disabled_server: 'Tümleşik Nodu Başlat veya üst sol köşede %{dots} basarak başka bir bağlantı metodu ekleyin.'
+  no_ips: Sisteminizde hiç mevcut IP adresleri yok, server başlatılamadı, network bağlantısını kontrol edin.
+  available: Mevcut
+  not_available: Mevcut değil
+  availability_check: Mevcut kontrol
+sync_status:
+  node_restarting: Node yeniden başlatılıyor
+  node_down: Node çalışmıyor
+  initial: Node başlıyor
+  no_sync: Node çalışıyor.
+  awaiting_peers:  Peers bekleniyor
+  header_sync: Downloading headers
+  header_sync_percent: 'Downloading headers: %{percent}%'
+  tx_hashset_pibd: Downloading state (PIBD)
+  tx_hashset_pibd_percent: 'Downloading state (PIBD): %{percent}%'
+  tx_hashset_download: Downloading state
+  tx_hashset_download_percent: 'Downloading state: %{percent}%'
+  tx_hashset_setup_history: 'Preparing state (history): %{percent}%'
+  tx_hashset_setup_position: 'Preparing state (position): %{percent}%'
+  tx_hashset_setup: Preparing state
+  tx_hashset_range_proofs_validation: 'Validating state (range proofs): %{percent}%'
+  tx_hashset_kernels_validation: 'Validating state (kernels): %{percent}%'
+  tx_hashset_save: Finalizing chain state
+  body_sync: Downloading blocks
+  body_sync_percent: 'Downloading blocks: %{percent}%'
+  shutdown: Node kapanıyor
+network_node:
+  header: Header
+  block: Block
+  hash: Hash
+  height: Height
+  difficulty: Difficulty
+  time: Time
+  main_pool: Main pool
+  stem_pool: Stem pool
+  data: Data
+  size: Size (GB)
+  peers: Peers
+network_metrics:
+  loading: Metrikler senkronizasyondan sonra mevcut olur.
+  emission: Emission
+  inflation: Enflasyon
+  supply: Arz
+  block_time: Blok zaman
+  reward: Ödül
+  difficulty_window: 'Difficulty window %{size}'
+network_mining:
+  loading: Madencilik senkronizasyondan sonra mevcut olacak.
+  info: 'Madencilik server etkinleşti, ayarlar %{settings} ekranın alt köşeden değiştirilir. Cihaz bağlıyken veriler güncelleniyor.'
+  restart_server_required: Değişiklikleri uygulamak için Server yeniden BAŞLAT.
+  rewards_wallet: Ödül Cüzdanı
+  server: Stratum server
+  address: Address
+  miners: Madenciler
+  devices: Cihazlar
+  blocks_found: Blok bulunan
+  hashrate: 'Hashrate (C%{bits})'
+  connected: Bağlı 
+  disconnected: Bağlı değil
+network_settings:
+  change_value: Change value
+  stratum_ip: 'Stratum IP address:'
+  stratum_port: 'Stratum port:'
+  port_unavailable: Belirlenen port mevcut değil
+  restart_node_required: Değişiklikler için yeniden Node BAŞLAT 
+  enable: Etkinleştir
+  disable: Devredışı bırak
+  restart: Restart
+  server: Server
+  api_ip: 'API IP address:'
+  api_port: 'API port:'
+  api_secret: 'Rest API and V2 Owner API token:'
+  foreign_api_secret: 'Foreign API token:'
+  disabled: Disabled
+  enabled: Enabled
+  ftl: 'The Future Time Limit (FTL):'
+  ftl_description: Bloğun kabul edilebilmesi için yeni bir bloktaki zaman damgasının,  NODE  saniye cinsinden yerel saatine göre geleceğe ne kadar uzak olabileceğine ilişkin sınırlama.
+  not_valid_value: Girilen değer geçersiz
+  full_validation: Tam geçerli
+  full_validation_description: Her bloğu işlerken tam zincir doğrulamasının çalıştırılıp çalıştırılmayacağı (senkronizasyon hariç).
+  archive_mode: Arşiv mode
+  archive_mode_desc: Tam arşiv NODE çalıştır (daha fazla disk yeri ve senkronizasyon için zaman gerektirir).
+  attempt_time: 'Mining attempt time (in seconds):'
+  attempt_time_desc: The amount of time to attempt to mine on a particular header before stopping and re-collecting transactions from the pool
+  min_share_diff: 'The minimum acceptable share difficulty:'
+  reset_settings_desc: Reset node settings to default values
+  reset_settings: Reset ayarlar
+  reset: Reset
+  tx_pool: Transaction pool
+  pool_fee: 'Base fee that is accepted into the pool:'
+  reorg_period: 'Reorg cache retention period (in minutes):'
+  max_tx_pool: 'Maximum number of transactions in the pool:'
+  max_tx_stempool: 'Maximum number of transactions in the stem-pool:'
+  max_tx_weight: 'Maximum total weight of transactions that can get selected to build a block:'
+  epoch_duration: 'Epoch duration (in seconds):'
+  embargo_timer: 'Embargo timer (in seconds):'
+  aggregation_period: 'Aggregation period (in seconds):'
+  stem_probability: 'Stem phase probability:'
+  stem_txs: Stem transactions
+  p2p_server: P2P server
+  p2p_port: 'P2P port:'
+  add_seed: Add DNS Seed
+  seed_address: 'DNS Seed address:'
+  add_peer: Add peer
+  peer_address: 'Peer address:'
+  peer_address_error: 'Enter IP address or DNS name (make sure specified host is available) in correct format, e.g.: 192.168.0.1:1234 or example.com:5678'
+  default: Default
+  allow_list: Allow list
+  allow_list_desc: Connect only to peers in this list.
+  deny_list: Deny list
+  deny_list_desc: Never connect to peers in this list.
+  favourites: Favourites
+  favourites_desc: A list of preferred peers to connect to.
+  ban_window: 'How much time (in seconds) a banned peer should stay banned:'
+  ban_window_desc: The decision to ban is made by node, based on the correctness of the data received from the peer.
+  max_inbound_count: 'Maximum number of inbound peer connections:'
+  max_outbound_count: 'Maximum number of outbound peer connections:'
+  min_outbound_count: 'Minimum number of outbound peer connections:'
+  min_outbound_desc: Node server will actively keep trying to add peers until it will get to at least this number.
+modal:
+  cancel: Cancel
+  save: Save
+  confirmation: Confirmation
+  add: Add
+modal_exit:
+  description: Uygulamadan çıkmak için emin misiniz?
+  exit: Exit
