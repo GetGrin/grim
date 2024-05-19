@@ -26,7 +26,7 @@ use parking_lot::RwLock;
 use crate::gui::Colors;
 use crate::gui::icons::{ARROW_CIRCLE_DOWN, ARROW_CIRCLE_UP, ARROW_CLOCKWISE, BRIDGE, CALENDAR_CHECK, CHAT_CIRCLE_TEXT, CHECK, CHECK_CIRCLE, CLIPBOARD_TEXT, COPY, DOTS_THREE_CIRCLE, FILE_ARCHIVE, FILE_TEXT, GEAR_FINE, HASH_STRAIGHT, PROHIBIT, QR_CODE, SCAN, X_CIRCLE};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Modal, Root, View};
+use crate::gui::views::{Modal, QrCodeContent, Root, View};
 use crate::gui::views::types::ModalPosition;
 use crate::gui::views::wallets::types::WalletTab;
 use crate::gui::views::wallets::wallet::types::{GRIN, SLATEPACK_MESSAGE_HINT, WalletTabType};
@@ -52,6 +52,10 @@ pub struct WalletTransactions {
     tx_info_finalizing: bool,
     /// Transaction finalization result for [`Modal`].
     tx_info_final_result: Arc<RwLock<Option<Result<Slate, Error>>>>,
+    /// Flag to check if QR code is showing at [`Modal`].
+    tx_info_show_qr: bool,
+    /// QR code address image [`Modal`] content.
+    tx_info_qr_code_content: QrCodeContent,
 
     /// Transaction identifier to use at confirmation [`Modal`].
     confirm_cancel_tx_id: Option<u32>,
@@ -71,6 +75,8 @@ impl Default for WalletTransactions {
             tx_info_finalize: false,
             tx_info_finalizing: false,
             tx_info_final_result: Arc::new(RwLock::new(None)),
+            tx_info_show_qr: false,
+            tx_info_qr_code_content: QrCodeContent::new("".to_string()),
             confirm_cancel_tx_id: None,
             manual_sync: None,
         }
@@ -258,6 +264,7 @@ impl WalletTransactions {
         self.tx_info_finalize_edit = "".to_string();
         self.tx_info_finalize_error = false;
         self.tx_info_id = Some(tx.data.id);
+        self.tx_info_show_qr = false;
         // Setup slate and message from transaction.
         if let Some((slate, message)) = wallet.read_slate_by_tx(tx) {
             self.tx_info_response_edit = message;
@@ -527,21 +534,23 @@ impl WalletTransactions {
         }
         let tx = txs.get(0).unwrap();
 
-        ui.add_space(6.0);
+        if !self.tx_info_show_qr {
+            ui.add_space(6.0);
 
-        // Show transaction amount status and time.
-        let rounding = View::item_rounding(0, 2, false);
-        self.tx_item_ui(ui, tx, rounding, false, false, &data, wallet, cb);
+            // Show transaction amount status and time.
+            let rounding = View::item_rounding(0, 2, false);
+            self.tx_item_ui(ui, tx, rounding, false, false, &data, wallet, cb);
 
-        // Show transaction ID info.
-        if let Some(id) = tx.data.tx_slate_id {
-            let label = format!("{} {}", HASH_STRAIGHT, t!("id"));
-            Self::tx_info_modal_item_ui(ui, id.to_string(), label, true, cb);
-        }
-        // Show transaction kernel info.
-        if let Some(kernel) = tx.data.kernel_excess {
-            let label = format!("{} {}", FILE_ARCHIVE, t!("kernel"));
-            Self::tx_info_modal_item_ui(ui, kernel.0.to_hex(), label, true, cb);
+            // Show transaction ID info.
+            if let Some(id) = tx.data.tx_slate_id {
+                let label = format!("{} {}", HASH_STRAIGHT, t!("id"));
+                Self::tx_info_modal_item_ui(ui, id.to_string(), label, true, cb);
+            }
+            // Show transaction kernel info.
+            if let Some(kernel) = tx.data.kernel_excess {
+                let label = format!("{} {}", FILE_ARCHIVE, t!("kernel"));
+                Self::tx_info_modal_item_ui(ui, kernel.0.to_hex(), label, true, cb);
+            }
         }
 
         // Show transaction Slatepack message response or finalization input.
@@ -552,23 +561,44 @@ impl WalletTransactions {
         }
         ui.add_space(8.0);
 
-        // Show button to close modal or finalizing loader.
         if !self.tx_info_finalizing {
-            ui.vertical_centered_justified(|ui| {
-                View::button(ui, t!("close"), Colors::WHITE, || {
-                    self.tx_info_id = None;
-                    self.tx_info_finalize = false;
-                    cb.hide_keyboard();
-                    modal.close();
+            if self.tx_info_show_qr {
+                // Setup spacing between buttons.
+                ui.spacing_mut().item_spacing = egui::Vec2::new(6.0, 0.0);
+                // Show buttons to close modal or come back to text content.
+                ui.columns(2, |cols| {
+                    cols[0].vertical_centered_justified(|ui| {
+                        View::button(ui, t!("close"), Colors::WHITE, || {
+                            self.tx_info_qr_code_content.clear_state();
+                            self.tx_info_show_qr = false;
+                            modal.close();
+                        });
+                    });
+                    cols[1].vertical_centered_justified(|ui| {
+                        View::button(ui, t!("back"), Colors::WHITE, || {
+                            self.tx_info_qr_code_content.clear_state();
+                            self.tx_info_show_qr = false;
+                        });
+                    });
                 });
-            });
+            } else {
+                // Show button to close modal.
+                ui.vertical_centered_justified(|ui| {
+                    View::button(ui, t!("close"), Colors::WHITE, || {
+                        self.tx_info_id = None;
+                        self.tx_info_finalize = false;
+                        cb.hide_keyboard();
+                        modal.close();
+                    });
+                });
+            }
             ui.add_space(6.0);
         } else {
+            // Show loader on finalizing.
             ui.vertical_centered(|ui| {
                 View::small_loading_spinner(ui);
                 ui.add_space(16.0);
             });
-
             // Check finalization result.
             let has_res = {
                 let r_res = self.tx_info_final_result.read();
@@ -644,13 +674,27 @@ impl WalletTransactions {
                               modal: &Modal,
                               cb: &dyn PlatformCallbacks) {
         if self.tx_info_slate.is_none() {
+            modal.close();
             return;
         }
+        ui.add_space(6.0);
+
+        // Draw QR code content if requested.
+        if self.tx_info_show_qr {
+            // Draw QR code content.
+            let text = self.tx_info_response_edit.clone();
+            self.tx_info_qr_code_content.ui(ui, text.clone());
+            ui.add_space(6.0);
+
+            // Show QR code text.
+            View::ellipsize_text(ui, text, 16.0, Colors::GRAY);
+            return;
+        }
+
         let slate = self.tx_info_slate.clone().unwrap();
         let amount = amount_to_hr_string(tx.amount, true);
 
         // Draw Slatepack message input or output description text.
-        ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             if self.tx_info_finalize {
                 let desc_text = if self.tx_info_finalize_error {
@@ -771,7 +815,7 @@ impl WalletTransactions {
                     // Draw button to show Slatepack message as QR code.
                     let qr_text = format!("{} {}", QR_CODE, t!("qr_code"));
                     View::button(ui, qr_text, Colors::BUTTON, || {
-                        //TODO: show qr.
+                        self.tx_info_show_qr = true;
                     });
                 });
             });
@@ -864,4 +908,3 @@ impl WalletTransactions {
         });
     }
 }
-

@@ -20,6 +20,7 @@ qr_code: QR-код
 scan_qr: Сканирование QR-кода
 repeat: Повторить
 scan_result: Результат сканирования
+back: Назад
 wallets:
   await_conf_amount: Ожидает подтверждения
   await_fin_amount: Ожидает завершения

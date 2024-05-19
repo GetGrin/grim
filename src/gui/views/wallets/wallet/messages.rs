@@ -231,7 +231,6 @@ impl WalletMessages {
                         Modal::new(AMOUNT_MODAL)
                             .position(ModalPosition::CenterTop)
                             .title(t!("wallets.send"))
-                            .closeable(false)
                             .show();
                         cb.show_keyboard();
                     });
@@ -703,7 +702,7 @@ impl WalletMessages {
                        cb: &dyn PlatformCallbacks) {
         ui.add_space(6.0);
         if self.request_loading {
-            ui.add_space(42.0);
+            ui.add_space(34.0);
             ui.vertical_centered(|ui| {
                 View::big_loading_spinner(ui);
             });
@@ -711,6 +710,7 @@ impl WalletMessages {
 
             // Check if there is request result error.
             if self.request_error.is_some() {
+                modal.enable_closing();
                 self.request_loading = false;
                 return;
             }
@@ -739,6 +739,7 @@ impl WalletMessages {
                         }
                     }
                 }
+                modal.enable_closing();
                 self.request_loading = false;
             }
         } else if self.request_edit.is_empty() {
@@ -838,6 +839,7 @@ impl WalletMessages {
 
                             // Send request at another thread.
                             self.request_loading = true;
+                            modal.disable_closing();
                             thread::spawn(move || {
                                 let message = if send_request {
                                     wallet.send(a)
