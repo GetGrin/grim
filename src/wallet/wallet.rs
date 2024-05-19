@@ -916,7 +916,7 @@ impl Wallet {
             }
             let instance = wallet.instance.clone().unwrap();
             let _ = cancel_tx(instance, None, &None, Some(id), None);
-            // Setup posting flag, and ability to finalize.
+            // Setup tx status, cancelling, posting flag, and ability to finalize.
             {
                 let mut w_data = wallet.data.write();
                 let mut data = w_data.clone().unwrap();
@@ -1185,7 +1185,18 @@ fn sync_wallet_data(wallet: &Wallet, from_node: bool) {
             }
 
             if wallet.info_sync_progress() == 100 || !from_node {
-                // Retrieve accounts data.
+                {
+                    // Update wallet info.
+                    let mut w_data = wallet.data.write();
+                    let txs = if w_data.is_some() {
+                        w_data.clone().unwrap().txs
+                    } else {
+                        vec![]
+                    };
+                    *w_data = Some(WalletData { info: info.1.clone(), txs });
+                }
+
+                // Setup accounts data.
                 let last_height = info.1.last_confirmed_height;
                 let spendable = if wallet.get_data().is_none() {
                     None
@@ -1335,9 +1346,14 @@ fn sync_wallet_data(wallet: &Wallet, from_node: bool) {
                             })
                         }
 
-                        // Update wallet data.
+                        // Update wallet txs.
                         let mut w_data = wallet.data.write();
-                        *w_data = Some(WalletData { info: info.1, txs: new_txs });
+                        let info = if w_data.is_some() {
+                            w_data.clone().unwrap().info
+                        } else {
+                            info.1
+                        };
+                        *w_data = Some(WalletData { info, txs: new_txs });
                         return;
                     }
                 }
