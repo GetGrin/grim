@@ -334,8 +334,7 @@ impl WalletTransactions {
             }
 
             // Draw finalization button for tx that can be finalized.
-            if ((!can_show_info && !self.tx_info_finalizing) || can_show_info) && tx.can_finalize &&
-                wallet_loaded {
+            if ((!can_show_info && !self.tx_info_finalizing) || can_show_info) && tx.can_finalize {
                 let (icon, color) = if !can_show_info && self.tx_info_finalize {
                     (FILE_TEXT, None)
                 } else {
@@ -356,7 +355,7 @@ impl WalletTransactions {
             }
 
             // Draw button to repost transaction.
-            if ((!can_show_info && !self.tx_info_finalizing) || can_show_info) && wallet_loaded &&
+            if ((!can_show_info && !self.tx_info_finalizing) || can_show_info) &&
                 tx.can_repost(data) {
                 View::item_button(ui,
                                   Rounding::default(),
