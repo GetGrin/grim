@@ -18,13 +18,14 @@ use egui::{Id, Margin, RichText, ScrollArea};
 use egui::scroll_area::ScrollBarVisibility;
 use grin_core::core::{amount_from_hr_string, amount_to_hr_string};
 use grin_wallet_libwallet::{Error, Slate, SlateState};
+use grin_wallet_libwallet::SlateState::Standard3;
 use log::error;
 use parking_lot::RwLock;
 
 use crate::gui::Colors;
 use crate::gui::icons::{BROOM, CLIPBOARD_TEXT, COPY, DOWNLOAD_SIMPLE, PROHIBIT, QR_CODE, SCAN, UPLOAD_SIMPLE};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{CameraContent, Modal, Root, View};
+use crate::gui::views::{CameraContent, Modal, QrCodeContent, Root, View};
 use crate::gui::views::types::{ModalPosition, QrScanResult, TextEditOptions};
 use crate::gui::views::wallets::wallet::types::{SLATEPACK_MESSAGE_HINT, WalletTab, WalletTabType};
 use crate::gui::views::wallets::wallet::WalletContent;
@@ -90,13 +91,19 @@ pub struct WalletMessages {
     message_camera_content: CameraContent,
     /// Flag to check if there is an error on scanning Slatepack message QR code at [`Modal`].
     message_scan_error: bool,
+
+    /// QR code Slatepack message image [`Modal`] content.
+    qr_slatepack_message_content: QrCodeContent,
 }
 
 /// Identifier for amount input [`Modal`].
 const AMOUNT_MODAL: &'static str = "amount_modal";
 
 /// Identifier for QR code Slatepack message scan [`Modal`].
-const QR_SLATEPACK_SCAN_MODAL: &'static str = "qr_slatepack_scan_modal";
+const QR_SLATEPACK_MESSAGE_SCAN_MODAL: &'static str = "qr_slatepack_message_scan_modal";
+
+/// Identifier for [`Modal`] to show QR code Slatepack message image.
+const QR_SLATEPACK_MESSAGE_MODAL: &'static str = "qr_slatepack_message_modal";
 
 impl WalletTab for WalletMessages {
     fn get_type(&self) -> WalletTabType {
@@ -164,6 +171,7 @@ impl WalletMessages {
             request_result: Arc::new(RwLock::new(None)),
             message_camera_content: CameraContent::default(),
             message_scan_error: false,
+            qr_slatepack_message_content: QrCodeContent::new("".to_string()),
         }
     }
 
@@ -201,9 +209,14 @@ impl WalletMessages {
                             self.amount_modal_ui(ui, wallet, modal, cb);
                         });
                     }
-                    QR_SLATEPACK_SCAN_MODAL => {
+                    QR_SLATEPACK_MESSAGE_SCAN_MODAL => {
                         Modal::ui(ui.ctx(), |ui, modal| {
-                            self.scan_qr_modal_ui(ui, modal, wallet, cb);
+                            self.qr_message_sca_modal_ui(ui, modal, wallet, cb);
+                        });
+                    }
+                    QR_SLATEPACK_MESSAGE_MODAL => {
+                        Modal::ui(ui.ctx(), |ui, modal| {
+                            self.qr_message_modal_ui(ui, modal);
                         });
                     }
                     _ => {}
@@ -433,7 +446,7 @@ impl WalletMessages {
                                 // Draw button to show Slatepack message as QR code.
                                 let qr_text = format!("{} {}", QR_CODE, t!("qr_code"));
                                 View::button(ui, qr_text, Colors::BUTTON, || {
-                                    //TODO: show qr.
+                                    self.show_qr_message_modal();
                                 });
                             } else {
                                 show_dandelion = true;
@@ -469,7 +482,9 @@ impl WalletMessages {
                             // Draw button to scan Slatepack message QR code.
                             let scan_text = format!("{} {}", SCAN, t!("scan"));
                             View::button(ui, scan_text, Colors::BUTTON, || {
-                                self.show_qr_scan_modal(cb);
+                                self.message_edit.clear();
+                                self.message_error = None;
+                                self.show_qr_message_scan_modal(cb);
                             });
                         }
                     });
@@ -515,11 +530,63 @@ impl WalletMessages {
         }
     }
 
-    /// Show QR code recovery phrase scanner [`Modal`].
-    pub fn show_qr_scan_modal(&mut self, cb: &dyn PlatformCallbacks) {
+    /// Show QR code Slatepack message [`Modal`].
+    pub fn show_qr_message_modal(&mut self) {
+        self.qr_slatepack_message_content.clear_state();
+        let slate = self.message_slate.clone().unwrap();
+        let title = if slate.state == SlateState::Standard1 {
+            t!("wallets.receive")
+        } else {
+            t!("wallets.send")
+        };
+        Modal::new(QR_SLATEPACK_MESSAGE_MODAL)
+            .position(ModalPosition::CenterTop)
+            .title(title)
+            .closeable(false)
+            .show();
+    }
+
+    /// Draw QR code Slatepack message image [`Modal`] content.
+    fn qr_message_modal_ui(&mut self, ui: &mut egui::Ui, modal: &Modal) {
+        ui.add_space(6.0);
+
+        // Setup title for Slatepack message.
+        let slate = self.message_slate.clone().unwrap();
+        let amount = amount_to_hr_string(slate.amount, true);
+        let title = if slate.state == SlateState::Standard1 {
+            t!("wallets.parse_s1_slatepack_desc","amount" => amount)
+        } else {
+            t!("wallets.parse_i1_slatepack_desc","amount" => amount)
+        };
+        ui.label(RichText::new(title).size(16.0).color(Colors::GRAY));
+        ui.add_space(6.0);
+
+        // Draw QR code content.
+        let text = self.response_edit.clone();
+        self.qr_slatepack_message_content.ui(ui, text.clone());
+        ui.add_space(6.0);
+
+        // Show message text.
+        View::ellipsize_text(ui, text, 16.0, Colors::GRAY);
+        ui.add_space(6.0);
+
+        ui.vertical_centered_justified(|ui| {
+            View::button(ui, t!("close"), Colors::WHITE, || {
+                self.qr_slatepack_message_content.clear_state();
+                self.message_edit.clear();
+                self.response_edit.clear();
+                self.message_slate = None;
+                modal.close();
+            });
+            ui.add_space(6.0);
+        });
+    }
+
+    /// Show QR code Slatepack message scanner [`Modal`].
+    pub fn show_qr_message_scan_modal(&mut self, cb: &dyn PlatformCallbacks) {
         self.message_scan_error = false;
         // Show QR code scan modal.
-        Modal::new(QR_SLATEPACK_SCAN_MODAL)
+        Modal::new(QR_SLATEPACK_MESSAGE_SCAN_MODAL)
             .position(ModalPosition::CenterTop)
             .title(t!("scan_qr"))
             .closeable(false)
@@ -527,16 +594,16 @@ impl WalletMessages {
         cb.start_camera();
     }
 
-    /// Draw QR code scan [`Modal`] content.
-    fn scan_qr_modal_ui(&mut self,
-                        ui: &mut egui::Ui,
-                        modal: &Modal,
-                        wallet: &Wallet,
-                        cb: &dyn PlatformCallbacks) {
+    /// Draw QR code scanner [`Modal`] content.
+    fn qr_message_sca_modal_ui(&mut self,
+                               ui: &mut egui::Ui,
+                               modal: &Modal,
+                               wallet: &Wallet,
+                               cb: &dyn PlatformCallbacks) {
         if self.message_scan_error {
             ui.add_space(6.0);
             ui.vertical_centered(|ui| {
-                let err_text = format!("{}", t!("wallets.parse_slatepack_err")).replace(":", "");
+                let err_text = format!("{}", t!("wallets.parse_slatepack_err")).replace(":", ".");
                 ui.label(RichText::new(err_text)
                     .size(17.0)
                     .color(Colors::RED));
