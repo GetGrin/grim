@@ -326,6 +326,8 @@ impl WalletTransactions {
                             .position(ModalPosition::Center)
                             .title(t!("modal.confirmation"))
                             .show();
+                    } else {
+                        wallet.cancel(self.confirm_cancel_tx_id.unwrap());
                     }
                 });
             }
