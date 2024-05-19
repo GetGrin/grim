@@ -12,13 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::sync::Arc;
+use std::thread;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use egui::{Align, Id, Layout, Margin, RichText, Rounding, ScrollArea};
 use egui::scroll_area::ScrollBarVisibility;
 use egui_pull_to_refresh::PullToRefresh;
 use grin_core::core::amount_to_hr_string;
 use grin_util::ToHex;
-use grin_wallet_libwallet::{Slate, SlateState, TxLogEntryType};
+use grin_wallet_libwallet::{Error, Slate, SlateState, TxLogEntryType};
+use parking_lot::RwLock;
 
 use crate::gui::Colors;
 use crate::gui::icons::{ARROW_CIRCLE_DOWN, ARROW_CIRCLE_UP, ARROW_CLOCKWISE, BRIDGE, CALENDAR_CHECK, CHAT_CIRCLE_TEXT, CHECK, CHECK_CIRCLE, CLIPBOARD_TEXT, COPY, DOTS_THREE_CIRCLE, FILE_ARCHIVE, FILE_TEXT, GEAR_FINE, HASH_STRAIGHT, PROHIBIT, X_CIRCLE};
@@ -33,20 +36,24 @@ use crate::wallet::Wallet;
 
 /// Wallet transactions tab content.
 pub struct WalletTransactions {
-    /// Transaction identifier to use at info [`Modal`].
+    /// Transaction identifier to use at [`Modal`].
     tx_info_id: Option<u32>,
-    /// Transaction [`Slate`] to use at info [`Modal`].
+    /// Transaction [`Slate`] to use at [`Modal`].
     tx_info_slate: Option<Slate>,
-    /// Response Slatepack message input value at info [`Modal`].
+    /// Response Slatepack message input value at [`Modal`].
     tx_info_response_edit: String,
-    /// Finalization Slatepack message input value at info [`Modal`].
+    /// Finalization Slatepack message input value at [`Modal`].
     tx_info_finalize_edit: String,
-    /// Flag to check if error happened during transaction finalization at info [`Modal`].
+    /// Flag to check if error happened during transaction finalization at [`Modal`].
     tx_info_finalize_error: bool,
-    /// Flag to check if tx finalization requested at info [`Modal`].
+    /// Flag to check if tx finalization requested at [`Modal`].
     tx_info_finalize: bool,
+    /// Flag to check if tx is finalizing at [`Modal`].
+    tx_info_finalizing: bool,
+    /// Transaction finalization result for [`Modal`].
+    tx_info_final_result: Arc<RwLock<Option<Result<Slate, Error>>>>,
 
-    /// Transaction identifier to use at confirmation[`Modal`].
+    /// Transaction identifier to use at confirmation [`Modal`].
     confirm_cancel_tx_id: Option<u32>,
 
     /// Flag to check if sync of wallet was initiated manually at time.
@@ -62,6 +69,8 @@ impl Default for WalletTransactions {
             tx_info_finalize_edit: "".to_string(),
             tx_info_finalize_error: false,
             tx_info_finalize: false,
+            tx_info_finalizing: false,
+            tx_info_final_result: Arc::new(RwLock::new(None)),
             confirm_cancel_tx_id: None,
             manual_sync: None,
         }
@@ -300,7 +309,8 @@ impl WalletTransactions {
             }
 
             // Draw cancel button for tx that can be reposted and canceled.
-            if tx.can_repost(data) || tx.can_cancel() {
+            if ((!can_show_info && !self.tx_info_finalizing) || can_show_info) &&
+                (tx.can_repost(data) || tx.can_cancel()) {
                 let cancel_rounding = if can_show_info {
                     Rounding::default()
                 } else {
@@ -309,17 +319,19 @@ impl WalletTransactions {
                     rounding
                 };
                 View::item_button(ui, cancel_rounding, PROHIBIT, Some(Colors::RED), || {
-                    self.confirm_cancel_tx_id = Some(tx.data.id);
-                    // Show transaction cancellation confirmation modal.
-                    Modal::new(CANCEL_TX_CONFIRMATION_MODAL)
-                        .position(ModalPosition::Center)
-                        .title(t!("modal.confirmation"))
-                        .show();
+                    if can_show_info {
+                        self.confirm_cancel_tx_id = Some(tx.data.id);
+                        // Show transaction cancellation confirmation modal.
+                        Modal::new(CANCEL_TX_CONFIRMATION_MODAL)
+                            .position(ModalPosition::Center)
+                            .title(t!("modal.confirmation"))
+                            .show();
+                    }
                 });
             }
 
             // Draw finalization button for tx that can be finalized.
-            if tx.can_finalize {
+            if ((!can_show_info && !self.tx_info_finalizing) || can_show_info) && tx.can_finalize {
                 let (icon, color) = if !can_show_info && self.tx_info_finalize {
                     (FILE_TEXT, None)
                 } else {
@@ -340,7 +352,8 @@ impl WalletTransactions {
             }
 
             // Draw button to repost transaction.
-            if tx.can_repost(data) {
+            if ((!can_show_info && !self.tx_info_finalizing) || can_show_info) &&
+                tx.can_repost(data) {
                 View::item_button(ui,
                                   Rounding::default(),
                                   ARROW_CLOCKWISE,
@@ -536,16 +549,48 @@ impl WalletTransactions {
         }
         ui.add_space(8.0);
 
-        // Show button to close modal.
-        ui.vertical_centered_justified(|ui| {
-            View::button(ui, t!("close"), Colors::WHITE, || {
-                self.tx_info_id = None;
-                self.tx_info_finalize = false;
-                cb.hide_keyboard();
-                modal.close();
+        // Show button to close modal or finalizing loader.
+        if !self.tx_info_finalizing {
+            ui.vertical_centered_justified(|ui| {
+                View::button(ui, t!("close"), Colors::WHITE, || {
+                    self.tx_info_id = None;
+                    self.tx_info_finalize = false;
+                    cb.hide_keyboard();
+                    modal.close();
+                });
             });
-        });
-        ui.add_space(6.0);
+            ui.add_space(6.0);
+        } else {
+            ui.vertical_centered(|ui| {
+                View::small_loading_spinner(ui);
+                ui.add_space(16.0);
+            });
+
+            // Check finalization result.
+            let has_res = {
+                let r_res = self.tx_info_final_result.read();
+                r_res.is_some()
+            };
+            if has_res {
+                let res = {
+                    let r_res = self.tx_info_final_result.read();
+                    r_res.as_ref().unwrap().clone()
+                };
+                if let Ok(_) = res {
+                    self.tx_info_finalize = false;
+                    self.tx_info_finalize_edit = "".to_string();
+                } else {
+                    self.tx_info_finalize_error = true;
+                }
+                // Clear status and result.
+                {
+                    let mut w_res = self.tx_info_final_result.write();
+                    *w_res = None;
+                }
+                self.tx_info_finalizing = false;
+                modal.enable_closing();
+            }
+        }
     }
 
     /// Draw transaction information [`Modal`] item content.
@@ -671,6 +716,10 @@ impl WalletTransactions {
             View::horizontal_line(ui, Colors::ITEM_STROKE);
             ui.add_space(8.0);
 
+            // Do not show buttons on finalization.
+            if self.tx_info_finalizing {
+                return;
+            }
             if self.tx_info_finalize {
                 // Draw paste button.
                 let paste_text = format!("{} {}", CLIPBOARD_TEXT, t!("paste"));
@@ -680,7 +729,7 @@ impl WalletTransactions {
 
                 // Callback on finalization message input change.
                 if message_before != self.tx_info_finalize_edit {
-                    self.on_finalization_input_change(tx, wallet, cb);
+                    self.on_finalization_input_change(tx, wallet, modal);
                 }
             } else {
                 // Draw copy button.
@@ -699,30 +748,29 @@ impl WalletTransactions {
     }
 
     /// Parse Slatepack message on transaction finalization input change.
-    fn on_finalization_input_change(&mut self,
-                                    tx: &WalletTransaction,
-                                    wallet: &Wallet,
-                                    cb: &dyn PlatformCallbacks) {
+    fn on_finalization_input_change(&mut self, tx: &WalletTransaction, w: &Wallet, modal: &Modal) {
         let message = &self.tx_info_finalize_edit;
         if message.is_empty() {
             self.tx_info_finalize_error = false;
         } else {
-            if let Ok(slate) = wallet.parse_slatepack(message) {
+            // Parse input message to finalize.
+            if let Ok(slate) = w.parse_slatepack(message) {
                 let send = slate.state == SlateState::Standard2 &&
                     tx.data.tx_type == TxLogEntryType::TxSent;
                 let receive = slate.state == SlateState::Invoice2 &&
                     tx.data.tx_type == TxLogEntryType::TxReceived;
                 if Some(slate.id) == tx.data.tx_slate_id && (send || receive) {
-                    match wallet.finalize(message, wallet.can_use_dandelion()) {
-                        Ok(_) => {
-                            self.tx_info_finalize = false;
-                            self.tx_info_finalize_edit = "".to_string();
-                            cb.hide_keyboard();
-                        }
-                        Err(_) => {
-                            self.tx_info_finalize_error = true;
-                        }
-                    }
+                    let message = message.clone();
+                    let wallet = w.clone();
+                    let final_res = self.tx_info_final_result.clone();
+                    self.tx_info_finalizing = true;
+                    modal.disable_closing();
+                    // Finalize transaction at separate thread.
+                    thread::spawn(move || {
+                        let res = wallet.finalize(&message, wallet.can_use_dandelion());
+                        let mut w_res = final_res.write();
+                        *w_res = Some(res);
+                    });
                 } else {
                     self.tx_info_finalize_error = true;
                 }
