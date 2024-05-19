@@ -1031,7 +1031,7 @@ const ATTEMPT_DELAY: Duration = Duration::from_millis(3 * 1000);
 const SYNC_ATTEMPTS: u8 = 10;
 
 /// Launch thread to sync wallet data from node.
-fn start_sync(mut wallet: Wallet) -> Thread {
+fn start_sync(wallet: Wallet) -> Thread {
     // Reset progress values.
     wallet.info_sync_progress.store(0, Ordering::Relaxed);
     wallet.txs_sync_progress.store(0, Ordering::Relaxed);
@@ -1105,34 +1105,6 @@ fn start_sync(mut wallet: Wallet) -> Thread {
         // Setup flag to check if sync was failed.
         let failed_sync = wallet.sync_error() || wallet.get_sync_attempts() != 0;
 
-        // Start Foreign API server and Tor service only if first sync was successful.
-        if !failed_sync {
-            // Start Foreign API listener if API server is not running.
-            let mut api_server_running = {
-                wallet.foreign_api_server.read().is_some()
-            };
-            if !api_server_running && wallet.is_open() {
-                match start_api_server(&mut wallet) {
-                    Ok(api_server) => {
-                        let mut api_server_w = wallet.foreign_api_server.write();
-                        *api_server_w = Some(api_server);
-                        api_server_running = true;
-                    }
-                    Err(_) => {}
-                }
-            }
-    
-            // Start Tor service if API server is running and wallet is open.
-            if wallet.auto_start_tor_listener() && wallet.is_open() && api_server_running &&
-                !Tor::is_service_running(&wallet.identifier()) {
-                let r_foreign_api = wallet.foreign_api_server.read();
-                let api = r_foreign_api.as_ref().unwrap();
-                if let Ok(sec_key) = wallet.secret_key() {
-                    Tor::start_service(api.1, sec_key, &wallet.identifier());
-                }
-            }
-        }
-
         // Clear syncing status.
         wallet.syncing.store(false, Ordering::Relaxed);
 
@@ -1185,8 +1157,35 @@ fn sync_wallet_data(wallet: &Wallet, from_node: bool) {
             }
 
             if wallet.info_sync_progress() == 100 || !from_node {
+                if from_node {
+                    // Start Foreign API listener if API server is not running.
+                    let mut api_server_running = {
+                        wallet.foreign_api_server.read().is_some()
+                    };
+                    if !api_server_running && wallet.is_open() {
+                        match start_api_server(&wallet) {
+                            Ok(api_server) => {
+                                let mut api_server_w = wallet.foreign_api_server.write();
+                                *api_server_w = Some(api_server);
+                                api_server_running = true;
+                            }
+                            Err(_) => {}
+                        }
+                    }
+
+                    // Start Tor service if API server is running and wallet is open.
+                    if wallet.auto_start_tor_listener() && wallet.is_open() && api_server_running &&
+                        !Tor::is_service_running(&wallet.identifier()) {
+                        let r_foreign_api = wallet.foreign_api_server.read();
+                        let api = r_foreign_api.as_ref().unwrap();
+                        if let Ok(sec_key) = wallet.secret_key() {
+                            Tor::start_service(api.1, sec_key, &wallet.identifier());
+                        }
+                    }
+                }
+
+                // Update wallet info.
                 {
-                    // Update wallet info.
                     let mut w_data = wallet.data.write();
                     let txs = if w_data.is_some() {
                         w_data.clone().unwrap().txs
@@ -1385,7 +1384,7 @@ fn sync_wallet_data(wallet: &Wallet, from_node: bool) {
 }
 
 /// Start Foreign API server to receive txs over transport and mining rewards.
-fn start_api_server(wallet: &mut Wallet) -> Result<(ApiServer, u16), Error> {
+fn start_api_server(wallet: &Wallet) -> Result<(ApiServer, u16), Error> {
     let host = "127.0.0.1";
     // Find free port.
     let port = if wallet.get_config().chain_type == ChainTypes::Mainnet {
