@@ -48,7 +48,7 @@ pub struct AppConfig {
 }
 
 const DEFAULT_WIDTH: f32 = 1280.0;
-const DEFAULT_HEIGHT: f32 = 740.0;
+const DEFAULT_HEIGHT: f32 = 745.0;
 
 impl Default for AppConfig {
     fn default() -> Self {
