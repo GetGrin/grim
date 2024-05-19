@@ -22,7 +22,7 @@ use log::error;
 use parking_lot::RwLock;
 
 use crate::gui::Colors;
-use crate::gui::icons::{BROOM, CLIPBOARD_TEXT, COPY, DOWNLOAD_SIMPLE, PROHIBIT, UPLOAD_SIMPLE};
+use crate::gui::icons::{BROOM, CLIPBOARD_TEXT, COPY, DOWNLOAD_SIMPLE, PROHIBIT, QR_CODE, SCAN, UPLOAD_SIMPLE};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, Root, View};
 use crate::gui::views::types::{ModalPosition, TextEditOptions};
@@ -362,8 +362,7 @@ impl WalletMessages {
         }
 
         // Draw buttons to clear/copy/paste.
-        let fields_empty = self.message_edit.is_empty() && self.response_edit.is_empty();
-        let columns_num = if fields_empty || self.message_loading { 1 } else { 2 };
+        let columns_num = if self.message_loading { 1 } else { 2 };
         let mut show_dandelion = false;
         ui.scope(|ui| {
             // Setup spacing between buttons.
@@ -373,6 +372,7 @@ impl WalletMessages {
                 let first_column_content = |ui: &mut egui::Ui| {
                     if self.message_slate.is_some() {
                         if self.response_edit.is_empty() {
+                            // Draw button to clear message input.
                             let clear_text = format!("{} {}", BROOM, t!("clear"));
                             View::button(ui, clear_text, Colors::BUTTON, || {
                                 self.message_edit.clear();
@@ -381,122 +381,21 @@ impl WalletMessages {
                                 self.message_slate = None;
                             });
                         } else {
-                            let cancel = format!("{} {}", PROHIBIT, t!("modal.cancel"));
-                            View::colored_text_button(ui, cancel, Colors::RED, Colors::BUTTON, || {
-                                let slate = self.message_slate.clone().unwrap();
-                                if let Some(tx) = wallet.tx_by_slate(&slate) {
-                                    wallet.cancel(tx.data.id);
-                                    self.message_edit.clear();
-                                    self.response_edit.clear();
-                                    self.message_slate = None;
-                                }
+                            let copy_text = format!("{} {}", COPY, t!("copy"));
+                            View::button(ui, copy_text, Colors::BUTTON, || {
+                                cb.copy_string_to_buffer(self.response_edit.clone());
+                                self.message_edit.clear();
+                                self.response_edit.clear();
+                                self.message_slate = None;
                             });
                         }
                     } else {
                         if self.message_loading {
                             View::small_loading_spinner(ui);
-
-                            // Check receive pay result.
-                            let has_finalize_post_result = {
-                                let r_res = self.final_post_result.read();
-                                r_res.is_some()
-                            };
-                            if has_finalize_post_result {
-                                let resp = {
-                                    let r_res = self.final_post_result.read();
-                                    r_res.as_ref().unwrap().clone()
-                                };
-                                if resp.is_ok() {
-                                    self.message_edit.clear();
-                                    self.message_slate = None;
-                                } else {
-                                    self.message_error = Some(
-                                        MessageError::Finalize(
-                                            t!("wallets.finalize_slatepack_err")
-                                        )
-                                    );
-                                }
-                                self.message_loading = false;
-                            }
-
-                            // Check receive pay result.
-                            let has_receive_pay_result = {
-                                let r_res = self.receive_pay_result.read();
-                                r_res.is_some()
-                            };
-                            if has_receive_pay_result {
-                                let (slate, resp) = {
-                                    let r_res = self.receive_pay_result.read();
-                                    r_res.as_ref().unwrap().clone()
-                                };
-                                if resp.is_ok() {
-                                    self.response_edit = resp.as_ref().unwrap().clone();
-                                } else {
-                                    let err = resp.as_ref().err().unwrap();
-                                    match err {
-                                        // Set already canceled transaction error message.
-                                        Error::TransactionWasCancelled {..}
-                                        => {
-                                            self.message_error = Some(
-                                                MessageError::Response(
-                                                    t!("wallets.resp_canceled_err")
-                                                )
-                                            );
-                                        }
-                                        // Set an error when there is not enough funds to pay.
-                                        Error::NotEnoughFunds {..} => {
-                                            let m = t!(
-                                                "wallets.pay_balance_error",
-                                                "amount" => amount_to_hr_string(slate.amount, true)
-                                            );
-                                            self.message_error = Some(MessageError::Response(m));
-                                        }
-                                        // Set default error message.
-                                        _ => {
-                                            self.message_error = Some(
-                                                MessageError::Response(
-                                                    t!("wallets.resp_slatepack_err")
-                                                )
-                                            );
-                                        }
-                                    }
-                                    // Check if tx with same slate id already exists.
-                                    if self.message_error.is_none() {
-                                        let exists_tx = wallet.tx_by_slate(&slate).is_some();
-                                        if exists_tx {
-                                            let mut sl = slate.clone();
-                                            sl.state = if sl.state == SlateState::Standard1 {
-                                                SlateState::Standard2
-                                            } else {
-                                                SlateState::Invoice2
-                                            };
-                                            match wallet.read_slatepack(&sl) {
-                                                None => {
-                                                    self.message_error = Some(
-                                                        MessageError::Response(
-                                                            t!("wallets.resp_slatepack_err")
-                                                        )
-                                                    );
-                                                }
-                                                Some(sp) => {
-                                                    self.response_edit = sp;
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                                // Setup message slate.
-                                if self.message_error.is_none() {
-                                    self.message_slate = Some(slate);
-                                }
-                                // Clear message loading result and status.
-                                {
-                                    let mut w_res = self.receive_pay_result.write();
-                                    *w_res = None;
-                                }
-                                self.message_loading = false;
-                            }
+                            // Check loading result.
+                            self.check_message_loading_result(wallet);
                         } else {
+                            // Draw button to paste text from clipboard.
                             let paste = format!("{} {}", CLIPBOARD_TEXT, t!("paste"));
                             View::button(ui, paste, Colors::BUTTON, || {
                                 let buf = cb.get_string_from_buffer();
@@ -517,12 +416,10 @@ impl WalletMessages {
                     columns[1].vertical_centered_justified(|ui| {
                         if self.message_slate.is_some() {
                             if !self.response_edit.is_empty() {
-                                let copy_text = format!("{} {}", COPY, t!("copy"));
-                                View::button(ui, copy_text, Colors::BUTTON, || {
-                                    cb.copy_string_to_buffer(self.response_edit.clone());
-                                    self.message_edit.clear();
-                                    self.response_edit.clear();
-                                    self.message_slate = None;
+                                // Draw button to show Slatepack message as QR code.
+                                let qr_text = format!("{} {}", QR_CODE, t!("qr_code"));
+                                View::button(ui, qr_text, Colors::BUTTON, || {
+                                    //TODO: show qr.
                                 });
                             } else {
                                 show_dandelion = true;
@@ -555,12 +452,10 @@ impl WalletMessages {
                                 });
                             }
                         } else {
-                            let clear_text = format!("{} {}", BROOM, t!("clear"));
-                            View::button(ui, clear_text, Colors::BUTTON, || {
-                                self.message_error = None;
-                                self.message_edit.clear();
-                                self.response_edit.clear();
-                                self.message_slate = None;
+                            // Draw button to scan Slatepack message QR code.
+                            let scan_text = format!("{} {}", SCAN, t!("scan"));
+                            View::button(ui, scan_text, Colors::BUTTON, || {
+                                //TODO: scan code
                             });
                         }
                     });
@@ -569,15 +464,30 @@ impl WalletMessages {
 
             ui.add_space(12.0);
 
-            // Draw clear button on response.
-            if !self.response_edit.is_empty() && self.message_slate.is_some() {
-                let clear_text = format!("{} {}", BROOM, t!("clear"));
-                View::button(ui, clear_text, Colors::BUTTON, || {
-                    self.message_error = None;
-                    self.message_edit.clear();
-                    self.response_edit.clear();
-                    self.message_slate = None;
-                });
+            // Draw clear button on message input or cancel and clear buttons on response.
+            if !self.message_loading {
+                if self.message_slate.is_none() && !self.message_edit.is_empty() {
+                    // Draw button to clear message input.
+                    let clear_text = format!("{} {}", BROOM, t!("clear"));
+                    View::button(ui, clear_text, Colors::BUTTON, || {
+                        self.message_edit.clear();
+                        self.response_edit.clear();
+                        self.message_error = None;
+                        self.message_slate = None;
+                    });
+                } else if !self.response_edit.is_empty() && self.message_slate.is_some() {
+                    // Draw cancel button.
+                    let cancel = format!("{} {}", PROHIBIT, t!("modal.cancel"));
+                    View::colored_text_button(ui, cancel, Colors::RED, Colors::BUTTON, || {
+                        let slate = self.message_slate.clone().unwrap();
+                        if let Some(tx) = wallet.tx_by_slate(&slate) {
+                            wallet.cancel(tx.data.id);
+                            self.message_edit.clear();
+                            self.response_edit.clear();
+                            self.message_slate = None;
+                        }
+                    });
+                }
             }
         });
 
@@ -588,6 +498,110 @@ impl WalletMessages {
                 self.dandelion = !dandelion_before;
                 wallet.update_use_dandelion(self.dandelion);
             });
+        }
+    }
+
+    /// Check Slatepack message request loading result.
+    fn check_message_loading_result(&mut self, wallet: &Wallet) {
+        // Check finalize post pay result.
+        let has_finalize_post_result = {
+            let r_res = self.final_post_result.read();
+            r_res.is_some()
+        };
+        if has_finalize_post_result {
+            let resp = {
+                let r_res = self.final_post_result.read();
+                r_res.as_ref().unwrap().clone()
+            };
+            if resp.is_ok() {
+                self.message_edit.clear();
+                self.message_slate = None;
+            } else {
+                self.message_error = Some(
+                    MessageError::Finalize(
+                        t!("wallets.finalize_slatepack_err")
+                    )
+                );
+            }
+            self.message_loading = false;
+        }
+
+        // Check receive pay result.
+        let has_receive_pay_result = {
+            let r_res = self.receive_pay_result.read();
+            r_res.is_some()
+        };
+        if has_receive_pay_result {
+            let (slate, resp) = {
+                let r_res = self.receive_pay_result.read();
+                r_res.as_ref().unwrap().clone()
+            };
+            if resp.is_ok() {
+                self.response_edit = resp.as_ref().unwrap().clone();
+            } else {
+                let err = resp.as_ref().err().unwrap();
+                match err {
+                    // Set already canceled transaction error message.
+                    Error::TransactionWasCancelled {..}
+                    => {
+                        self.message_error = Some(
+                            MessageError::Response(
+                                t!("wallets.resp_canceled_err")
+                            )
+                        );
+                    }
+                    // Set an error when there is not enough funds to pay.
+                    Error::NotEnoughFunds {..} => {
+                        let m = t!(
+                                                "wallets.pay_balance_error",
+                                                "amount" => amount_to_hr_string(slate.amount, true)
+                                            );
+                        self.message_error = Some(MessageError::Response(m));
+                    }
+                    // Set default error message.
+                    _ => {
+                        self.message_error = Some(
+                            MessageError::Response(
+                                t!("wallets.resp_slatepack_err")
+                            )
+                        );
+                    }
+                }
+                // Check if tx with same slate id already exists.
+                if self.message_error.is_none() {
+                    let exists_tx = wallet.tx_by_slate(&slate).is_some();
+                    if exists_tx {
+                        let mut sl = slate.clone();
+                        sl.state = if sl.state == SlateState::Standard1 {
+                            SlateState::Standard2
+                        } else {
+                            SlateState::Invoice2
+                        };
+                        match wallet.read_slatepack(&sl) {
+                            None => {
+                                self.message_error = Some(
+                                    MessageError::Response(
+                                        t!("wallets.resp_slatepack_err")
+                                    )
+                                );
+                            }
+                            Some(sp) => {
+                                self.response_edit = sp;
+                            }
+                        }
+                    }
+                }
+            }
+            // Setup message slate.
+            if self.message_error.is_none() {
+                self.message_slate = Some(slate);
+            }
+            // Clear message loading result and status.
+            {
+                let mut w_res = self.receive_pay_result.write();
+                *w_res = None;
+            }
+            self.message_loading = false;
         }
     }
 

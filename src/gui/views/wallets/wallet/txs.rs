@@ -14,7 +14,7 @@
 
 use std::sync::Arc;
 use std::thread;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{SystemTime, UNIX_EPOCH};
 use egui::{Align, Id, Layout, Margin, RichText, Rounding, ScrollArea};
 use egui::scroll_area::ScrollBarVisibility;
 use egui_pull_to_refresh::PullToRefresh;
@@ -24,7 +24,7 @@ use grin_wallet_libwallet::{Error, Slate, SlateState, TxLogEntryType};
 use parking_lot::RwLock;
 
 use crate::gui::Colors;
-use crate::gui::icons::{ARROW_CIRCLE_DOWN, ARROW_CIRCLE_UP, ARROW_CLOCKWISE, BRIDGE, CALENDAR_CHECK, CHAT_CIRCLE_TEXT, CHECK, CHECK_CIRCLE, CLIPBOARD_TEXT, COPY, DOTS_THREE_CIRCLE, FILE_ARCHIVE, FILE_TEXT, GEAR_FINE, HASH_STRAIGHT, PROHIBIT, X_CIRCLE};
+use crate::gui::icons::{ARROW_CIRCLE_DOWN, ARROW_CIRCLE_UP, ARROW_CLOCKWISE, BRIDGE, CALENDAR_CHECK, CHAT_CIRCLE_TEXT, CHECK, CHECK_CIRCLE, CLIPBOARD_TEXT, COPY, DOTS_THREE_CIRCLE, FILE_ARCHIVE, FILE_TEXT, GEAR_FINE, HASH_STRAIGHT, PROHIBIT, QR_CODE, SCAN, X_CIRCLE};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, Root, View};
 use crate::gui::views::types::ModalPosition;
@@ -309,8 +309,9 @@ impl WalletTransactions {
             }
 
             // Draw cancel button for tx that can be reposted and canceled.
+            let wallet_loaded = wallet.foreign_api_port().is_some();
             if ((!can_show_info && !self.tx_info_finalizing) || can_show_info) &&
-                (tx.can_repost(data) || tx.can_cancel()) {
+                (tx.can_repost(data) || tx.can_cancel()) && wallet_loaded {
                 let cancel_rounding = if can_show_info {
                     Rounding::default()
                 } else {
@@ -333,7 +334,8 @@ impl WalletTransactions {
             }
 
             // Draw finalization button for tx that can be finalized.
-            if ((!can_show_info && !self.tx_info_finalizing) || can_show_info) && tx.can_finalize {
+            if ((!can_show_info && !self.tx_info_finalizing) || can_show_info) && tx.can_finalize &&
+                wallet_loaded {
                 let (icon, color) = if !can_show_info && self.tx_info_finalize {
                     (FILE_TEXT, None)
                 } else {
@@ -354,7 +356,7 @@ impl WalletTransactions {
             }
 
             // Draw button to repost transaction.
-            if ((!can_show_info && !self.tx_info_finalizing) || can_show_info) &&
+            if ((!can_show_info && !self.tx_info_finalizing) || can_show_info) && wallet_loaded &&
                 tx.can_repost(data) {
                 View::item_button(ui,
                                   Rounding::default(),
@@ -686,15 +688,16 @@ impl WalletTransactions {
         });
         ui.add_space(4.0);
 
-        ui.vertical_centered(|ui| {
-            let message_edit = if self.tx_info_finalize {
-                &mut self.tx_info_finalize_edit
-            }  else {
-                &mut self.tx_info_response_edit
-            };
-            let message_before = message_edit.clone();
+        // Setup message input value.
+        let message_edit = if self.tx_info_finalize {
+            &mut self.tx_info_finalize_edit
+        }  else {
+            &mut self.tx_info_response_edit
+        };
+        let message_before = message_edit.clone();
 
-            // Draw Slatepack message text input or output.
+        // Draw Slatepack message text input or output.
+        ui.vertical_centered(|ui| {
             let input_id = Id::from("tx_info_slatepack_message").with(slate.id).with(tx.data.id);
             View::horizontal_line(ui, Colors::ITEM_STROKE);
             ui.add_space(3.0);
@@ -714,39 +717,66 @@ impl WalletTransactions {
                         .show(ui);
                     ui.add_space(6.0);
                 });
-            ui.add_space(2.0);
-            View::horizontal_line(ui, Colors::ITEM_STROKE);
-            ui.add_space(8.0);
+        });
 
-            // Do not show buttons on finalization.
-            if self.tx_info_finalizing {
-                return;
-            }
-            if self.tx_info_finalize {
-                // Draw paste button.
-                let paste_text = format!("{} {}", CLIPBOARD_TEXT, t!("paste"));
-                View::button(ui, paste_text, Colors::BUTTON, || {
-                    self.tx_info_finalize_edit = cb.get_string_from_buffer();
-                });
+        ui.add_space(2.0);
+        View::horizontal_line(ui, Colors::ITEM_STROKE);
+        ui.add_space(8.0);
 
-                // Callback on finalization message input change.
-                if message_before != self.tx_info_finalize_edit {
-                    self.on_finalization_input_change(tx, wallet, modal);
-                }
-            } else {
-                // Draw copy button.
-                let copy_text = format!("{} {}", COPY, t!("copy"));
-                View::button(ui, copy_text, Colors::BUTTON, || {
-                    cb.copy_string_to_buffer(self.tx_info_response_edit.clone());
-                    self.tx_info_finalize_edit = "".to_string();
-                    if tx.can_finalize {
-                        self.tx_info_finalize = true;
-                    } else {
-                        modal.close();
+        // Do not show buttons on finalization.
+        if self.tx_info_finalizing {
+            return;
+        }
+
+        // Setup spacing between buttons.
+        ui.spacing_mut().item_spacing = egui::Vec2::new(6.0, 0.0);
+
+        if self.tx_info_finalize {
+            ui.columns(2, |columns| {
+                columns[0].vertical_centered_justified(|ui| {
+                    // Draw paste button.
+                    let paste_text = format!("{} {}", CLIPBOARD_TEXT, t!("paste"));
+                    View::button(ui, paste_text, Colors::BUTTON, || {
+                        self.tx_info_finalize_edit = cb.get_string_from_buffer();
+                    });
+
+                    // Callback on finalization message input change.
+                    if message_before != self.tx_info_finalize_edit {
+                        self.on_finalization_input_change(tx, wallet, modal);
                     }
                 });
-            }
-        });
+                columns[1].vertical_centered_justified(|ui| {
+                    // Draw button to scan Slatepack message QR code.
+                    let qr_text = format!("{} {}", SCAN, t!("scan"));
+                    View::button(ui, qr_text, Colors::BUTTON, || {
+                        //TODO: scan qr.
+                    });
+                });
+            });
+        } else {
+            ui.columns(2, |columns| {
+                columns[0].vertical_centered_justified(|ui| {
+                    // Draw copy button.
+                    let copy_text = format!("{} {}", COPY, t!("copy"));
+                    View::button(ui, copy_text, Colors::BUTTON, || {
+                        cb.copy_string_to_buffer(self.tx_info_response_edit.clone());
+                        self.tx_info_finalize_edit = "".to_string();
+                        if tx.can_finalize {
+                            self.tx_info_finalize = true;
+                        } else {
+                            modal.close();
+                        }
+                    });
+                });
+                columns[1].vertical_centered_justified(|ui| {
+                    // Draw button to show Slatepack message as QR code.
+                    let qr_text = format!("{} {}", QR_CODE, t!("qr_code"));
+                    View::button(ui, qr_text, Colors::BUTTON, || {
+                        //TODO: show qr.
+                    });
+                });
+            });
+        }
     }
 
     /// Parse Slatepack message on transaction finalization input change.
