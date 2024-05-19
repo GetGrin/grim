@@ -89,15 +89,15 @@ wallets:
   parse_s1_slatepack_desc: 'To receive %{amount} ツ send this message to the sender:'
   parse_s2_slatepack_desc: 'Finalize transaction to send %{amount} ツ'
   parse_s3_slatepack_desc: 'Post transaction to finalize sending of %{amount} ツ'
-  resp_slatepack_err: 'An error occurred during creation of the response, check input:'
+  resp_slatepack_err: 'An error occurred during creation of the response, check input data or try again:'
   resp_exists_err: Such transaction already exists.
   resp_canceled_err: Such transaction was already canceled.
   create_request_desc: 'Create request to send or receive the funds:'
   send_request_desc: 'You have created a request to send %{amount} ツ. Send this message to the receiver:'
-  send_slatepack_err: An error occurred during creation of request to send funds, check input.
+  send_slatepack_err: An error occurred during creation of request to send funds, check input data or try again.
   invoice_desc: 'You have created request to receive %{amount} ツ. Send this message to the sender:'
-  invoice_slatepack_err: An error occurred during issuing of the invoice, check input.
-  finalize_slatepack_err: 'An error occurred during finalization, check input:'
+  invoice_slatepack_err: An error occurred during issuing of the invoice, check input data or try again.
+  finalize_slatepack_err: 'An error occurred during finalization, check input data or try again:'
   finalize: Finalize
   use_dandelion: Use Dandelion
   enter_amount_send: 'You have %{amount} ツ. Enter amount to send:'
