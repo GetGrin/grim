@@ -12,8 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::sync::Arc;
-use egui::{IconData, pos2};
 use grim::AppConfig;
 
 pub fn main() {
@@ -42,6 +40,9 @@ fn real_main() {
     // Setup an icon.
     let icon = image::open("img/icon.png").expect("Failed to open icon path").to_rgba8();
     let (icon_width, icon_height) = icon.dimensions();
+
+    use std::sync::Arc;
+    use egui::{IconData, pos2};
 
     let mut viewport = egui::ViewportBuilder::default()
         .with_inner_size([width, height])

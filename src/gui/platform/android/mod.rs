@@ -34,8 +34,6 @@ impl Android {
         }
     }
     fn call_java_method(&self, name: &str, sig: &str, args: &[JValue]) -> Option<jni::sys::jvalue> {
-        use jni::objects::{JObject};
-
         let vm = unsafe { jni::JavaVM::from_raw(self.android_app.vm_as_ptr() as _) }.unwrap();
         let mut env = vm.attach_current_thread().unwrap();
         let activity = unsafe {
@@ -65,7 +63,7 @@ impl PlatformCallbacks for Android {
 
     fn copy_string_to_buffer(&self, data: String) {
         let vm = unsafe { jni::JavaVM::from_raw(self.android_app.vm_as_ptr() as _) }.unwrap();
-        let mut env = vm.attach_current_thread().unwrap();
+        let env = vm.attach_current_thread().unwrap();
         let arg_value = env.new_string(data).unwrap();
         self.call_java_method("copyText",
                               "(Ljava/lang/String;)V",

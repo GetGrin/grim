@@ -56,8 +56,6 @@ fn android_main(app: AndroidApp) {
     }
 
     use gui::platform::Android;
-    use gui::PlatformApp;
-
     let platform = Android::new(app.clone());
     use winit::platform::android::EventLoopBuilderExtAndroid;
 
@@ -69,7 +67,7 @@ fn android_main(app: AndroidApp) {
         ..Default::default()
     };
     // Setup limits that are guaranteed to be compatible with Android devices.
-    options.wgpu_options.device_descriptor = std::sync::Arc::new(|adapter| {
+    options.wgpu_options.device_descriptor = std::sync::Arc::new(|_| {
         let base_limits = wgpu::Limits::downlevel_webgl2_defaults();
         wgpu::DeviceDescriptor {
             label: Some("egui wgpu device"),
