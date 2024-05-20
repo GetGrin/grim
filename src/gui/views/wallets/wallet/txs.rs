@@ -321,39 +321,23 @@ impl WalletTransactions {
                 });
             }
 
-            // Draw cancel button for tx that can be reposted and canceled.
-            let wallet_loaded = wallet.foreign_api_port().is_some();
-            if ((!can_show_info && !self.tx_info_finalizing) || can_show_info) &&
-                (tx.can_repost(data) || tx.can_cancel()) && wallet_loaded {
-                let cancel_rounding = if can_show_info {
+            // Draw finalization button for tx that can be finalized.
+            let show_finalization = ((!can_show_info && !self.tx_info_finalizing) || can_show_info)
+                && tx.can_finalize;
+            if show_finalization {
+                let (icon, color) = if !can_show_info && self.tx_info_finalize {
+                    (FILE_TEXT, None)
+                } else {
+                    (CHECK, Some(Colors::GREEN))
+                };
+                let final_rounding = if can_show_info {
                     Rounding::default()
                 } else {
                     rounding.nw = 0.0;
                     rounding.sw = 0.0;
                     rounding
                 };
-                View::item_button(ui, cancel_rounding, PROHIBIT, Some(Colors::RED), || {
-                    if can_show_info {
-                        self.confirm_cancel_tx_id = Some(tx.data.id);
-                        // Show transaction cancellation confirmation modal.
-                        Modal::new(CANCEL_TX_CONFIRMATION_MODAL)
-                            .position(ModalPosition::Center)
-                            .title(t!("modal.confirmation"))
-                            .show();
-                    } else {
-                        wallet.cancel(tx.data.id);
-                    }
-                });
-            }
-
-            // Draw finalization button for tx that can be finalized.
-            if ((!can_show_info && !self.tx_info_finalizing) || can_show_info) && tx.can_finalize {
-                let (icon, color) = if !can_show_info && self.tx_info_finalize {
-                    (FILE_TEXT, None)
-                } else {
-                    (CHECK, Some(Colors::GREEN))
-                };
-                View::item_button(ui, Rounding::default(), icon, color, || {
+                View::item_button(ui, final_rounding, icon, color, || {
                     if !can_show_info && self.tx_info_finalize {
                         self.tx_info_finalize = false;
                         return;
@@ -367,27 +351,40 @@ impl WalletTransactions {
                 });
             }
 
+            // Draw cancel button for tx that can be reposted and canceled.
+            let wallet_loaded = wallet.foreign_api_port().is_some();
+            if ((!can_show_info && !self.tx_info_finalizing) || can_show_info) &&
+                (tx.can_repost(data) || tx.can_cancel()) && wallet_loaded {
+                View::item_button(ui, Rounding::default(), PROHIBIT, Some(Colors::RED), || {
+                    if can_show_info {
+                        self.confirm_cancel_tx_id = Some(tx.data.id);
+                        // Show transaction cancellation confirmation modal.
+                        Modal::new(CANCEL_TX_CONFIRMATION_MODAL)
+                            .position(ModalPosition::Center)
+                            .title(t!("modal.confirmation"))
+                            .show();
+                    } else {
+                        wallet.cancel(tx.data.id);
+                    }
+                });
+            }
+
             // Draw button to repost transaction.
             if ((!can_show_info && !self.tx_info_finalizing) || can_show_info) &&
                 tx.can_repost(data) {
-                View::item_button(ui,
-                                  Rounding::default(),
-                                  ARROW_CLOCKWISE,
-                                  Some(Colors::GREEN), || {
-                        // Create slate to check existing file.
-                        let mut slate = Slate::blank(1, false);
-                        slate.id = tx.data.tx_slate_id.unwrap();
-                        slate.state = match tx.data.tx_type {
-                            TxLogEntryType::TxReceived => SlateState::Invoice3,
-                            _ => SlateState::Standard3
-                        };
-                        // Post tx after getting slate from slatepack file.
-                        if let Some(sp) = wallet.read_slatepack(&slate) {
-                            if let Ok(s) = wallet.parse_slatepack(&sp) {
-                                let _ = wallet.post(&s, wallet.can_use_dandelion());
-                            }
-                        }
-                    });
+                let repost_rounding = if show_finalization || can_show_info {
+                    Rounding::default()
+                } else {
+                    rounding.nw = 0.0;
+                    rounding.sw = 0.0;
+                    rounding
+                };
+                View::item_button(ui, repost_rounding, ARROW_CLOCKWISE, Some(Colors::GREEN), || {
+                    // Post tx after getting slate from slatepack file.
+                    if let Some((s, _)) = wallet.read_slate_by_tx(tx) {
+                        let _ = wallet.post(&s, wallet.can_use_dandelion());
+                    }
+                });
             }
 
             let layout_size = ui.available_size();
