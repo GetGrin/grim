@@ -572,24 +572,24 @@ impl WalletTransactions {
             ui.spacing_mut().item_spacing = egui::Vec2::new(6.0, 0.0);
 
             if self.tx_info_show_qr {
-                // Show buttons to close modal or come back to text content.
+                // Show buttons to close modal or come back to text request content.
                 ui.columns(2, |cols| {
                     cols[0].vertical_centered_justified(|ui| {
+                        View::button(ui, t!("back"), Colors::WHITE, || {
+                            self.tx_info_qr_code_content.clear_state();
+                            self.tx_info_show_qr = false;
+                        });
+                    });
+                    cols[1].vertical_centered_justified(|ui| {
                         View::button(ui, t!("close"), Colors::WHITE, || {
                             self.tx_info_qr_code_content.clear_state();
                             self.tx_info_show_qr = false;
                             modal.close();
                         });
                     });
-                    cols[1].vertical_centered_justified(|ui| {
-                        View::button(ui, t!("back"), Colors::WHITE, || {
-                            self.tx_info_qr_code_content.clear_state();
-                            self.tx_info_show_qr = false;
-                        });
-                    });
                 });
             } else if self.tx_info_show_scanner {
-                // Show buttons to close modal or close scanner.
+                // Show buttons to close modal or scanner.
                 ui.columns(2, |cols| {
                     cols[0].vertical_centered_justified(|ui| {
                         View::button(ui, t!("close"), Colors::WHITE, || {
@@ -704,21 +704,6 @@ impl WalletTransactions {
         }
         ui.add_space(6.0);
 
-        // Draw QR code content if requested.
-        if self.tx_info_show_qr {
-            // Draw QR code content.
-            let text = self.tx_info_response_edit.clone();
-            if text.is_empty() {
-                self.tx_info_show_qr = false;
-            }
-            self.tx_info_qr_code_content.ui(ui, text.clone());
-            ui.add_space(6.0);
-
-            // Show QR code text.
-            View::ellipsize_text(ui, text, 16.0, Colors::GRAY);
-            return;
-        }
-
         // Draw QR code scanner content if requested.
         if self.tx_info_show_scanner {
             if let Some(result) = self.tx_info_scanner_content.qr_scan_result() {
@@ -741,7 +726,7 @@ impl WalletTransactions {
         let slate = self.tx_info_slate.clone().unwrap();
         let amount = amount_to_hr_string(tx.amount, true);
 
-        // Draw Slatepack message input or output description text.
+        // Draw Slatepack message description text.
         ui.vertical_centered(|ui| {
             if self.tx_info_finalize {
                 let desc_text = if self.tx_info_finalize_error {
@@ -776,7 +761,7 @@ impl WalletTransactions {
                 ui.label(RichText::new(desc_text).size(16.0).color(Colors::INACTIVE_TEXT));
             }
         });
-        ui.add_space(4.0);
+        ui.add_space(6.0);
 
         // Setup message input value.
         let message_edit = if self.tx_info_finalize {
@@ -786,9 +771,29 @@ impl WalletTransactions {
         };
         let message_before = message_edit.clone();
 
-        // Draw Slatepack message text input or output.
+        // Draw QR code content if requested.
+        if self.tx_info_show_qr {
+            let text = message_edit.clone();
+            if text.is_empty() {
+                self.tx_info_show_qr = false;
+            } else {
+                // Draw QR code content.
+                self.tx_info_qr_code_content.ui(ui, text.clone());
+                ui.add_space(6.0);
+
+                // Show QR code text.
+                View::ellipsize_text(ui, text, 16.0, Colors::INACTIVE_TEXT);
+                return;
+            }
+        }
+
+        // Draw Slatepack message finalization input or request text.
         ui.vertical_centered(|ui| {
-            let input_id = Id::from("tx_info_slatepack_message").with(slate.id).with(tx.data.id);
+            let input_id = if self.tx_info_finalize {
+                Id::from("tx_info_message_finalize")
+            } else {
+                Id::from("tx_info_message_request")
+            }.with(slate.id).with(tx.data.id);
             View::horizontal_line(ui, Colors::ITEM_STROKE);
             ui.add_space(3.0);
             ScrollArea::vertical()
@@ -824,18 +829,6 @@ impl WalletTransactions {
         if self.tx_info_finalize {
             ui.columns(2, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
-                    // Draw paste button.
-                    let paste_text = format!("{} {}", CLIPBOARD_TEXT, t!("paste"));
-                    View::button(ui, paste_text, Colors::BUTTON, || {
-                        self.tx_info_finalize_edit = cb.get_string_from_buffer();
-                    });
-
-                    // Callback on finalization message input change.
-                    if message_before != self.tx_info_finalize_edit {
-                        self.on_finalization_input_change(tx, wallet, modal, cb);
-                    }
-                });
-                columns[1].vertical_centered_justified(|ui| {
                     // Draw button to scan Slatepack message QR code.
                     let qr_text = format!("{} {}", SCAN, t!("scan"));
                     View::button(ui, qr_text, Colors::BUTTON, || {
@@ -845,10 +838,29 @@ impl WalletTransactions {
                         self.tx_info_show_scanner = true;
                     });
                 });
+                columns[1].vertical_centered_justified(|ui| {
+                    // Draw button to paste data from clipboard.
+                    let paste_text = format!("{} {}", CLIPBOARD_TEXT, t!("paste"));
+                    View::button(ui, paste_text, Colors::BUTTON, || {
+                        self.tx_info_finalize_edit = cb.get_string_from_buffer();
+                    });
+                    // Callback on finalization message input change.
+                    if message_before != self.tx_info_finalize_edit {
+                        self.on_finalization_input_change(tx, wallet, modal, cb);
+                    }
+                });
             });
         } else {
             ui.columns(2, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
+                    // Draw button to show Slatepack message as QR code.
+                    let qr_text = format!("{} {}", QR_CODE, t!("qr_code"));
+                    View::button(ui, qr_text, Colors::BUTTON, || {
+                        cb.hide_keyboard();
+                        self.tx_info_show_qr = true;
+                    });
+                });
+                columns[1].vertical_centered_justified(|ui| {
                     // Draw copy button.
                     let copy_text = format!("{} {}", COPY, t!("copy"));
                     View::button(ui, copy_text, Colors::BUTTON, || {
@@ -860,14 +872,6 @@ impl WalletTransactions {
                             cb.hide_keyboard();
                             modal.close();
                         }
-                    });
-                });
-                columns[1].vertical_centered_justified(|ui| {
-                    // Draw button to show Slatepack message as QR code.
-                    let qr_text = format!("{} {}", QR_CODE, t!("qr_code"));
-                    View::button(ui, qr_text, Colors::BUTTON, || {
-                        cb.hide_keyboard();
-                        self.tx_info_show_qr = true;
                     });
                 });
             });
