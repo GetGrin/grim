@@ -18,6 +18,7 @@ use std::thread;
 use egui::{SizeHint, TextureHandle, TextureOptions};
 use egui::load::SizedTexture;
 use egui_extras::image::load_svg_bytes_with_size;
+use qrcodegen::QrCode;
 
 use crate::gui::views::types::QrCreationState;
 use crate::gui::views::View;
@@ -46,9 +47,12 @@ impl QrCodeContent {
     pub fn ui(&mut self, ui: &mut egui::Ui, text: String) {
         // Get saved QR code image or load new one.
         if !self.has_image() {
-            ui.add_space(38.0);
-            View::small_loading_spinner(ui);
-            ui.add_space(38.0);
+            let space = (ui.available_width() - View::BIG_SPINNER_SIZE) / 2.0;
+            ui.vertical_centered(|ui| {
+                ui.add_space(space);
+                View::big_loading_spinner(ui);
+                ui.add_space(space);
+            });
 
             // Create image from text if not loading.
             self.create_image(text);
@@ -90,12 +94,12 @@ impl QrCodeContent {
         let qr_creation_state = self.qr_creation_state.clone();
         if !self.creating() {
             thread::spawn(move || {
-                let qr = qrcodegen::QrCode::encode_text(text.as_str(),
-                                                        qrcodegen::QrCodeEcc::Medium).unwrap();
-                let svg = Self::qr_to_svg(qr, 0);
-                let mut w_create = qr_creation_state.write();
-                w_create.creating = false;
-                w_create.svg = Some(svg.into_bytes());
+                if let Ok(qr) = QrCode::encode_text(text.as_str(), qrcodegen::QrCodeEcc::Medium) {
+                    let svg = Self::qr_to_svg(qr, 0);
+                    let mut w_create = qr_creation_state.write();
+                    w_create.creating = false;
+                    w_create.svg = Some(svg.into_bytes());
+                }
             });
         }
     }
