@@ -26,7 +26,7 @@ use parking_lot::RwLock;
 use crate::gui::Colors;
 use crate::gui::icons::{ARROW_CIRCLE_DOWN, ARROW_CIRCLE_UP, ARROW_CLOCKWISE, BRIDGE, CALENDAR_CHECK, CHAT_CIRCLE_TEXT, CHECK, CHECK_CIRCLE, CLIPBOARD_TEXT, COPY, DOTS_THREE_CIRCLE, FILE_ARCHIVE, FILE_TEXT, GEAR_FINE, HASH_STRAIGHT, PROHIBIT, QR_CODE, SCAN, X_CIRCLE};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Modal, QrCodeContent, Root, View};
+use crate::gui::views::{CameraContent, Modal, QrCodeContent, Root, View};
 use crate::gui::views::types::ModalPosition;
 use crate::gui::views::wallets::types::WalletTab;
 use crate::gui::views::wallets::wallet::types::{GRIN, SLATEPACK_MESSAGE_HINT, WalletTabType};
@@ -54,8 +54,12 @@ pub struct WalletTransactions {
     tx_info_final_result: Arc<RwLock<Option<Result<Slate, Error>>>>,
     /// Flag to check if QR code is showing at [`Modal`].
     tx_info_show_qr: bool,
-    /// QR code address image [`Modal`] content.
+    /// QR code Slatepack message image [`Modal`] content.
     tx_info_qr_code_content: QrCodeContent,
+    /// Flag to check if QR code scanner is showing at [`Modal`].
+    tx_info_show_scanner: bool,
+    /// QR code scanner [`Modal`] content.
+    tx_info_scanner_content: CameraContent,
 
     /// Transaction identifier to use at confirmation [`Modal`].
     confirm_cancel_tx_id: Option<u32>,
@@ -77,6 +81,8 @@ impl Default for WalletTransactions {
             tx_info_final_result: Arc::new(RwLock::new(None)),
             tx_info_show_qr: false,
             tx_info_qr_code_content: QrCodeContent::new("".to_string()),
+            tx_info_show_scanner: false,
+            tx_info_scanner_content: CameraContent::default(),
             confirm_cancel_tx_id: None,
             manual_sync: None,
         }
@@ -534,7 +540,7 @@ impl WalletTransactions {
         }
         let tx = txs.get(0).unwrap();
 
-        if !self.tx_info_show_qr {
+        if !self.tx_info_show_qr && !self.tx_info_show_scanner {
             ui.add_space(6.0);
 
             // Show transaction amount status and time.
@@ -562,9 +568,10 @@ impl WalletTransactions {
         ui.add_space(8.0);
 
         if !self.tx_info_finalizing {
+            // Setup spacing between buttons.
+            ui.spacing_mut().item_spacing = egui::Vec2::new(6.0, 0.0);
+
             if self.tx_info_show_qr {
-                // Setup spacing between buttons.
-                ui.spacing_mut().item_spacing = egui::Vec2::new(6.0, 0.0);
                 // Show buttons to close modal or come back to text content.
                 ui.columns(2, |cols| {
                     cols[0].vertical_centered_justified(|ui| {
@@ -578,6 +585,24 @@ impl WalletTransactions {
                         View::button(ui, t!("back"), Colors::WHITE, || {
                             self.tx_info_qr_code_content.clear_state();
                             self.tx_info_show_qr = false;
+                        });
+                    });
+                });
+            } else if self.tx_info_show_scanner {
+                // Show buttons to close modal or close scanner.
+                ui.columns(2, |cols| {
+                    cols[0].vertical_centered_justified(|ui| {
+                        View::button(ui, t!("close"), Colors::WHITE, || {
+                            cb.stop_camera();
+                            self.tx_info_show_scanner = false;
+                            modal.close();
+                        });
+                    });
+                    cols[1].vertical_centered_justified(|ui| {
+                        View::button(ui, t!("back"), Colors::WHITE, || {
+                            cb.stop_camera();
+                            self.tx_info_show_scanner = false;
+                            modal.enable_closing();
                         });
                     });
                 });
@@ -691,6 +716,25 @@ impl WalletTransactions {
             return;
         }
 
+        // Draw QR code scanner content if requested.
+        if self.tx_info_show_scanner {
+            if let Some(result) = self.tx_info_scanner_content.qr_scan_result() {
+                cb.stop_camera();
+                self.tx_info_scanner_content.clear_state();
+
+                // Setup value to finalization input field.
+                self.tx_info_finalize_edit = result.value();
+                self.on_finalization_input_change(tx, wallet, modal, );
+
+                modal.enable_closing();
+                self.tx_info_show_scanner = false;
+            } else {
+                self.tx_info_scanner_content.ui(ui, cb);
+                ui.add_space(2.0);
+            }
+            return;
+        }
+
         let slate = self.tx_info_slate.clone().unwrap();
         let amount = amount_to_hr_string(tx.amount, true);
 
@@ -785,14 +829,17 @@ impl WalletTransactions {
 
                     // Callback on finalization message input change.
                     if message_before != self.tx_info_finalize_edit {
-                        self.on_finalization_input_change(tx, wallet, modal);
+                        self.on_finalization_input_change(tx, wallet, modal, cb);
                     }
                 });
                 columns[1].vertical_centered_justified(|ui| {
                     // Draw button to scan Slatepack message QR code.
                     let qr_text = format!("{} {}", SCAN, t!("scan"));
                     View::button(ui, qr_text, Colors::BUTTON, || {
-                        //TODO: scan qr.
+                        cb.hide_keyboard();
+                        modal.disable_closing();
+                        cb.start_camera();
+                        self.tx_info_show_scanner = true;
                     });
                 });
             });
@@ -807,6 +854,7 @@ impl WalletTransactions {
                         if tx.can_finalize {
                             self.tx_info_finalize = true;
                         } else {
+                            cb.hide_keyboard();
                             modal.close();
                         }
                     });
@@ -815,6 +863,7 @@ impl WalletTransactions {
                     // Draw button to show Slatepack message as QR code.
                     let qr_text = format!("{} {}", QR_CODE, t!("qr_code"));
                     View::button(ui, qr_text, Colors::BUTTON, || {
+                        cb.hide_keyboard();
                         self.tx_info_show_qr = true;
                     });
                 });
@@ -823,24 +872,29 @@ impl WalletTransactions {
     }
 
     /// Parse Slatepack message on transaction finalization input change.
-    fn on_finalization_input_change(&mut self, tx: &WalletTransaction, w: &Wallet, modal: &Modal) {
+    fn on_finalization_input_change(&mut self,
+                                    tx: &WalletTransaction,
+                                    wallet: &Wallet,
+                                    modal: &Modal,
+                                    cb: &dyn PlatformCallbacks) {
         let message = &self.tx_info_finalize_edit;
         if message.is_empty() {
             self.tx_info_finalize_error = false;
         } else {
             // Parse input message to finalize.
-            if let Ok(slate) = w.parse_slatepack(message) {
+            if let Ok(slate) = wallet.parse_slatepack(message) {
                 let send = slate.state == SlateState::Standard2 &&
                     tx.data.tx_type == TxLogEntryType::TxSent;
                 let receive = slate.state == SlateState::Invoice2 &&
                     tx.data.tx_type == TxLogEntryType::TxReceived;
                 if Some(slate.id) == tx.data.tx_slate_id && (send || receive) {
                     let message = message.clone();
-                    let wallet = w.clone();
+                    let wallet = wallet.clone();
                     let final_res = self.tx_info_final_result.clone();
+                    // Finalize transaction at separate thread.
+                    cb.hide_keyboard();
                     self.tx_info_finalizing = true;
                     modal.disable_closing();
-                    // Finalize transaction at separate thread.
                     thread::spawn(move || {
                         let res = wallet.finalize(&message, wallet.can_use_dandelion());
                         let mut w_res = final_res.write();

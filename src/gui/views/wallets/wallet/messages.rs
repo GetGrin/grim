@@ -18,7 +18,6 @@ use egui::{Id, Margin, RichText, ScrollArea};
 use egui::scroll_area::ScrollBarVisibility;
 use grin_core::core::{amount_from_hr_string, amount_to_hr_string};
 use grin_wallet_libwallet::{Error, Slate, SlateState};
-use grin_wallet_libwallet::SlateState::Standard3;
 use log::error;
 use parking_lot::RwLock;
 
@@ -211,7 +210,7 @@ impl WalletMessages {
                     }
                     QR_SLATEPACK_MESSAGE_SCAN_MODAL => {
                         Modal::ui(ui.ctx(), |ui, modal| {
-                            self.qr_message_sca_modal_ui(ui, modal, wallet, cb);
+                            self.qr_message_scan_modal_ui(ui, modal, wallet, cb);
                         });
                     }
                     QR_SLATEPACK_MESSAGE_MODAL => {
@@ -595,11 +594,11 @@ impl WalletMessages {
     }
 
     /// Draw QR code scanner [`Modal`] content.
-    fn qr_message_sca_modal_ui(&mut self,
-                               ui: &mut egui::Ui,
-                               modal: &Modal,
-                               wallet: &Wallet,
-                               cb: &dyn PlatformCallbacks) {
+    fn qr_message_scan_modal_ui(&mut self,
+                                ui: &mut egui::Ui,
+                                modal: &Modal,
+                                wallet: &Wallet,
+                                cb: &dyn PlatformCallbacks) {
         if self.message_scan_error {
             ui.add_space(6.0);
             ui.vertical_centered(|ui| {
@@ -646,7 +645,7 @@ impl WalletMessages {
         } else {
             ui.add_space(6.0);
             self.message_camera_content.ui(ui, cb);
-            ui.add_space(6.0);
+            ui.add_space(8.0);
         }
 
         ui.vertical_centered_justified(|ui| {

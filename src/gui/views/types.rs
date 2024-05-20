@@ -152,6 +152,17 @@ pub enum QrScanResult {
     Text(ZeroingString)
 }
 
+impl QrScanResult {
+    /// Get scan result value.
+    pub fn value(&self) -> String {
+        match self {
+            QrScanResult::Slatepack(text) => text,
+            QrScanResult::Address(text) => text,
+            QrScanResult::Text(text) => text
+        }.to_string()
+    }
+}
+
 /// QR code scan state.
 pub struct QrScanState {
     // Flag to check if image is processing to find QR code.
