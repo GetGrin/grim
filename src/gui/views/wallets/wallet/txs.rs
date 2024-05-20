@@ -708,6 +708,9 @@ impl WalletTransactions {
         if self.tx_info_show_qr {
             // Draw QR code content.
             let text = self.tx_info_response_edit.clone();
+            if text.is_empty() {
+                self.tx_info_show_qr = false;
+            }
             self.tx_info_qr_code_content.ui(ui, text.clone());
             ui.add_space(6.0);
 
@@ -724,7 +727,7 @@ impl WalletTransactions {
 
                 // Setup value to finalization input field.
                 self.tx_info_finalize_edit = result.value();
-                self.on_finalization_input_change(tx, wallet, modal, );
+                self.on_finalization_input_change(tx, wallet, modal, cb);
 
                 modal.enable_closing();
                 self.tx_info_show_scanner = false;
