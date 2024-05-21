@@ -12,20 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use eye::hal::traits::{Context, Device, Stream};
-use eye::hal::PlatformContext;
 use lazy_static::lazy_static;
 use parking_lot::RwLock;
-use std::sync::atomic::{AtomicBool, AtomicI32, Ordering};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::thread;
+use nokhwa::Camera;
+use nokhwa::pixel_format::RgbFormat;
+use nokhwa::utils::{CameraIndex, RequestedFormat, RequestedFormatType};
 
 use crate::gui::platform::PlatformCallbacks;
 
 /// Desktop platform related actions.
 pub struct Desktop {
-    /// Camera index.
-    camera_index: AtomicI32,
     /// Flag to check if camera stop is needed.
     stop_camera: Arc<AtomicBool>,
 }
@@ -33,7 +32,6 @@ pub struct Desktop {
 impl Default for Desktop {
     fn default() -> Self {
         Self {
-            camera_index: AtomicI32::new(0),
             stop_camera: Arc::new(AtomicBool::new(false)),
         }
     }
@@ -65,29 +63,6 @@ impl PlatformCallbacks for Desktop {
         let stop_camera = self.stop_camera.clone();
         stop_camera.store(false, Ordering::Relaxed);
 
-        // Create a context
-        let ctx = if let Some(ctx) = PlatformContext::all().next() {
-            ctx
-        } else {
-            PlatformContext::default()
-        };
-
-        // Query for available devices.
-        let devices = ctx.devices();
-        if devices.is_err() {
-            return;
-        }
-        let devices = devices.unwrap();
-
-        // Setup camera index.
-        let saved_index = self.camera_index.load(Ordering::Relaxed);
-        let camera_index = if devices.len() <= self.camera_index.load(Ordering::Relaxed) as usize {
-            self.camera_index.store(0, Ordering::Relaxed);
-            0
-        } else {
-            saved_index
-        };
-
         // Capture images at separate thread.
         thread::spawn(move || {
             tokio::runtime::Builder::new_multi_thread()
@@ -95,31 +70,24 @@ impl PlatformCallbacks for Desktop {
                 .build()
                 .unwrap()
                 .block_on(async {
-                    // Open camera.
-                    if let Ok(dev) = ctx.open_device(&devices[camera_index as usize].uri) {
-                        let streams = dev.streams().unwrap();
-                        let stream_desc = streams[0].clone();
-                        println!("Camera stream: {:?}", stream_desc);
-                        let mut stream = dev.start_stream(&stream_desc).unwrap();
+                    let index = CameraIndex::Index(0);
+                    let requested = RequestedFormat::new::<RgbFormat>(
+                        RequestedFormatType::AbsoluteHighestFrameRate
+                    );
+                    // Create and open camera.
+                    let mut camera = Camera::new(index, requested).unwrap();
+                    if let Ok(_) = camera.open_stream() {
                         loop {
                             // Stop if camera was stopped.
                             if stop_camera.load(Ordering::Relaxed) {
                                 stop_camera.store(false, Ordering::Relaxed);
                                 break;
                             }
-                            // Get frame.
-                            if let Some(frame) = stream.next() {
-                                // Get data from frame.
-                                if let Ok(frame_data) = frame {
-                                    // Save image.
-                                    let mut w_image = LAST_CAMERA_IMAGE.write();
-                                    *w_image = Some((frame_data.to_vec(), 0));
-                                } else {
-                                    // Clear image.
-                                    let mut w_image = LAST_CAMERA_IMAGE.write();
-                                    *w_image = None;
-                                    break;
-                                }
+                            // Get a frame.
+                            if let Ok(frame) = camera.frame() {
+                                // Save image.
+                                let mut w_image = LAST_CAMERA_IMAGE.write();
+                                *w_image = Some((frame.buffer().to_vec(), 0));
                             } else {
                                 // Clear image.
                                 let mut w_image = LAST_CAMERA_IMAGE.write();
@@ -127,6 +95,7 @@ impl PlatformCallbacks for Desktop {
                                 break;
                             }
                         }
+                        camera.stop_stream().unwrap();
                     };
                 });
         });

@@ -12,8 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use grim::AppConfig;
-
 pub fn main() {
     #[allow(dead_code)]
     #[cfg(not(target_os = "android"))]
@@ -31,6 +29,7 @@ fn real_main() {
 
     use grim::gui::platform::Desktop;
     use grim::gui::PlatformApp;
+    use grim::AppConfig;
 
     let platform = Desktop::default();
 
