@@ -277,8 +277,10 @@ impl MnemonicSetup {
             ui.add_space(8.0);
 
             // Draw word value text edit.
-            let text_edit_opts = TextEditOptions::new(Id::from(modal.id).with(self.word_num_edit));
-            View::text_edit(ui, cb, &mut self.word_edit, text_edit_opts);
+            let mut text_edit_opts = TextEditOptions::new(
+                Id::from(modal.id).with(self.word_num_edit)
+            );
+            View::text_edit(ui, cb, &mut self.word_edit, &mut text_edit_opts);
 
             // Show error when specified word is not valid.
             if !self.valid_word_edit {

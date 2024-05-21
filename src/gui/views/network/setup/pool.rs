@@ -169,8 +169,8 @@ impl PoolSetup {
             ui.add_space(8.0);
 
             // Draw fee base text edit.
-            let fee_base_edit_opts = TextEditOptions::new(Id::from(modal.id)).h_center();
-            View::text_edit(ui, cb, &mut self.fee_base_edit, fee_base_edit_opts);
+            let mut fee_base_edit_opts = TextEditOptions::new(Id::from(modal.id)).h_center();
+            View::text_edit(ui, cb, &mut self.fee_base_edit, &mut fee_base_edit_opts);
 
             // Show error when specified value is not valid or reminder to restart enabled node.
             if self.fee_base_edit.parse::<u64>().is_err() {
@@ -246,8 +246,8 @@ impl PoolSetup {
             ui.add_space(8.0);
 
             // Draw reorg period text edit.
-            let reorg_period_edit_opts = TextEditOptions::new(Id::from(modal.id)).h_center();
-            View::text_edit(ui, cb, &mut self.reorg_period_edit, reorg_period_edit_opts);
+            let mut reorg_period_edit_opts = TextEditOptions::new(Id::from(modal.id)).h_center();
+            View::text_edit(ui, cb, &mut self.reorg_period_edit, &mut reorg_period_edit_opts);
 
             // Show error when specified value is not valid or reminder to restart enabled node.
             if self.reorg_period_edit.parse::<u32>().is_err() {
@@ -323,8 +323,8 @@ impl PoolSetup {
             ui.add_space(8.0);
 
             // Draw pool size text edit.
-            let pool_size_edit_opts = TextEditOptions::new(Id::from(modal.id)).h_center();
-            View::text_edit(ui, cb, &mut self.pool_size_edit, pool_size_edit_opts);
+            let mut pool_size_edit_opts = TextEditOptions::new(Id::from(modal.id)).h_center();
+            View::text_edit(ui, cb, &mut self.pool_size_edit, &mut pool_size_edit_opts);
 
             // Show error when specified value is not valid or reminder to restart enabled node.
             if self.pool_size_edit.parse::<usize>().is_err() {
@@ -400,8 +400,8 @@ impl PoolSetup {
             ui.add_space(8.0);
 
             // Draw stempool size text edit.
-            let stem_pool_edit_opts = TextEditOptions::new(Id::from(modal.id)).h_center();
-            View::text_edit(ui, cb, &mut self.stempool_size_edit, stem_pool_edit_opts);
+            let mut stem_pool_edit_opts = TextEditOptions::new(Id::from(modal.id)).h_center();
+            View::text_edit(ui, cb, &mut self.stempool_size_edit, &mut stem_pool_edit_opts);
 
             // Show error when specified value is not valid or reminder to restart enabled node.
             if self.stempool_size_edit.parse::<usize>().is_err() {
@@ -477,8 +477,8 @@ impl PoolSetup {
             ui.add_space(8.0);
 
             // Draw tx weight text edit.
-            let mac_weight_edit_opts = TextEditOptions::new(Id::from(modal.id)).h_center();
-            View::text_edit(ui, cb, &mut self.max_weight_edit, mac_weight_edit_opts);
+            let mut mac_weight_edit_opts = TextEditOptions::new(Id::from(modal.id)).h_center();
+            View::text_edit(ui, cb, &mut self.max_weight_edit, &mut mac_weight_edit_opts);
 
             // Show error when specified value is not valid or reminder to restart enabled node.
             if self.max_weight_edit.parse::<u64>().is_err() {

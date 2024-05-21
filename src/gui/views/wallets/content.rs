@@ -527,8 +527,8 @@ impl WalletsContent {
             ui.add_space(8.0);
 
             // Show password input.
-            let pass_edit_opts = TextEditOptions::new(Id::from(modal.id)).password();
-            View::text_edit(ui, cb, &mut self.pass_edit, pass_edit_opts);
+            let mut pass_edit_opts = TextEditOptions::new(Id::from(modal.id)).password();
+            View::text_edit(ui, cb, &mut self.pass_edit, &mut pass_edit_opts);
 
             // Show information when password is empty.
             if self.pass_edit.is_empty() {

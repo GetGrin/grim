@@ -409,7 +409,7 @@ impl WalletCreation {
                 self.modal_just_opened = false;
                 name_edit_opts.focus = true;
             }
-            View::text_edit(ui, cb, &mut self.name_edit, name_edit_opts);
+            View::text_edit(ui, cb, &mut self.name_edit, &mut name_edit_opts);
             ui.add_space(8.0);
 
             ui.label(RichText::new(t!("wallets.pass"))
@@ -418,10 +418,10 @@ impl WalletCreation {
             ui.add_space(8.0);
 
             // Draw wallet password text edit.
-            let pass_text_edit_opts = TextEditOptions::new(Id::from(modal.id).with("pass"))
+            let mut pass_text_edit_opts = TextEditOptions::new(Id::from(modal.id).with("pass"))
                 .password()
                 .no_focus();
-            View::text_edit(ui, cb, &mut self.pass_edit, pass_text_edit_opts);
+            View::text_edit(ui, cb, &mut self.pass_edit, &mut pass_text_edit_opts);
             ui.add_space(12.0);
         });
 

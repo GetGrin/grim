@@ -26,7 +26,7 @@ use grin_wallet_libwallet::SlatepackAddress;
 use crate::gui::Colors;
 use crate::gui::icons::{CHECK_CIRCLE, COPY, DOTS_THREE_CIRCLE, EXPORT, GEAR_SIX, GLOBE_SIMPLE, POWER, QR_CODE, SHIELD_CHECKERED, SHIELD_SLASH, WARNING_CIRCLE, X_CIRCLE};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Modal, QrCodeContent, Root, View};
+use crate::gui::views::{CameraContent, Modal, QrCodeContent, Root, View};
 use crate::gui::views::types::{ModalPosition, TextEditOptions};
 use crate::gui::views::wallets::wallet::types::{WalletTab, WalletTabType};
 use crate::gui::views::wallets::wallet::WalletContent;
@@ -48,11 +48,15 @@ pub struct WalletTransport {
     address_edit: String,
     /// Flag to check if entered address is incorrect at [`Modal`].
     address_error: bool,
+    /// Flag to check if QR code scanner is opened at address [`Modal`].
+    show_address_scan: bool,
+    /// Address QR code scanner [`Modal`] content.
+    address_scan_content: CameraContent,
     /// Flag to check if [`Modal`] was just opened to focus on first field.
     modal_just_opened: bool,
 
     /// QR code address image [`Modal`] content.
-    qr_code_content: QrCodeContent,
+    qr_address_content: QrCodeContent,
 
     /// Flag to check if Tor settings were changed.
     tor_settings_changed: bool,
@@ -60,6 +64,10 @@ pub struct WalletTransport {
     bridge_bin_path_edit: String,
     /// Tor bridge connection line edit text.
     bridge_conn_line_edit: String,
+    /// Flag to check if QR code scanner is opened at bridge [`Modal`].
+    show_bridge_scan: bool,
+    /// Address QR code scanner [`Modal`] content.
+    bridge_qr_scan_content: CameraContent,
 }
 
 impl WalletTab for WalletTransport {
@@ -134,11 +142,15 @@ impl WalletTransport {
             amount_edit: "".to_string(),
             address_edit: "".to_string(),
             address_error: false,
+            show_address_scan: false,
+            address_scan_content: CameraContent::default(),
             modal_just_opened: false,
-            qr_code_content: QrCodeContent::new(addr),
+            qr_address_content: QrCodeContent::new(addr),
             tor_settings_changed: false,
             bridge_bin_path_edit: bin_path,
             bridge_conn_line_edit: conn_line,
+            show_bridge_scan: false,
+            bridge_qr_scan_content: CameraContent::default(),
         }
     }
 
@@ -218,13 +230,7 @@ impl WalletTransport {
                 // Draw button to setup Tor transport.
                 let button_rounding = View::item_rounding(0, 2, true);
                 View::item_button(ui, button_rounding, GEAR_SIX, None, || {
-                    self.tor_settings_changed = false;
-                    // Show Tor settings modal.
-                    Modal::new(TOR_SETTINGS_MODAL)
-                        .position(ModalPosition::CenterTop)
-                        .title(t!("transport.tor_settings"))
-                        .closeable(false)
-                        .show();
+                    self.show_tor_settings_modal();
                 });
 
                 // Draw button to enable/disable Tor listener for current wallet.
@@ -292,17 +298,67 @@ impl WalletTransport {
         });
     }
 
-    /// Draw tor transport settings [`Modal`] content.
+    /// Show Tor transport settings [`Modal`].
+    fn show_tor_settings_modal(&mut self) {
+        self.tor_settings_changed = false;
+        // Show Tor settings modal.
+        Modal::new(TOR_SETTINGS_MODAL)
+            .position(ModalPosition::CenterTop)
+            .title(t!("transport.tor_settings"))
+            .closeable(false)
+            .show();
+    }
+
+    /// Draw Tor transport settings [`Modal`] content.
     fn tor_settings_modal_ui(&mut self,
                              ui: &mut egui::Ui,
                              wallet: &Wallet,
                              modal: &Modal,
                              cb: &dyn PlatformCallbacks) {
+        ui.add_space(6.0);
+
+        // Draw QR code scanner content if requested.
+        if self.show_bridge_scan {
+            let mut on_stop = |content: &mut CameraContent| {
+                cb.stop_camera();
+                content.clear_state();
+                modal.enable_closing();
+                self.show_bridge_scan = false;
+            };
+
+            if let Some(result) = self.bridge_qr_scan_content.qr_scan_result() {
+                self.bridge_conn_line_edit = result.value();
+                on_stop(&mut self.bridge_qr_scan_content);
+                cb.show_keyboard();
+            } else {
+                self.bridge_qr_scan_content.ui(ui, cb);
+                ui.add_space(12.0);
+
+                // Setup spacing between buttons.
+                ui.spacing_mut().item_spacing = egui::Vec2::new(6.0, 0.0);
+
+                // Show buttons to close modal or come back to sending input.
+                ui.columns(2, |cols| {
+                    cols[0].vertical_centered_justified(|ui| {
+                        View::button(ui, t!("close"), Colors::WHITE, || {
+                            on_stop(&mut self.bridge_qr_scan_content);
+                            modal.close();
+                        });
+                    });
+                    cols[1].vertical_centered_justified(|ui| {
+                        View::button(ui, t!("back"), Colors::WHITE, || {
+                            on_stop(&mut self.bridge_qr_scan_content);
+                        });
+                    });
+                });
+                ui.add_space(6.0);
+            }
+            return;
+        }
+
         // Do not show bridges setup on Android.
         let os = OperatingSystem::from_target_os();
         let show_bridges = os != OperatingSystem::Android;
-
-        ui.add_space(6.0);
         if show_bridges {
             let bridge = TorConfig::get_bridge();
             ui.vertical_centered(|ui| {
@@ -360,7 +416,7 @@ impl WalletTransport {
                 let bin_edit_id = Id::from(modal.id)
                     .with(wallet.get_config().id)
                     .with("_bin_edit");
-                let bin_edit_opts = TextEditOptions::new(bin_edit_id)
+                let mut bin_edit_opts = TextEditOptions::new(bin_edit_id)
                     .paste()
                     .no_focus();
                 let bin_edit_before = self.bridge_bin_path_edit.clone();
@@ -369,25 +425,32 @@ impl WalletTransport {
                         .size(17.0)
                         .color(Colors::INACTIVE_TEXT));
                     ui.add_space(6.0);
-                    View::text_edit(ui, cb, &mut self.bridge_bin_path_edit, bin_edit_opts);
+                    View::text_edit(ui, cb, &mut self.bridge_bin_path_edit, &mut bin_edit_opts);
                     ui.add_space(6.0);
                 });
 
                 // Draw connection line text edit.
+                let conn_edit_before = self.bridge_conn_line_edit.clone();
                 let conn_edit_id = Id::from(modal.id)
                     .with(wallet.get_config().id)
                     .with("_conn_edit");
-                let conn_edit_opts = TextEditOptions::new(conn_edit_id)
+                let mut conn_edit_opts = TextEditOptions::new(conn_edit_id)
                     .paste()
-                    .scan_qr()
-                    .no_focus();
-                let conn_edit_before = self.bridge_conn_line_edit.clone();
+                    .no_focus()
+                    .scan_qr();
                 ui.vertical_centered(|ui| {
                     ui.label(RichText::new(t!("transport.conn_line"))
                         .size(17.0)
                         .color(Colors::INACTIVE_TEXT));
                     ui.add_space(6.0);
-                    View::text_edit(ui, cb, &mut self.bridge_conn_line_edit, conn_edit_opts);
+                    View::text_edit(ui, cb, &mut self.bridge_conn_line_edit, &mut conn_edit_opts);
+                    // Check if scan button was pressed.
+                    if conn_edit_opts.scan_pressed {
+                        cb.hide_keyboard();
+                        modal.disable_closing();
+                        conn_edit_opts.scan_pressed = false;
+                        self.show_bridge_scan = true;
+                    }
                 });
 
                 // Check if bin path or connection line text was changed to save bridge.
@@ -481,7 +544,7 @@ impl WalletTransport {
                 };
                 View::item_button(ui, button_rounding, QR_CODE, None, || {
                     // Show QR code image address modal.
-                    self.qr_code_content.clear_state();
+                    self.qr_address_content.clear_state();
                     Modal::new(QR_ADDRESS_MODAL)
                         .position(ModalPosition::CenterTop)
                         .title(t!("network_mining.address"))
@@ -525,8 +588,8 @@ impl WalletTransport {
         ui.add_space(6.0);
 
         // Draw QR code content.
-        let text = self.qr_code_content.text.clone();
-        self.qr_code_content.ui(ui, text.clone());
+        let text = self.qr_address_content.text.clone();
+        self.qr_address_content.ui(ui, text.clone());
         ui.add_space(6.0);
 
         // Show address.
@@ -535,7 +598,7 @@ impl WalletTransport {
 
         ui.vertical_centered_justified(|ui| {
             View::button(ui, t!("close"), Colors::WHITE, || {
-                self.qr_code_content.clear_state();
+                self.qr_address_content.clear_state();
                 modal.close();
             });
             ui.add_space(6.0);
@@ -567,7 +630,6 @@ impl WalletTransport {
 
     /// Show [`Modal`] to send over Tor.
     pub fn show_send_tor_modal(&mut self, cb: &dyn PlatformCallbacks, address: Option<String>) {
-        // Setup modal values.
         {
             let mut w_send_err = self.tor_send_error.write();
             *w_send_err = false;
@@ -616,6 +678,48 @@ impl WalletTransport {
         let has_send_err = self.has_tor_send_error();
         let sending = self.tor_sending();
         if !has_send_err && !sending {
+            // Draw QR code scanner content if requested.
+            if self.show_address_scan {
+                let mut on_stop = |content: &mut CameraContent| {
+                    cb.stop_camera();
+                    content.clear_state();
+                    modal.enable_closing();
+                    self.show_address_scan = false;
+                };
+
+                if let Some(result) = self.address_scan_content.qr_scan_result() {
+                    self.address_edit = result.value();
+                    self.modal_just_opened = true;
+                    on_stop(&mut self.address_scan_content);
+                    cb.show_keyboard();
+                } else {
+                    self.address_scan_content.ui(ui, cb);
+                    ui.add_space(12.0);
+
+                    // Setup spacing between buttons.
+                    ui.spacing_mut().item_spacing = egui::Vec2::new(6.0, 0.0);
+
+                    // Show buttons to close modal or come back to sending input.
+                    ui.columns(2, |cols| {
+                        cols[0].vertical_centered_justified(|ui| {
+                            View::button(ui, t!("close"), Colors::WHITE, || {
+                                on_stop(&mut self.address_scan_content);
+                                modal.close();
+                            });
+                        });
+                        cols[1].vertical_centered_justified(|ui| {
+                            View::button(ui, t!("back"), Colors::WHITE, || {
+                                self.modal_just_opened = true;
+                                on_stop(&mut self.address_scan_content);
+                                cb.show_keyboard();
+                            });
+                        });
+                    });
+                    ui.add_space(6.0);
+                }
+                return;
+            }
+
             ui.vertical_centered(|ui| {
                 let data = wallet.get_data().unwrap();
                 let amount = amount_to_hr_string(data.info.amount_currently_spendable, true);
@@ -634,7 +738,7 @@ impl WalletTransport {
                 self.modal_just_opened = false;
                 amount_edit_opts.focus = true;
             }
-            View::text_edit(ui, cb, &mut self.amount_edit, amount_edit_opts);
+            View::text_edit(ui, cb, &mut self.amount_edit, &mut amount_edit_opts);
             ui.add_space(8.0);
 
             // Check value if input was changed.
@@ -682,16 +786,23 @@ impl WalletTransport {
                         .color(Colors::GRAY));
                 }
             });
-            ui.add_space(8.0);
+            ui.add_space(6.0);
 
             // Draw address text edit.
             let addr_edit_before = self.address_edit.clone();
             let address_edit_id = Id::from(modal.id).with("address").with(wallet.get_config().id);
-            let address_edit_opts = TextEditOptions::new(address_edit_id)
+            let mut address_edit_opts = TextEditOptions::new(address_edit_id)
                 .paste()
-                .scan_qr()
-                .no_focus();
-            View::text_edit(ui, cb, &mut self.address_edit, address_edit_opts);
+                .no_focus()
+                .scan_qr();
+            View::text_edit(ui, cb, &mut self.address_edit, &mut address_edit_opts);
+            // Check if scan button was pressed.
+            if address_edit_opts.scan_pressed {
+                cb.hide_keyboard();
+                modal.disable_closing();
+                address_edit_opts.scan_pressed = false;
+                self.show_address_scan = true;
+            }
             ui.add_space(12.0);
 
             // Check value if input was changed.

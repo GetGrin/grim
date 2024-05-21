@@ -17,7 +17,7 @@ use std::sync::Arc;
 use parking_lot::RwLock;
 use lazy_static::lazy_static;
 
-use egui::{Align, Button, CursorIcon, Id, Layout, lerp, PointerState, Rect, Response, Rgba, RichText, Sense, Spinner, TextBuffer, TextStyle, Widget};
+use egui::{Align, Button, CursorIcon, Layout, lerp, PointerState, Rect, Response, Rgba, RichText, Sense, Spinner, TextBuffer, TextStyle, Widget};
 use egui::epaint::{Color32, FontId, RectShape, Rounding, Stroke};
 use egui::epaint::text::TextWrapping;
 use egui::os::OperatingSystem;
@@ -321,7 +321,7 @@ impl View {
     pub fn text_edit(ui: &mut egui::Ui,
                      cb: &dyn PlatformCallbacks,
                      value: &mut String,
-                     options: TextEditOptions) {
+                     options: &mut TextEditOptions) {
         let mut layout_rect = ui.available_rect_before_wrap();
         layout_rect.set_height(Self::TEXT_EDIT_HEIGHT);
         ui.allocate_ui_with_layout(layout_rect.size(), Layout::right_to_left(Align::Center), |ui| {
@@ -371,7 +371,8 @@ impl View {
             if options.scan_qr {
                 let scan_icon = SCAN.to_string();
                 View::button(ui, scan_icon, Colors::WHITE, || {
-                    //TODO: open scanner
+                    cb.start_camera();
+                    options.scan_pressed = true;
                 });
                 ui.add_space(8.0);
             }
@@ -412,7 +413,7 @@ impl View {
     }
 
     /// Apply soft keyboard input data to provided String.
-    pub fn on_soft_input(ui: &mut egui::Ui, id: Id, value: &mut String) {
+    pub fn on_soft_input(ui: &mut egui::Ui, id: egui::Id, value: &mut String) {
         let os = OperatingSystem::from_target_os();
         if os == OperatingSystem::Android {
             let mut w_input = LAST_SOFT_KEYBOARD_INPUT.write();

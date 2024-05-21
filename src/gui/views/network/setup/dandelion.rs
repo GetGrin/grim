@@ -165,8 +165,8 @@ impl DandelionSetup {
             ui.add_space(8.0);
 
             // Draw epoch text edit.
-            let epoch_edit_opts = TextEditOptions::new(Id::from(modal.id)).h_center();
-            View::text_edit(ui, cb, &mut self.epoch_edit, epoch_edit_opts);
+            let mut epoch_edit_opts = TextEditOptions::new(Id::from(modal.id)).h_center();
+            View::text_edit(ui, cb, &mut self.epoch_edit, &mut epoch_edit_opts);
 
             // Show error when specified value is not valid or reminder to restart enabled node.
             if self.epoch_edit.parse::<u16>().is_err() {
@@ -242,8 +242,8 @@ impl DandelionSetup {
             ui.add_space(8.0);
 
             // Draw embargo text edit.
-            let embargo_edit_opts = TextEditOptions::new(Id::from(modal.id)).h_center();
-            View::text_edit(ui, cb, &mut self.embargo_edit, embargo_edit_opts);
+            let mut embargo_edit_opts = TextEditOptions::new(Id::from(modal.id)).h_center();
+            View::text_edit(ui, cb, &mut self.embargo_edit, &mut embargo_edit_opts);
 
             // Show error when specified value is not valid or reminder to restart enabled node.
             if self.embargo_edit.parse::<u16>().is_err() {
@@ -319,8 +319,8 @@ impl DandelionSetup {
             ui.add_space(8.0);
 
             // Draw aggregation period text edit.
-            let aggregation_edit_opts = TextEditOptions::new(Id::from(modal.id)).h_center();
-            View::text_edit(ui, cb, &mut self.aggregation_edit, aggregation_edit_opts);
+            let mut aggregation_edit_opts = TextEditOptions::new(Id::from(modal.id)).h_center();
+            View::text_edit(ui, cb, &mut self.aggregation_edit, &mut aggregation_edit_opts);
 
             // Show error when specified value is not valid or reminder to restart enabled node.
             if self.aggregation_edit.parse::<u16>().is_err() {
@@ -396,8 +396,8 @@ impl DandelionSetup {
             ui.add_space(8.0);
 
             // Draw stem phase probability text edit.
-            let stem_prob_edit_opts = TextEditOptions::new(Id::from(modal.id)).h_center();
-            View::text_edit(ui, cb, &mut self.stem_prob_edit, stem_prob_edit_opts);
+            let mut stem_prob_edit_opts = TextEditOptions::new(Id::from(modal.id)).h_center();
+            View::text_edit(ui, cb, &mut self.stem_prob_edit, &mut stem_prob_edit_opts);
 
             // Show error when specified value is not valid or reminder to restart enabled node.
             if self.stem_prob_edit.parse::<u8>().is_err() {

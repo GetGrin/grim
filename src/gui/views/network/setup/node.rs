@@ -287,8 +287,8 @@ impl NodeSetup {
             ui.add_space(6.0);
 
             // Draw API port text edit.
-            let api_port_edit_opts = TextEditOptions::new(Id::from(modal.id)).h_center();
-            View::text_edit(ui, cb, &mut self.api_port_edit, api_port_edit_opts);
+            let mut api_port_edit_opts = TextEditOptions::new(Id::from(modal.id)).h_center();
+            View::text_edit(ui, cb, &mut self.api_port_edit, &mut api_port_edit_opts);
 
             // Show error when specified port is unavailable or reminder to restart enabled node.
             if !self.api_port_available_edit {
@@ -390,8 +390,8 @@ impl NodeSetup {
             ui.add_space(8.0);
 
             // Draw API secret token value text edit.
-            let secret_edit_opts = TextEditOptions::new(Id::from(modal.id)).copy().paste();
-            View::text_edit(ui, cb, &mut self.secret_edit, secret_edit_opts);
+            let mut secret_edit_opts = TextEditOptions::new(Id::from(modal.id)).copy().paste();
+            View::text_edit(ui, cb, &mut self.secret_edit, &mut secret_edit_opts);
             ui.add_space(6.0);
 
             // Show reminder to restart enabled node.
@@ -476,8 +476,8 @@ impl NodeSetup {
             ui.add_space(8.0);
 
             // Draw ftl value text edit.
-            let ftl_edit_opts = TextEditOptions::new(Id::from(modal.id)).h_center();
-            View::text_edit(ui, cb, &mut self.ftl_edit, ftl_edit_opts);
+            let mut ftl_edit_opts = TextEditOptions::new(Id::from(modal.id)).h_center();
+            View::text_edit(ui, cb, &mut self.ftl_edit, &mut ftl_edit_opts);
 
             // Show error when specified value is not valid or reminder to restart enabled node.
             if self.ftl_edit.parse::<u64>().is_err() {

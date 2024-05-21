@@ -181,8 +181,8 @@ impl CommonSetup {
 
             // Show wallet name text edit.
             let name_edit_id = Id::from(modal.id).with(wallet.get_config().id);
-            let name_edit_opts = TextEditOptions::new(name_edit_id);
-            View::text_edit(ui, cb, &mut self.name_edit, name_edit_opts);
+            let mut name_edit_opts = TextEditOptions::new(name_edit_id);
+            View::text_edit(ui, cb, &mut self.name_edit, &mut name_edit_opts);
             ui.add_space(12.0);
         });
 
@@ -242,7 +242,7 @@ impl CommonSetup {
                 self.first_edit_pass_opening = false;
                 pass_edit_opts.focus = true;
             }
-            View::text_edit(ui, cb, &mut self.old_pass_edit, pass_edit_opts);
+            View::text_edit(ui, cb, &mut self.old_pass_edit, &mut pass_edit_opts);
             ui.add_space(8.0);
 
             ui.label(RichText::new(t!("wallets.new_pass"))
@@ -252,8 +252,10 @@ impl CommonSetup {
 
             // Draw new password text edit.
             let new_pass_edit_id = Id::from(modal.id).with(wallet_id).with("new_pass");
-            let new_pass_edit_opts = TextEditOptions::new(new_pass_edit_id).password().no_focus();
-            View::text_edit(ui, cb, &mut self.new_pass_edit, new_pass_edit_opts);
+            let mut new_pass_edit_opts = TextEditOptions::new(new_pass_edit_id)
+                .password()
+                .no_focus();
+            View::text_edit(ui, cb, &mut self.new_pass_edit, &mut new_pass_edit_opts);
 
             // Show information when password is empty.
             if self.old_pass_edit.is_empty() || self.new_pass_edit.is_empty() {
@@ -330,8 +332,8 @@ impl CommonSetup {
             ui.add_space(8.0);
 
             // Minimum amount of confirmations text edit.
-            let text_edit_opts = TextEditOptions::new(Id::from(modal.id)).h_center();
-            View::text_edit(ui, cb, &mut self.min_confirmations_edit, text_edit_opts);
+            let mut text_edit_opts = TextEditOptions::new(Id::from(modal.id)).h_center();
+            View::text_edit(ui, cb, &mut self.min_confirmations_edit, &mut text_edit_opts);
 
             // Show error when specified value is not valid or reminder to restart enabled node.
             if self.min_confirmations_edit.parse::<u64>().is_err() {

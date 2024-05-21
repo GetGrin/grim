@@ -224,8 +224,8 @@ impl StratumSetup {
             ui.add_space(8.0);
 
             // Draw stratum port text edit.
-            let text_edit_opts = TextEditOptions::new(Id::from(modal.id)).h_center();
-            View::text_edit(ui, cb, &mut self.stratum_port_edit, text_edit_opts);
+            let mut text_edit_opts = TextEditOptions::new(Id::from(modal.id)).h_center();
+            View::text_edit(ui, cb, &mut self.stratum_port_edit, &mut text_edit_opts);
 
             // Show error when specified port is unavailable.
             if !self.stratum_port_available_edit {
@@ -319,8 +319,8 @@ impl StratumSetup {
             ui.add_space(8.0);
 
             // Draw attempt time text edit.
-            let text_edit_opts = TextEditOptions::new(Id::from(modal.id)).h_center();
-            View::text_edit(ui, cb, &mut self.attempt_time_edit, text_edit_opts);
+            let mut text_edit_opts = TextEditOptions::new(Id::from(modal.id)).h_center();
+            View::text_edit(ui, cb, &mut self.attempt_time_edit, &mut text_edit_opts);
 
             // Show error when specified value is not valid or reminder to restart enabled node.
             if self.attempt_time_edit.parse::<u32>().is_err() {
@@ -397,8 +397,8 @@ impl StratumSetup {
             ui.add_space(8.0);
 
             // Draw share difficulty text edit.
-            let text_edit_opts = TextEditOptions::new(Id::from(modal.id)).h_center();
-            View::text_edit(ui, cb, &mut self.min_share_diff_edit, text_edit_opts);
+            let mut text_edit_opts = TextEditOptions::new(Id::from(modal.id)).h_center();
+            View::text_edit(ui, cb, &mut self.min_share_diff_edit, &mut text_edit_opts);
 
             // Show error when specified value is not valid or reminder to restart enabled node.
             if self.min_share_diff_edit.parse::<u64>().is_err() {

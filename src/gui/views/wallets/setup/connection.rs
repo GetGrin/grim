@@ -333,7 +333,7 @@ impl ConnectionSetup {
                 self.first_modal_launch = false;
                 url_edit_opts.focus = true;
             }
-            View::text_edit(ui, cb, &mut self.ext_node_url_edit, url_edit_opts);
+            View::text_edit(ui, cb, &mut self.ext_node_url_edit, &mut url_edit_opts);
             ui.add_space(8.0);
 
             ui.label(RichText::new(t!("wallets.node_secret"))
@@ -343,8 +343,8 @@ impl ConnectionSetup {
 
             // Draw node API secret text edit.
             let secret_edit_id = Id::from(modal.id).with("node_secret_edit");
-            let secret_edit_opts = TextEditOptions::new(secret_edit_id).paste().no_focus();
-            View::text_edit(ui, cb, &mut self.ext_node_secret_edit, secret_edit_opts);
+            let mut secret_edit_opts = TextEditOptions::new(secret_edit_id).paste().no_focus();
+            View::text_edit(ui, cb, &mut self.ext_node_secret_edit, &mut secret_edit_opts);
 
             // Show error when specified URL is not valid.
             if self.ext_node_url_error {

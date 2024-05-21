@@ -280,8 +280,8 @@ impl P2PSetup {
             ui.add_space(8.0);
 
             // Draw p2p port text edit.
-            let text_edit_opts = TextEditOptions::new(Id::from(modal.id)).h_center();
-            View::text_edit(ui, cb, &mut self.port_edit, text_edit_opts);
+            let mut text_edit_opts = TextEditOptions::new(Id::from(modal.id)).h_center();
+            View::text_edit(ui, cb, &mut self.port_edit, &mut text_edit_opts);
 
             // Show error when specified port is unavailable.
             if !self.port_available_edit {
@@ -421,8 +421,8 @@ impl P2PSetup {
             ui.add_space(8.0);
 
             // Draw peer address text edit.
-            let peer_text_edit_opts = TextEditOptions::new(Id::from(modal.id)).paste();
-            View::text_edit(ui, cb, &mut self.peer_edit, peer_text_edit_opts);
+            let mut peer_text_edit_opts = TextEditOptions::new(Id::from(modal.id)).paste();
+            View::text_edit(ui, cb, &mut self.peer_edit, &mut peer_text_edit_opts);
 
             // Show error when specified address is incorrect.
             if !self.is_correct_address_edit {
@@ -535,8 +535,8 @@ impl P2PSetup {
             ui.add_space(8.0);
 
             // Draw ban window text edit.
-            let text_edit_opts = TextEditOptions::new(Id::from(modal.id)).h_center();
-            View::text_edit(ui, cb, &mut self.ban_window_edit, text_edit_opts);
+            let mut text_edit_opts = TextEditOptions::new(Id::from(modal.id)).h_center();
+            View::text_edit(ui, cb, &mut self.ban_window_edit, &mut text_edit_opts);
 
             // Show error when specified value is not valid or reminder to restart enabled node.
             if self.ban_window_edit.parse::<i64>().is_err() {
@@ -613,8 +613,8 @@ impl P2PSetup {
             ui.add_space(8.0);
 
             // Draw maximum number of inbound peers text edit.
-            let text_edit_opts = TextEditOptions::new(Id::from(modal.id)).h_center();
-            View::text_edit(ui, cb, &mut self.max_inbound_count, text_edit_opts);
+            let mut text_edit_opts = TextEditOptions::new(Id::from(modal.id)).h_center();
+            View::text_edit(ui, cb, &mut self.max_inbound_count, &mut text_edit_opts);
 
             // Show error when specified value is not valid or reminder to restart enabled node.
             if self.max_inbound_count.parse::<u32>().is_err() {
@@ -691,8 +691,8 @@ impl P2PSetup {
             ui.add_space(8.0);
 
             // Draw maximum number of outbound peers text edit.
-            let text_edit_opts = TextEditOptions::new(Id::from(modal.id)).h_center();
-            View::text_edit(ui, cb, &mut self.max_outbound_count, text_edit_opts);
+            let mut text_edit_opts = TextEditOptions::new(Id::from(modal.id)).h_center();
+            View::text_edit(ui, cb, &mut self.max_outbound_count, &mut text_edit_opts);
 
             // Show error when specified value is not valid or reminder to restart enabled node.
             if self.max_outbound_count.parse::<u32>().is_err() {

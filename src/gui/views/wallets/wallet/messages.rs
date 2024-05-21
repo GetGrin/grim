@@ -364,9 +364,9 @@ impl WalletMessages {
 
             // Draw request amount text input.
             let amount_edit_id = Id::from(modal.id).with(wallet.get_config().id);
-            let amount_edit_opts = TextEditOptions::new(amount_edit_id).h_center();
+            let mut amount_edit_opts = TextEditOptions::new(amount_edit_id).h_center();
             let amount_edit_before = self.request_amount_edit.clone();
-            View::text_edit(ui, cb, &mut self.request_amount_edit, amount_edit_opts);
+            View::text_edit(ui, cb, &mut self.request_amount_edit, &mut amount_edit_opts);
 
             // Check value if input was changed.
             if amount_edit_before != self.request_amount_edit {

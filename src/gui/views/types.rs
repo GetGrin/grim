@@ -77,18 +77,20 @@ pub trait ModalContainer {
 pub struct TextEditOptions {
     /// View identifier.
     pub id: egui::Id,
-    /// Flag to check if horizontal centering is needed.
+    /// Check if horizontal centering is needed.
     pub h_center: bool,
-    /// Flag to check if initial focus on field is needed.
+    /// Check if initial focus on field is needed.
     pub focus: bool,
-    /// Flag to hide letters and draw button to show/hide letters.
+    /// Hide letters and draw button to show/hide letters.
     pub password: bool,
-    /// Flag to show copy button.
+    /// Show copy button.
     pub copy: bool,
-    /// Flag to show paste button.
+    /// Show paste button.
     pub paste: bool,
-    /// Flag to show button to scan QR code into text.
-    pub scan_qr: bool
+    /// Show button to scan QR code into text.
+    pub scan_qr: bool,
+    /// Callback when scan button was pressed.
+    pub scan_pressed: bool,
 }
 
 impl TextEditOptions {
@@ -101,6 +103,7 @@ impl TextEditOptions {
             copy: false,
             paste: false,
             scan_qr: false,
+            scan_pressed: false,
         }
     }
 
@@ -137,6 +140,7 @@ impl TextEditOptions {
     /// Show button to scan QR code to text.
     pub fn scan_qr(mut self) -> Self {
         self.scan_qr = true;
+        self.scan_pressed = false;
         self
     }
 }

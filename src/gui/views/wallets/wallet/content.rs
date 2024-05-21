@@ -265,8 +265,8 @@ impl WalletContent {
 
                 // Draw account name edit.
                 let text_edit_id = Id::from(modal.id).with(wallet.get_config().id);
-                let text_edit_opts = TextEditOptions::new(text_edit_id);
-                View::text_edit(ui, cb, &mut self.account_label_edit, text_edit_opts);
+                let mut text_edit_opts = TextEditOptions::new(text_edit_id);
+                View::text_edit(ui, cb, &mut self.account_label_edit, &mut text_edit_opts);
 
                 // Show error occurred during account creation..
                 if self.account_creation_error {

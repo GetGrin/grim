@@ -204,8 +204,8 @@ impl RecoverySetup {
 
                 // Draw current wallet password text edit.
                 let pass_edit_id = Id::from(modal.id).with(wallet.get_config().id);
-                let pass_edit_opts = TextEditOptions::new(pass_edit_id).password();
-                View::text_edit(ui, cb, &mut self.pass_edit, pass_edit_opts);
+                let mut pass_edit_opts = TextEditOptions::new(pass_edit_id).password();
+                View::text_edit(ui, cb, &mut self.pass_edit, &mut pass_edit_opts);
 
                 // Show information when password is empty or wrong.
                 if self.pass_edit.is_empty() {
