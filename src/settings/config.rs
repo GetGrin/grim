@@ -47,9 +47,6 @@ pub struct AppConfig {
     lang: Option<String>
 }
 
-const DEFAULT_WIDTH: f32 = 1280.0;
-const DEFAULT_HEIGHT: f32 = 745.0;
-
 impl Default for AppConfig {
     fn default() -> Self {
         Self {
@@ -58,8 +55,8 @@ impl Default for AppConfig {
             android_integrated_node_warning: None,
             show_wallets_at_dual_panel: false,
             show_connections_network_panel: false,
-            width: DEFAULT_WIDTH,
-            height: DEFAULT_HEIGHT,
+            width: Self::DEFAULT_WIDTH,
+            height: Self::DEFAULT_HEIGHT,
             x: None,
             y: None,
             lang: None,
@@ -68,6 +65,11 @@ impl Default for AppConfig {
 }
 
 impl AppConfig {
+    /// Default window width.
+    pub const DEFAULT_WIDTH: f32 = 1280.0;
+    /// Default window height.
+    pub const DEFAULT_HEIGHT: f32 = 745.0;
+
     /// Application configuration file name.
     pub const FILE_NAME: &'static str = "app.toml";
 

@@ -23,6 +23,7 @@ use egui::epaint::text::TextWrapping;
 use egui::os::OperatingSystem;
 use egui::text::{LayoutJob, TextFormat};
 use egui::text_edit::TextEditState;
+use crate::AppConfig;
 
 use crate::gui::Colors;
 use crate::gui::icons::{CHECK_SQUARE, CLIPBOARD_TEXT, COPY, EYE, EYE_SLASH, SCAN, SQUARE};
@@ -63,8 +64,11 @@ impl View {
         ui.ctx().input(|i| {
             return match i.viewport().inner_rect {
                 None => {
-                    let size = i.viewport().monitor_size.unwrap();
-                    (size.x, size.y)
+                    if let Some(size) = i.viewport().monitor_size {
+                        (size.x, size.y)
+                    } else {
+                        (AppConfig::DEFAULT_WIDTH, AppConfig::DEFAULT_HEIGHT)
+                    }
                 }
                 Some(rect) => {
                     (rect.width(), rect.height())
