@@ -31,25 +31,27 @@ fn real_main() {
     use grim::gui::PlatformApp;
     use grim::AppConfig;
 
+    use std::sync::Arc;
+    use egui::{IconData, pos2};
+
     let platform = Desktop::default();
 
     // Desktop window size.
     let (width, height) = AppConfig::window_size();
 
-    // Setup an icon.
-    let icon = image::open("img/icon.png").expect("Failed to open icon path").to_rgba8();
-    let (icon_width, icon_height) = icon.dimensions();
-
-    use std::sync::Arc;
-    use egui::{IconData, pos2};
-
     let mut viewport = egui::ViewportBuilder::default()
-        .with_inner_size([width, height])
-        .with_icon(Arc::new(IconData {
+        .with_inner_size([width, height]);
+
+    // Setup an icon.
+    if let Ok(image) = image::open("img/icon.png") {
+        let icon = image.to_rgba8();
+        let (icon_width, icon_height) = icon.dimensions();
+        viewport = viewport.with_icon(Arc::new(IconData {
             rgba: icon.into_raw(),
             width: icon_width,
             height: icon_height,
         }));
+    }
 
     // Desktop window position.
     if let Some((x, y)) = AppConfig::window_pos() {
