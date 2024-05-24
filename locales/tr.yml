@@ -1,4 +1,4 @@
-lang_name:
+lang_name: Türkçe
 copy: Kopyala
 paste: Yapistir
 continue: Devam
@@ -20,7 +20,7 @@ qr_code: QR kod
 scan_qr: QR kod tara 
 repeat: Tekrar
 scan_result: Tarama sonucu
-wallets: Cuzdanlar
+wallets: 
   await_conf_amount: Onay bekleniyor
   await_fin_amount: Tamamlanma bekleniyor
   locked_amount: Kilitli
@@ -157,7 +157,7 @@ network:
   not_available: Mevcut degil
   availability_check: Mevcut kontrol
   android_warning:
-sync_status: synch status
+sync_status:
   node_restarting: Node yeniden baslatiliyor
   node_down: Node calismiyor
   initial: Node bagliyor
