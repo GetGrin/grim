@@ -38,15 +38,15 @@ pub struct ConnectionSetup {
     /// Flag to show URL format error.
     ext_node_url_error: bool,
 
+    /// Current wallet external connection.
+    curr_ext_conn: Option<ExternalConnection>,
+
     /// [`Modal`] identifiers allowed at this ui container.
     modal_ids: Vec<&'static str>
 }
 
 /// Identifier for [`Modal`] to add external connection.
 pub const ADD_EXT_CONNECTION_MODAL: &'static str = "add_ext_connection_modal";
-
-/// Identifier for [`Modal`] to confirm wallet reopening after connection change.
-pub const REOPEN_WALLET_CONFIRMATION_MODAL: &'static str = "change_conn_reopen_wallet_modal";
 
 impl Default for ConnectionSetup {
     fn default() -> Self {
@@ -56,6 +56,7 @@ impl Default for ConnectionSetup {
             ext_node_url_edit: "".to_string(),
             ext_node_secret_edit: "".to_string(),
             ext_node_url_error: false,
+            curr_ext_conn: None,
             modal_ids: vec![
                 ADD_EXT_CONNECTION_MODAL
             ]
@@ -86,7 +87,7 @@ impl ConnectionSetup {
                      ui: &mut egui::Ui,
                      frame: &mut eframe::Frame,
                      cb: &dyn PlatformCallbacks) {
-        self.ui(ui, frame, cb);
+        self.ui(ui, frame, None, cb);
     }
 
     /// Draw existing wallet connection setup content.
@@ -95,13 +96,6 @@ impl ConnectionSetup {
               frame: &mut eframe::Frame,
               wallet: &mut Wallet,
               cb: &dyn PlatformCallbacks) {
-        // Show modal content to reopen the wallet.
-        if Modal::opened() == Some(REOPEN_WALLET_CONFIRMATION_MODAL) {
-            Modal::ui(ui.ctx(), |ui, modal| {
-                self.reopen_modal_content(ui, wallet, modal, cb);
-            });
-        }
-
         // Setup connection value from provided wallet.
         match wallet.get_config().ext_conn_id {
             None => self.method = ConnectionMethod::Integrated,
@@ -109,7 +103,7 @@ impl ConnectionSetup {
         }
 
         // Draw setup content.
-        self.ui(ui, frame, cb);
+        self.ui(ui, frame, Some(wallet), cb);
 
         // Setup wallet connection value after change.
         let config = wallet.get_config();
@@ -130,12 +124,12 @@ impl ConnectionSetup {
             }
         };
 
+        // Reopen wallet if connection changed.
         if changed {
-            // Show reopen confirmation modal.
-            Modal::new(REOPEN_WALLET_CONFIRMATION_MODAL)
-                .position(ModalPosition::Center)
-                .title(t!("modal.confirmation"))
-                .show();
+            if !wallet.reopen_needed() {
+                wallet.set_reopen(true);
+                wallet.close();
+            }
         }
     }
 
@@ -143,6 +137,7 @@ impl ConnectionSetup {
     fn ui(&mut self,
           ui: &mut egui::Ui,
           frame: &mut eframe::Frame,
+          wallet: Option<&Wallet>,
           cb: &dyn PlatformCallbacks) {
         // Draw modal content for current ui container.
         self.current_modal_ui(ui, frame, cb);
@@ -169,13 +164,27 @@ impl ConnectionSetup {
             });
             ui.add_space(4.0);
 
-            let ext_conn_list = ConnectionsConfig::ext_conn_list();
+            let mut ext_conn_list = ConnectionsConfig::ext_conn_list();
+            // Check if current external connection was deleted to show at list.
+            if let Some(wallet) = wallet {
+                if let Some(conn) = wallet.get_current_ext_conn() {
+                    if ext_conn_list.iter()
+                        .filter(|c| c.id == conn.id)
+                        .collect::<Vec<&ExternalConnection>>().is_empty() {
+                        if self.curr_ext_conn.is_none() {
+                            conn.check_conn_availability();
+                            self.curr_ext_conn = Some(conn);
+                        }
+                        ext_conn_list.insert(0, self.curr_ext_conn.as_ref().unwrap().clone());
+                    }
+                }
+            }
             if !ext_conn_list.is_empty() {
                 ui.add_space(8.0);
                 for (index, conn) in ext_conn_list.iter().enumerate() {
                     ui.horizontal_wrapped(|ui| {
                         // Draw connection list item.
-                        self.ext_conn_item_ui(ui, conn, index, ext_conn_list.len());
+                        self.ext_conn_item_ui(ui, wallet, conn, index, ext_conn_list.len());
                     });
                 }
             }
@@ -246,6 +255,7 @@ impl ConnectionSetup {
     /// Draw external connection item content.
     fn ext_conn_item_ui(&mut self,
                         ui: &mut egui::Ui,
+                        wallet: Option<&Wallet>,
                         conn: &ExternalConnection,
                         index: usize,
                         len: usize) {
@@ -261,7 +271,15 @@ impl ConnectionSetup {
         ui.vertical(|ui| {
             ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
                 // Draw button to select connection.
-                let is_current_method = self.method == ConnectionMethod::External(conn.id);
+                let is_current_method = if let Some(wallet) = wallet {
+                    if let Some(cur) = wallet.get_current_ext_conn() {
+                        &cur == conn
+                    } else {
+                        false
+                    }
+                } else {
+                    self.method == ConnectionMethod::External(conn.id)
+                };
                 if !is_current_method {
                     let button_rounding = View::item_rounding(index, len, true);
                     View::item_button(ui, button_rounding, CHECK, None, || {
@@ -372,6 +390,9 @@ impl ConnectionSetup {
                 columns[1].vertical_centered_justified(|ui| {
                     // Add connection button callback.
                     let mut on_add = || {
+                        if !self.ext_node_url_edit.starts_with("http") {
+                            self.ext_node_url_edit = format!("http://{}", self.ext_node_url_edit)
+                        }
                         let error = Url::parse(self.ext_node_url_edit.as_str()).is_err();
                         self.ext_node_url_error = error;
                         if !error {
@@ -385,10 +406,8 @@ impl ConnectionSetup {
                             let ext_conn = ExternalConnection::new(url.clone(), secret);
                             ext_conn.check_conn_availability();
                             ConnectionsConfig::add_ext_conn(ext_conn.clone());
-
                             // Set added connection as current.
                             self.method = ConnectionMethod::External(ext_conn.id);
-
                             // Close modal.
                             cb.hide_keyboard();
                             modal.close();
@@ -401,44 +420,6 @@ impl ConnectionSetup {
                     });
 
                     View::button(ui, t!("modal.add"), Colors::WHITE, on_add);
-                });
-            });
-            ui.add_space(6.0);
-        });
-    }
-
-    /// Draw confirmation modal content to reopen the [`Wallet`].
-    fn reopen_modal_content(&mut self,
-                            ui: &mut egui::Ui,
-                            wallet: &Wallet,
-                            modal: &Modal,
-                            _: &dyn PlatformCallbacks) {
-        ui.add_space(8.0);
-        ui.vertical_centered(|ui| {
-            ui.label(RichText::new(t!("wallets.change_server_confirmation"))
-                .size(17.0)
-                .color(Colors::TEXT));
-        });
-        ui.add_space(10.0);
-
-        // Show modal buttons.
-        ui.scope(|ui| {
-            // Setup spacing between buttons.
-            ui.spacing_mut().item_spacing = egui::Vec2::new(6.0, 0.0);
-
-            ui.columns(2, |columns| {
-                columns[0].vertical_centered_justified(|ui| {
-                    View::button(ui, t!("modal.cancel"), Colors::WHITE, || {
-                        modal.close();
-                    });
-                });
-                columns[1].vertical_centered_justified(|ui| {
-                    View::button(ui, "OK".to_owned(), Colors::WHITE, || {
-                        modal.disable_closing();
-                        wallet.set_reopen(true);
-                        wallet.close();
-                        modal.close()
-                    });
                 });
             });
             ui.add_space(6.0);

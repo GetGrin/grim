@@ -114,7 +114,6 @@ wallets:
   send: Send
   receive: Receive
   settings: Wallet settings
-  change_server_confirmation: To apply change of connection settings, you need to re-open your wallet. Reopen it now?
   tx_send_cancel_conf: 'Are you sure you want to cancel sending of %{amount} ツ?'
   tx_receive_cancel_conf: 'Are you sure you want to cancel receiving of %{amount} ツ?'
   rec_phrase_not_found: Recovery phrase not found.

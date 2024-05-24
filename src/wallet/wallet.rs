@@ -19,7 +19,7 @@ use std::net::{SocketAddr, TcpListener};
 use std::path::PathBuf;
 use std::sync::{Arc, mpsc};
 use parking_lot::RwLock;
-use std::sync::atomic::{AtomicBool, AtomicI64, AtomicU8, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
 use std::thread::Thread;
 use std::time::Duration;
 use futures::channel::oneshot;
@@ -55,8 +55,8 @@ pub struct Wallet {
     config: Arc<RwLock<WalletConfig>>,
     /// Wallet instance, initializing on wallet opening and clearing on wallet closing.
     instance: Option<WalletInstance>,
-    /// [`WalletInstance`] external connection id applied after opening.
-    instance_ext_conn_id: Arc<AtomicI64>,
+    /// [`WalletInstance`] external connection URL.
+    external_connection: Arc<RwLock<Option<ExternalConnection>>>,
 
     /// Wallet Slatepack address to receive txs at transport.
     slatepack_address: Arc<RwLock<Option<String>>>,
@@ -106,7 +106,7 @@ impl Wallet {
         Self {
             config: Arc::new(RwLock::new(config)),
             instance: None,
-            instance_ext_conn_id: Arc::new(AtomicI64::new(0)),
+            external_connection: Arc::new(RwLock::new(None)),
             slatepack_address: Arc::new(RwLock::new(None)),
             sync_thread: Arc::from(RwLock::new(None)),
             foreign_api_server: Arc::new(RwLock::new(None)),
@@ -133,10 +133,10 @@ impl Wallet {
         mnemonic: String,
         conn_method: &ConnectionMethod
     ) -> Result<Wallet, Error> {
-        let config = WalletConfig::create(name, conn_method);
+        let mut config = WalletConfig::create(name, conn_method);
         let w = Wallet::new(config.clone());
         {
-            let instance = Self::create_wallet_instance(config)?;
+            let instance = Self::create_wallet_instance(&mut config)?;
             let mut w_lock = instance.lock();
             let p = w_lock.lc_provider()?;
             p.create_wallet(None,
@@ -159,7 +159,7 @@ impl Wallet {
     }
 
     /// Create [`WalletInstance`] from provided [`WalletConfig`].
-    fn create_wallet_instance(config: WalletConfig) -> Result<WalletInstance, Error> {
+    fn create_wallet_instance(config: &mut WalletConfig) -> Result<WalletInstance, Error> {
         // Assume global chain type has already been initialized.
         let chain_type = config.chain_type;
         if !global::GLOBAL_CHAIN_TYPE.is_init() {
@@ -170,16 +170,28 @@ impl Wallet {
         }
 
         // Setup node client.
+        let integrated = || {
+            let api_url = format!("http://{}", NodeConfig::get_api_address());
+            let api_secret = NodeConfig::get_foreign_api_secret();
+            (api_url, api_secret)
+        };
         let (node_api_url, node_secret) = if let Some(id) = config.ext_conn_id {
             if let Some(conn) = ConnectionsConfig::ext_conn(id) {
                 (conn.url, conn.secret)
             } else {
-                (ExternalConnection::DEFAULT_MAIN_URL.to_string(), None)
+                if chain_type == ChainTypes::Mainnet {
+                    // Save default external connection if previous was deleted.
+                    let default = ExternalConnection::default_main();
+                    config.ext_conn_id = Some(default.id);
+                    config.save();
+
+                    (default.url, default.secret)
+                } else {
+                    integrated()
+                }
             }
         } else {
-            let api_url = format!("http://{}", NodeConfig::get_api_address());
-            let api_secret = NodeConfig::get_foreign_api_secret();
-            (api_url, api_secret)
+            integrated()
         };
         let node_client = HTTPNodeClient::new(&node_api_url, node_secret)?;
 
@@ -194,7 +206,7 @@ impl Wallet {
 
     /// Instantiate [`WalletInstance`] from provided node client and [`WalletConfig`].
     fn inst_wallet<L, C, K>(
-        config: WalletConfig,
+        config: &mut WalletConfig,
         node_client: C,
     ) -> Result<Arc<Mutex<Box<dyn WalletInst<'static, L, C, K>>>>, Error>
         where
@@ -308,13 +320,14 @@ impl Wallet {
 
         // Create new wallet instance if sync thread was stopped or instance was not created.
         if self.sync_thread.read().is_none() || self.instance.is_none() {
-            let config = self.get_config();
-            let new_instance = Self::create_wallet_instance(config.clone())?;
+            let mut config = self.get_config();
+            let new_instance = Self::create_wallet_instance(&mut config)?;
             self.instance = Some(new_instance);
-            self.instance_ext_conn_id.store(match config.ext_conn_id {
-                None => 0,
-                Some(conn_id) => conn_id
-            }, Ordering::Relaxed);
+            // Setup current external connection.
+            {
+                let mut w_conn = self.external_connection.write();
+                *w_conn = self.get_current_ext_conn();
+            }
         }
 
         // Open the wallet.
@@ -361,18 +374,27 @@ impl Wallet {
         Ok(())
     }
 
-    /// Get external connection id applied to [`WalletInstance`]
+    /// Get external connection URL applied to [`WalletInstance`]
     /// after wallet opening if sync is running or get it from config.
-    pub fn get_current_ext_conn_id(&self) -> Option<i64> {
+    pub fn get_current_ext_conn(&self) -> Option<ExternalConnection> {
         if self.sync_thread.read().is_some() {
-            let ext_conn_id = self.instance_ext_conn_id.load(Ordering::Relaxed);
-            if ext_conn_id == 0 {
-                None
-            } else {
-                Some(ext_conn_id)
-            }
+            let r_conn = self.external_connection.read();
+            r_conn.clone()
         } else {
-            self.get_config().ext_conn_id
+            let config = self.get_config();
+            if let Some(id) = config.ext_conn_id {
+                return match ConnectionsConfig::ext_conn(id) {
+                    None => {
+                        if config.chain_type == ChainTypes::Mainnet {
+                            Some(ExternalConnection::default_main())
+                        } else {
+                            None
+                        }
+                    },
+                    Some(ext_conn) => Some(ext_conn)
+                }
+            }
+            None
         }
     }
 
@@ -1067,7 +1089,7 @@ fn start_sync(wallet: Wallet) -> Thread {
         }
 
         // Check integrated node state.
-        if wallet.get_current_ext_conn_id().is_none() {
+        if wallet.get_current_ext_conn().is_none() {
             let not_enabled = !Node::is_running() || Node::is_stopping();
             if not_enabled {
                 // Reset loading progress.

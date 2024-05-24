@@ -25,7 +25,7 @@ use crate::gui::views::types::{ModalContainer, ModalPosition, TextEditOptions, T
 use crate::gui::views::wallets::creation::WalletCreation;
 use crate::gui::views::wallets::types::WalletTabType;
 use crate::gui::views::wallets::WalletContent;
-use crate::wallet::{ConnectionsConfig, ExternalConnection, Wallet, WalletList};
+use crate::wallet::{Wallet, WalletList};
 
 /// Wallets content.
 pub struct WalletsContent {
@@ -438,12 +438,8 @@ impl WalletsContent {
                     View::ellipsize_text(ui, config.name, 18.0, name_color);
 
                     // Setup wallet connection text.
-                    let conn_text = if let Some(id) = wallet.get_current_ext_conn_id() {
-                        let ext_conn_url = match ConnectionsConfig::ext_conn(id) {
-                            None => ExternalConnection::DEFAULT_MAIN_URL.to_string(),
-                            Some(ext_conn) => ext_conn.url
-                        };
-                        format!("{} {}", GLOBE_SIMPLE, ext_conn_url)
+                    let conn_text = if let Some(conn) = wallet.get_current_ext_conn() {
+                        format!("{} {}", GLOBE_SIMPLE, conn.url)
                     } else {
                         format!("{} {}", COMPUTER_TOWER, t!("network.node"))
                     };

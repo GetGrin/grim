@@ -67,7 +67,7 @@ impl RecoverySetup {
         ui.add_space(4.0);
 
         ui.vertical_centered(|ui| {
-            let integrated_node = wallet.get_current_ext_conn_id().is_none();
+            let integrated_node = wallet.get_current_ext_conn().is_none();
             let integrated_node_ready = Node::get_sync_status() == Some(SyncStatus::NoSync);
             if wallet.sync_error() || (integrated_node && !integrated_node_ready) {
                 ui.add_space(6.0);

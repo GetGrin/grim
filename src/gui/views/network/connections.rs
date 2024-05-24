@@ -319,6 +319,9 @@ impl ConnectionsContent {
                 columns[1].vertical_centered_justified(|ui| {
                     // Add connection button callback.
                     let mut on_add = || {
+                        if !self.ext_node_url_edit.starts_with("http") {
+                            self.ext_node_url_edit = format!("http://{}", self.ext_node_url_edit)
+                        }
                         let error = Url::parse(self.ext_node_url_edit.as_str()).is_err();
                         self.ext_node_url_error = error;
                         if !error {

@@ -520,7 +520,7 @@ impl WalletContent {
         } else if wallet.is_closing() {
             Self::sync_progress_ui(ui, wallet);
             return true;
-        } else if wallet.get_current_ext_conn_id().is_none() {
+        } else if wallet.get_current_ext_conn().is_none() {
             if !Node::is_running() || Node::is_stopping() {
                 View::center_content(ui, 108.0, |ui| {
                     View::max_width_ui(ui, Root::SIDE_PANEL_WIDTH * 1.5, |ui| {
@@ -574,7 +574,7 @@ impl WalletContent {
     /// Check when to block tabs navigation on sync progress.
     pub fn block_navigation_on_sync(wallet: &Wallet) -> bool {
         let sync_error = wallet.sync_error();
-        let integrated_node = wallet.get_current_ext_conn_id().is_none();
+        let integrated_node = wallet.get_current_ext_conn().is_none();
         let integrated_node_ready = Node::get_sync_status() == Some(SyncStatus::NoSync);
         let sync_after_opening = wallet.get_data().is_none() && !wallet.sync_error();
         // Block navigation if wallet is repairing and integrated node is not launching
@@ -591,7 +591,7 @@ impl WalletContent {
                 ui.add_space(18.0);
                 // Setup sync progress text.
                 let text = {
-                    let integrated_node = wallet.get_current_ext_conn_id().is_none();
+                    let integrated_node = wallet.get_current_ext_conn().is_none();
                     let integrated_node_ready = Node::get_sync_status() == Some(SyncStatus::NoSync);
                     let info_progress = wallet.info_sync_progress();
 
