@@ -11,16 +11,17 @@ show: Goster
 delete: Sil
 clear: Temizle
 create: Olustur
-id: id
-kernel: kernel
+id: Id
+kernel: Kernel
 settings: Ayarlar
 language: Dil
 scan: Scan
 qr_code: QR kod
-scan_qr: QR kod tara 
+scan_qr: QR kod tara
 repeat: Tekrar
 scan_result: Tarama sonucu
-wallets: 
+back: Geri
+wallets:
   await_conf_amount: Onay bekleniyor
   await_fin_amount: Tamamlanma bekleniyor
   locked_amount: Kilitli
@@ -28,7 +29,7 @@ wallets:
   title: Cuzdanlar
   create_desc: Yeni cuzdan olustur veya var olan bakiyeli cuzdani kurtarma kelimelerinizle canlandirin.
   add: Cuzdan ekle
-  name: 'ad:'
+  name: 'Ad:'
   pass: 'Sifre:'
   pass_empty: CUzdan Sifresini girin
   current_pass: Su anki sifre:'
@@ -66,31 +67,30 @@ wallets:
   tx_loading: Islemler yukleniyor
   default_account: Varsayilan hesap
   accounts: Hesaplar
-  tx_sent:  Gonderildi
+  tx_sent: Gonderildi
   tx_received: Alindi
   tx_sending: Gonderiliyor
   tx_receiving: Aliniyor
   tx_confirming: Onaylaniyor
-  tx_canceled:  Iptal edildi
+  tx_canceled: Iptal edildi
   tx_cancelling: Iptal ediliyor
-  tx_finalizing: islem tamamlaniyor
-  tx_confirmed:  Onaylandi
+  tx_finalizing: Islem tamamlaniyor
+  tx_confirmed: Onaylandi
   txs: Islemler
-  tx:  islem 
-  messages: mesajlar
+  tx: Islem
+  messages: Mesajlar
   transport: Transferler
-  input_finalize_desc: 'Islemi Tamamlamak için slatepack mesaji girin:'
   input_slatepack_desc: 'Islemi Tamamlamak veya cevap slatepack oluşturmak icin mesaji girin:'
-  parse_slatepack_err:  'Girilen mesaji okurken hata oluştu,girilien mesaji tekrar kontrol et:'
+  parse_slatepack_err: 'Girilen mesaji okurken hata oluştu,girilien mesaji tekrar kontrol et:'
   pay_balance_error: 'Hesap bakiyesi girilen %{amount} ツ ve ağ ücretini ödemek için yetersiz.'
   parse_i1_slatepack_desc: '%{amount} ツ ödemek için bu  mesaji aliciya gönderin:'
   parse_i2_slatepack_desc: '%{amount} ツ Almak için bu işlemi tamamlayin'
-  parse_i3_slatepack_desc: '%{amount} almak için mesaji tamamlama işlemi postalayin' 
+  parse_i3_slatepack_desc: '%{amount} almak için mesaji tamamlama işlemi postalayin'
   parse_s1_slatepack_desc: '%{amount} ツ almak için mesaji ödeyecek kişiye gönderin'
   parse_s2_slatepack_desc: 'Göndereciğiniz  %{amount} ツ işlemini  tamamlayin.'
-  parse_s3_slatepack_desc:  '%{amount} ツ gönderim  tamamlamak için işlemi postalayin.'
+  parse_s3_slatepack_desc: '%{amount} ツ gönderim  tamamlamak için işlemi postalayin.'
   resp_slatepack_err: 'Cevap slateapack oluşturulurken bir hata oluştu, girişi kontrol edin:'
-  resp_exists_err:  Bu işlem zaten mevcut.
+  resp_exists_err: Bu işlem zaten mevcut.
   resp_canceled_err: Bu işlem zaten iptal edildi.
   create_request_desc: 'Para Almak veya göndermek için talep oluştur:'
   send_request_desc: '%{amount} ツ göndermek için bir istek oluşturdunuz. Bu mesaji aliciya gönder:'
@@ -99,9 +99,9 @@ wallets:
   invoice_slatepack_err: Fatura duzenlenirken bir hata olustu, girilen bilgiyi kontrol edin.
   finalize_slatepack_err: 'TX islemi tamamlanirken hata olustu, girilen bilgiyi kontrol edin:'
   finalize: Tamamla
-  use_dandelion:  Dandelion kullan
+  use_dandelion: Dandelion kullan
   enter_amount_send: GONDERIM miktari gir
-  enter_amount_receive: ALIM  miktari gir
+  enter_amount_receive: ALIM miktari gir
   recovery: Kurtarma
   repair_wallet: Cuzdani Onar
   repair_desc: Cuzdani check et,yapilmis, gorunmeyen islemler icin resynch biraz zaman alir.
@@ -112,13 +112,12 @@ wallets:
   wallet_loading_err: 'Cuzdan senkronize edilirken hata olustu, tekrar deneyin veya ekranin altinda bulunan ayarlar %{settings} ogesinden baglanti metodunu degistirin.'
   wallet: Cuzdan
   send: Gonder
-  receive: AL
+  receive: Al
   settings: Cuzdan ayarlar
-  change_server_confirmation: Yeni baglanti ayarlarin  gecerli olmasi icin cuzdani tekrar acmak gerek.Simdi tekrar acilsin mi?
-  tx_send_cancel_conf: gonderim tx iptal
-  tx_receive_cancel_conf: gelen tx iptal
-  rec_phrase_not_found: sifre kelime bulunmuyor
-  restore_wallet_desc:  cuzdani restore et
+  tx_send_cancel_conf: Gonderim tx iptal
+  tx_receive_cancel_conf: Gelen tx iptal
+  rec_phrase_not_found: Sifre kelime bulunmuyor
+  restore_wallet_desc: Cuzdani restore et
 transport:
   desc: 'Adresten senkronize GONDER veya AL:'
   tor_network: Tor network
@@ -174,8 +173,8 @@ sync_status:
   tx_hashset_setup: Durum hazirlama
   tx_hashset_range_proofs_validation: 'Onaylaniyor durum (range proofs): %{percent}%'
   tx_hashset_kernels_validation: 'Onaylaniyor durum (kernels): %{percent}%'
-  tx_hashset_save:  zincir durumu Tamamlaniyor
-  body_sync: Bloklar Yukleniyor 
+  tx_hashset_save: Zincir durumu Tamamlaniyor
+  body_sync: Bloklar Yukleniyor
   body_sync_percent: 'Bloklar yukleniyor: %{percent}%'
   shutdown: Node kapaniyor
 network_node:
