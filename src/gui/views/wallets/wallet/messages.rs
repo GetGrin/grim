@@ -916,7 +916,7 @@ impl WalletMessages {
                     .size(17.0)
                     .color(Colors::RED));
             });
-            ui.add_space(6.0);
+            ui.add_space(12.0);
 
             // Setup spacing between buttons.
             ui.spacing_mut().item_spacing = egui::Vec2::new(6.0, 0.0);

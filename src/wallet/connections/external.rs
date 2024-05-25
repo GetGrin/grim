@@ -57,7 +57,6 @@ impl ExternalConnection {
                 .build()
                 .unwrap()
                 .block_on(async {
-                    println!("check {}", conn.url);
                     let url = url::Url::parse(conn.url.as_str()).unwrap();
                     if let Ok(_) = url.socket_addrs(|| None) {
                         let addr = format!("{}v2/foreign", url.to_string());

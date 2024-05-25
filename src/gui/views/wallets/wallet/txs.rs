@@ -572,16 +572,16 @@ impl WalletTransactions {
                 // Show buttons to close modal or come back to text request content.
                 ui.columns(2, |cols| {
                     cols[0].vertical_centered_justified(|ui| {
-                        View::button(ui, t!("back"), Colors::WHITE, || {
-                            self.tx_info_qr_code_content.clear_state();
-                            self.tx_info_show_qr = false;
-                        });
-                    });
-                    cols[1].vertical_centered_justified(|ui| {
                         View::button(ui, t!("close"), Colors::WHITE, || {
                             self.tx_info_qr_code_content.clear_state();
                             self.tx_info_show_qr = false;
                             modal.close();
+                        });
+                    });
+                    cols[1].vertical_centered_justified(|ui| {
+                        View::button(ui, t!("back"), Colors::WHITE, || {
+                            self.tx_info_qr_code_content.clear_state();
+                            self.tx_info_show_qr = false;
                         });
                     });
                 });
@@ -715,7 +715,6 @@ impl WalletTransactions {
                 self.tx_info_show_scanner = false;
             } else {
                 self.tx_info_scanner_content.ui(ui, cb);
-                ui.add_space(2.0);
             }
             return;
         }

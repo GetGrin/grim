@@ -16,7 +16,7 @@ use egui::{Align, Id, Layout, RichText, Rounding};
 use url::Url;
 
 use crate::gui::Colors;
-use crate::gui::icons::{CHECK, CHECK_CIRCLE, CHECK_FAT, COMPUTER_TOWER, DOTS_THREE_CIRCLE, GLOBE, PLUS_CIRCLE, POWER, X_CIRCLE};
+use crate::gui::icons::{CHECK, CHECK_CIRCLE, CHECK_FAT, COMPUTER_TOWER, DOTS_THREE_CIRCLE, GLOBE, GLOBE_SIMPLE, PLUS_CIRCLE, POWER, X_CIRCLE};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, View};
 use crate::gui::views::types::{ModalContainer, ModalPosition, TextEditOptions};
@@ -296,7 +296,7 @@ impl ConnectionSetup {
                     ui.vertical(|ui| {
                         // Draw connections URL.
                         ui.add_space(4.0);
-                        let conn_text = format!("{} {}", COMPUTER_TOWER, conn.url);
+                        let conn_text = format!("{} {}", GLOBE_SIMPLE, conn.url);
                         View::ellipsize_text(ui, conn_text, 15.0, Colors::TITLE);
                         ui.add_space(1.0);
                         // Setup connection status text.
