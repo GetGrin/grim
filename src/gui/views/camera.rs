@@ -22,12 +22,14 @@ use image::{DynamicImage, EncodableLayout, ImageFormat};
 
 use grin_util::ZeroingString;
 use grin_wallet_libwallet::SlatepackAddress;
+use grin_keychain::mnemonic::WORDS;
 
 use crate::gui::Colors;
 use crate::gui::icons::CAMERA_ROTATE;
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::types::{QrScanResult, QrScanState};
 use crate::gui::views::View;
+use crate::wallet::types::PhraseSize;
 
 /// Camera QR code scanner.
 pub struct CameraContent {
@@ -146,6 +148,11 @@ impl CameraContent {
             let mut w_scan = self.qr_scan_state.write();
             w_scan.image_processing = true;
         }
+        // Clear previous scanning result.
+        {
+            let mut w_scan = self.qr_scan_state.write();
+            w_scan.qr_scan_result = None;
+        }
         // Launch scanner at separate thread.
         let data = data.clone();
         let qr_scan_state = self.qr_scan_state.clone();
@@ -164,7 +171,16 @@ impl CameraContent {
                     for g in grids {
                         if let Ok((_, text)) = g.decode() {
                             let text = text.trim();
-                            if !text.is_empty() {
+                            let cur_text = {
+                                let r_scan = qr_scan_state.read();
+                                let text = if let Some(res) = r_scan.qr_scan_result.clone() {
+                                    res.value()
+                                } else {
+                                    "".to_string()
+                                };
+                                text
+                            };
+                            if !text.is_empty() && text != cur_text {
                                 let result = Self::parse_scan_result(text);
                                 let mut w_scan = qr_scan_state.write();
                                 w_scan.qr_scan_result = Some(result);
@@ -184,15 +200,58 @@ impl CameraContent {
         // Check if string starts with Grin address prefix.
         if text.starts_with("tgrin") || text.starts_with("grin") {
             if SlatepackAddress::try_from(text).is_ok() {
-                return QrScanResult::Address(ZeroingString::from(text))
+                return QrScanResult::Address(ZeroingString::from(text));
             }
         }
 
         // Check if string contains Slatepack message prefix and postfix.
         if text.starts_with("BEGINSLATEPACK.") && text.ends_with("ENDSLATEPACK.") {
-            return QrScanResult::Slatepack(ZeroingString::from(text))
+            return QrScanResult::Slatepack(ZeroingString::from(text));
         }
 
+        // Check SeedQR format.
+        let only_numbers = || {
+            for c in text.chars() {
+                if !c.is_numeric() {
+                    return false;
+                }
+            }
+            true
+        };
+        if only_numbers() {
+            if let Some(_) = PhraseSize::type_for_value(text.len() / 4) {
+                let chars: Vec<char> = text.trim().chars().collect();
+                let split = &chars.chunks(4)
+                    .map(|chunk| chunk.iter().collect::<String>()
+                        .trim()
+                        .trim_start_matches("0")
+                        .to_string()
+                    )
+                    .collect::<Vec<_>>();
+                let mut words = "".to_string();
+                for i in split {
+                    let index = if i.is_empty() {
+                        0usize
+                    } else {
+                        i.parse::<usize>().unwrap_or(WORDS.len())
+                    };
+                    let empty_word = "".to_string();
+                    let word = WORDS.get(index).clone().unwrap_or(&empty_word).clone();
+                    // Return text result when BIP39 word was not found.
+                    if word.is_empty() {
+                        return QrScanResult::Text(ZeroingString::from(text));
+                    }
+                    words = if words.is_empty() {
+                        format!("{}", word)
+                    } else {
+                        format!("{} {}", words, word)
+                    };
+                }
+                return QrScanResult::SeedQR(ZeroingString::from(words));
+            }
+        }
+
+        // Return default text result.
         QrScanResult::Text(ZeroingString::from(text))
     }
 

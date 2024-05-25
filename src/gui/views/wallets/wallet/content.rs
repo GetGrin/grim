@@ -371,11 +371,7 @@ impl WalletContent {
                              cb: &dyn PlatformCallbacks) {
         // Show scan result if exists or show camera content while scanning.
         if let Some(result) = &self.qr_scan_result {
-            let mut result_text = match result {
-                QrScanResult::Slatepack(t) => t,
-                QrScanResult::Address(t) => t,
-                QrScanResult::Text(t) => t
-            }.to_string();
+            let mut result_text = result.value();
             View::horizontal_line(ui, Colors::ITEM_STROKE);
             ui.add_space(3.0);
             ScrollArea::vertical()
@@ -431,7 +427,7 @@ impl WalletContent {
                         return;
                     }
                 }
-                QrScanResult::Text(_) => {}
+                _ => {}
             }
 
             // Set result and rename modal title.

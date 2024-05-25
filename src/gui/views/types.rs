@@ -153,7 +153,9 @@ pub enum QrScanResult {
     /// Slatepack address.
     Address(ZeroingString),
     /// Parsed text.
-    Text(ZeroingString)
+    Text(ZeroingString),
+    /// Parsed SeedQR https://github.com/SeedSigner/seedsigner/blob/dev/docs/seed_qr/README.md.
+    SeedQR(ZeroingString)
 }
 
 impl QrScanResult {
@@ -162,7 +164,8 @@ impl QrScanResult {
         match self {
             QrScanResult::Slatepack(text) => text,
             QrScanResult::Address(text) => text,
-            QrScanResult::Text(text) => text
+            QrScanResult::Text(text) => text,
+            QrScanResult::SeedQR(text) => text
         }.to_string()
     }
 }
