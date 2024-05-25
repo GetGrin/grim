@@ -30,6 +30,7 @@ use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::types::{QrScanResult, QrScanState};
 use crate::gui::views::View;
 use crate::wallet::types::PhraseSize;
+use crate::wallet::WalletUtils;
 
 /// Camera QR code scanner.
 pub struct CameraContent {
@@ -148,11 +149,6 @@ impl CameraContent {
             let mut w_scan = self.qr_scan_state.write();
             w_scan.image_processing = true;
         }
-        // Clear previous scanning result.
-        {
-            let mut w_scan = self.qr_scan_state.write();
-            w_scan.qr_scan_result = None;
-        }
         // Launch scanner at separate thread.
         let data = data.clone();
         let qr_scan_state = self.qr_scan_state.clone();
@@ -168,9 +164,9 @@ impl CameraContent {
                         = rqrr::PreparedImage::prepare(img);
                     // Scan and save results.
                     let grids = img.detect_grids();
-                    for g in grids {
-                        if let Ok((_, text)) = g.decode() {
-                            let text = text.trim();
+                    if let Some(g) = grids.get(0) {
+                        let mut data = vec![];
+                        if let Ok(_) = g.decode_to(&mut data) {
                             let cur_text = {
                                 let r_scan = qr_scan_state.read();
                                 let text = if let Some(res) = r_scan.qr_scan_result.clone() {
@@ -180,14 +176,16 @@ impl CameraContent {
                                 };
                                 text
                             };
-                            if !text.is_empty() && text != cur_text {
-                                let result = Self::parse_scan_result(text);
+                            let text = String::from_utf8(data.clone()).unwrap_or("".to_string());
+                            if !data.is_empty() && (cur_text.is_empty() || text != cur_text) {
+                                let result = Self::parse_scan_result(&data);
                                 let mut w_scan = qr_scan_state.write();
                                 w_scan.qr_scan_result = Some(result);
+                                return;
                             }
                         }
                     }
-                    // Setup scanning flag.
+                    // Reset scanning flag to process again.
                     {
                         let mut w_scan = qr_scan_state.write();
                         w_scan.image_processing = false;
@@ -196,8 +194,10 @@ impl CameraContent {
         });
     }
 
-    fn parse_scan_result(text: &str) -> QrScanResult {
+    fn parse_scan_result(data: &Vec<u8>) -> QrScanResult {
         // Check if string starts with Grin address prefix.
+        let text_string = String::from_utf8(data.clone()).unwrap_or("".to_string());
+        let text = text_string.as_str();
         if text.starts_with("tgrin") || text.starts_with("grin") {
             if SlatepackAddress::try_from(text).is_ok() {
                 return QrScanResult::Address(ZeroingString::from(text));
@@ -209,7 +209,57 @@ impl CameraContent {
             return QrScanResult::Slatepack(ZeroingString::from(text));
         }
 
-        // Check SeedQR format.
+        // Check Compact SeedQR format (https://github.com/SeedSigner/seedsigner/blob/dev/docs/seed_qr/README.md#compactseedqr-specification).
+        if data.len() <= 32 && 16 <= data.len() && data.len() % 4 == 0 {
+            // Setup words amount.
+            let total_bits = data.len() * 8;
+            let checksum_bits = total_bits / 32;
+            let total_words = (total_bits + checksum_bits) / 11;
+            // Setup entropy.
+            let mut entropy = data.clone();
+            WalletUtils::setup_checksum(&mut entropy);
+            // Setup bits.
+            let mut bits = vec![false; entropy.len() * 8];
+            for i in 0..entropy.len() {
+                for j in 0..8 {
+                    bits[(i * 8) + j] = (entropy[i] & (1 << (7 - j))) != 0;
+                }
+            }
+            // Extract word index.
+            let extract_index = |i: usize| -> usize {
+                let mut index = 0;
+                for j in 0..11 {
+                    index = index << 1;
+                    if bits[(i * 11) + j] {
+                        index += 1;
+                    }
+                }
+                return index;
+            };
+            // Setup words.
+            let mut words = "".to_string();
+            for n in 0..total_words {
+                // Setup word index.
+                let index = extract_index(n);
+                // Setup word.
+                let empty_word = "".to_string();
+                let word = WORDS.get(index).clone().unwrap_or(&empty_word).clone();
+                if word.is_empty() {
+                    words = empty_word;
+                    break;
+                }
+                words = if words.is_empty() {
+                    format!("{}", word)
+                } else {
+                    format!("{} {}", words, word)
+                };
+            }
+            if !words.is_empty() {
+                return QrScanResult::SeedQR(ZeroingString::from(words));
+            }
+        }
+
+        // Check Standard SeedQR format (https://github.com/SeedSigner/seedsigner/blob/dev/docs/seed_qr/README.md#standard-seedqr-specification).
         let only_numbers = || {
             for c in text.chars() {
                 if !c.is_numeric() {
@@ -218,7 +268,7 @@ impl CameraContent {
             }
             true
         };
-        if only_numbers() {
+        if !text.is_empty() && data.len() <= 96 && data.len() % 4 == 0 && only_numbers() {
             if let Some(_) = PhraseSize::type_for_value(text.len() / 4) {
                 let chars: Vec<char> = text.trim().chars().collect();
                 let split = &chars.chunks(4)

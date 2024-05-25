@@ -1,4 +1,4 @@
-// Copyright 2023 The Grim Developers
+// Copyright 2024 The Grim Developers
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,22 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub mod types;
+use sha2::{Sha256, Digest};
 
-mod mnemonic;
-pub use mnemonic::Mnemonic;
+/// Wallet utilities functions.
+pub struct WalletUtils {}
 
-mod connections;
-pub use connections::*;
-
-mod wallet;
-pub use wallet::*;
-
-mod config;
-pub use config::*;
-
-mod list;
-pub use list::*;
-
-mod utils;
-pub use utils::WalletUtils;
+impl WalletUtils {
+    /// Setup entropy data checksum.
+    pub fn setup_checksum(data: &mut Vec<u8>) {
+        let mut hasher = Sha256::new();
+        hasher.update(data.clone());
+        let checksum = hasher.finalize();
+        println!("BEFORE data: {}, checksum: {}", data.len(), checksum.len());
+        data.extend(checksum);
+        println!("AFTER data: {}", data.len());
+    }
+}
