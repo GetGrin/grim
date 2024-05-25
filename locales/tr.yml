@@ -259,7 +259,7 @@ network_settings:
   p2p_port: 'P2P port:'
   add_seed: DNS Seed Ekle
   seed_address: 'DNS Seed adresi:'
-  add_peer:  Peer ekle
+  add_peer: Peer ekle
   peer_address: 'Peer adresi:'
   peer_address_error: 'IP addres veya DNS gir (make sure specified host is available) dogru format, ornek.: 192.168.0.1:1234 or example.com:5678'
   default: Varsayilan
