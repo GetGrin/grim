@@ -229,7 +229,7 @@ impl WalletCreation {
                 // Show paste button.
                 let p_t = format!("{} {}", CLIPBOARD_TEXT, t!("paste").to_uppercase());
                 View::button(ui, p_t, Colors::WHITE, || {
-                    let data = ZeroingString::from(cb.get_string_from_buffer());
+                    let data = ZeroingString::from(cb.get_string_from_buffer().trim());
                     self.mnemonic_setup.mnemonic.import_text(&data);
                 });
             }
