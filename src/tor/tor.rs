@@ -105,6 +105,7 @@ impl Tor {
             TorConfig::state_path(),
             TorConfig::cache_path(),
         );
+        builder.address_filter().allow_onion_addrs(true);
         // Setup bridges.
         let bridge = TorConfig::get_bridge();
         if let Some(b) = bridge {
@@ -115,8 +116,6 @@ impl Tor {
                 super::TorBridge::Obfs4(path, conn) => Self::build_obfs4(&mut builder, path, conn),
             }
         }
-        // Setup address filter.
-        builder.address_filter().allow_onion_addrs(true);
         // Create config.
         let config = builder.build().unwrap();
         config
