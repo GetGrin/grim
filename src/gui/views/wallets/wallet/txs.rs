@@ -346,7 +346,6 @@ impl WalletTransactions {
                     // Show transaction information modal.
                     if can_show_info {
                         self.show_tx_info_modal(wallet, tx);
-                        cb.show_keyboard();
                     }
                 });
             }
