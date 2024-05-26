@@ -28,16 +28,27 @@ pub struct QrCodeContent {
     /// Text to create QR code.
     pub(crate) text: String,
 
+    /// Flag to draw animated QR with Uniform Resources
+    /// https://github.com/BlockchainCommons/Research/blob/master/papers/bcr-2020-005-ur.md
+    animated: bool,
+    /// Index of current image at animation.
+    animated_index: Option<usize>,
+    /// Time of last image draw.
+    animation_time: Option<i64>,
+
     /// Texture handle to show image when created.
     texture_handle: Option<TextureHandle>,
     /// QR code image creation progress and result.
-    qr_creation_state: Arc<RwLock<QrCreationState>>
+    qr_creation_state: Arc<RwLock<QrCreationState>>,
 }
 
 impl QrCodeContent {
-    pub fn new(text: String) -> Self {
+    pub fn new(text: String, animated: bool) -> Self {
         Self {
             text,
+            animated,
+            animated_index: None,
+            animation_time: None,
             texture_handle: None,
             qr_creation_state: Arc::new(RwLock::new(QrCreationState::default())),
         }
@@ -45,67 +56,141 @@ impl QrCodeContent {
 
     /// Draw QR code.
     pub fn ui(&mut self, ui: &mut egui::Ui, text: String) {
-        // Get saved QR code image or load new one.
-        if !self.has_image() {
-            let space = (ui.available_width() - View::BIG_SPINNER_SIZE) / 2.0;
-            ui.vertical_centered(|ui| {
-                ui.add_space(space);
-                View::big_loading_spinner(ui);
-                ui.add_space(space);
-            });
+        if self.animated {
+            // Create animated QR code image if not created.
+            if !self.has_image() {
+                let space = (ui.available_width() - View::BIG_SPINNER_SIZE) / 2.0;
+                ui.vertical_centered(|ui| {
+                    ui.add_space(space);
+                    View::big_loading_spinner(ui);
+                    ui.add_space(space);
+                });
 
-            // Create image from text if not loading.
-            self.create_image(text);
+                // Create multiple vector images from text if not creating.
+                if !self.creating() {
+                    self.create_svg_list(text);
+                }
+            } else {
+                let svg_list = {
+                    let r_create = self.qr_creation_state.read();
+                    r_create.svg_list.clone().unwrap()
+                };
+
+                // Setup animated index.
+                let now = chrono::Utc::now().timestamp_millis();
+                if now - *self.animation_time.get_or_insert(now) > 100 {
+                    if let Some(i) = self.animated_index {
+                        self.animated_index = Some(i + 1);
+                    }
+                    if *self.animated_index.get_or_insert(0) == svg_list.len() {
+                        self.animated_index = Some(0);
+                    }
+                    self.animation_time = Some(now);
+                }
+
+                let svg = svg_list[self.animated_index.unwrap_or(0)].clone();
+
+                // Create images from SVG data.
+                let size = SizeHint::Size(ui.available_width() as u32, ui.available_width() as u32);
+                let color_img = load_svg_bytes_with_size(svg.as_slice(), Some(size)).unwrap();
+                // Create image texture.
+                let texture_handle = ui.ctx().load_texture("qr_code",
+                                                           color_img.clone(),
+                                                           TextureOptions::default());
+                self.texture_handle = Some(texture_handle.clone());
+                let img_size = egui::emath::vec2(color_img.width() as f32,
+                                                 color_img.height() as f32);
+                let sized_img = SizedTexture::new(texture_handle.id(), img_size);
+                // Add image to content.
+                ui.add(egui::Image::from_texture(sized_img)
+                    .max_height(ui.available_width())
+                    .fit_to_original_size(1.0));
+                ui.ctx().request_repaint();
+            }
         } else {
-            // Create image from SVG data.
-            let r_create = self.qr_creation_state.read();
-            let svg = r_create.svg.as_ref().unwrap();
-            let size = SizeHint::Size(ui.available_width() as u32, ui.available_width() as u32);
-            let color_img = load_svg_bytes_with_size(svg, Some(size)).unwrap();
-            // Create image texture.
-            let texture_handle = ui.ctx().load_texture("qr_code",
-                                                       color_img.clone(),
-                                                       TextureOptions::default());
-            self.texture_handle = Some(texture_handle.clone());
-            let img_size = egui::emath::vec2(color_img.width() as f32,
-                                             color_img.height() as f32);
-            let sized_img = SizedTexture::new(texture_handle.id(), img_size);
-            // Add image to content.
-            ui.add(egui::Image::from_texture(sized_img)
-                .max_height(ui.available_width())
-                .fit_to_original_size(1.0));
+            // Create vector QR code image if not created.
+            if !self.has_image() {
+                let space = (ui.available_width() - View::BIG_SPINNER_SIZE) / 2.0;
+                ui.vertical_centered(|ui| {
+                    ui.add_space(space);
+                    View::big_loading_spinner(ui);
+                    ui.add_space(space);
+                });
+
+                // Create vector image from text if not creating.
+                if !self.creating() {
+                    self.create_svg(text);
+                }
+            } else {
+                // Create image from SVG data.
+                let r_create = self.qr_creation_state.read();
+                let svg = r_create.svg.as_ref().unwrap();
+                let size = SizeHint::Size(ui.available_width() as u32, ui.available_width() as u32);
+                let color_img = load_svg_bytes_with_size(svg, Some(size)).unwrap();
+                // Create image texture.
+                let texture_handle = ui.ctx().load_texture("qr_code",
+                                                           color_img.clone(),
+                                                           TextureOptions::default());
+                self.texture_handle = Some(texture_handle.clone());
+                let img_size = egui::emath::vec2(color_img.width() as f32,
+                                                 color_img.height() as f32);
+                let sized_img = SizedTexture::new(texture_handle.id(), img_size);
+                // Add image to content.
+                ui.add(egui::Image::from_texture(sized_img)
+                    .max_height(ui.available_width())
+                    .fit_to_original_size(1.0));
+            }
         }
     }
 
-    /// Check if image is creating.
+    /// Check if QR code is creating.
     fn creating(&self) -> bool {
         let r_create = self.qr_creation_state.read();
         r_create.creating
     }
 
+    /// Create multiple vector QR code images at separate thread.
+    fn create_svg_list(&self, text: String) {
+        let qr_creation_state = self.qr_creation_state.clone();
+        thread::spawn(move || {
+            let mut encoder = ur::Encoder::bytes(text.as_bytes(), 100).unwrap();
+            let mut data = Vec::with_capacity(encoder.fragment_count());
+            for _ in 0..encoder.fragment_count() {
+                let ur = encoder.next_part().unwrap();
+                if let Ok(qr) = QrCode::encode_text(ur.as_str(), qrcodegen::QrCodeEcc::Low) {
+                    let svg = Self::qr_to_svg(qr, 0);
+                    data.push(svg.into_bytes());
+                }
+            }
+            let mut w_create = qr_creation_state.write();
+            if !data.is_empty() {
+                w_create.svg_list = Some(data);
+            }
+            w_create.creating = false;
+        });
+    }
+
     /// Check if image was created.
     fn has_image(&self) -> bool {
         let r_create = self.qr_creation_state.read();
-        r_create.svg.is_some()
+        r_create.svg.is_some() || r_create.svg_list.is_some()
     }
 
-    /// Create QR code image at separate thread.
-    fn create_image(&self, text: String) {
+    /// Create vector QR code image at separate thread.
+    fn create_svg(&self, text: String) {
         let qr_creation_state = self.qr_creation_state.clone();
-        if !self.creating() {
-            thread::spawn(move || {
-                if let Ok(qr) = QrCode::encode_text(text.as_str(), qrcodegen::QrCodeEcc::Medium) {
-                    let svg = Self::qr_to_svg(qr, 0);
-                    let mut w_create = qr_creation_state.write();
-                    w_create.creating = false;
-                    w_create.svg = Some(svg.into_bytes());
-                }
-            });
-        }
+        thread::spawn(move || {
+            if let Ok(qr) = QrCode::encode_text(text.as_str(), qrcodegen::QrCodeEcc::Low) {
+                let svg = Self::qr_to_svg(qr, 0);
+                let mut w_create = qr_creation_state.write();
+                w_create.creating = false;
+                w_create.svg = Some(svg.into_bytes());
+            }
+        });
     }
 
     /// Convert QR code to SVG string.
-    fn qr_to_svg(qr: qrcodegen::QrCode, border: i32) -> String {
+    fn qr_to_svg(qr: QrCode, border: i32) -> String {
         let mut result = String::new();
         let dimension = qr.size().checked_add(border.checked_mul(2).unwrap()).unwrap();
         result += "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";

@@ -35,18 +35,26 @@ use crate::wallet::WalletUtils;
 /// Camera QR code scanner.
 pub struct CameraContent {
     /// QR code scanning progress and result.
-    qr_scan_state: Arc<RwLock<QrScanState>>
+    qr_scan_state: Arc<RwLock<QrScanState>>,
+
+    /// Uniform Resources URIs collected from QR code scanning.
+    ur_data: Arc<RwLock<Option<Vec<String>>>>,
+
+    start: i64,
 }
 
 impl Default for CameraContent {
     fn default() -> Self {
         Self {
             qr_scan_state: Arc::new(RwLock::new(QrScanState::default())),
+            ur_data: Arc::new(RwLock::new(None)),
+            start: 0,
         }
     }
 }
 
 impl CameraContent {
+    /// Draw camera content.
     pub fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         // Draw last image from camera or loader.
         if let Some(img_data) = cb.camera_image() {
@@ -138,8 +146,13 @@ impl CameraContent {
         r_scan.image_processing
     }
 
+    /// Get UR scanning progress in percents.
+    fn ur_progress(&self) -> i32 {
+        0
+    }
+
     /// Parse QR code from provided image data.
-    fn scan_qr(&self, data: &DynamicImage) {
+    fn scan_qr(&self, image_data: &DynamicImage) {
         // Do not scan when another image is processing.
         if self.image_processing() {
             return;
@@ -149,55 +162,117 @@ impl CameraContent {
             let mut w_scan = self.qr_scan_state.write();
             w_scan.image_processing = true;
         }
-        // Launch scanner at separate thread.
-        let data = data.clone();
+
+        let image_data = image_data.clone();
         let qr_scan_state = self.qr_scan_state.clone();
+        let ur_data = self.ur_data.clone();
+
+        let on_scan = async move {
+            // Prepare image data.
+            let img = image_data.to_luma8();
+            let mut img: rqrr::PreparedImage<image::GrayImage>
+                = rqrr::PreparedImage::prepare(img);
+            // Scan and save results.
+            let grids = img.detect_grids();
+            if let Some(g) = grids.get(0) {
+                let mut qr_data = vec![];
+                if let Ok(_) = g.decode_to(&mut qr_data) {
+                    // Setup scanned data into text.
+                    let text = String::from_utf8(qr_data.clone()).unwrap_or("".to_string());
+                    // Setup current text.
+                    let cur_text = {
+                        let r_scan = qr_scan_state.read();
+                        let text = if let Some(res) = r_scan.qr_scan_result.clone() {
+                            res.text()
+                        } else {
+                            "".to_string()
+                        };
+                        text
+                    };
+                    // Parse non-empty data if parsed text is different from saved.
+                    if !qr_data.is_empty() && (cur_text.is_empty() || text != cur_text) {
+                        let res = Self::parse_qr_code(qr_data);
+                        match res {
+                            QrScanResult::URPart(uri, index, total) => {
+                                // Setup current UR data.
+                                let mut cur_data = {
+                                    let r_data = ur_data.read();
+                                    let mut cur_data = vec!["".to_string(); total];
+                                    if let Some(d) = r_data.clone() {
+                                        cur_data = d;
+                                    }
+                                    cur_data
+                                };
+                                if !cur_data.contains(&uri) {
+                                    // Save part of UR data.
+                                    {
+                                        cur_data.insert(index, uri);
+                                        let mut w_data = ur_data.write();
+                                        *w_data = Some(cur_data.clone());
+                                    }
+                                    // Setup UR decoder.
+                                    let mut decoder = ur::Decoder::default();
+                                    for m in cur_data {
+                                        if !m.is_empty() {
+                                            if let Ok(_) = decoder.receive(m.as_str()) {
+                                                continue;
+                                            } else {
+                                                break;
+                                            }
+                                        }
+                                    }
+                                    // Check if UR data is complete.
+                                    if decoder.complete() {
+                                        if let Ok(data) = decoder.message() {
+                                            // Parse complete data.
+                                            let res = Self::parse_qr_code(data.unwrap_or(vec![]));
+                                            // Clean UR data.
+                                            let mut w_data = ur_data.write();
+                                            *w_data = None;
+                                            // Save scan result.
+                                            let mut w_scan = qr_scan_state.write();
+                                            w_scan.qr_scan_result = Some(res);
+                                            return;
+                                        }
+                                    }
+                                }
+                            }
+                            _ => {
+                                // Clean UR data.
+                                let mut w_data = ur_data.write();
+                                *w_data = None;
+                                // Save scan result.
+                                let mut w_scan = qr_scan_state.write();
+                                w_scan.qr_scan_result = Some(res);
+                                return;
+                            }
+                        }
+                    }
+                }
+            }
+            // Reset scanning flag to process again.
+            {
+                let mut w_scan = qr_scan_state.write();
+                w_scan.image_processing = false;
+            }
+        };
+
+        // Launch scanner at separate thread.
         thread::spawn(move || {
             tokio::runtime::Builder::new_multi_thread()
                 .enable_all()
                 .build()
                 .unwrap()
-                .block_on(async {
-                    // Prepare image data.
-                    let img = data.to_luma8();
-                    let mut img: rqrr::PreparedImage<image::GrayImage>
-                        = rqrr::PreparedImage::prepare(img);
-                    // Scan and save results.
-                    let grids = img.detect_grids();
-                    if let Some(g) = grids.get(0) {
-                        let mut data = vec![];
-                        if let Ok(_) = g.decode_to(&mut data) {
-                            let cur_text = {
-                                let r_scan = qr_scan_state.read();
-                                let text = if let Some(res) = r_scan.qr_scan_result.clone() {
-                                    res.value()
-                                } else {
-                                    "".to_string()
-                                };
-                                text
-                            };
-                            let text = String::from_utf8(data.clone()).unwrap_or("".to_string());
-                            if !data.is_empty() && (cur_text.is_empty() || text != cur_text) {
-                                let result = Self::parse_scan_result(&data);
-                                let mut w_scan = qr_scan_state.write();
-                                w_scan.qr_scan_result = Some(result);
-                                return;
-                            }
-                        }
-                    }
-                    // Reset scanning flag to process again.
-                    {
-                        let mut w_scan = qr_scan_state.write();
-                        w_scan.image_processing = false;
-                    }
-                });
+                .block_on(on_scan);
         });
     }
 
-    fn parse_scan_result(data: &Vec<u8>) -> QrScanResult {
+    /// Parse QR code scan result.
+    fn parse_qr_code(data: Vec<u8>) -> QrScanResult {
         // Check if string starts with Grin address prefix.
         let text_string = String::from_utf8(data.clone()).unwrap_or("".to_string());
-        let text = text_string.as_str();
+        println!("data: {}", text_string);
+        let text = text_string.trim();
         if text.starts_with("tgrin") || text.starts_with("grin") {
             if SlatepackAddress::try_from(text).is_ok() {
                 return QrScanResult::Address(ZeroingString::from(text));
@@ -209,7 +284,25 @@ impl CameraContent {
             return QrScanResult::Slatepack(ZeroingString::from(text));
         }
 
-        // Check Compact SeedQR format (https://github.com/SeedSigner/seedsigner/blob/dev/docs/seed_qr/README.md#compactseedqr-specification).
+        // Check Uniform Resource data.
+        // https://github.com/BlockchainCommons/Research/blob/master/papers/bcr-2020-005-ur.md
+        if text.starts_with("ur:bytes/") {
+            let split = text.split("/").collect::<Vec<_>>();
+            if let Some(index_total) = split.get(1) {
+                if let Some((index, total)) = index_total.split_once("-") {
+                    let index = index.parse::<usize>();
+                    let total = total.parse::<usize>();
+                    if index.is_ok() && total.is_ok() {
+                        let index = index.unwrap() - 1;
+                        let total = total.unwrap();
+                        return QrScanResult::URPart(text_string, index, total);
+                    }
+                }
+            }
+        }
+
+        // Check Compact SeedQR format.
+        // https://github.com/SeedSigner/seedsigner/blob/dev/docs/seed_qr/README.md#compactseedqr-specification
         if data.len() <= 32 && 16 <= data.len() && data.len() % 4 == 0 {
             // Setup words amount.
             let total_bits = data.len() * 8;
@@ -259,7 +352,8 @@ impl CameraContent {
             }
         }
 
-        // Check Standard SeedQR format (https://github.com/SeedSigner/seedsigner/blob/dev/docs/seed_qr/README.md#standard-seedqr-specification).
+        // Check Standard SeedQR format.
+        // https://github.com/SeedSigner/seedsigner/blob/dev/docs/seed_qr/README.md#standard-seedqr-specification
         let only_numbers = || {
             for c in text.chars() {
                 if !c.is_numeric() {
@@ -316,7 +410,11 @@ impl CameraContent {
 
     /// Reset camera content state to default.
     pub fn clear_state(&mut self) {
+        // Clear QR code scanning state.
         let mut w_scan = self.qr_scan_state.write();
         *w_scan = QrScanState::default();
+        // Clear UR data.
+        let mut w_data = self.ur_data.write();
+        *w_data = None;
     }
 }

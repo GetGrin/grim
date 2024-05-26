@@ -23,8 +23,6 @@ impl WalletUtils {
         let mut hasher = Sha256::new();
         hasher.update(data.clone());
         let checksum = hasher.finalize();
-        println!("BEFORE data: {}, checksum: {}", data.len(), checksum.len());
         data.extend(checksum);
-        println!("AFTER data: {}", data.len());
     }
 }

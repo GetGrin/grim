@@ -154,19 +154,24 @@ pub enum QrScanResult {
     Address(ZeroingString),
     /// Parsed text.
     Text(ZeroingString),
-    /// Parsed SeedQR https://github.com/SeedSigner/seedsigner/blob/dev/docs/seed_qr/README.md.
-    SeedQR(ZeroingString)
+    /// Recovery phrase in standard or compact SeedQR format.
+    /// https://github.com/SeedSigner/seedsigner/blob/dev/docs/seed_qr/README.md
+    SeedQR(ZeroingString),
+    /// Part of Uniform Resources as URI with current index and total messages amount.
+    /// https://github.com/BlockchainCommons/Research/blob/master/papers/bcr-2020-005-ur.md
+    URPart(String, usize, usize),
 }
 
 impl QrScanResult {
-    /// Get scan result value.
-    pub fn value(&self) -> String {
+    /// Get text scanning result.
+    pub fn text(&self) -> String {
         match self {
-            QrScanResult::Slatepack(text) => text,
-            QrScanResult::Address(text) => text,
-            QrScanResult::Text(text) => text,
-            QrScanResult::SeedQR(text) => text
-        }.to_string()
+            QrScanResult::Slatepack(text) => text.to_string(),
+            QrScanResult::Address(text) => text.to_string(),
+            QrScanResult::Text(text) => text.to_string(),
+            QrScanResult::SeedQR(text) => text.to_string(),
+            QrScanResult::URPart(uri, _, _) => uri.to_string(),
+        }
     }
 }
 
@@ -191,8 +196,10 @@ impl Default for QrScanState {
 pub struct QrCreationState {
     // Flag to check if QR code image is creating.
     pub creating: bool,
-    // Found QR code content.
-    pub svg: Option<Vec<u8>>
+    // Vector image data.
+    pub svg: Option<Vec<u8>>,
+    // Multiple vector image data.
+    pub svg_list: Option<Vec<Vec<u8>>>
 }
 
 impl Default for QrCreationState {
@@ -200,6 +207,7 @@ impl Default for QrCreationState {
         Self {
             creating: false,
             svg: None,
+            svg_list: None,
         }
     }
 }

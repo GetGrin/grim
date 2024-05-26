@@ -80,7 +80,7 @@ impl Default for WalletTransactions {
             tx_info_finalizing: false,
             tx_info_final_result: Arc::new(RwLock::new(None)),
             tx_info_show_qr: false,
-            tx_info_qr_code_content: QrCodeContent::new("".to_string()),
+            tx_info_qr_code_content: QrCodeContent::new("".to_string(), true),
             tx_info_show_scanner: false,
             tx_info_scanner_content: CameraContent::default(),
             confirm_cancel_tx_id: None,
@@ -708,7 +708,7 @@ impl WalletTransactions {
                 self.tx_info_scanner_content.clear_state();
 
                 // Setup value to finalization input field.
-                self.tx_info_finalize_edit = result.value();
+                self.tx_info_finalize_edit = result.text();
                 self.on_finalization_input_change(tx, wallet, modal, cb);
 
                 modal.enable_closing();
@@ -737,7 +737,7 @@ impl WalletTransactions {
                 let desc_color = if self.tx_info_finalize_error {
                     Colors::RED
                 } else {
-                    Colors::INACTIVE_TEXT
+                    Colors::GRAY
                 };
                 ui.label(RichText::new(desc_text).size(16.0).color(desc_color));
             } else {
@@ -754,7 +754,7 @@ impl WalletTransactions {
                         t!("wallets.parse_s1_slatepack_desc", "amount" => amount)
                     }
                 };
-                ui.label(RichText::new(desc_text).size(16.0).color(Colors::INACTIVE_TEXT));
+                ui.label(RichText::new(desc_text).size(16.0).color(Colors::GRAY));
             }
         });
         ui.add_space(6.0);

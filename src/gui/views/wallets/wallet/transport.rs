@@ -145,7 +145,7 @@ impl WalletTransport {
             show_address_scan: false,
             address_scan_content: CameraContent::default(),
             modal_just_opened: false,
-            qr_address_content: QrCodeContent::new(addr),
+            qr_address_content: QrCodeContent::new(addr, false),
             tor_settings_changed: false,
             bridge_bin_path_edit: bin_path,
             bridge_conn_line_edit: conn_line,
@@ -327,7 +327,7 @@ impl WalletTransport {
             };
 
             if let Some(result) = self.bridge_qr_scan_content.qr_scan_result() {
-                self.bridge_conn_line_edit = result.value();
+                self.bridge_conn_line_edit = result.text();
                 on_stop(&mut self.bridge_qr_scan_content);
                 cb.show_keyboard();
             } else {
@@ -688,7 +688,7 @@ impl WalletTransport {
                 };
 
                 if let Some(result) = self.address_scan_content.qr_scan_result() {
-                    self.address_edit = result.value();
+                    self.address_edit = result.text();
                     self.modal_just_opened = true;
                     on_stop(&mut self.address_scan_content);
                     cb.show_keyboard();

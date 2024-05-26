@@ -371,7 +371,7 @@ impl WalletContent {
                              cb: &dyn PlatformCallbacks) {
         // Show scan result if exists or show camera content while scanning.
         if let Some(result) = &self.qr_scan_result {
-            let mut result_text = result.value();
+            let mut result_text = result.text();
             View::horizontal_line(ui, Colors::ITEM_STROKE);
             ui.add_space(3.0);
             ScrollArea::vertical()

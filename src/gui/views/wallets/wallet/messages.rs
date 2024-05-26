@@ -173,13 +173,13 @@ impl WalletMessages {
             request_edit: "".to_string(),
             request_error: None,
             request_qr: false,
-            request_qr_content: QrCodeContent::new("".to_string()),
+            request_qr_content: QrCodeContent::new("".to_string(), true),
             request_loading: false,
             request_result: Arc::new(RwLock::new(None)),
             message_camera_content: CameraContent::default(),
             message_scan_error: false,
             qr_message_text: None,
-            qr_message_content: QrCodeContent::new("".to_string()),
+            qr_message_content: QrCodeContent::new("".to_string(), true),
         }
     }
 
@@ -472,7 +472,7 @@ impl WalletMessages {
                 } else {
                     t!("wallets.send_request_desc","amount" => amount_format)
                 };
-                ui.label(RichText::new(desc_text).size(16.0).color(Colors::INACTIVE_TEXT));
+                ui.label(RichText::new(desc_text).size(16.0).color(Colors::GRAY));
             });
             ui.add_space(6.0);
 
