@@ -17,7 +17,7 @@ use parking_lot::RwLock;
 use std::thread;
 use eframe::emath::Align;
 use egui::load::SizedTexture;
-use egui::{Layout, Pos2, Rect, TextureOptions, Widget};
+use egui::{Layout, Pos2, Rect, RichText, TextureOptions, Widget};
 use image::{DynamicImage, EncodableLayout, ImageFormat};
 
 use grin_util::ZeroingString;
@@ -38,9 +38,7 @@ pub struct CameraContent {
     qr_scan_state: Arc<RwLock<QrScanState>>,
 
     /// Uniform Resources URIs collected from QR code scanning.
-    ur_data: Arc<RwLock<Option<Vec<String>>>>,
-
-    start: i64,
+    ur_data: Arc<RwLock<Option<(Vec<String>, usize)>>>,
 }
 
 impl Default for CameraContent {
@@ -48,7 +46,6 @@ impl Default for CameraContent {
         Self {
             qr_scan_state: Arc::new(RwLock::new(QrScanState::default())),
             ur_data: Arc::new(RwLock::new(None)),
-            start: 0,
         }
     }
 }
@@ -107,6 +104,20 @@ impl CameraContent {
                         .ui(ui);
                 });
 
+                // Show UR scan progress.
+                let show_ur_progress = {
+                    self.ur_data.clone().read().is_some()
+                };
+                let ur_progress = self.ur_progress();
+                if show_ur_progress && ur_progress != 0 {
+                    ui.add_space(-52.0);
+                    ui.vertical_centered(|ui| {
+                        ui.label(RichText::new(format!("{}%", ur_progress))
+                            .size(16.0)
+                            .color(Colors::YELLOW));
+                    });
+                }
+
                 // Show button to switch cameras.
                 if cb.can_switch_camera() {
                     ui.add_space(-52.0);
@@ -148,7 +159,20 @@ impl CameraContent {
 
     /// Get UR scanning progress in percents.
     fn ur_progress(&self) -> i32 {
-        0
+        // Setup data.
+        let r_data = self.ur_data.read();
+        let (data, total) = r_data.clone().unwrap_or((vec![], 0));
+        if data.is_empty() {
+            return 0;
+        }
+        // Calculate progress.
+        let mut complete = 0;
+        for i in &data {
+            if !i.is_empty() {
+                complete += 1;
+            }
+        }
+        (100 * complete / total) as i32
     }
 
     /// Parse QR code from provided image data.
@@ -198,7 +222,7 @@ impl CameraContent {
                                 let mut cur_data = {
                                     let r_data = ur_data.read();
                                     let mut cur_data = vec!["".to_string(); total];
-                                    if let Some(d) = r_data.clone() {
+                                    if let Some((d, _)) = r_data.clone() {
                                         cur_data = d;
                                     }
                                     cur_data
@@ -208,7 +232,7 @@ impl CameraContent {
                                     {
                                         cur_data.insert(index, uri);
                                         let mut w_data = ur_data.write();
-                                        *w_data = Some(cur_data.clone());
+                                        *w_data = Some((cur_data.clone(), total));
                                     }
                                     // Setup UR decoder.
                                     let mut decoder = ur::Decoder::default();
@@ -271,7 +295,6 @@ impl CameraContent {
     fn parse_qr_code(data: Vec<u8>) -> QrScanResult {
         // Check if string starts with Grin address prefix.
         let text_string = String::from_utf8(data.clone()).unwrap_or("".to_string());
-        println!("data: {}", text_string);
         let text = text_string.trim();
         if text.starts_with("tgrin") || text.starts_with("grin") {
             if SlatepackAddress::try_from(text).is_ok() {
