@@ -224,7 +224,7 @@ impl WalletMessages {
                     }
                     QR_SLATEPACK_MESSAGE_MODAL => {
                         Modal::ui(ui.ctx(), |ui, modal| {
-                            self.qr_message_modal_ui(ui, modal);
+                            self.qr_message_modal_ui(ui, modal, cb);
                         });
                     }
                     _ => {}
@@ -483,11 +483,7 @@ impl WalletMessages {
                 if text.is_empty() {
                     self.request_qr = false;
                 }
-                self.request_qr_content.ui(ui, text.clone());
-                ui.add_space(6.0);
-
-                // Show QR code text.
-                View::ellipsize_text(ui, text, 16.0, Colors::INACTIVE_TEXT);
+                self.request_qr_content.ui(ui, text.clone(), cb);
                 ui.add_space(6.0);
 
                 // Show button to close modal.
@@ -853,7 +849,7 @@ impl WalletMessages {
     }
 
     /// Draw QR code Slatepack message image [`Modal`] content.
-    fn qr_message_modal_ui(&mut self, ui: &mut egui::Ui, modal: &Modal) {
+    fn qr_message_modal_ui(&mut self, ui: &mut egui::Ui, m: &Modal, cb: &dyn PlatformCallbacks) {
         ui.add_space(6.0);
 
         // Setup title for Slatepack message.
@@ -871,11 +867,7 @@ impl WalletMessages {
 
         // Draw QR code content.
         let text = self.qr_message_text.clone().unwrap();
-        self.qr_message_content.ui(ui, text.clone());
-        ui.add_space(6.0);
-
-        // Show message text.
-        View::ellipsize_text(ui, text, 16.0, Colors::INACTIVE_TEXT);
+        self.qr_message_content.ui(ui, text.clone(), cb);
         ui.add_space(6.0);
 
         ui.vertical_centered_justified(|ui| {
@@ -884,7 +876,7 @@ impl WalletMessages {
                 self.qr_message_content.clear_state();
                 self.response_edit.clear();
                 self.message_slate = None;
-                modal.close();
+                m.close();
             });
         });
         ui.add_space(6.0);

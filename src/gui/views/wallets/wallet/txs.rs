@@ -122,7 +122,7 @@ impl WalletTab for WalletTransactions {
             .show_inside(ui, |ui| {
                 ui.vertical_centered(|ui| {
                     let data = wallet.get_data().unwrap();
-                    self.txs_ui(ui, wallet, &data, cb);
+                    self.txs_ui(ui, wallet, &data);
                 });
             });
     }
@@ -142,8 +142,7 @@ impl WalletTransactions {
     fn txs_ui(&mut self,
               ui: &mut egui::Ui,
               wallet: &mut Wallet,
-              data: &WalletData,
-              cb: &dyn PlatformCallbacks) {
+              data: &WalletData) {
         let amount_conf = data.info.amount_awaiting_confirmation;
         let amount_fin = data.info.amount_awaiting_finalization;
         let amount_locked = data.info.amount_locked;
@@ -224,7 +223,7 @@ impl WalletTransactions {
                                 // Show transaction item.
                                 let tx = data.txs.get(index).unwrap();
                                 let rounding = View::item_rounding(index, data.txs.len(), false);
-                                self.tx_item_ui(ui, tx, rounding, padding, true, &data, wallet, cb);
+                                self.tx_item_ui(ui, tx, rounding, padding, true, &data, wallet);
                             }
                         });
                     })
@@ -291,8 +290,7 @@ impl WalletTransactions {
                   extra_padding: bool,
                   can_show_info: bool,
                   data: &WalletData,
-                  wallet: &mut Wallet,
-                  cb: &dyn PlatformCallbacks) {
+                  wallet: &mut Wallet) {
         // Setup layout size.
         let mut rect = ui.available_rect_before_wrap();
         if extra_padding {
@@ -541,7 +539,7 @@ impl WalletTransactions {
 
             // Show transaction amount status and time.
             let rounding = View::item_rounding(0, 2, false);
-            self.tx_item_ui(ui, tx, rounding, false, false, &data, wallet, cb);
+            self.tx_item_ui(ui, tx, rounding, false, false, &data, wallet);
 
             // Show transaction ID info.
             if let Some(id) = tx.data.tx_slate_id {
@@ -773,11 +771,7 @@ impl WalletTransactions {
                 self.tx_info_show_qr = false;
             } else {
                 // Draw QR code content.
-                self.tx_info_qr_code_content.ui(ui, text.clone());
-                ui.add_space(6.0);
-
-                // Show QR code text.
-                View::ellipsize_text(ui, text, 16.0, Colors::INACTIVE_TEXT);
+                self.tx_info_qr_code_content.ui(ui, text.clone(), cb);
                 return;
             }
         }

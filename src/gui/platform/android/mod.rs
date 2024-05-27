@@ -114,6 +114,10 @@ impl PlatformCallbacks for Android {
     fn switch_camera(&self) {
         self.call_java_method("switchCamera", "()V", &[]).unwrap();
     }
+
+    fn share_data(&self, name: String, data: Vec<u8>) -> Result<(), std::io::Error> {
+        Ok(())
+    }
 }
 
 lazy_static! {

@@ -21,6 +21,7 @@ scan_qr: QR kod tara
 repeat: Tekrar
 scan_result: Tarama sonucu
 back: Geri
+share: Paylasmak
 wallets:
   await_conf_amount: Onay bekleniyor
   await_fin_amount: Tamamlanma bekleniyor

@@ -31,4 +31,5 @@ pub trait PlatformCallbacks {
     fn camera_image(&self) -> Option<(Vec<u8>, u32)>;
     fn can_switch_camera(&self) -> bool;
     fn switch_camera(&self);
+    fn share_data(&self, name: String, data: Vec<u8>) -> Result<(), std::io::Error>;
 }

@@ -175,11 +175,11 @@ impl QrScanResult {
     }
 }
 
-/// QR code scan state.
+/// QR code scanning state.
 pub struct QrScanState {
-    // Flag to check if image is processing to find QR code.
-    pub(crate) image_processing: bool,
-    // Found QR code content.
+    /// Flag to check if image is processing to find QR code.
+    pub image_processing: bool,
+    /// Processed QR code result.
     pub qr_scan_result: Option<QrScanResult>
 }
 
@@ -192,20 +192,31 @@ impl Default for QrScanState {
     }
 }
 
-/// QR code image creation state.
-pub struct QrCreationState {
-    // Flag to check if QR code image is creating.
-    pub creating: bool,
-    // Vector image data.
+/// QR code image data state.
+pub struct QrImageState {
+    /// Flag to check if QR code image is loading.
+    pub loading: bool,
+    /// Flag to check if QR code image is exporting.
+    pub exporting: bool,
+
+    /// Created GIF data from animated QR code.
+    pub gif_data: Option<Vec<u8>>,
+    /// Flag to check if GIF is creating.
+    pub gif_creating: bool,
+
+    /// Vector image data.
     pub svg: Option<Vec<u8>>,
-    // Multiple vector image data.
+    /// Multiple vector image data for animated QR code.
     pub svg_list: Option<Vec<Vec<u8>>>
 }
 
-impl Default for QrCreationState {
+impl Default for QrImageState {
     fn default() -> Self {
         Self {
-            creating: false,
+            loading: false,
+            exporting: false,
+            gif_data: None,
+            gif_creating: false,
             svg: None,
             svg_list: None,
         }

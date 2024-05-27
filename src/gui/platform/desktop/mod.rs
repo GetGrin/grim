@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::fs::File;
+use std::io:: Write;
 use lazy_static::lazy_static;
 use parking_lot::RwLock;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -20,6 +22,7 @@ use std::thread;
 use nokhwa::Camera;
 use nokhwa::pixel_format::RgbFormat;
 use nokhwa::utils::{CameraIndex, RequestedFormat, RequestedFormatType};
+use rfd::FileDialog;
 
 use crate::gui::platform::PlatformCallbacks;
 
@@ -123,6 +126,19 @@ impl PlatformCallbacks for Desktop {
 
     fn switch_camera(&self) {
         return;
+    }
+
+    fn share_data(&self, name: String, data: Vec<u8>) -> Result<(), std::io::Error> {
+        let folder = FileDialog::new()
+            .set_directory(dirs::home_dir().unwrap())
+            .set_file_name(name.clone())
+            .save_file();
+        if let Some(folder) = folder {
+            let mut image = File::create(folder)?;
+            image.write_all(data.as_slice())?;
+            image.sync_all()?;
+        }
+        Ok(())
     }
 }
 

@@ -21,6 +21,7 @@ scan_qr: Scan QR code
 repeat: Repeat
 scan_result: Scan result
 back: Back
+share: Share
 wallets:
   await_conf_amount: Awaiting confirmation
   await_fin_amount: Awaiting finalization

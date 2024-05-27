@@ -403,6 +403,8 @@ impl WalletContent {
                 });
             });
             ui.add_space(6.0);
+            View::horizontal_line(ui, Colors::ITEM_STROKE);
+            ui.add_space(6.0);
         } else if let Some(result) = self.camera_content.qr_scan_result() {
             cb.stop_camera();
             self.camera_content.clear_state();
