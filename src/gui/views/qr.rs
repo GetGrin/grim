@@ -12,8 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::fs::{File, read};
-use std::io::Cursor;
 use std::mem::size_of;
 use std::sync::Arc;
 use parking_lot::RwLock;
@@ -21,9 +19,8 @@ use std::thread;
 use egui::{SizeHint, TextureHandle, TextureOptions};
 use egui::load::SizedTexture;
 use egui_extras::image::load_svg_bytes_with_size;
-use image::codecs::jpeg::JpegEncoder;
-use image::{ColorType, EncodableLayout, ExtendedColorType, ImageBuffer, ImageEncoder, Rgb, RgbImage};
-use image::codecs::png::{CompressionType, FilterType, PngDecoder, PngEncoder};
+use image::{EncodableLayout, ExtendedColorType, ImageEncoder};
+use image::codecs::png::{CompressionType, FilterType, PngEncoder};
 use qrcodegen::QrCode;
 use crate::gui::Colors;
 use crate::gui::icons::IMAGES_SQUARE;
@@ -125,11 +122,7 @@ impl QrCodeContent {
             ui.add(egui::Image::from_texture(sized_img)
                 .max_height(ui.available_width())
                 .fit_to_original_size(1.0));
-            ui.add_space(6.0);
-
-            // Show QR code text.
-            View::ellipsize_text(ui, text.clone(), 16.0, Colors::INACTIVE_TEXT);
-            ui.add_space(6.0);
+            ui.add_space(10.0);
 
             ui.vertical_centered(|ui| {
                 let sharing = {
