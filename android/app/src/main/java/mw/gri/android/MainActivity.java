@@ -4,6 +4,7 @@ import android.Manifest;
 import android.content.*;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Process;
@@ -17,6 +18,7 @@ import androidx.annotation.NonNull;
 import androidx.camera.core.*;
 import androidx.camera.lifecycle.ProcessCameraProvider;
 import androidx.core.content.ContextCompat;
+import androidx.core.content.FileProvider;
 import androidx.core.graphics.Insets;
 import androidx.core.view.DisplayCutoutCompat;
 import androidx.core.view.ViewCompat;
@@ -24,6 +26,7 @@ import androidx.core.view.WindowInsetsCompat;
 import com.google.androidgamesdk.GameActivity;
 import com.google.common.util.concurrent.ListenableFuture;
 
+import java.io.File;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -62,6 +65,11 @@ public class MainActivity extends GameActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        // Clear cache on start.
+        if (savedInstanceState == null) {
+            Utils.deleteDirectoryContent(new File(getExternalCacheDir().getPath()), false);
+        }
+
         // Setup environment variables for native code.
         try {
             Os.setenv("HOME", getExternalFilesDir("").getPath(), true);
@@ -70,6 +78,7 @@ public class MainActivity extends GameActivity {
         } catch (ErrnoException e) {
             throw new RuntimeException(e);
         }
+
         super.onCreate(null);
 
         // Register receiver to finish activity from the BackgroundService.
@@ -334,4 +343,14 @@ public class MainActivity extends GameActivity {
 
     // Pass image from camera into native code.
     public native void onCameraImage(byte[] buff, int rotation);
+
+    // Called from native code to share image from provided path.
+    public void shareImage(String path) {
+        File file = new File(path);
+        Uri uri = FileProvider.getUriForFile(this, "mw.gri.android.fileprovider", file);
+        Intent intent = new Intent(Intent.ACTION_SEND);
+        intent.putExtra(Intent.EXTRA_STREAM, uri);
+        intent.setType("image/*");
+        startActivity(Intent.createChooser(intent, "Share image"));
+    }
 }

@@ -8,6 +8,7 @@ import android.media.Image;
 import androidx.camera.core.ImageProxy;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.nio.ByteBuffer;
 
 public class Utils {
@@ -134,5 +135,15 @@ public class Utils {
             }
             rowStart += plane.getRowStride();
         }
+    }
+
+    public static boolean deleteDirectoryContent(File directoryToBeDeleted, boolean deleteDirectory) {
+        File[] allContents = directoryToBeDeleted.listFiles();
+        if (allContents != null) {
+            for (File file : allContents) {
+                deleteDirectoryContent(file, true);
+            }
+        }
+        return directoryToBeDeleted.delete();
     }
 }

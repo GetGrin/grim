@@ -19,7 +19,7 @@ use std::thread;
 use egui::{SizeHint, TextureHandle, TextureOptions};
 use egui::load::SizedTexture;
 use egui_extras::image::load_svg_bytes_with_size;
-use image::{EncodableLayout, ExtendedColorType, ImageEncoder};
+use image::{ExtendedColorType, ImageEncoder};
 use image::codecs::png::{CompressionType, FilterType, PngEncoder};
 use qrcodegen::QrCode;
 use crate::gui::Colors;

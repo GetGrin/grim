@@ -19,11 +19,22 @@
             android:supportsRtl="true"
             android:theme="@style/Theme.Main">
 
+        <provider
+                android:name=".FileProvider"
+                android:authorities="mw.gri.android.fileprovider"
+                android:exported="false"
+                android:grantUriPermissions="true">
+            <meta-data
+                    android:name="android.support.FILE_PROVIDER_PATHS"
+                    android:resource="@xml/paths" />
+        </provider>
+
         <activity
                 android:launchMode="singleTask"
                 android:name=".MainActivity"
                 android:configChanges="orientation|screenSize"
                 android:exported="true">
+
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

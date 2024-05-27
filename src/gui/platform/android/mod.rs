@@ -12,6 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::env;
+use std::ffi::OsString;
+use std::fs::File;
+use std::io::Write;
+use std::path::PathBuf;
 use lazy_static::lazy_static;
 use std::sync::Arc;
 use parking_lot::RwLock;
@@ -116,6 +121,22 @@ impl PlatformCallbacks for Android {
     }
 
     fn share_data(&self, name: String, data: Vec<u8>) -> Result<(), std::io::Error> {
+        // Create file at cache dir.
+        let default_cache = OsString::from(dirs::cache_dir().unwrap());
+        let mut cache = PathBuf::from(env::var_os("XDG_CACHE_HOME").unwrap_or(default_cache));
+        cache.push("images");
+        std::fs::create_dir_all(cache.to_str().unwrap())?;
+        cache.push(name);
+        let mut image = File::create_new(cache.clone()).unwrap();
+        image.write_all(data.as_slice()).unwrap();
+        image.sync_all().unwrap();
+        // Call share modal at system.
+        let vm = unsafe { jni::JavaVM::from_raw(self.android_app.vm_as_ptr() as _) }.unwrap();
+        let env = vm.attach_current_thread().unwrap();
+        let arg_value = env.new_string(cache.to_str().unwrap()).unwrap();
+        self.call_java_method("shareImage",
+                              "(Ljava/lang/String;)V",
+                              &[JValue::Object(&JObject::from(arg_value))]).unwrap();
         Ok(())
     }
 }
