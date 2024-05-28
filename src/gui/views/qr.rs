@@ -22,10 +22,10 @@ use egui_extras::image::load_svg_bytes_with_size;
 use image::{ExtendedColorType, ImageEncoder};
 use image::codecs::png::{CompressionType, FilterType, PngEncoder};
 use qrcodegen::QrCode;
+
 use crate::gui::Colors;
 use crate::gui::icons::IMAGES_SQUARE;
 use crate::gui::platform::PlatformCallbacks;
-
 use crate::gui::views::types::QrImageState;
 use crate::gui::views::View;
 
@@ -48,7 +48,7 @@ pub struct QrCodeContent {
     qr_image_state: Arc<RwLock<QrImageState>>,
 }
 
-const DEFAULT_QR_SIZE: u32 = 380;
+const DEFAULT_QR_SIZE: u32 = 512;
 
 impl QrCodeContent {
     pub fn new(text: String, animated: bool) -> Self {
@@ -320,32 +320,40 @@ impl QrCodeContent {
         thread::spawn(move || {
             // Setup GIF image encoder.
             let mut gif = vec![];
-            if let Ok(mut gif_enc) = gif::Encoder::new(&mut gif,
-                                                       size as u16,
-                                                       size as u16,
-                                                       &[]) {
-                gif_enc.set_repeat(gif::Repeat::Infinite).unwrap();
+            {
                 // Generate QR codes from text.
+                let mut qrs = vec![];
                 let mut ur_enc = ur::Encoder::bytes(text.as_bytes(), 100).unwrap();
                 for _ in 0..ur_enc.fragment_count() {
                     let ur = ur_enc.next_part().unwrap();
                     if let Ok(qr) = QrCode::encode_text(ur.as_str(), qrcodegen::QrCodeEcc::Low) {
-                        // Create an image from QR data and write it to encoder.
-                        if let Some(image) = Self::qr_to_image_data(qr, size) {
-                            let mut frame = gif::Frame::from_indexed_pixels(size as u16,
-                                                                            size as u16,
-                                                                            image.as_slice(), None);
-                            frame.palette = Some(vec![]);
-                            // Write an image to GIF encoder.
-                            if let Ok(_) = gif_enc.write_frame(&frame) {
-                                continue;
-                            }
-                        }
-                        // Exit on error.
-                        let mut w_state = qr_state.write();
-                        w_state.gif_creating = false;
-                        return;
+                        qrs.push(qr);
                     }
+                }
+                // Generate GIF data.
+                let color_map = &[0, 0, 0, 0xFF, 0xFF, 0xFF];
+                let mut gif_enc = gif::Encoder::new(&mut gif,
+                                                    size as u16,
+                                                    size as u16,
+                                                    color_map).unwrap();
+                gif_enc.set_repeat(gif::Repeat::Infinite).unwrap();
+                for qr in qrs {
+                    // Create an image from QR data and write it to encoder.
+                    if let Some(image) = Self::qr_to_image_data(qr, size) {
+                        let mut frame = gif::Frame::from_indexed_pixels(size as u16,
+                                                                        size as u16,
+                                                                        image.as_slice(),
+                                                                        None);
+                        frame.delay = 10;
+                        // Write an image to GIF encoder.
+                        if let Ok(_) = gif_enc.write_frame(&frame) {
+                            continue;
+                        }
+                    }
+                    // Exit on error.
+                    let mut w_state = qr_state.write();
+                    w_state.gif_creating = false;
+                    return;
                 }
             }
             // Setup GIF image data.
