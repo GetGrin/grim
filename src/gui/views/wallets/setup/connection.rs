@@ -106,17 +106,16 @@ impl ConnectionSetup {
         self.ui(ui, frame, Some(wallet), cb);
 
         // Setup wallet connection value after change.
-        let config = wallet.get_config();
         let changed = match self.method {
             ConnectionMethod::Integrated => {
-                let changed = config.ext_conn_id.is_some();
+                let changed = wallet.get_current_ext_conn().is_some();
                 if changed {
                     wallet.update_ext_conn_id(None);
                 }
                 changed
             }
             ConnectionMethod::External(id) => {
-                let changed = config.ext_conn_id != Some(id);
+                let changed = wallet.get_config().ext_conn_id != Some(id);
                 if changed {
                     wallet.update_ext_conn_id(Some(id));
                 }
