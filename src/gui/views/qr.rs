@@ -76,8 +76,8 @@ impl QrCodeContent {
     /// Draw QR code image content.
     fn qr_image_ui(&mut self, svg: Vec<u8>, ui: &mut egui::Ui) {
         let mut rect = ui.available_rect_before_wrap();
-        rect.min += egui::emath::vec2(5.0, 0.0);
-        rect.max -= egui::emath::vec2(5.0, 0.0);
+        rect.min += egui::emath::vec2(8.0, 0.0);
+        rect.max -= egui::emath::vec2(8.0, 0.0);
 
         // Create background shape.
         let mut bg_shape = egui::epaint::RectShape {
@@ -103,16 +103,16 @@ impl QrCodeContent {
                                              color_img.height() as f32);
             let sized_img = SizedTexture::new(texture_handle.id(), img_size);
             // Add image to content.
-            ui.add_space(5.0);
+            ui.add_space(8.0);
             ui.add(egui::Image::from_texture(sized_img)
                 .max_height(ui.available_width())
                 .fit_to_original_size(1.0));
-            ui.add_space(5.0);
+            ui.add_space(8.0);
         }).response.rect;
 
         // Setup background shape to be painted behind main content.
-        content_rect.min -= egui::emath::vec2(5.0, 0.0);
-        content_rect.max += egui::emath::vec2(5.0, 0.0);
+        content_rect.min -= egui::emath::vec2(8.0, 0.0);
+        content_rect.max += egui::emath::vec2(8.0, 0.0);
         bg_shape.rect = content_rect;
         ui.painter().set(bg_idx, bg_shape);
 
