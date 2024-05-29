@@ -100,7 +100,7 @@ impl PoolSetup {
         self.current_modal_ui(ui, frame, cb);
 
         View::sub_title(ui, format!("{} {}", CHART_SCATTER, t!("network_settings.tx_pool")));
-        View::horizontal_line(ui, Colors::STROKE);
+        View::horizontal_line(ui, Colors::stroke());
         ui.add_space(6.0);
 
         ui.vertical_centered(|ui| {
@@ -108,28 +108,28 @@ impl PoolSetup {
             self.fee_base_ui(ui, cb);
 
             ui.add_space(6.0);
-            View::horizontal_line(ui, Colors::ITEM_STROKE);
+            View::horizontal_line(ui, Colors::item_stroke());
             ui.add_space(6.0);
 
             // Show reorg cache retention period setup.
             self.reorg_period_ui(ui, cb);
 
             ui.add_space(6.0);
-            View::horizontal_line(ui, Colors::ITEM_STROKE);
+            View::horizontal_line(ui, Colors::item_stroke());
             ui.add_space(6.0);
 
             // Show pool size setup.
             self.pool_size_ui(ui, cb);
 
             ui.add_space(6.0);
-            View::horizontal_line(ui, Colors::ITEM_STROKE);
+            View::horizontal_line(ui, Colors::item_stroke());
             ui.add_space(6.0);
 
             // Show stem pool size setup.
             self.stem_size_ui(ui, cb);
 
             ui.add_space(6.0);
-            View::horizontal_line(ui, Colors::ITEM_STROKE);
+            View::horizontal_line(ui, Colors::item_stroke());
             ui.add_space(6.0);
 
             // Show max weight of transactions setup.
@@ -141,12 +141,12 @@ impl PoolSetup {
     fn fee_base_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         ui.label(RichText::new(t!("network_settings.pool_fee"))
             .size(16.0)
-            .color(Colors::GRAY)
+            .color(Colors::gray())
         );
         ui.add_space(6.0);
 
         let fee = NodeConfig::get_base_fee();
-        View::button(ui, format!("{} {}", HAND_COINS, fee.clone()), Colors::BUTTON, || {
+        View::button(ui, format!("{} {}", HAND_COINS, fee.clone()), Colors::button(), || {
             // Setup values for modal.
             self.fee_base_edit = fee;
             // Show fee setup modal.
@@ -165,7 +165,7 @@ impl PoolSetup {
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.pool_fee"))
                 .size(17.0)
-                .color(Colors::GRAY));
+                .color(Colors::gray()));
             ui.add_space(8.0);
 
             // Draw fee base text edit.
@@ -177,7 +177,7 @@ impl PoolSetup {
                 ui.add_space(12.0);
                 ui.label(RichText::new(t!("network_settings.not_valid_value"))
                     .size(17.0)
-                    .color(Colors::RED));
+                    .color(Colors::red()));
             } else {
                 NetworkSettings::node_restart_required_ui(ui);
             }
@@ -199,14 +199,14 @@ impl PoolSetup {
 
                 ui.columns(2, |columns| {
                     columns[0].vertical_centered_justified(|ui| {
-                        View::button(ui, t!("modal.cancel"), Colors::WHITE, || {
+                        View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                             // Close modal.
                             cb.hide_keyboard();
                             modal.close();
                         });
                     });
                     columns[1].vertical_centered_justified(|ui| {
-                        View::button(ui, t!("modal.save"), Colors::WHITE, on_save);
+                        View::button(ui, t!("modal.save"), Colors::white_or_black(false), on_save);
                     });
                 });
                 ui.add_space(6.0);
@@ -218,12 +218,12 @@ impl PoolSetup {
     fn reorg_period_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         ui.label(RichText::new(t!("network_settings.reorg_period"))
             .size(16.0)
-            .color(Colors::GRAY)
+            .color(Colors::gray())
         );
         ui.add_space(6.0);
 
         let period = NodeConfig::get_reorg_cache_period();
-        View::button(ui, format!("{} {}", CLOCK_COUNTDOWN, period.clone()), Colors::BUTTON, || {
+        View::button(ui, format!("{} {}", CLOCK_COUNTDOWN, period.clone()), Colors::button(), || {
             // Setup values for modal.
             self.reorg_period_edit = period;
             // Show reorg period setup modal.
@@ -242,7 +242,7 @@ impl PoolSetup {
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.reorg_period"))
                 .size(17.0)
-                .color(Colors::GRAY));
+                .color(Colors::gray()));
             ui.add_space(8.0);
 
             // Draw reorg period text edit.
@@ -254,7 +254,7 @@ impl PoolSetup {
                 ui.add_space(12.0);
                 ui.label(RichText::new(t!("network_settings.not_valid_value"))
                     .size(17.0)
-                    .color(Colors::RED));
+                    .color(Colors::red()));
             } else {
                 NetworkSettings::node_restart_required_ui(ui);
             }
@@ -276,14 +276,14 @@ impl PoolSetup {
 
                 ui.columns(2, |columns| {
                     columns[0].vertical_centered_justified(|ui| {
-                        View::button(ui, t!("modal.cancel"), Colors::WHITE, || {
+                        View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                             // Close modal.
                             cb.hide_keyboard();
                             modal.close();
                         });
                     });
                     columns[1].vertical_centered_justified(|ui| {
-                        View::button(ui, t!("modal.save"), Colors::WHITE, on_save);
+                        View::button(ui, t!("modal.save"), Colors::white_or_black(false), on_save);
                     });
                 });
                 ui.add_space(6.0);
@@ -295,12 +295,12 @@ impl PoolSetup {
     fn pool_size_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         ui.label(RichText::new(t!("network_settings.max_tx_pool"))
             .size(16.0)
-            .color(Colors::GRAY)
+            .color(Colors::gray())
         );
         ui.add_space(6.0);
 
         let size = NodeConfig::get_max_pool_size();
-        View::button(ui, format!("{} {}", CIRCLES_THREE, size.clone()), Colors::BUTTON, || {
+        View::button(ui, format!("{} {}", CIRCLES_THREE, size.clone()), Colors::button(), || {
             // Setup values for modal.
             self.pool_size_edit = size;
             // Show pool size setup modal.
@@ -319,7 +319,7 @@ impl PoolSetup {
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.max_tx_pool"))
                 .size(17.0)
-                .color(Colors::GRAY));
+                .color(Colors::gray()));
             ui.add_space(8.0);
 
             // Draw pool size text edit.
@@ -331,7 +331,7 @@ impl PoolSetup {
                 ui.add_space(12.0);
                 ui.label(RichText::new(t!("network_settings.not_valid_value"))
                     .size(17.0)
-                    .color(Colors::RED));
+                    .color(Colors::red()));
             } else {
                 NetworkSettings::node_restart_required_ui(ui);
             }
@@ -353,14 +353,14 @@ impl PoolSetup {
 
                 ui.columns(2, |columns| {
                     columns[0].vertical_centered_justified(|ui| {
-                        View::button(ui, t!("modal.cancel"), Colors::WHITE, || {
+                        View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                             // Close modal.
                             cb.hide_keyboard();
                             modal.close();
                         });
                     });
                     columns[1].vertical_centered_justified(|ui| {
-                        View::button(ui, t!("modal.save"), Colors::WHITE, on_save);
+                        View::button(ui, t!("modal.save"), Colors::white_or_black(false), on_save);
                     });
                 });
                 ui.add_space(6.0);
@@ -372,12 +372,12 @@ impl PoolSetup {
     fn stem_size_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         ui.label(RichText::new(t!("network_settings.max_tx_stempool"))
             .size(16.0)
-            .color(Colors::GRAY)
+            .color(Colors::gray())
         );
         ui.add_space(6.0);
 
         let size = NodeConfig::get_max_stempool_size();
-        View::button(ui, format!("{} {}", BEZIER_CURVE, size.clone()), Colors::BUTTON, || {
+        View::button(ui, format!("{} {}", BEZIER_CURVE, size.clone()), Colors::button(), || {
             // Setup values for modal.
             self.stempool_size_edit = size;
             // Show stempool size setup modal.
@@ -396,7 +396,7 @@ impl PoolSetup {
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.max_tx_stempool"))
                 .size(17.0)
-                .color(Colors::GRAY));
+                .color(Colors::gray()));
             ui.add_space(8.0);
 
             // Draw stempool size text edit.
@@ -408,7 +408,7 @@ impl PoolSetup {
                 ui.add_space(12.0);
                 ui.label(RichText::new(t!("network_settings.not_valid_value"))
                     .size(17.0)
-                    .color(Colors::RED));
+                    .color(Colors::red()));
             } else {
                 NetworkSettings::node_restart_required_ui(ui);
             }
@@ -430,14 +430,14 @@ impl PoolSetup {
 
                 ui.columns(2, |columns| {
                     columns[0].vertical_centered_justified(|ui| {
-                        View::button(ui, t!("modal.cancel"), Colors::WHITE, || {
+                        View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                             // Close modal.
                             cb.hide_keyboard();
                             modal.close();
                         });
                     });
                     columns[1].vertical_centered_justified(|ui| {
-                        View::button(ui, t!("modal.save"), Colors::WHITE, on_save);
+                        View::button(ui, t!("modal.save"), Colors::white_or_black(false), on_save);
                     });
                 });
                 ui.add_space(6.0);
@@ -449,12 +449,12 @@ impl PoolSetup {
     fn max_weight_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         ui.label(RichText::new(t!("network_settings.max_tx_weight"))
             .size(16.0)
-            .color(Colors::GRAY)
+            .color(Colors::gray())
         );
         ui.add_space(6.0);
 
         let weight = NodeConfig::get_mineable_max_weight();
-        View::button(ui, format!("{} {}", BOUNDING_BOX, weight.clone()), Colors::BUTTON, || {
+        View::button(ui, format!("{} {}", BOUNDING_BOX, weight.clone()), Colors::button(), || {
             // Setup values for modal.
             self.max_weight_edit = weight;
             // Show total tx weight setup modal.
@@ -473,7 +473,7 @@ impl PoolSetup {
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.max_tx_weight"))
                 .size(17.0)
-                .color(Colors::GRAY));
+                .color(Colors::gray()));
             ui.add_space(8.0);
 
             // Draw tx weight text edit.
@@ -485,7 +485,7 @@ impl PoolSetup {
                 ui.add_space(12.0);
                 ui.label(RichText::new(t!("network_settings.not_valid_value"))
                     .size(17.0)
-                    .color(Colors::RED));
+                    .color(Colors::red()));
             } else {
                 NetworkSettings::node_restart_required_ui(ui);
             }
@@ -507,14 +507,14 @@ impl PoolSetup {
 
                 ui.columns(2, |columns| {
                     columns[0].vertical_centered_justified(|ui| {
-                        View::button(ui, t!("modal.cancel"), Colors::WHITE, || {
+                        View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                             // Close modal.
                             cb.hide_keyboard();
                             modal.close();
                         });
                     });
                     columns[1].vertical_centered_justified(|ui| {
-                        View::button(ui, t!("modal.save"), Colors::WHITE, on_save);
+                        View::button(ui, t!("modal.save"), Colors::white_or_black(false), on_save);
                     });
                 });
                 ui.add_space(6.0);

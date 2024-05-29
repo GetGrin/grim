@@ -109,8 +109,8 @@ impl WalletTab for WalletTransactions {
         // Show wallet transactions panel.
         egui::CentralPanel::default()
             .frame(egui::Frame {
-                stroke: View::ITEM_STROKE,
-                fill: Colors::BUTTON,
+                stroke: View::item_stroke(),
+                fill: Colors::button(),
                 inner_margin: Margin {
                     left: View::far_left_inset_margin(ui) + 4.0,
                     right: View::get_right_inset() + 4.0,
@@ -196,7 +196,7 @@ impl WalletTransactions {
                             "transport" => BRIDGE,
                             "settings" => GEAR_FINE
                         );
-                    ui.label(RichText::new(empty_text).size(16.0).color(Colors::INACTIVE_TEXT));
+                    ui.label(RichText::new(empty_text).size(16.0).color(Colors::inactive_text()));
                 });
                 return;
             }
@@ -302,11 +302,11 @@ impl WalletTransactions {
         // Draw round background.
         let bg_rect = rect.clone();
         let color = if can_show_info {
-            Colors::BUTTON
+            Colors::button()
         } else {
-            Colors::FILL
+            Colors::fill()
         };
-        ui.painter().rect(bg_rect, rounding, color, View::ITEM_STROKE);
+        ui.painter().rect(bg_rect, rounding, color, View::item_stroke());
 
         ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
             // Draw button to show transaction info.
@@ -326,7 +326,7 @@ impl WalletTransactions {
                 let (icon, color) = if !can_show_info && self.tx_info_finalize {
                     (FILE_TEXT, None)
                 } else {
-                    (CHECK, Some(Colors::GREEN))
+                    (CHECK, Some(Colors::green()))
                 };
                 let final_rounding = if can_show_info {
                     Rounding::default()
@@ -352,7 +352,7 @@ impl WalletTransactions {
             let wallet_loaded = wallet.foreign_api_port().is_some();
             if ((!can_show_info && !self.tx_info_finalizing) || can_show_info) &&
                 (tx.can_repost(data) || tx.can_cancel()) && wallet_loaded {
-                View::item_button(ui, Rounding::default(), PROHIBIT, Some(Colors::RED), || {
+                View::item_button(ui, Rounding::default(), PROHIBIT, Some(Colors::red()), || {
                     if can_show_info {
                         self.confirm_cancel_tx_id = Some(tx.data.id);
                         // Show transaction cancellation confirmation modal.
@@ -376,7 +376,7 @@ impl WalletTransactions {
                     rounding.sw = 0.0;
                     rounding
                 };
-                View::item_button(ui, repost_rounding, ARROW_CLOCKWISE, Some(Colors::GREEN), || {
+                View::item_button(ui, repost_rounding, ARROW_CLOCKWISE, Some(Colors::green()), || {
                     // Post tx after getting slate from slatepack file.
                     if let Some((s, _)) = wallet.read_slate_by_tx(tx) {
                         let _ = wallet.post(&s, wallet.can_use_dandelion());
@@ -407,12 +407,12 @@ impl WalletTransactions {
 
                     // Setup amount color.
                     let amount_color = match tx.data.tx_type {
-                        TxLogEntryType::ConfirmedCoinbase => Colors::BLACK,
-                        TxLogEntryType::TxReceived => Colors::BLACK,
-                        TxLogEntryType::TxSent => Colors::BLACK,
-                        TxLogEntryType::TxReceivedCancelled => Colors::TEXT,
-                        TxLogEntryType::TxSentCancelled => Colors::TEXT,
-                        TxLogEntryType::TxReverted => Colors::TEXT
+                        TxLogEntryType::ConfirmedCoinbase => Colors::white_or_black(true),
+                        TxLogEntryType::TxReceived => Colors::white_or_black(true),
+                        TxLogEntryType::TxSent => Colors::white_or_black(true),
+                        TxLogEntryType::TxReceivedCancelled => Colors::text(false),
+                        TxLogEntryType::TxSentCancelled => Colors::text(false),
+                        TxLogEntryType::TxReverted => Colors::text(false)
                     };
                     View::ellipsize_text(ui, amount_text, 18.0, amount_color);
                     ui.add_space(-2.0);
@@ -484,27 +484,27 @@ impl WalletTransactions {
 
                     // Setup status text color.
                     let status_color = match tx.data.tx_type {
-                        TxLogEntryType::ConfirmedCoinbase => Colors::TEXT,
+                        TxLogEntryType::ConfirmedCoinbase => Colors::text(false),
                         TxLogEntryType::TxReceived => if tx.data.confirmed {
-                            Colors::GREEN
+                            Colors::green()
                         } else {
-                            Colors::TEXT
+                            Colors::text(false)
                         },
                         TxLogEntryType::TxSent => if tx.data.confirmed {
-                            Colors::RED
+                            Colors::red()
                         } else {
-                            Colors::TEXT
+                            Colors::text(false)
                         },
-                        TxLogEntryType::TxReceivedCancelled => Colors::INACTIVE_TEXT,
-                        TxLogEntryType::TxSentCancelled => Colors::INACTIVE_TEXT,
-                        TxLogEntryType::TxReverted => Colors::INACTIVE_TEXT,
+                        TxLogEntryType::TxReceivedCancelled => Colors::inactive_text(),
+                        TxLogEntryType::TxSentCancelled => Colors::inactive_text(),
+                        TxLogEntryType::TxReverted => Colors::inactive_text(),
                     };
                     ui.label(RichText::new(status_text).size(15.0).color(status_color));
 
                     // Setup transaction time.
                     let tx_time = View::format_time(tx.data.creation_ts.timestamp());
                     let tx_time_text = format!("{} {}", CALENDAR_CHECK, tx_time);
-                    ui.label(RichText::new(tx_time_text).size(15.0).color(Colors::GRAY));
+                    ui.label(RichText::new(tx_time_text).size(15.0).color(Colors::gray()));
                     ui.add_space(3.0);
                 });
             });
@@ -570,14 +570,14 @@ impl WalletTransactions {
                 // Show buttons to close modal or come back to text request content.
                 ui.columns(2, |cols| {
                     cols[0].vertical_centered_justified(|ui| {
-                        View::button(ui, t!("close"), Colors::WHITE, || {
+                        View::button(ui, t!("close"), Colors::white_or_black(false), || {
                             self.tx_info_qr_code_content.clear_state();
                             self.tx_info_show_qr = false;
                             modal.close();
                         });
                     });
                     cols[1].vertical_centered_justified(|ui| {
-                        View::button(ui, t!("back"), Colors::WHITE, || {
+                        View::button(ui, t!("back"), Colors::white_or_black(false), || {
                             self.tx_info_qr_code_content.clear_state();
                             self.tx_info_show_qr = false;
                         });
@@ -587,14 +587,14 @@ impl WalletTransactions {
                 // Show buttons to close modal or scanner.
                 ui.columns(2, |cols| {
                     cols[0].vertical_centered_justified(|ui| {
-                        View::button(ui, t!("close"), Colors::WHITE, || {
+                        View::button(ui, t!("close"), Colors::white_or_black(false), || {
                             cb.stop_camera();
                             self.tx_info_show_scanner = false;
                             modal.close();
                         });
                     });
                     cols[1].vertical_centered_justified(|ui| {
-                        View::button(ui, t!("back"), Colors::WHITE, || {
+                        View::button(ui, t!("back"), Colors::white_or_black(false), || {
                             cb.stop_camera();
                             self.tx_info_show_scanner = false;
                             modal.enable_closing();
@@ -604,7 +604,7 @@ impl WalletTransactions {
             } else {
                 // Show button to close modal.
                 ui.vertical_centered_justified(|ui| {
-                    View::button(ui, t!("close"), Colors::WHITE, || {
+                    View::button(ui, t!("close"), Colors::white_or_black(false), || {
                         self.tx_info_id = None;
                         self.tx_info_finalize = false;
                         cb.hide_keyboard();
@@ -660,7 +660,7 @@ impl WalletTransactions {
         let bg_rect = rect.clone();
         let mut rounding = View::item_rounding(1, 3, false);
 
-        ui.painter().rect(bg_rect, rounding, Colors::FILL, View::ITEM_STROKE);
+        ui.painter().rect(bg_rect, rounding, Colors::fill(), View::item_stroke());
 
         ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
             // Draw button to copy transaction info value.
@@ -678,8 +678,8 @@ impl WalletTransactions {
                 ui.add_space(6.0);
                 ui.vertical(|ui| {
                     ui.add_space(3.0);
-                    View::ellipsize_text(ui, value, 15.0, Colors::TITLE);
-                    ui.label(RichText::new(label).size(15.0).color(Colors::GRAY));
+                    View::ellipsize_text(ui, value, 15.0, Colors::title(false));
+                    ui.label(RichText::new(label).size(15.0).color(Colors::gray()));
                     ui.add_space(3.0);
                 });
             });
@@ -734,9 +734,9 @@ impl WalletTransactions {
                     }
                 };
                 let desc_color = if self.tx_info_finalize_error {
-                    Colors::RED
+                    Colors::red()
                 } else {
-                    Colors::GRAY
+                    Colors::gray()
                 };
                 ui.label(RichText::new(desc_text).size(16.0).color(desc_color));
             } else {
@@ -753,7 +753,7 @@ impl WalletTransactions {
                         t!("wallets.parse_s1_slatepack_desc", "amount" => amount)
                     }
                 };
-                ui.label(RichText::new(desc_text).size(16.0).color(Colors::GRAY));
+                ui.label(RichText::new(desc_text).size(16.0).color(Colors::gray()));
             }
         });
         ui.add_space(6.0);
@@ -785,7 +785,7 @@ impl WalletTransactions {
             } else {
                 Id::from("tx_info_message_request")
             }.with(slate.id).with(tx.data.id);
-            View::horizontal_line(ui, Colors::ITEM_STROKE);
+            View::horizontal_line(ui, Colors::item_stroke());
             ui.add_space(3.0);
             ScrollArea::vertical()
                 .id_source(input_id)
@@ -806,7 +806,7 @@ impl WalletTransactions {
         });
 
         ui.add_space(2.0);
-        View::horizontal_line(ui, Colors::ITEM_STROKE);
+        View::horizontal_line(ui, Colors::item_stroke());
         ui.add_space(8.0);
 
         // Do not show buttons on finalization.
@@ -822,7 +822,7 @@ impl WalletTransactions {
                 columns[0].vertical_centered_justified(|ui| {
                     // Draw button to scan Slatepack message QR code.
                     let qr_text = format!("{} {}", SCAN, t!("scan"));
-                    View::button(ui, qr_text, Colors::BUTTON, || {
+                    View::button(ui, qr_text, Colors::button(), || {
                         cb.hide_keyboard();
                         modal.disable_closing();
                         cb.start_camera();
@@ -832,7 +832,7 @@ impl WalletTransactions {
                 columns[1].vertical_centered_justified(|ui| {
                     // Draw button to paste data from clipboard.
                     let paste_text = format!("{} {}", CLIPBOARD_TEXT, t!("paste"));
-                    View::button(ui, paste_text, Colors::BUTTON, || {
+                    View::button(ui, paste_text, Colors::button(), || {
                         self.tx_info_finalize_edit = cb.get_string_from_buffer();
                     });
                     // Callback on finalization message input change.
@@ -846,7 +846,7 @@ impl WalletTransactions {
                 columns[0].vertical_centered_justified(|ui| {
                     // Draw button to show Slatepack message as QR code.
                     let qr_text = format!("{} {}", QR_CODE, t!("qr_code"));
-                    View::button(ui, qr_text, Colors::BUTTON, || {
+                    View::button(ui, qr_text, Colors::button(), || {
                         cb.hide_keyboard();
                         self.tx_info_show_qr = true;
                     });
@@ -854,7 +854,7 @@ impl WalletTransactions {
                 columns[1].vertical_centered_justified(|ui| {
                     // Draw copy button.
                     let copy_text = format!("{} {}", COPY, t!("copy"));
-                    View::button(ui, copy_text, Colors::BUTTON, || {
+                    View::button(ui, copy_text, Colors::button(), || {
                         cb.copy_string_to_buffer(self.tx_info_response_edit.clone());
                         self.tx_info_finalize_edit = "".to_string();
                         if tx.can_finalize {
@@ -932,7 +932,7 @@ impl WalletTransactions {
             };
             ui.label(RichText::new(text)
                 .size(17.0)
-                .color(Colors::TEXT));
+                .color(Colors::text(false)));
             ui.add_space(8.0);
         });
 
@@ -943,13 +943,13 @@ impl WalletTransactions {
 
             ui.columns(2, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
-                    View::button(ui, t!("modal.cancel"), Colors::WHITE, || {
+                    View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                         self.confirm_cancel_tx_id = None;
                         modal.close();
                     });
                 });
                 columns[1].vertical_centered_justified(|ui| {
-                    View::button(ui, "OK".to_string(), Colors::WHITE, || {
+                    View::button(ui, "OK".to_string(), Colors::white_or_black(false), || {
                         wallet.cancel(self.confirm_cancel_tx_id.unwrap());
                         self.confirm_cancel_tx_id = None;
                         modal.close();

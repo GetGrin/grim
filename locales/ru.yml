@@ -22,6 +22,9 @@ repeat: Повторить
 scan_result: Результат сканирования
 back: Назад
 share: Поделиться
+theme: Тема
+dark: Тёмная
+light: Светлая
 wallets:
   await_conf_amount: Ожидает подтверждения
   await_fin_amount: Ожидает завершения

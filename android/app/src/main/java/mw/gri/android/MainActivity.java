@@ -353,4 +353,10 @@ public class MainActivity extends GameActivity {
         intent.setType("image/*");
         startActivity(Intent.createChooser(intent, "Share image"));
     }
+
+    // Check if device is using dark theme.
+    public boolean useDarkTheme() {
+        int currentNightMode = getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK;
+        return  currentNightMode == Configuration.UI_MODE_NIGHT_YES;
+    }
 }

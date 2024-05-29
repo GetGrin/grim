@@ -27,25 +27,29 @@ use winit::platform::android::activity::AndroidApp;
 
 use crate::gui::platform::PlatformCallbacks;
 
+/// Android platform implementation.
 #[derive(Clone)]
 pub struct Android {
     android_app: AndroidApp,
 }
 
 impl Android {
+    /// Create new Android platform instance from provided [`AndroidApp`].
     pub fn new(app: AndroidApp) -> Self {
         Self {
             android_app: app,
         }
     }
-    fn call_java_method(&self, name: &str, sig: &str, args: &[JValue]) -> Option<jni::sys::jvalue> {
+
+    /// Call Android Activity method with JNI.
+    pub fn call_java_method(&self, name: &str, sig: &str, args: &[JValue]) -> Option<jni::sys::jvalue> {
         let vm = unsafe { jni::JavaVM::from_raw(self.android_app.vm_as_ptr() as _) }.unwrap();
         let mut env = vm.attach_current_thread().unwrap();
         let activity = unsafe {
             JObject::from_raw(self.android_app.activity_as_ptr() as jni::sys::jobject)
         };
         if let Ok(result) = env.call_method(activity, name, sig, args) {
-           return Some(result.as_jni().clone());
+            return Some(result.as_jni().clone());
         }
         None
     }
@@ -142,6 +146,7 @@ impl PlatformCallbacks for Android {
 }
 
 lazy_static! {
+    /// Last image data from camera.
     static ref LAST_CAMERA_IMAGE: Arc<RwLock<Option<(Vec<u8>, u32)>>> = Arc::new(RwLock::new(None));
 }
 

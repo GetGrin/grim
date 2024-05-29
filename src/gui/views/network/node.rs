@@ -205,7 +205,7 @@ fn peer_item_ui(ui: &mut egui::Ui, peer: &PeerStats, rounding: Rounding) {
     ui.allocate_ui_at_rect(rect, |ui| {
         ui.vertical(|ui| {
             // Draw round background.
-            ui.painter().rect(rect, rounding, Colors::WHITE, View::ITEM_STROKE);
+            ui.painter().rect(rect, rounding, Colors::white_or_black(false), View::item_stroke());
 
             ui.add_space(2.0);
 
@@ -213,7 +213,7 @@ fn peer_item_ui(ui: &mut egui::Ui, peer: &PeerStats, rounding: Rounding) {
             ui.horizontal(|ui| {
                 ui.add_space(5.0);
                 let addr_text = format!("{} {}", PLUGS_CONNECTED, &peer.addr);
-                ui.label(RichText::new(addr_text).color(Colors::BLACK).size(17.0));
+                ui.label(RichText::new(addr_text).color(Colors::white_or_black(true)).size(17.0));
             });
             // Draw peer difficulty and height
             ui.horizontal(|ui| {
@@ -223,13 +223,13 @@ fn peer_item_ui(ui: &mut egui::Ui, peer: &PeerStats, rounding: Rounding) {
                                         peer.total_difficulty,
                                         AT,
                                         peer.height);
-                ui.label(RichText::new(diff_text).color(Colors::TITLE).size(16.0));
+                ui.label(RichText::new(diff_text).color(Colors::title(false)).size(16.0));
             });
             // Draw peer user-agent
             ui.horizontal(|ui| {
                 ui.add_space(6.0);
                 let agent_text = format!("{} {}", DEVICES, &peer.user_agent);
-                ui.label(RichText::new(agent_text).color(Colors::GRAY).size(16.0));
+                ui.label(RichText::new(agent_text).color(Colors::gray()).size(16.0));
             });
 
             ui.add_space(2.0);

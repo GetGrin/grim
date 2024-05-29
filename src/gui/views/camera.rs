@@ -114,7 +114,7 @@ impl CameraContent {
                     ui.vertical_centered(|ui| {
                         ui.label(RichText::new(format!("{}%", ur_progress))
                             .size(16.0)
-                            .color(Colors::YELLOW));
+                            .color(Colors::yellow()));
                     });
                 }
 
@@ -125,7 +125,7 @@ impl CameraContent {
                     size.y = 48.0;
                     ui.allocate_ui_with_layout(size, Layout::right_to_left(Align::Max), |ui| {
                         ui.add_space(4.0);
-                        View::button(ui, CAMERA_ROTATE.to_string(), Colors::WHITE, || {
+                        View::button(ui, CAMERA_ROTATE.to_string(), Colors::white_or_black(false), || {
                             cb.switch_camera();
                         });
                     });

@@ -60,10 +60,10 @@ impl RecoverySetup {
         self.modal_content_ui(ui, wallet, cb);
 
         ui.add_space(10.0);
-        View::horizontal_line(ui, Colors::STROKE);
+        View::horizontal_line(ui, Colors::stroke());
         ui.add_space(6.0);
         View::sub_title(ui, format!("{} {}", WRENCH, t!("wallets.recovery")));
-        View::horizontal_line(ui, Colors::STROKE);
+        View::horizontal_line(ui, Colors::stroke());
         ui.add_space(4.0);
 
         ui.vertical_centered(|ui| {
@@ -73,60 +73,60 @@ impl RecoverySetup {
                 ui.add_space(6.0);
                 ui.label(RichText::new(t!("wallets.repair_unavailable"))
                     .size(16.0)
-                    .color(Colors::RED));
+                    .color(Colors::red()));
             } else if !wallet.is_repairing() {
                 ui.add_space(6.0);
 
                 // Draw button to repair the wallet.
                 let repair_text = format!("{} {}", STETHOSCOPE, t!("wallets.repair_wallet"));
-                View::button(ui, repair_text, Colors::GOLD, || {
+                View::action_button(ui, repair_text, || {
                     wallet.repair();
                 });
 
                 ui.add_space(6.0);
                 ui.label(RichText::new(t!("wallets.repair_desc"))
                     .size(16.0)
-                    .color(Colors::INACTIVE_TEXT));
+                    .color(Colors::inactive_text()));
             }
 
             ui.add_space(6.0);
-            View::horizontal_line(ui, Colors::ITEM_STROKE);
+            View::horizontal_line(ui, Colors::item_stroke());
             ui.add_space(6.0);
 
             // Draw button to restore the wallet.
             let recover_text = format!("{} {}", LIFEBUOY, t!("wallets.recover"));
             ui.add_space(4.0);
-            View::colored_text_button(ui, recover_text, Colors::GREEN, Colors::BUTTON, || {
+            View::colored_text_button(ui, recover_text, Colors::green(), Colors::button(), || {
                 wallet.delete_db(true);
             });
             ui.add_space(6.0);
             ui.label(RichText::new(t!("wallets.restore_wallet_desc"))
                 .size(16.0)
-                .color(Colors::INACTIVE_TEXT));
+                .color(Colors::inactive_text()));
 
             ui.add_space(6.0);
-            View::horizontal_line(ui, Colors::ITEM_STROKE);
+            View::horizontal_line(ui, Colors::item_stroke());
             ui.add_space(6.0);
 
             let recovery_text = format!("{}:", t!("wallets.recovery_phrase"));
-            ui.label(RichText::new(recovery_text).size(16.0).color(Colors::GRAY));
+            ui.label(RichText::new(recovery_text).size(16.0).color(Colors::gray()));
             ui.add_space(6.0);
 
             // Draw button to show recovery phrase.
             let show_text = format!("{} {}", EYE, t!("show"));
-            View::button(ui, show_text, Colors::BUTTON, || {
+            View::button(ui, show_text, Colors::button(), || {
                 self.show_recovery_phrase_modal(cb);
             });
 
             ui.add_space(12.0);
-            View::horizontal_line(ui, Colors::ITEM_STROKE);
+            View::horizontal_line(ui, Colors::item_stroke());
             ui.add_space(6.0);
-            ui.label(RichText::new(t!("wallets.delete_desc")).size(16.0).color(Colors::RED));
+            ui.label(RichText::new(t!("wallets.delete_desc")).size(16.0).color(Colors::red()));
             ui.add_space(6.0);
 
             // Draw button to delete the wallet.
             let delete_text = format!("{} {}", TRASH, t!("wallets.delete"));
-            View::colored_text_button(ui, delete_text, Colors::RED, Colors::BUTTON, || {
+            View::colored_text_button(ui, delete_text, Colors::red(), Colors::button(), || {
                 Modal::new(DELETE_CONFIRMATION_MODAL)
                     .position(ModalPosition::Center)
                     .title(t!("modal.confirmation"))
@@ -186,11 +186,11 @@ impl RecoverySetup {
             ui.vertical_centered(|ui| {
                 ui.label(RichText::new(self.recovery_phrase.clone().unwrap().to_string())
                     .size(17.0)
-                    .color(Colors::BLACK));
+                    .color(Colors::white_or_black(true)));
             });
             ui.add_space(10.0);
             ui.vertical_centered_justified(|ui| {
-                View::button(ui, t!("close"), Colors::WHITE, || {
+                View::button(ui, t!("close"), Colors::white_or_black(false), || {
                     self.recovery_phrase = None;
                     modal.close();
                 });
@@ -199,7 +199,7 @@ impl RecoverySetup {
             ui.vertical_centered(|ui| {
                 ui.label(RichText::new(t!("wallets.pass"))
                     .size(17.0)
-                    .color(Colors::GRAY));
+                    .color(Colors::gray()));
                 ui.add_space(8.0);
 
                 // Draw current wallet password text edit.
@@ -212,12 +212,12 @@ impl RecoverySetup {
                     ui.add_space(12.0);
                     ui.label(RichText::new(t!("wallets.pass_empty"))
                         .size(17.0)
-                        .color(Colors::INACTIVE_TEXT));
+                        .color(Colors::inactive_text()));
                 } else if self.wrong_pass {
                     ui.add_space(12.0);
                     ui.label(RichText::new(t!("wallets.wrong_pass"))
                         .size(17.0)
-                        .color(Colors::RED));
+                        .color(Colors::red()));
                 }
             });
             ui.add_space(12.0);
@@ -229,13 +229,13 @@ impl RecoverySetup {
 
                 ui.columns(2, |columns| {
                     columns[0].vertical_centered_justified(|ui| {
-                        View::button(ui, t!("modal.cancel"), Colors::WHITE, || {
+                        View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                             self.recovery_phrase = None;
                             modal.close();
                         });
                     });
                     columns[1].vertical_centered_justified(|ui| {
-                        View::button(ui, "OK".to_owned(), Colors::WHITE, || {
+                        View::button(ui, "OK".to_owned(), Colors::white_or_black(false), || {
                             match wallet.get_recovery(self.pass_edit.clone()) {
                                 Ok(phrase) => {
                                     self.wrong_pass = false;
@@ -263,7 +263,7 @@ impl RecoverySetup {
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("wallets.delete_conf"))
                 .size(17.0)
-                .color(Colors::TEXT));
+                .color(Colors::text(false)));
         });
         ui.add_space(12.0);
 
@@ -274,12 +274,12 @@ impl RecoverySetup {
 
             ui.columns(2, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
-                    View::button(ui, t!("modal.cancel"), Colors::WHITE, || {
+                    View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                         modal.close();
                     });
                 });
                 columns[1].vertical_centered_justified(|ui| {
-                    View::button(ui, t!("delete"), Colors::WHITE, || {
+                    View::button(ui, t!("delete"), Colors::white_or_black(false), || {
                         wallet.delete_wallet();
                         modal.close();
                     });

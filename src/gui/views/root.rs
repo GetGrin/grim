@@ -110,7 +110,7 @@ impl Root {
             .resizable(false)
             .exact_width(panel_width)
             .frame(egui::Frame {
-                fill: Colors::WHITE,
+                fill: Colors::white_or_black(false),
                 ..Default::default()
             })
             .show_animated_inside(ui, is_panel_open, |ui| {
@@ -126,7 +126,7 @@ impl Root {
         // Show wallets content.
         egui::CentralPanel::default()
             .frame(egui::Frame {
-                fill: Colors::FILL_DARK,
+                fill: Colors::fill_deep(),
                 ..Default::default()
             })
             .show_inside(ui, |ui| {
@@ -208,7 +208,7 @@ impl Root {
                 ui.add_space(12.0);
                 ui.label(RichText::new(t!("sync_status.shutdown"))
                     .size(17.0)
-                    .color(Colors::TEXT));
+                    .color(Colors::text(false)));
             });
             ui.add_space(10.0);
         } else {
@@ -216,38 +216,35 @@ impl Root {
             ui.vertical_centered(|ui| {
                 ui.label(RichText::new(t!("modal_exit.description"))
                     .size(17.0)
-                    .color(Colors::TEXT));
+                    .color(Colors::text(false)));
             });
             ui.add_space(10.0);
 
-            // Show modal buttons.
-            ui.scope(|ui| {
-                // Setup spacing between buttons.
-                ui.spacing_mut().item_spacing = egui::Vec2::new(6.0, 0.0);
+            // Setup spacing between buttons.
+            ui.spacing_mut().item_spacing = egui::Vec2::new(6.0, 0.0);
 
-                ui.columns(2, |columns| {
-                    columns[0].vertical_centered_justified(|ui| {
-                        View::button(ui, t!("modal.cancel"), Colors::WHITE, || {
-                            modal.close();
-                        });
-                    });
-                    columns[1].vertical_centered_justified(|ui| {
-                        View::button_ui(ui, t!("modal_exit.exit"), Colors::WHITE, |ui| {
-                            if !Node::is_running() {
-                                self.exit_allowed = true;
-                                ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
-                                modal.close();
-                            } else {
-                                Node::stop(true);
-                                modal.disable_closing();
-                                Modal::set_title(t!("modal_exit.exit"));
-                                self.show_exit_progress = true;
-                            }
-                        });
+            ui.columns(2, |columns| {
+                columns[0].vertical_centered_justified(|ui| {
+                    View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
+                        modal.close();
                     });
                 });
-                ui.add_space(6.0);
+                columns[1].vertical_centered_justified(|ui| {
+                    View::button_ui(ui, t!("modal_exit.exit"), Colors::white_or_black(false), |ui| {
+                        if !Node::is_running() {
+                            self.exit_allowed = true;
+                            ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
+                            modal.close();
+                        } else {
+                            Node::stop(true);
+                            modal.disable_closing();
+                            Modal::set_title(t!("modal_exit.exit"));
+                            self.show_exit_progress = true;
+                        }
+                    });
+                });
             });
+            ui.add_space(6.0);
         }
     }
 
@@ -268,16 +265,23 @@ impl Root {
         NodeSetup::chain_type_ui(ui);
 
         ui.add_space(8.0);
-        View::horizontal_line(ui, Colors::ITEM_STROKE);
+        View::horizontal_line(ui, Colors::item_stroke());
+        ui.add_space(8.0);
+
+        // Draw theme selection.
+        Self::theme_selection_ui(ui);
+
+        ui.add_space(8.0);
+        View::horizontal_line(ui, Colors::item_stroke());
         ui.add_space(6.0);
 
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(format!("{}:", t!("language")))
                 .size(16.0)
-                .color(Colors::GRAY)
+                .color(Colors::gray())
             );
         });
-        ui.add_space(6.0);
+        ui.add_space(8.0);
 
         // Draw available list of languages to select.
         let locales = rust_i18n::available_locales!();
@@ -289,11 +293,37 @@ impl Root {
 
         // Show button to close modal.
         ui.vertical_centered_justified(|ui| {
-            View::button(ui, t!("close"), Colors::WHITE, || {
+            View::button(ui, t!("close"), Colors::white_or_black(false), || {
                 modal.close();
             });
         });
         ui.add_space(6.0);
+    }
+
+    /// Draw theme selection content.
+    fn theme_selection_ui(ui: &mut egui::Ui) {
+        ui.vertical_centered(|ui| {
+            ui.label(RichText::new(t!("theme")).size(16.0).color(Colors::gray()));
+        });
+
+        let saved_use_dark = AppConfig::dark_theme().unwrap_or(false);
+        let mut selected_use_dark = saved_use_dark;
+
+        ui.add_space(8.0);
+        ui.columns(2, |columns| {
+            columns[0].vertical_centered(|ui| {
+                View::radio_value(ui, &mut selected_use_dark, false, t!("light"));
+            });
+            columns[1].vertical_centered(|ui| {
+                View::radio_value(ui, &mut selected_use_dark, true, t!("dark"));
+            })
+        });
+        ui.add_space(8.0);
+
+        if saved_use_dark != selected_use_dark {
+            AppConfig::set_dark_theme(selected_use_dark);
+            crate::setup_visuals(ui.ctx());
+        }
     }
 
     /// Draw language selection item content.
@@ -305,7 +335,7 @@ impl Root {
         // Draw round background.
         let bg_rect = rect.clone();
         let item_rounding = View::item_rounding(index, len, false);
-        ui.painter().rect(bg_rect, item_rounding, Colors::FILL, View::ITEM_STROKE);
+        ui.painter().rect(bg_rect, item_rounding, Colors::fill(), View::item_stroke());
 
         ui.vertical(|ui| {
             ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
@@ -323,7 +353,7 @@ impl Root {
                     });
                 } else {
                     ui.add_space(14.0);
-                    ui.label(RichText::new(CHECK_FAT).size(20.0).color(Colors::GREEN));
+                    ui.label(RichText::new(CHECK_FAT).size(20.0).color(Colors::green()));
                     ui.add_space(14.0);
                 }
 
@@ -333,9 +363,14 @@ impl Root {
                     ui.vertical(|ui| {
                         // Draw language name.
                         ui.add_space(12.0);
+                        let color = if is_current {
+                            Colors::title(false)
+                        } else {
+                            Colors::gray()
+                        };
                         ui.label(RichText::new(t!("lang_name", locale = locale))
                             .size(17.0)
-                            .color(Colors::TEXT));
+                            .color(color));
                         ui.add_space(3.0);
                     });
                 });
@@ -349,11 +384,11 @@ impl Root {
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network.android_warning"))
                 .size(15.0)
-                .color(Colors::TEXT));
+                .color(Colors::text(false)));
         });
         ui.add_space(8.0);
         ui.vertical_centered_justified(|ui| {
-            View::button(ui, t!("continue"), Colors::WHITE, || {
+            View::button(ui, t!("continue"), Colors::white_or_black(false), || {
                 AppConfig::show_android_integrated_node_warning();
                 modal.close();
             });

@@ -33,12 +33,20 @@ use crate::gui::views::types::TextEditOptions;
 pub struct View;
 
 impl View {
-    /// Default stroke around views.
-    pub const DEFAULT_STROKE: Stroke = Stroke { width: 1.0, color: Colors::STROKE };
-    /// Stroke for items.
-    pub const ITEM_STROKE: Stroke = Stroke { width: 1.0, color: Colors::ITEM_STROKE };
-    /// Stroke for hovered items and buttons.
-    pub const HOVER_STROKE: Stroke = Stroke { width: 1.0, color: Colors::ITEM_HOVER };
+    /// Get default stroke around views.
+    pub fn default_stroke() -> Stroke {
+        Stroke { width: 1.0, color: Colors::stroke() }
+    }
+
+    /// Get default stroke around item buttons.
+    pub fn item_stroke() -> Stroke {
+        Stroke { width: 1.0, color: Colors::item_stroke() }
+    }
+
+    /// Get stroke for hovered items and buttons.
+    pub fn hover_stroke() -> Stroke {
+        Stroke { width: 1.0, color: Colors::item_hover() }
+    }
 
     /// Draw content with maximum width value.
     pub fn max_width_ui(ui: &mut egui::Ui,
@@ -149,7 +157,7 @@ impl View {
     /// Draw horizontally centered sub-title with space below.
     pub fn sub_title(ui: &mut egui::Ui, text: String) {
         ui.vertical_centered_justified(|ui| {
-            ui.label(RichText::new(text.to_uppercase()).size(16.0).color(Colors::TEXT));
+            ui.label(RichText::new(text.to_uppercase()).size(16.0).color(Colors::text(false)));
         });
         ui.add_space(4.0);
     }
@@ -170,20 +178,15 @@ impl View {
     /// Title button with transparent background fill color, contains only icon.
     pub fn title_button(ui: &mut egui::Ui, icon: &str, action: impl FnOnce()) {
         ui.scope(|ui| {
-            // Disable stroke when inactive.
+            // Disable strokes.
             ui.style_mut().visuals.widgets.inactive.bg_stroke = Stroke::NONE;
-            // Setup stroke around title buttons on click.
-            ui.style_mut().visuals.widgets.hovered.bg_stroke = Self::HOVER_STROKE;
-            ui.style_mut().visuals.widgets.active.bg_stroke = Self::DEFAULT_STROKE;
-            // Disable rounding.
-            ui.style_mut().visuals.widgets.hovered.rounding = Rounding::default();
+            ui.style_mut().visuals.widgets.hovered.bg_stroke = Stroke::NONE;
+            ui.style_mut().visuals.widgets.active.bg_stroke = Stroke::NONE;
             ui.style_mut().visuals.widgets.active.rounding = Rounding::default();
-            // Disable expansion.
-            ui.style_mut().visuals.widgets.hovered.expansion = 0.0;
             ui.style_mut().visuals.widgets.active.expansion = 0.0;
 
             // Setup text.
-            let wt = RichText::new(icon.to_string()).size(22.0).color(Colors::TITLE);
+            let wt = RichText::new(icon.to_string()).size(22.0).color(Colors::title(true));
             // Draw button.
             let br = Button::new(wt)
                 .fill(Colors::TRANSPARENT)
@@ -200,8 +203,8 @@ impl View {
     pub fn tab_button(ui: &mut egui::Ui, icon: &str, active: bool, action: impl FnOnce()) {
         ui.scope(|ui| {
             let text_color = match active {
-                true => Colors::TITLE,
-                false => Colors::TEXT
+                true => Colors::title(false),
+                false => Colors::text(false)
             };
 
             let mut button = Button::new(RichText::new(icon).size(22.0).color(text_color));
@@ -211,15 +214,15 @@ impl View {
                 ui.style_mut().visuals.widgets.hovered.expansion = 0.0;
                 ui.style_mut().visuals.widgets.active.expansion = 0.0;
                 // Setup fill colors.
-                ui.visuals_mut().widgets.inactive.weak_bg_fill = Colors::WHITE;
-                ui.visuals_mut().widgets.hovered.weak_bg_fill = Colors::BUTTON;
-                ui.visuals_mut().widgets.active.weak_bg_fill = Colors::FILL;
+                ui.visuals_mut().widgets.inactive.weak_bg_fill = Colors::white_or_black(false);
+                ui.visuals_mut().widgets.hovered.weak_bg_fill = Colors::button();
+                ui.visuals_mut().widgets.active.weak_bg_fill = Colors::fill();
                 // Setup stroke colors.
-                ui.visuals_mut().widgets.inactive.bg_stroke = Self::DEFAULT_STROKE;
-                ui.visuals_mut().widgets.hovered.bg_stroke = Self::HOVER_STROKE;
-                ui.visuals_mut().widgets.active.bg_stroke = Self::ITEM_STROKE;
+                ui.visuals_mut().widgets.inactive.bg_stroke = Self::default_stroke();
+                ui.visuals_mut().widgets.hovered.bg_stroke = Self::hover_stroke();
+                ui.visuals_mut().widgets.active.bg_stroke = Self::item_stroke();
             } else {
-                button = button.fill(Colors::FILL).stroke(Stroke::NONE);
+                button = button.fill(Colors::fill()).stroke(Stroke::NONE);
             }
 
             let br = button.ui(ui).on_hover_cursor(CursorIcon::PointingHand);
@@ -234,7 +237,7 @@ impl View {
     fn button_resp(ui: &mut egui::Ui, text: String, text_color: Color32, bg: Color32) -> Response {
         let button_text = Self::ellipsize(text.to_uppercase(), 17.0, text_color);
         Button::new(button_text)
-            .stroke(Self::DEFAULT_STROKE)
+            .stroke(Self::default_stroke())
             .fill(bg)
             .ui(ui)
             .on_hover_cursor(CursorIcon::PointingHand)
@@ -242,7 +245,7 @@ impl View {
 
     /// Draw [`Button`] with specified background fill color and default text color.
     pub fn button(ui: &mut egui::Ui, text: String, fill: Color32, action: impl FnOnce()) {
-        let br = Self::button_resp(ui, text, Colors::TEXT_BUTTON, fill);
+        let br = Self::button_resp(ui, text, Colors::text_button(), fill);
         if Self::touched(ui, br) {
             (action)();
         }
@@ -260,14 +263,20 @@ impl View {
         }
     }
 
+    /// Draw gold action [`Button`].
+    pub fn action_button(ui: &mut egui::Ui,
+                         text: String, action: impl FnOnce()) {
+        Self::colored_text_button(ui, text, Colors::title(true), Colors::gold(), action);
+    }
+
     /// Draw [`Button`] with specified background fill color and ui at callback.
     pub fn button_ui(ui: &mut egui::Ui,
                      text: String,
                      fill: Color32,
                      action: impl FnOnce(&mut egui::Ui)) {
-        let button_text = Self::ellipsize(text.to_uppercase(), 17.0, Colors::TEXT_BUTTON);
+        let button_text = Self::ellipsize(text.to_uppercase(), 17.0, Colors::text_button());
         let br = Button::new(button_text)
-            .stroke(Self::DEFAULT_STROKE)
+            .stroke(Self::default_stroke())
             .fill(fill)
             .ui(ui)
             .on_hover_cursor(CursorIcon::PointingHand);
@@ -294,16 +303,16 @@ impl View {
             ui.style_mut().visuals.widgets.hovered.expansion = 0.0;
             ui.style_mut().visuals.widgets.active.expansion = 0.0;
             // Setup fill colors.
-            ui.visuals_mut().widgets.inactive.weak_bg_fill = Colors::WHITE;
-            ui.visuals_mut().widgets.hovered.weak_bg_fill = Colors::BUTTON;
-            ui.visuals_mut().widgets.active.weak_bg_fill = Colors::FILL;
+            ui.visuals_mut().widgets.inactive.weak_bg_fill = Colors::white_or_black(false);
+            ui.visuals_mut().widgets.hovered.weak_bg_fill = Colors::button();
+            ui.visuals_mut().widgets.active.weak_bg_fill = Colors::fill();
             // Setup stroke colors.
-            ui.visuals_mut().widgets.inactive.bg_stroke = Self::DEFAULT_STROKE;
-            ui.visuals_mut().widgets.hovered.bg_stroke = Self::HOVER_STROKE;
-            ui.visuals_mut().widgets.active.bg_stroke = Self::ITEM_STROKE;
+            ui.visuals_mut().widgets.inactive.bg_stroke = Self::default_stroke();
+            ui.visuals_mut().widgets.hovered.bg_stroke = Self::hover_stroke();
+            ui.visuals_mut().widgets.active.bg_stroke = Self::item_stroke();
 
             // Setup button text color.
-            let text_color = if let Some(c) = color { c } else { Colors::ITEM_BUTTON };
+            let text_color = if let Some(c) = color { c } else { Colors::item_button() };
 
             // Show button.
             let br = Button::new(RichText::new(text).size(20.0).color(text_color))
@@ -340,7 +349,7 @@ impl View {
                 // Draw button to show/hide current password.
                 let eye_icon = if show_pass { EYE } else { EYE_SLASH };
                 let mut changed = false;
-                View::button(ui, eye_icon.to_string(), Colors::WHITE, || {
+                View::button(ui, eye_icon.to_string(), Colors::white_or_black(false), || {
                     show_pass = !show_pass;
                     changed = true;
                 });
@@ -356,7 +365,7 @@ impl View {
             // Setup copy button.
             if options.copy {
                 let copy_icon = COPY.to_string();
-                View::button(ui, copy_icon, Colors::WHITE, || {
+                View::button(ui, copy_icon, Colors::white_or_black(false), || {
                     cb.copy_string_to_buffer(value.clone());
                 });
                 ui.add_space(8.0);
@@ -365,7 +374,7 @@ impl View {
             // Setup paste button.
             if options.paste {
                 let paste_icon = CLIPBOARD_TEXT.to_string();
-                View::button(ui, paste_icon, Colors::WHITE, || {
+                View::button(ui, paste_icon, Colors::white_or_black(false), || {
                     *value = cb.get_string_from_buffer();
                 });
                 ui.add_space(8.0);
@@ -374,7 +383,7 @@ impl View {
             // Setup scan QR code button.
             if options.scan_qr {
                 let scan_icon = SCAN.to_string();
-                View::button(ui, scan_icon, Colors::WHITE, || {
+                View::button(ui, scan_icon, Colors::white_or_black(false), || {
                     cb.start_camera();
                     options.scan_pressed = true;
                 });
@@ -500,7 +509,7 @@ impl View {
                 se: if r[3] { 8.0 } else { 0.0 },
             },
             fill: Colors::TRANSPARENT,
-            stroke: Self::ITEM_STROKE,
+            stroke: Self::item_stroke(),
             fill_texture_id: Default::default(),
             uv: Rect::ZERO
         };
@@ -518,7 +527,7 @@ impl View {
                     // Draw box value.
                     let mut job = LayoutJob::single_section(value, TextFormat {
                         font_id: FontId::proportional(17.0),
-                        color: Colors::BLACK,
+                        color: Colors::white_or_black(true),
                         ..Default::default()
                     });
                     job.wrap = TextWrapping {
@@ -530,7 +539,7 @@ impl View {
                     ui.label(job);
 
                     // Draw box label.
-                    ui.label(RichText::new(label).color(Colors::GRAY).size(15.0));
+                    ui.label(RichText::new(label).color(Colors::gray()).size(15.0));
                 });
 
                 ui.add_space(2.0);
@@ -560,19 +569,19 @@ impl View {
 
     /// Draw big gold loading spinner.
     pub fn big_loading_spinner(ui: &mut egui::Ui) {
-        Spinner::new().size(Self::BIG_SPINNER_SIZE).color(Colors::GOLD).ui(ui);
+        Spinner::new().size(Self::BIG_SPINNER_SIZE).color(Colors::gold()).ui(ui);
     }
 
     /// Draw small gold loading spinner.
     pub fn small_loading_spinner(ui: &mut egui::Ui) {
-        Spinner::new().size(38.0).color(Colors::GOLD).ui(ui);
+        Spinner::new().size(38.0).color(Colors::gold()).ui(ui);
     }
 
     /// Draw the button that looks like checkbox with callback on check.
     pub fn checkbox(ui: &mut egui::Ui, checked: bool, text: String, callback: impl FnOnce()) {
         let (text_value, color) = match checked {
-            true => (format!("{} {}", CHECK_SQUARE, text), Colors::TEXT_BUTTON),
-            false => (format!("{} {}", SQUARE, text), Colors::CHECKBOX)
+            true => (format!("{} {}", CHECK_SQUARE, text), Colors::text_button()),
+            false => (format!("{} {}", SQUARE, text), Colors::checkbox())
         };
 
         let br = Button::new(RichText::new(text_value).size(17.0).color(color))
@@ -591,7 +600,7 @@ impl View {
     pub fn radio_value<T: PartialEq>(ui: &mut egui::Ui, current: &mut T, value: T, text: String) {
         ui.scope(|ui| {
             // Setup background color.
-            ui.visuals_mut().widgets.inactive.bg_fill = Colors::FILL_DARK;
+            ui.visuals_mut().widgets.inactive.bg_fill = Colors::fill_deep();
             // Draw radio button.
             let mut response = ui.radio(*current == value, text)
                 .on_hover_cursor(CursorIcon::PointingHand);

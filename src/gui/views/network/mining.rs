@@ -175,7 +175,7 @@ impl NetworkTab for NetworkMining {
         let workers_size = stratum_stats.worker_stats.len();
         if workers_size != 0 && stratum_stats.num_workers > 0 {
             ui.add_space(4.0);
-            View::horizontal_line(ui, Colors::ITEM_STROKE);
+            View::horizontal_line(ui, Colors::item_stroke());
             ui.add_space(4.0);
             ScrollArea::vertical()
                 .id_source("stratum_workers_scroll")
@@ -201,7 +201,7 @@ impl NetworkTab for NetworkMining {
             View::center_content(ui, 142.0, |ui| {
                 ui.label(RichText::new(t!("network_mining.info", "settings" => FADERS))
                     .size(16.0)
-                    .color(Colors::INACTIVE_TEXT)
+                    .color(Colors::inactive_text())
                 );
             });
         }
@@ -218,7 +218,7 @@ fn worker_item_ui(ui: &mut egui::Ui, ws: &WorkerStats, rounding: Rounding) {
             // Draw round background.
             let mut rect = ui.available_rect_before_wrap();
             rect.set_height(WORKER_ITEM_HEIGHT);
-            ui.painter().rect(rect, rounding, Colors::WHITE, View::ITEM_STROKE);
+            ui.painter().rect(rect, rounding, Colors::white_or_black(false), View::item_stroke());
 
             ui.add_space(2.0);
             ui.horizontal(|ui| {
@@ -226,8 +226,12 @@ fn worker_item_ui(ui: &mut egui::Ui, ws: &WorkerStats, rounding: Rounding) {
 
                 // Draw worker connection status.
                 let (status_text, status_icon, status_color) = match ws.is_connected {
-                    true => (t!("network_mining.connected"), PLUGS_CONNECTED, Colors::BLACK),
-                    false => (t!("network_mining.disconnected"), PLUGS, Colors::INACTIVE_TEXT)
+                    true => (
+                        t!("network_mining.connected"),
+                        PLUGS_CONNECTED,
+                        Colors::white_or_black(true)
+                    ),
+                    false => (t!("network_mining.disconnected"), PLUGS, Colors::inactive_text())
                 };
                 let status_line_text = format!("{} {} {}", status_icon, ws.id, status_text);
                 ui.heading(RichText::new(status_line_text)
@@ -241,35 +245,35 @@ fn worker_item_ui(ui: &mut egui::Ui, ws: &WorkerStats, rounding: Rounding) {
                 // Draw difficulty.
                 let diff_text = format!("{} {}", BARBELL, ws.pow_difficulty);
                 ui.heading(RichText::new(diff_text)
-                    .color(Colors::TITLE)
+                    .color(Colors::title(false))
                     .size(16.0));
                 ui.add_space(6.0);
 
                 // Draw accepted shares.
                 let accepted_text = format!("{} {}", FOLDER_SIMPLE_PLUS, ws.num_accepted);
                 ui.heading(RichText::new(accepted_text)
-                    .color(Colors::GREEN)
+                    .color(Colors::green())
                     .size(16.0));
                 ui.add_space(6.0);
 
                 // Draw rejected shares.
                 let rejected_text = format!("{} {}", FOLDER_SIMPLE_MINUS, ws.num_rejected);
                 ui.heading(RichText::new(rejected_text)
-                    .color(Colors::RED)
+                    .color(Colors::red())
                     .size(16.0));
                 ui.add_space(6.0);
 
                 // Draw stale shares.
                 let stale_text = format!("{} {}", FOLDER_DASHED, ws.num_stale);
                 ui.heading(RichText::new(stale_text)
-                    .color(Colors::GRAY)
+                    .color(Colors::gray())
                     .size(16.0));
                 ui.add_space(6.0);
 
                 // Draw blocks found.
                 let blocks_found_text = format!("{} {}", CUBE, ws.num_blocks_found);
                 ui.heading(RichText::new(blocks_found_text)
-                    .color(Colors::TITLE)
+                    .color(Colors::title(false))
                     .size(16.0));
             });
             ui.horizontal(|ui| {
@@ -280,7 +284,7 @@ fn worker_item_ui(ui: &mut egui::Ui, ws: &WorkerStats, rounding: Rounding) {
                 let seen_time = View::format_time(seen_ts as i64);
                 let seen_text = format!("{} {}", CLOCK_AFTERNOON, seen_time);
                 ui.heading(RichText::new(seen_text)
-                    .color(Colors::GRAY)
+                    .color(Colors::gray())
                     .size(16.0));
             });
         });

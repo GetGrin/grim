@@ -92,7 +92,7 @@ impl DandelionSetup {
         self.current_modal_ui(ui, frame, cb);
 
         View::sub_title(ui, format!("{} {}", GRAPH, "Dandelion"));
-        View::horizontal_line(ui, Colors::STROKE);
+        View::horizontal_line(ui, Colors::stroke());
         ui.add_space(6.0);
 
         ui.vertical_centered(|ui| {
@@ -100,28 +100,28 @@ impl DandelionSetup {
             self.epoch_ui(ui, cb);
 
             ui.add_space(6.0);
-            View::horizontal_line(ui, Colors::ITEM_STROKE);
+            View::horizontal_line(ui, Colors::item_stroke());
             ui.add_space(6.0);
 
             // Show embargo expiration time setup.
             self.embargo_ui(ui, cb);
 
             ui.add_space(6.0);
-            View::horizontal_line(ui, Colors::ITEM_STROKE);
+            View::horizontal_line(ui, Colors::item_stroke());
             ui.add_space(6.0);
 
             // Show aggregation period setup.
             self.aggregation_ui(ui, cb);
 
             ui.add_space(6.0);
-            View::horizontal_line(ui, Colors::ITEM_STROKE);
+            View::horizontal_line(ui, Colors::item_stroke());
             ui.add_space(6.0);
 
             // Show Stem phase probability setup.
             self.stem_prob_ui(ui, cb);
 
             ui.add_space(6.0);
-            View::horizontal_line(ui, Colors::ITEM_STROKE);
+            View::horizontal_line(ui, Colors::item_stroke());
             ui.add_space(8.0);
 
             // Show setup to always stem our txs.
@@ -137,12 +137,12 @@ impl DandelionSetup {
     fn epoch_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         ui.label(RichText::new(t!("network_settings.epoch_duration"))
             .size(16.0)
-            .color(Colors::GRAY)
+            .color(Colors::gray())
         );
         ui.add_space(6.0);
 
         let epoch = NodeConfig::get_dandelion_epoch();
-        View::button(ui, format!("{} {}", WATCH, epoch.clone()), Colors::BUTTON, || {
+        View::button(ui, format!("{} {}", WATCH, epoch.clone()), Colors::button(), || {
             // Setup values for modal.
             self.epoch_edit = epoch;
             // Show epoch setup modal.
@@ -161,7 +161,7 @@ impl DandelionSetup {
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.epoch_duration"))
                 .size(17.0)
-                .color(Colors::GRAY));
+                .color(Colors::gray()));
             ui.add_space(8.0);
 
             // Draw epoch text edit.
@@ -173,7 +173,7 @@ impl DandelionSetup {
                 ui.add_space(12.0);
                 ui.label(RichText::new(t!("network_settings.not_valid_value"))
                     .size(17.0)
-                    .color(Colors::RED));
+                    .color(Colors::red()));
             } else {
                 NetworkSettings::node_restart_required_ui(ui);
             }
@@ -196,14 +196,14 @@ impl DandelionSetup {
 
             ui.columns(2, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
-                    View::button(ui, t!("modal.cancel"), Colors::WHITE, || {
+                    View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                         // Close modal.
                         cb.hide_keyboard();
                         modal.close();
                     });
                 });
                 columns[1].vertical_centered_justified(|ui| {
-                    View::button(ui, t!("modal.save"), Colors::WHITE, on_save);
+                    View::button(ui, t!("modal.save"), Colors::white_or_black(false), on_save);
                 });
             });
             ui.add_space(6.0);
@@ -214,12 +214,12 @@ impl DandelionSetup {
     fn embargo_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         ui.label(RichText::new(t!("network_settings.embargo_timer"))
             .size(16.0)
-            .color(Colors::GRAY)
+            .color(Colors::gray())
         );
         ui.add_space(6.0);
 
         let embargo = NodeConfig::get_dandelion_embargo();
-        View::button(ui, format!("{} {}", TIMER, embargo.clone()), Colors::BUTTON, || {
+        View::button(ui, format!("{} {}", TIMER, embargo.clone()), Colors::button(), || {
             // Setup values for modal.
             self.embargo_edit = embargo;
             // Show embargo setup modal.
@@ -238,7 +238,7 @@ impl DandelionSetup {
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.embargo_timer"))
                 .size(17.0)
-                .color(Colors::GRAY));
+                .color(Colors::gray()));
             ui.add_space(8.0);
 
             // Draw embargo text edit.
@@ -250,7 +250,7 @@ impl DandelionSetup {
                 ui.add_space(12.0);
                 ui.label(RichText::new(t!("network_settings.not_valid_value"))
                     .size(17.0)
-                    .color(Colors::RED));
+                    .color(Colors::red()));
             } else {
                 NetworkSettings::node_restart_required_ui(ui);
             }
@@ -273,14 +273,14 @@ impl DandelionSetup {
 
             ui.columns(2, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
-                    View::button(ui, t!("modal.cancel"), Colors::WHITE, || {
+                    View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                         // Close modal.
                         cb.hide_keyboard();
                         modal.close();
                     });
                 });
                 columns[1].vertical_centered_justified(|ui| {
-                    View::button(ui, t!("modal.save"), Colors::WHITE, on_save);
+                    View::button(ui, t!("modal.save"), Colors::white_or_black(false), on_save);
                 });
             });
             ui.add_space(6.0);
@@ -291,12 +291,12 @@ impl DandelionSetup {
     fn aggregation_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         ui.label(RichText::new(t!("network_settings.aggregation_period"))
             .size(16.0)
-            .color(Colors::GRAY)
+            .color(Colors::gray())
         );
         ui.add_space(6.0);
 
         let agg = NodeConfig::get_dandelion_aggregation();
-        View::button(ui, format!("{} {}", CLOCK_COUNTDOWN, agg.clone()), Colors::BUTTON, || {
+        View::button(ui, format!("{} {}", CLOCK_COUNTDOWN, agg.clone()), Colors::button(), || {
             // Setup values for modal.
             self.aggregation_edit = agg;
             // Show aggregation setup modal.
@@ -315,7 +315,7 @@ impl DandelionSetup {
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.aggregation_period"))
                 .size(17.0)
-                .color(Colors::GRAY));
+                .color(Colors::gray()));
             ui.add_space(8.0);
 
             // Draw aggregation period text edit.
@@ -327,7 +327,7 @@ impl DandelionSetup {
                 ui.add_space(12.0);
                 ui.label(RichText::new(t!("network_settings.not_valid_value"))
                     .size(17.0)
-                    .color(Colors::RED));
+                    .color(Colors::red()));
             } else {
                 NetworkSettings::node_restart_required_ui(ui);
             }
@@ -350,14 +350,14 @@ impl DandelionSetup {
 
             ui.columns(2, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
-                    View::button(ui, t!("modal.cancel"), Colors::WHITE, || {
+                    View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                         // Close modal.
                         cb.hide_keyboard();
                         modal.close();
                     });
                 });
                 columns[1].vertical_centered_justified(|ui| {
-                    View::button(ui, t!("modal.save"), Colors::WHITE, on_save);
+                    View::button(ui, t!("modal.save"), Colors::white_or_black(false), on_save);
                 });
             });
             ui.add_space(6.0);
@@ -368,12 +368,12 @@ impl DandelionSetup {
     fn stem_prob_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         ui.label(RichText::new(t!("network_settings.stem_probability"))
             .size(16.0)
-            .color(Colors::GRAY)
+            .color(Colors::gray())
         );
         ui.add_space(6.0);
 
         let stem_prob = NodeConfig::get_stem_probability();
-        View::button(ui, format!("{}%", stem_prob.clone()), Colors::BUTTON, || {
+        View::button(ui, format!("{}%", stem_prob.clone()), Colors::button(), || {
             // Setup values for modal.
             self.stem_prob_edit = stem_prob;
             // Show stem probability setup modal.
@@ -392,7 +392,7 @@ impl DandelionSetup {
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.stem_probability"))
                 .size(17.0)
-                .color(Colors::GRAY));
+                .color(Colors::gray()));
             ui.add_space(8.0);
 
             // Draw stem phase probability text edit.
@@ -404,7 +404,7 @@ impl DandelionSetup {
                 ui.add_space(12.0);
                 ui.label(RichText::new(t!("network_settings.not_valid_value"))
                     .size(17.0)
-                    .color(Colors::RED));
+                    .color(Colors::red()));
             } else {
                 NetworkSettings::node_restart_required_ui(ui);
             }
@@ -427,14 +427,14 @@ impl DandelionSetup {
 
             ui.columns(2, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
-                    View::button(ui, t!("modal.cancel"), Colors::WHITE, || {
+                    View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                         // Close modal.
                         cb.hide_keyboard();
                         modal.close();
                     });
                 });
                 columns[1].vertical_centered_justified(|ui| {
-                    View::button(ui, t!("modal.save"), Colors::WHITE, on_save);
+                    View::button(ui, t!("modal.save"), Colors::white_or_black(false), on_save);
                 });
             });
             ui.add_space(6.0);

@@ -44,7 +44,10 @@ pub struct AppConfig {
     x: Option<f32>, y: Option<f32>,
 
     /// Locale code for i18n.
-    lang: Option<String>
+    lang: Option<String>,
+
+    /// Flag to check if dark theme should be used, use system settings if not set.
+    use_dark_theme: Option<bool>,
 }
 
 impl Default for AppConfig {
@@ -60,6 +63,7 @@ impl Default for AppConfig {
             x: None,
             y: None,
             lang: None,
+            use_dark_theme: None,
         }
     }
 }
@@ -213,8 +217,21 @@ impl AppConfig {
 
     /// Mark integrated node warning for Android as shown.
     pub fn show_android_integrated_node_warning() {
-        let mut w_app_config = Settings::app_config_to_update();
-        w_app_config.android_integrated_node_warning = Some(false);
-        w_app_config.save();
+        let mut w_config = Settings::app_config_to_update();
+        w_config.android_integrated_node_warning = Some(false);
+        w_config.save();
+    }
+
+    /// Check if dark theme should be used.
+    pub fn dark_theme() -> Option<bool> {
+        let r_config = Settings::app_config_to_read();
+        r_config.use_dark_theme.clone()
+    }
+
+    /// Setup flag to use dark theme.
+    pub fn set_dark_theme(use_dark: bool) {
+        let mut w_config = Settings::app_config_to_update();
+        w_config.use_dark_theme = Some(use_dark);
+        w_config.save();
     }
 }

@@ -14,29 +14,236 @@
 
 use egui::Color32;
 
+use crate::AppConfig;
+
+/// Provides colors values based on current theme.
 pub struct Colors;
 
+const WHITE: Color32 = Color32::from_gray(253);
+const BLACK: Color32 = Color32::from_gray(12);
+
+const SEMI_TRANSPARENT: Color32 = Color32::from_black_alpha(100);
+const DARK_SEMI_TRANSPARENT: Color32 = Color32::from_black_alpha(170);
+
+const GOLD: Color32 = Color32::from_rgb(255, 215, 0);
+
+const YELLOW: Color32 = Color32::from_rgb(254, 241, 2);
+
+const GREEN: Color32 = Color32::from_rgb(0, 0x64, 0);
+
+const RED: Color32 = Color32::from_rgb(0x8B, 0, 0);
+
+const FILL: Color32 = Color32::from_gray(244);
+const FILL_DEEP: Color32 = Color32::from_gray(238);
+
+const FILL_DARK: Color32 = Color32::from_gray(24);
+const FILL_DEEP_DARK: Color32 = Color32::from_gray(18);
+
+const TEXT: Color32 = Color32::from_gray(80);
+const TEXT_DARK: Color32 = Color32::from_gray(185);
+
+const CHECKBOX: Color32 = Color32::from_gray(100);
+const CHECKBOX_DARK: Color32 = Color32::from_gray(175);
+
+const TEXT_BUTTON: Color32 = Color32::from_gray(70);
+const TEXT_BUTTON_DARK: Color32 = Color32::from_gray(195);
+
+const TITLE: Color32 = Color32::from_gray(60);
+const TITLE_DARK: Color32 = Color32::from_gray(205);
+
+const BUTTON: Color32 = Color32::from_gray(249);
+const BUTTON_DARK: Color32 = Color32::from_gray(16);
+
+const GRAY: Color32 = Color32::from_gray(120);
+const GRAY_DARK: Color32 = Color32::from_gray(145);
+
+const STROKE: Color32 = Color32::from_gray(200);
+const STROKE_DARK: Color32 = Color32::from_gray(65);
+
+const INACTIVE_TEXT: Color32 = Color32::from_gray(150);
+const INACTIVE_TEXT_DARK: Color32 = Color32::from_gray(115);
+
+const ITEM_BUTTON: Color32 = Color32::from_gray(90);
+const ITEM_BUTTON_DARK: Color32 = Color32::from_gray(175);
+
+const ITEM_STROKE: Color32 = Color32::from_gray(220);
+const ITEM_STROKE_DARK: Color32 = Color32::from_gray(45);
+
+const ITEM_HOVER: Color32 = Color32::from_gray(205);
+const ITEM_HOVER_DARK: Color32 = Color32::from_gray(60);
+
+const ITEM_CURRENT: Color32 = Color32::from_gray(227);
+const ITEM_CURRENT_DARK: Color32 = Color32::from_gray(38);
+
+/// Check if dark theme should be used.
+fn use_dark() -> bool {
+    AppConfig::dark_theme().unwrap_or(false)
+}
+
 impl Colors {
-    pub const WHITE: Color32 = Color32::from_gray(253);
-    pub const BLACK: Color32 = Color32::from_gray(12);
     pub const TRANSPARENT: Color32 = Color32::from_rgba_premultiplied(0, 0, 0, 0);
-    pub const SEMI_TRANSPARENT: Color32 = Color32::from_black_alpha(100);
-    pub const YELLOW: Color32 = Color32::from_rgb(254, 241, 2);
-    pub const GOLD: Color32 = Color32::from_rgb(255, 215, 0);
-    pub const GREEN: Color32 = Color32::from_rgb(0, 0x64, 0);
-    pub const RED: Color32 = Color32::from_rgb(0x8B, 0, 0);
-    pub const FILL: Color32 = Color32::from_gray(244);
-    pub const FILL_DARK: Color32 = Color32::from_gray(238);
-    pub const CHECKBOX: Color32 = Color32::from_gray(100);
-    pub const TEXT: Color32 = Color32::from_gray(80);
-    pub const TEXT_BUTTON: Color32 = Color32::from_gray(70);
-    pub const TITLE: Color32 = Color32::from_gray(60);
-    pub const BUTTON: Color32 = Color32::from_gray(249);
-    pub const GRAY: Color32 = Color32::from_gray(120);
-    pub const STROKE: Color32 = Color32::from_gray(200);
-    pub const INACTIVE_TEXT: Color32 = Color32::from_gray(150);
-    pub const ITEM_BUTTON: Color32 = Color32::from_gray(90);
-    pub const ITEM_STROKE: Color32 = Color32::from_gray(220);
-    pub const ITEM_HOVER: Color32 = Color32::from_gray(205);
-    pub const ITEM_CURRENT: Color32 = Color32::from_gray(227);
+
+    pub fn white_or_black(black_in_white: bool) -> Color32 {
+        if use_dark() {
+            if black_in_white {
+                WHITE
+            } else {
+                BLACK
+            }
+        } else {
+            if black_in_white {
+                BLACK
+            } else {
+                WHITE
+            }
+        }
+    }
+
+    pub fn semi_transparent() -> Color32 {
+        if use_dark() {
+            DARK_SEMI_TRANSPARENT
+        } else {
+            SEMI_TRANSPARENT
+        }
+    }
+
+    pub fn gold() -> Color32 {
+        if use_dark() {
+            GOLD.linear_multiply(0.85)
+        } else {
+            GOLD
+        }
+    }
+
+    pub fn yellow() -> Color32 {
+        YELLOW
+    }
+
+    pub fn green() -> Color32 {
+        if use_dark() {
+            GREEN.linear_multiply(1.3)
+        } else {
+            GREEN
+        }
+    }
+
+    pub fn red() -> Color32 {
+        if use_dark() {
+            RED.linear_multiply(1.3)
+        } else {
+            RED
+        }
+    }
+
+    pub fn fill() -> Color32 {
+        if use_dark() {
+            FILL_DARK
+        } else {
+            FILL
+        }
+    }
+
+    pub fn fill_deep() -> Color32 {
+        if use_dark() {
+            FILL_DEEP_DARK
+        } else {
+            FILL_DEEP
+        }
+    }
+
+    pub fn checkbox() -> Color32 {
+        if use_dark() {
+            CHECKBOX_DARK
+        } else {
+            CHECKBOX
+        }
+    }
+
+    pub fn text(always_light: bool) -> Color32 {
+        if use_dark() && !always_light {
+            TEXT_DARK
+        } else {
+            TEXT
+        }
+    }
+
+    pub fn text_button() -> Color32 {
+        if use_dark() {
+            TEXT_BUTTON_DARK
+        } else {
+            TEXT_BUTTON
+        }
+    }
+
+    pub fn title(always_light: bool) -> Color32 {
+        if use_dark() && !always_light {
+            TITLE_DARK
+        } else {
+            TITLE
+        }
+    }
+
+    pub fn button() -> Color32 {
+        if use_dark() {
+            BUTTON_DARK
+        } else {
+            BUTTON
+        }
+    }
+
+    pub fn gray() -> Color32 {
+        if use_dark() {
+            GRAY_DARK
+        } else {
+            GRAY
+        }
+    }
+
+    pub fn stroke() -> Color32 {
+        if use_dark() {
+            STROKE_DARK
+        } else {
+            STROKE
+        }
+    }
+
+    pub fn inactive_text() -> Color32 {
+        if use_dark() {
+            INACTIVE_TEXT_DARK
+        } else {
+            INACTIVE_TEXT
+        }
+    }
+
+    pub fn item_button() -> Color32 {
+        if use_dark() {
+            ITEM_BUTTON_DARK
+        } else {
+            ITEM_BUTTON
+        }
+    }
+
+    pub fn item_stroke() -> Color32 {
+        if use_dark() {
+            ITEM_STROKE_DARK
+        } else {
+            ITEM_STROKE
+        }
+    }
+
+    pub fn item_hover() -> Color32 {
+        if use_dark() {
+            ITEM_HOVER_DARK
+        } else {
+            ITEM_HOVER
+        }
+    }
+
+    pub fn item_current() -> Color32 {
+        if use_dark() {
+            ITEM_CURRENT_DARK
+        } else {
+            ITEM_CURRENT
+        }
+    }
 }

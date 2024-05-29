@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use dark_light::Mode;
+
 pub fn main() {
     #[allow(dead_code)]
     #[cfg(not(target_os = "android"))]
@@ -36,7 +38,17 @@ fn real_main() {
 
     let platform = Desktop::default();
 
-    // Desktop window size.
+    // Setup system theme if not set.
+    if let None = AppConfig::dark_theme() {
+        let dark = match dark_light::detect() {
+            Mode::Dark => true,
+            Mode::Light => false,
+            Mode::Default => false
+        };
+        AppConfig::set_dark_theme(dark);
+    }
+
+    // Setup window size.
     let (width, height) = AppConfig::window_size();
 
     let mut viewport = egui::ViewportBuilder::default()
@@ -53,7 +65,7 @@ fn real_main() {
         }));
     }
 
-    // Desktop window position.
+    // Setup window position.
     if let Some((x, y)) = AppConfig::window_pos() {
         viewport = viewport.with_position(pos2(x, y));
     }

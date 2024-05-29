@@ -22,6 +22,9 @@ repeat: Repeat
 scan_result: Scan result
 back: Back
 share: Share
+theme: Theme
+dark: Dark
+light: Light
 wallets:
   await_conf_amount: Awaiting confirmation
   await_fin_amount: Awaiting finalization

@@ -173,7 +173,7 @@ fn block_item_ui(ui: &mut egui::Ui, db: &DiffBlock, rounding: Rounding) {
                 // Draw round background.
                 rect.min += vec2(8.0, 0.0);
                 rect.max -= vec2(8.0, 0.0);
-                ui.painter().rect(rect, rounding, Colors::WHITE, View::ITEM_STROKE);
+                ui.painter().rect(rect, rounding, Colors::white_or_black(false), View::item_stroke());
 
                 ui.add_space(2.0);
 
@@ -181,7 +181,7 @@ fn block_item_ui(ui: &mut egui::Ui, db: &DiffBlock, rounding: Rounding) {
                 ui.horizontal(|ui| {
                     ui.add_space(5.0);
                     ui.label(RichText::new(format!("{} {}", HASH, db.block_hash))
-                        .color(Colors::BLACK)
+                        .color(Colors::white_or_black(true))
                         .size(17.0));
                 });
                 // Draw block difficulty and height.
@@ -192,7 +192,7 @@ fn block_item_ui(ui: &mut egui::Ui, db: &DiffBlock, rounding: Rounding) {
                                             db.difficulty,
                                             AT,
                                             db.block_height);
-                    ui.label(RichText::new(diff_text).color(Colors::TITLE).size(16.0));
+                    ui.label(RichText::new(diff_text).color(Colors::title(false)).size(16.0));
                 });
                 // Draw block date.
                 ui.horizontal(|ui| {
@@ -203,7 +203,7 @@ fn block_item_ui(ui: &mut egui::Ui, db: &DiffBlock, rounding: Rounding) {
                                                    db.duration,
                                                    HOURGLASS_LOW,
                                                    block_time))
-                        .color(Colors::GRAY)
+                        .color(Colors::gray())
                         .size(16.0));
                 });
 

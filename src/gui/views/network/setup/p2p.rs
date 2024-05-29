@@ -158,7 +158,7 @@ impl P2PSetup {
         self.current_modal_ui(ui, frame, cb);
 
         View::sub_title(ui, format!("{} {}", HANDSHAKE, t!("network_settings.p2p_server")));
-        View::horizontal_line(ui, Colors::STROKE);
+        View::horizontal_line(ui, Colors::stroke());
         ui.add_space(6.0);
 
         ui.vertical_centered(|ui| {
@@ -166,62 +166,62 @@ impl P2PSetup {
             self.port_ui(ui, cb);
 
             ui.add_space(6.0);
-            View::horizontal_line(ui, Colors::ITEM_STROKE);
+            View::horizontal_line(ui, Colors::item_stroke());
             ui.add_space(6.0);
 
             // Show seeding type setup.
             self.seeding_type_ui(ui, cb);
 
             ui.add_space(6.0);
-            View::horizontal_line(ui, Colors::ITEM_STROKE);
+            View::horizontal_line(ui, Colors::item_stroke());
             ui.add_space(6.0);
 
             ui.label(RichText::new(t!("network_settings.allow_list"))
                 .size(16.0)
-                .color(Colors::GRAY));
+                .color(Colors::gray()));
             ui.add_space(6.0);
             // Show allowed peers setup.
             self.peer_list_ui(ui, &PeerType::Allowed, cb);
 
             ui.add_space(6.0);
-            View::horizontal_line(ui, Colors::ITEM_STROKE);
+            View::horizontal_line(ui, Colors::item_stroke());
             ui.add_space(6.0);
 
             ui.label(RichText::new(t!("network_settings.deny_list"))
                 .size(16.0)
-                .color(Colors::GRAY));
+                .color(Colors::gray()));
             ui.add_space(6.0);
             // Show denied peers setup.
             self.peer_list_ui(ui, &PeerType::Denied, cb);
 
             ui.add_space(6.0);
-            View::horizontal_line(ui, Colors::ITEM_STROKE);
+            View::horizontal_line(ui, Colors::item_stroke());
             ui.add_space(6.0);
 
             ui.label(RichText::new(t!("network_settings.favourites"))
                 .size(16.0)
-                .color(Colors::GRAY));
+                .color(Colors::gray()));
             ui.add_space(6.0);
             // Show preferred peers setup.
             self.peer_list_ui(ui, &PeerType::Preferred, cb);
 
 
             ui.add_space(6.0);
-            View::horizontal_line(ui, Colors::ITEM_STROKE);
+            View::horizontal_line(ui, Colors::item_stroke());
             ui.add_space(6.0);
 
             // Show ban window setup.
             self.ban_window_ui(ui, cb);
 
             ui.add_space(6.0);
-            View::horizontal_line(ui, Colors::ITEM_STROKE);
+            View::horizontal_line(ui, Colors::item_stroke());
             ui.add_space(6.0);
 
             // Show maximum inbound peers value setup.
             self.max_inbound_ui(ui, cb);
 
             ui.add_space(6.0);
-            View::horizontal_line(ui, Colors::ITEM_STROKE);
+            View::horizontal_line(ui, Colors::item_stroke());
             ui.add_space(6.0);
 
             // Show maximum outbound peers value setup.
@@ -229,7 +229,7 @@ impl P2PSetup {
 
             if !Node::is_restarting() && !self.peers_reset {
                 ui.add_space(6.0);
-                View::horizontal_line(ui, Colors::ITEM_STROKE);
+                View::horizontal_line(ui, Colors::item_stroke());
                 ui.add_space(6.0);
 
                 // Show peers data reset content.
@@ -242,12 +242,12 @@ impl P2PSetup {
     fn port_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         ui.label(RichText::new(t!("network_settings.p2p_port"))
             .size(16.0)
-            .color(Colors::GRAY)
+            .color(Colors::gray())
         );
         ui.add_space(6.0);
 
         let port = NodeConfig::get_p2p_port();
-        View::button(ui, format!("{} {}", PLUG, port.clone()), Colors::BUTTON, || {
+        View::button(ui, format!("{} {}", PLUG, port.clone()), Colors::button(), || {
             // Setup values for modal.
             self.port_edit = port;
             self.port_available_edit = self.is_port_available;
@@ -265,7 +265,7 @@ impl P2PSetup {
             ui.add_space(6.0);
             ui.label(RichText::new(t!("network_settings.port_unavailable"))
                 .size(16.0)
-                .color(Colors::RED));
+                .color(Colors::red()));
             ui.add_space(12.0);
         }
     }
@@ -276,7 +276,7 @@ impl P2PSetup {
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.p2p_port"))
                 .size(17.0)
-                .color(Colors::GRAY));
+                .color(Colors::gray()));
             ui.add_space(8.0);
 
             // Draw p2p port text edit.
@@ -288,7 +288,7 @@ impl P2PSetup {
                 ui.add_space(12.0);
                 ui.label(RichText::new(t!("network_settings.port_unavailable"))
                     .size(17.0)
-                    .color(Colors::RED));
+                    .color(Colors::red()));
             }
 
             ui.add_space(12.0);
@@ -320,14 +320,14 @@ impl P2PSetup {
 
                 ui.columns(2, |columns| {
                     columns[0].vertical_centered_justified(|ui| {
-                        View::button(ui, t!("modal.cancel"), Colors::WHITE, || {
+                        View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                             // Close modal.
                             cb.hide_keyboard();
                             modal.close();
                         });
                     });
                     columns[1].vertical_centered_justified(|ui| {
-                        View::button(ui, t!("modal.save"), Colors::WHITE, on_save);
+                        View::button(ui, t!("modal.save"), Colors::white_or_black(false), on_save);
                     });
                 });
                 ui.add_space(6.0);
@@ -370,7 +370,7 @@ impl P2PSetup {
                 };
                 ui.label(RichText::new(desc)
                     .size(16.0)
-                    .color(Colors::INACTIVE_TEXT));
+                    .color(Colors::inactive_text()));
                 ui.add_space(12.0);
             }
 
@@ -380,7 +380,7 @@ impl P2PSetup {
                 format!("{} {}", PLUS_CIRCLE, t!("network_settings.add_peer"))
 
             };
-            View::button(ui, add_text, Colors::BUTTON, || {
+            View::button(ui, add_text, Colors::button(), || {
                 // Setup values for modal.
                 self.is_correct_address_edit = true;
                 self.peer_edit = "".to_string();
@@ -417,7 +417,7 @@ impl P2PSetup {
                 CUSTOM_SEED_MODAL => t!("network_settings.seed_address"),
                 &_ => t!("network_settings.peer_address")
             };
-            ui.label(RichText::new(label_text).size(17.0).color(Colors::GRAY));
+            ui.label(RichText::new(label_text).size(17.0).color(Colors::gray()));
             ui.add_space(8.0);
 
             // Draw peer address text edit.
@@ -429,7 +429,7 @@ impl P2PSetup {
                 ui.add_space(10.0);
                 ui.label(RichText::new(t!("network_settings.peer_address_error"))
                     .size(16.0)
-                    .color(Colors::RED));
+                    .color(Colors::red()));
             }
             ui.add_space(12.0);
 
@@ -463,14 +463,14 @@ impl P2PSetup {
 
                 ui.columns(2, |columns| {
                     columns[0].vertical_centered_justified(|ui| {
-                        View::button(ui, t!("modal.cancel"), Colors::WHITE, || {
+                        View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                             // Close modal.
                             cb.hide_keyboard();
                             modal.close();
                         });
                     });
                     columns[1].vertical_centered_justified(|ui| {
-                        View::button(ui, t!("modal.save"), Colors::WHITE, on_save);
+                        View::button(ui, t!("modal.save"), Colors::white_or_black(false), on_save);
                     });
                 });
                 ui.add_space(6.0);
@@ -481,7 +481,7 @@ impl P2PSetup {
     /// Draw seeding type setup content.
     fn seeding_type_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         let title = Self::DNS_SEEDS_TITLE;
-        ui.label(RichText::new(title).size(16.0).color(Colors::GRAY));
+        ui.label(RichText::new(title).size(16.0).color(Colors::gray()));
         ui.add_space(2.0);
 
         let default_seeding = NodeConfig::is_default_seeding_type();
@@ -502,12 +502,12 @@ impl P2PSetup {
     fn ban_window_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         ui.label(RichText::new(t!("network_settings.ban_window"))
             .size(16.0)
-            .color(Colors::GRAY)
+            .color(Colors::gray())
         );
         ui.add_space(6.0);
 
         let ban_window = NodeConfig::get_p2p_ban_window();
-        View::button(ui, format!("{} {}", PROHIBIT_INSET, ban_window.clone()), Colors::BUTTON, || {
+        View::button(ui, format!("{} {}", PROHIBIT_INSET, ban_window.clone()), Colors::button(), || {
             // Setup values for modal.
             self.ban_window_edit = ban_window;
             // Show ban window period setup modal.
@@ -520,7 +520,7 @@ impl P2PSetup {
         ui.add_space(6.0);
         ui.label(RichText::new(t!("network_settings.ban_window_desc"))
             .size(16.0)
-            .color(Colors::INACTIVE_TEXT)
+            .color(Colors::inactive_text())
         );
         ui.add_space(2.0);
     }
@@ -531,7 +531,7 @@ impl P2PSetup {
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.ban_window"))
                 .size(17.0)
-                .color(Colors::GRAY));
+                .color(Colors::gray()));
             ui.add_space(8.0);
 
             // Draw ban window text edit.
@@ -543,7 +543,7 @@ impl P2PSetup {
                 ui.add_space(12.0);
                 ui.label(RichText::new(t!("network_settings.not_valid_value"))
                     .size(17.0)
-                    .color(Colors::RED));
+                    .color(Colors::red()));
             } else {
                 NetworkSettings::node_restart_required_ui(ui);
             }
@@ -566,14 +566,14 @@ impl P2PSetup {
 
             ui.columns(2, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
-                    View::button(ui, t!("modal.cancel"), Colors::WHITE, || {
+                    View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                         // Close modal.
                         cb.hide_keyboard();
                         modal.close();
                     });
                 });
                 columns[1].vertical_centered_justified(|ui| {
-                    View::button(ui, t!("modal.save"), Colors::WHITE, on_save);
+                    View::button(ui, t!("modal.save"), Colors::white_or_black(false), on_save);
                 });
             });
             ui.add_space(6.0);
@@ -584,13 +584,13 @@ impl P2PSetup {
     fn max_inbound_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         ui.label(RichText::new(t!("network_settings.max_inbound_count"))
             .size(16.0)
-            .color(Colors::GRAY)
+            .color(Colors::gray())
         );
         ui.add_space(6.0);
 
         let max_inbound = NodeConfig::get_max_inbound_peers();
         let button_text = format!("{} {}", ARROW_FAT_LINES_DOWN, max_inbound.clone());
-        View::button(ui, button_text, Colors::BUTTON, || {
+        View::button(ui, button_text, Colors::button(), || {
             // Setup values for modal.
             self.max_inbound_count = max_inbound;
             // Show maximum number of inbound peers setup modal.
@@ -609,7 +609,7 @@ impl P2PSetup {
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.max_inbound_count"))
                 .size(17.0)
-                .color(Colors::GRAY));
+                .color(Colors::gray()));
             ui.add_space(8.0);
 
             // Draw maximum number of inbound peers text edit.
@@ -621,7 +621,7 @@ impl P2PSetup {
                 ui.add_space(12.0);
                 ui.label(RichText::new(t!("network_settings.not_valid_value"))
                     .size(17.0)
-                    .color(Colors::RED));
+                    .color(Colors::red()));
             } else {
                 NetworkSettings::node_restart_required_ui(ui);
             }
@@ -644,14 +644,14 @@ impl P2PSetup {
 
             ui.columns(2, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
-                    View::button(ui, t!("modal.cancel"), Colors::WHITE, || {
+                    View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                         // Close modal.
                         cb.hide_keyboard();
                         modal.close();
                     });
                 });
                 columns[1].vertical_centered_justified(|ui| {
-                    View::button(ui, t!("modal.save"), Colors::WHITE, on_save);
+                    View::button(ui, t!("modal.save"), Colors::white_or_black(false), on_save);
                 });
             });
             ui.add_space(6.0);
@@ -662,13 +662,13 @@ impl P2PSetup {
     fn max_outbound_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         ui.label(RichText::new(t!("network_settings.max_outbound_count"))
             .size(16.0)
-            .color(Colors::GRAY)
+            .color(Colors::gray())
         );
         ui.add_space(6.0);
 
         let max_outbound = NodeConfig::get_max_outbound_peers();
         let button_text = format!("{} {}", ARROW_FAT_LINES_UP, max_outbound.clone());
-        View::button(ui, button_text, Colors::BUTTON, || {
+        View::button(ui, button_text, Colors::button(), || {
             // Setup values for modal.
             self.max_outbound_count = max_outbound;
             // Show maximum number of outbound peers setup modal.
@@ -687,7 +687,7 @@ impl P2PSetup {
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.max_outbound_count"))
                 .size(17.0)
-                .color(Colors::GRAY));
+                .color(Colors::gray()));
             ui.add_space(8.0);
 
             // Draw maximum number of outbound peers text edit.
@@ -699,7 +699,7 @@ impl P2PSetup {
                 ui.add_space(12.0);
                 ui.label(RichText::new(t!("network_settings.not_valid_value"))
                     .size(17.0)
-                    .color(Colors::RED));
+                    .color(Colors::red()));
             } else {
                 NetworkSettings::node_restart_required_ui(ui);
             }
@@ -722,14 +722,14 @@ impl P2PSetup {
 
             ui.columns(2, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
-                    View::button(ui, t!("modal.cancel"), Colors::WHITE, || {
+                    View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                         // Close modal.
                         cb.hide_keyboard();
                         modal.close();
                     });
                 });
                 columns[1].vertical_centered_justified(|ui| {
-                    View::button(ui, t!("modal.save"), Colors::WHITE, on_save);
+                    View::button(ui, t!("modal.save"), Colors::white_or_black(false), on_save);
                 });
             });
             ui.add_space(6.0);
@@ -741,14 +741,14 @@ impl P2PSetup {
         ui.add_space(4.0);
 
         let button_text = format!("{} {}", TRASH, t!("network_settings.reset_peers"));
-        View::colored_text_button(ui, button_text, Colors::RED, Colors::BUTTON, || {
+        View::colored_text_button(ui, button_text, Colors::red(), Colors::button(), || {
             Node::reset_peers(false);
             self.peers_reset = true;
         });
         ui.add_space(6.0);
         ui.label(RichText::new(t!("network_settings.reset_peers_desc"))
             .size(16.0)
-            .color(Colors::INACTIVE_TEXT)
+            .color(Colors::inactive_text())
         );
     }
 }
@@ -767,7 +767,7 @@ fn peer_item_ui(ui: &mut egui::Ui,
     let mut bg_rect = rect.clone();
     bg_rect.min += egui::emath::vec2(6.0, 0.0);
     let item_rounding = View::item_rounding(index, len, false);
-    ui.painter().rect(bg_rect, item_rounding, Colors::WHITE, View::ITEM_STROKE);
+    ui.painter().rect(bg_rect, item_rounding, Colors::white_or_black(false), View::item_stroke());
 
     ui.vertical(|ui| {
         ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
@@ -798,7 +798,7 @@ fn peer_item_ui(ui: &mut egui::Ui,
                 // Draw peer address.
                 let peer_text = format!("{} {}", GLOBE_SIMPLE, &peer_addr);
                 ui.label(RichText::new(peer_text)
-                    .color(Colors::TEXT_BUTTON)
+                    .color(Colors::text_button())
                     .size(16.0));
             });
         });

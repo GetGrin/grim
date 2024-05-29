@@ -43,7 +43,7 @@ pub struct Modal {
 
 impl Modal {
     /// Margin from [`Modal`] window at top/left/right.
-    const DEFAULT_MARGIN: f32 = 10.0;
+    const DEFAULT_MARGIN: f32 = 6.0;
     /// Maximum width of the content.
     const DEFAULT_WIDTH: f32 = Root::SIDE_PANEL_WIDTH - (2.0 * Self::DEFAULT_MARGIN);
 
@@ -167,7 +167,7 @@ impl Modal {
             .collapsible(false)
             .fixed_rect(rect)
             .frame(egui::Frame {
-                fill: Colors::SEMI_TRANSPARENT,
+                fill: Colors::semi_transparent(),
                 ..Default::default()
             })
             .show(ctx, |ui| {
@@ -196,7 +196,7 @@ impl Modal {
                     color: egui::Color32::from_black_alpha(32),
                 },
                 rounding: Rounding::same(8.0),
-                fill: Colors::YELLOW,
+                fill: Colors::fill(),
                 ..Default::default()
             })
             .show(ctx, |ui| {
@@ -246,7 +246,7 @@ impl Modal {
         let mut bg_shape = RectShape {
             rect,
             rounding,
-            fill: Colors::FILL,
+            fill: Colors::fill(),
             stroke: Stroke::NONE,
             fill_texture_id: Default::default(),
             uv: Rect::ZERO
@@ -278,7 +278,7 @@ impl Modal {
                 sw: 0.0,
                 se: 0.0,
             },
-            fill: Colors::YELLOW,
+            fill: Colors::yellow(),
             stroke: Stroke::NONE,
             fill_texture_id: Default::default(),
             uv: Rect::ZERO
@@ -288,12 +288,12 @@ impl Modal {
         // Draw title content.
         let title_resp = ui.allocate_ui_at_rect(rect, |ui| {
             ui.vertical_centered_justified(|ui| {
-                ui.add_space(8.0);
+                ui.add_space(10.0);
                 ui.label(RichText::new(self.title.as_ref().unwrap())
                     .size(19.0)
-                    .color(Colors::TITLE)
+                    .color(Colors::title(true))
                 );
-                ui.add_space(8.0);
+                ui.add_space(10.0);
             });
         }).response;
 
@@ -302,6 +302,6 @@ impl Modal {
         ui.painter().set(bg_idx, bg_shape);
 
         // Draw line below title.
-        View::horizontal_line(ui, Colors::STROKE);
+        View::horizontal_line(ui, Colors::stroke());
     }
 }

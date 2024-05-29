@@ -54,8 +54,8 @@ impl NetworkContent {
         egui::TopBottomPanel::bottom("node_tabs_panel")
             .resizable(false)
             .frame(egui::Frame {
-                fill: Colors::FILL,
-                stroke: View::ITEM_STROKE,
+                fill: Colors::fill(),
+                stroke: View::item_stroke(),
                 inner_margin: Margin {
                     left: View::get_left_inset() + 4.0,
                     right: View::far_right_inset_margin(ui) + 4.0,
@@ -78,14 +78,14 @@ impl NetworkContent {
             .resizable(false)
             .exact_width(ui.available_width())
             .frame(egui::Frame {
-                stroke: View::DEFAULT_STROKE,
+                stroke: View::default_stroke(),
                 ..Default::default()
             })
             .show_animated_inside(ui, !show_connections, |ui| {
                 egui::CentralPanel::default()
                     .frame(egui::Frame {
-                        fill: Colors::WHITE,
-                        stroke: View::DEFAULT_STROKE,
+                        fill: Colors::white_or_black(false),
+                        stroke: View::default_stroke(),
                         inner_margin: Margin {
                             left: View::get_left_inset() + 4.0,
                             right: View::far_right_inset_margin(ui) + 4.0,
@@ -104,7 +104,7 @@ impl NetworkContent {
         egui::CentralPanel::default()
             .frame(egui::Frame {
                 stroke: if show_connections{
-                    View::DEFAULT_STROKE
+                    View::default_stroke()
                 } else {
                     Stroke::NONE
                 },
@@ -122,7 +122,7 @@ impl NetworkContent {
                     top: 3.0,
                     bottom: View::get_bottom_inset() + 4.0,
                 },
-                fill: Colors::BUTTON,
+                fill: Colors::button(),
                 ..Default::default()
             })
             .show_inside(ui, |ui| {
@@ -230,10 +230,10 @@ impl NetworkContent {
             let text = t!("network.disabled_server", "dots" => DOTS_THREE_OUTLINE_VERTICAL);
             ui.label(RichText::new(text)
                 .size(16.0)
-                .color(Colors::INACTIVE_TEXT)
+                .color(Colors::inactive_text())
             );
             ui.add_space(8.0);
-            View::button(ui, format!("{} {}", POWER, t!("network.enable_node")), Colors::GOLD, || {
+            View::action_button(ui, format!("{} {}", POWER, t!("network.enable_node")), || {
                 Node::start();
             });
             ui.add_space(2.0);
@@ -255,7 +255,7 @@ impl NetworkContent {
                     ui.add_space(18.0);
                     ui.label(RichText::new(t)
                         .size(16.0)
-                        .color(Colors::INACTIVE_TEXT)
+                        .color(Colors::inactive_text())
                     );
                 });
             }
@@ -277,13 +277,13 @@ impl NetworkContent {
                 View::center_content(ui, 156.0, |ui| {
                     ui.label(RichText::new(t!("network_node.error_clean"))
                         .size(16.0)
-                        .color(Colors::RED)
+                        .color(Colors::red())
                     );
                     ui.add_space(8.0);
                     let btn_txt = format!("{} {}",
                                           ARROWS_COUNTER_CLOCKWISE,
                                           t!("network_node.resync"));
-                    View::button(ui, btn_txt, Colors::GOLD, || {
+                    View::action_button(ui, btn_txt, || {
                         Node::clean_up_data();
                         Node::start();
                     });
@@ -304,7 +304,7 @@ impl NetworkContent {
                     );
                     ui.label(RichText::new(text)
                         .size(16.0)
-                        .color(Colors::RED)
+                        .color(Colors::red())
                     );
                     ui.add_space(2.0);
                 });
@@ -314,7 +314,7 @@ impl NetworkContent {
                 View::center_content(ui, 106.0, |ui| {
                     ui.label(RichText::new(t!("network_node.error_config", "settings" => FADERS))
                         .size(16.0)
-                        .color(Colors::RED)
+                        .color(Colors::red())
                     );
                     ui.add_space(2.0);
                 });
@@ -323,13 +323,13 @@ impl NetworkContent {
                 View::center_content(ui, 156.0, |ui| {
                     ui.label(RichText::new(t!("network_node.error_unknown", "settings" => FADERS))
                         .size(16.0)
-                        .color(Colors::RED)
+                        .color(Colors::red())
                     );
                     ui.add_space(8.0);
                     let btn_txt = format!("{} {}",
                                           ARROWS_COUNTER_CLOCKWISE,
                                           t!("network_node.resync"));
-                    View::button(ui, btn_txt, Colors::GOLD, || {
+                    View::action_button(ui, btn_txt, || {
                         Node::clean_up_data();
                         Node::start();
                     });

@@ -115,12 +115,12 @@ impl WalletsContent {
             .frame(egui::Frame {
                 fill: if empty_list && !create_wallet
                     || (dual_panel && show_wallet && !self.show_wallets_at_dual_panel) {
-                    Colors::FILL_DARK
+                    Colors::fill_deep()
                 } else {
                     if create_wallet {
-                        Colors::WHITE
+                        Colors::white_or_black(true)
                     } else {
-                        Colors::BUTTON
+                        Colors::button()
                     }
                 },
                 ..Default::default()
@@ -175,8 +175,8 @@ impl WalletsContent {
         // Show wallets bottom panel.
         egui::TopBottomPanel::bottom("wallets_bottom_panel")
             .frame(egui::Frame {
-                stroke: View::ITEM_STROKE,
-                fill: Colors::FILL,
+                stroke: View::item_stroke(),
+                fill: Colors::fill(),
                 inner_margin: Margin {
                     left: View::get_left_inset() + 4.0,
                     right: View::far_right_inset_margin(ui) + 4.0,
@@ -202,8 +202,8 @@ impl WalletsContent {
             // Show wallet list panel.
             egui::CentralPanel::default()
                 .frame(egui::Frame {
-                    stroke: View::DEFAULT_STROKE,
-                    fill: Colors::FILL_DARK,
+                    stroke: View::default_stroke(),
+                    fill: Colors::fill_deep(),
                     inner_margin: Margin {
                         left: if list_hidden {
                             0.0
@@ -337,11 +337,6 @@ impl WalletsContent {
                       dual_panel: bool,
                       cb: &dyn PlatformCallbacks) {
         ui.scope(|ui| {
-            // Setup scroll bar color.
-            ui.style_mut().visuals.widgets.inactive.bg_fill = Colors::ITEM_HOVER;
-            ui.style_mut().visuals.widgets.hovered.bg_fill = Colors::STROKE;
-
-            // Draw list of wallets.
             ScrollArea::vertical()
                 .id_source("wallet_list")
                 .scroll_bar_visibility(ScrollBarVisibility::AlwaysHidden)
@@ -389,11 +384,15 @@ impl WalletsContent {
         rect.set_height(78.0);
         let rounding = View::item_rounding(0, 1, false);
         let bg = if current {
-            egui::Color32::from_gray(234)
+            if AppConfig::dark_theme().unwrap_or(false) {
+                egui::Color32::from_gray(32)
+            } else {
+                egui::Color32::from_gray(233)
+            }
         } else {
-            Colors::FILL
+            Colors::fill()
         };
-        ui.painter().rect(rect, rounding, bg, View::HOVER_STROKE);
+        ui.painter().rect(rect, rounding, bg, View::hover_stroke());
 
         ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
             // Setup padding for item buttons.
@@ -434,7 +433,11 @@ impl WalletsContent {
                 ui.vertical(|ui| {
                     ui.add_space(3.0);
                     // Setup wallet name text.
-                    let name_color = if is_selected { Colors::BLACK } else { Colors::TITLE };
+                    let name_color = if is_selected {
+                        Colors::white_or_black(true)
+                    } else {
+                        Colors::title(false)
+                    };
                     View::ellipsize_text(ui, config.name, 18.0, name_color);
 
                     // Setup wallet connection text.
@@ -443,7 +446,7 @@ impl WalletsContent {
                     } else {
                         format!("{} {}", COMPUTER_TOWER, t!("network.node"))
                     };
-                    View::ellipsize_text(ui, conn_text, 15.0, Colors::TEXT);
+                    View::ellipsize_text(ui, conn_text, 15.0, Colors::text(false));
                     ui.add_space(1.0);
 
                     // Setup wallet status text.
@@ -490,7 +493,7 @@ impl WalletsContent {
                     } else {
                         format!("{} {}", FOLDER_LOCK, t!("wallets.locked"))
                     };
-                    ui.label(RichText::new(status_text).size(15.0).color(Colors::GRAY));
+                    ui.label(RichText::new(status_text).size(15.0).color(Colors::gray()));
                     ui.add_space(4.0);
                 })
             });
@@ -519,7 +522,7 @@ impl WalletsContent {
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("wallets.pass"))
                 .size(17.0)
-                .color(Colors::GRAY));
+                .color(Colors::gray()));
             ui.add_space(8.0);
 
             // Show password input.
@@ -532,12 +535,12 @@ impl WalletsContent {
                 ui.add_space(10.0);
                 ui.label(RichText::new(t!("wallets.pass_empty"))
                     .size(17.0)
-                    .color(Colors::INACTIVE_TEXT));
+                    .color(Colors::inactive_text()));
             } else if self.wrong_pass {
                 ui.add_space(10.0);
                 ui.label(RichText::new(t!("wallets.wrong_pass"))
                     .size(17.0)
-                    .color(Colors::RED));
+                    .color(Colors::red()));
             }
             ui.add_space(12.0);
         });
@@ -549,7 +552,7 @@ impl WalletsContent {
 
             ui.columns(2, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
-                    View::button(ui, t!("modal.cancel"), Colors::WHITE, || {
+                    View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                         // Close modal.
                         cb.hide_keyboard();
                         modal.close();
@@ -581,7 +584,7 @@ impl WalletsContent {
                         (on_continue)();
                     });
 
-                    View::button(ui, t!("continue"), Colors::WHITE, on_continue);
+                    View::button(ui, t!("continue"), Colors::white_or_black(false), on_continue);
                 });
             });
             ui.add_space(6.0);

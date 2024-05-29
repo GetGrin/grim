@@ -103,7 +103,7 @@ impl NodeSetup {
         self.current_modal_ui(ui, frame, cb);
 
         View::sub_title(ui, format!("{} {}", COMPUTER_TOWER, t!("network_settings.server")));
-        View::horizontal_line(ui, Colors::STROKE);
+        View::horizontal_line(ui, Colors::stroke());
         ui.add_space(6.0);
 
         // Show chain type setup.
@@ -126,12 +126,12 @@ impl NodeSetup {
 
                     ui.columns(2, |columns| {
                         columns[0].vertical_centered_justified(|ui| {
-                            View::button(ui, t!("network_settings.disable"), Colors::GOLD, || {
+                            View::action_button(ui, t!("network_settings.disable"), || {
                                 Node::stop(false);
                             });
                         });
                         columns[1].vertical_centered_justified(|ui| {
-                            View::button(ui, t!("network_settings.restart"), Colors::GOLD, || {
+                            View::action_button(ui, t!("network_settings.restart"), || {
                                 Node::restart();
                             });
                         });
@@ -141,7 +141,7 @@ impl NodeSetup {
                 ui.add_space(6.0);
                 ui.vertical_centered(|ui| {
                     let enable_text = format!("{} {}", POWER, t!("network_settings.enable"));
-                    View::button(ui, enable_text, Colors::GOLD, || {
+                    View::action_button(ui, enable_text, || {
                         Node::start();
                     });
                 });
@@ -156,7 +156,7 @@ impl NodeSetup {
                 ui.add_space(2.0);
                 ui.label(RichText::new(t!("network_settings.restart_node_required"))
                     .size(16.0)
-                    .color(Colors::INACTIVE_TEXT)
+                    .color(Colors::inactive_text())
                 );
                 ui.add_space(4.0);
             }
@@ -167,13 +167,13 @@ impl NodeSetup {
             // Show message when IP addresses are not available on the system.
             NetworkSettings::no_ip_address_ui(ui);
         } else {
-            View::horizontal_line(ui, Colors::ITEM_STROKE);
+            View::horizontal_line(ui, Colors::item_stroke());
             ui.add_space(6.0);
 
             ui.vertical_centered(|ui| {
                 ui.label(RichText::new(t!("network_settings.api_ip"))
                     .size(16.0)
-                    .color(Colors::GRAY)
+                    .color(Colors::gray())
                 );
                 ui.add_space(6.0);
 
@@ -196,7 +196,7 @@ impl NodeSetup {
         }
 
         ui.add_space(6.0);
-        View::horizontal_line(ui, Colors::ITEM_STROKE);
+        View::horizontal_line(ui, Colors::item_stroke());
         ui.add_space(6.0);
 
         ui.vertical_centered(|ui| {
@@ -204,14 +204,14 @@ impl NodeSetup {
             self.ftl_ui(ui, cb);
 
             ui.add_space(6.0);
-            View::horizontal_line(ui, Colors::ITEM_STROKE);
+            View::horizontal_line(ui, Colors::item_stroke());
             ui.add_space(6.0);
 
             // Validation setup.
             self.validation_mode_ui(ui);
 
             ui.add_space(6.0);
-            View::horizontal_line(ui, Colors::ITEM_STROKE);
+            View::horizontal_line(ui, Colors::item_stroke());
             ui.add_space(6.0);
 
             // Archive mode setup.
@@ -222,7 +222,7 @@ impl NodeSetup {
     /// Draw [`ChainTypes`] setup content.
     pub fn chain_type_ui(ui: &mut egui::Ui) {
         ui.vertical_centered(|ui| {
-            ui.label(RichText::new(t!("network.type")).size(16.0).color(Colors::GRAY));
+            ui.label(RichText::new(t!("network.type")).size(16.0).color(Colors::gray()));
         });
 
         let saved_chain_type = AppConfig::chain_type();
@@ -251,11 +251,11 @@ impl NodeSetup {
 
     /// Draw API port setup content.
     fn api_port_setup_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
-        ui.label(RichText::new(t!("network_settings.api_port")).size(16.0).color(Colors::GRAY));
+        ui.label(RichText::new(t!("network_settings.api_port")).size(16.0).color(Colors::gray()));
         ui.add_space(6.0);
 
         let (_, port) = NodeConfig::get_api_ip_port();
-        View::button(ui, format!("{} {}", PLUG, port.clone()), Colors::BUTTON, || {
+        View::button(ui, format!("{} {}", PLUG, port.clone()), Colors::button(), || {
             // Setup values for modal.
             self.api_port_edit = port;
             self.api_port_available_edit = self.is_api_port_available;
@@ -273,7 +273,7 @@ impl NodeSetup {
             // Show error when API server port is unavailable.
             ui.label(RichText::new(t!("network_settings.port_unavailable"))
                 .size(16.0)
-                .color(Colors::RED));
+                .color(Colors::red()));
             ui.add_space(6.0);
         }
         ui.add_space(6.0);
@@ -283,7 +283,7 @@ impl NodeSetup {
     fn api_port_modal(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
-            ui.label(RichText::new(t!("network_settings.api_port")).size(17.0).color(Colors::GRAY));
+            ui.label(RichText::new(t!("network_settings.api_port")).size(17.0).color(Colors::gray()));
             ui.add_space(6.0);
 
             // Draw API port text edit.
@@ -295,7 +295,7 @@ impl NodeSetup {
                 ui.add_space(12.0);
                 ui.label(RichText::new(t!("network_settings.port_unavailable"))
                     .size(16.0)
-                    .color(Colors::RED));
+                    .color(Colors::red()));
             } else {
                 NetworkSettings::node_restart_required_ui(ui);
             }
@@ -330,13 +330,13 @@ impl NodeSetup {
 
             ui.columns(2, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
-                    View::button(ui, t!("modal.cancel"), Colors::WHITE, || {
+                    View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                         cb.hide_keyboard();
                         modal.close();
                     });
                 });
                 columns[1].vertical_centered_justified(|ui| {
-                    View::button(ui, t!("modal.save"), Colors::WHITE, on_save);
+                    View::button(ui, t!("modal.save"), Colors::white_or_black(false), on_save);
                 });
             });
             ui.add_space(6.0);
@@ -351,7 +351,7 @@ impl NodeSetup {
         };
         ui.label(RichText::new(secret_title)
             .size(16.0)
-            .color(Colors::GRAY)
+            .color(Colors::gray())
         );
         ui.add_space(6.0);
 
@@ -366,7 +366,7 @@ impl NodeSetup {
             format!("{} {}", SHIELD_SLASH, t!("network_settings.disabled"))
         };
 
-        View::button(ui, secret_text, Colors::BUTTON, || {
+        View::button(ui, secret_text, Colors::button(), || {
             // Setup values for modal.
             self.secret_edit = secret_value.unwrap_or("".to_string());
             // Show secret edit modal.
@@ -386,7 +386,7 @@ impl NodeSetup {
                 API_SECRET_MODAL => t!("network_settings.api_secret"),
                 _ => t!("network_settings.foreign_api_secret")
             };
-            ui.label(RichText::new(description).size(17.0).color(Colors::GRAY));
+            ui.label(RichText::new(description).size(17.0).color(Colors::gray()));
             ui.add_space(8.0);
 
             // Draw API secret token value text edit.
@@ -398,7 +398,7 @@ impl NodeSetup {
             if Node::is_running() {
                 ui.label(RichText::new(t!("network_settings.restart_node_required"))
                     .size(16.0)
-                    .color(Colors::GREEN)
+                    .color(Colors::green())
                 );
                 ui.add_space(6.0);
             }
@@ -427,13 +427,13 @@ impl NodeSetup {
 
             ui.columns(2, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
-                    View::button(ui, t!("modal.cancel"), Colors::WHITE, || {
+                    View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                         cb.hide_keyboard();
                         modal.close();
                     });
                 });
                 columns[1].vertical_centered_justified(|ui| {
-                    View::button(ui, t!("modal.save"), Colors::WHITE, on_save);
+                    View::button(ui, t!("modal.save"), Colors::white_or_black(false), on_save);
                 });
             });
             ui.add_space(6.0);
@@ -444,12 +444,12 @@ impl NodeSetup {
     fn ftl_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         ui.label(RichText::new(t!("network_settings.ftl"))
             .size(16.0)
-            .color(Colors::GRAY)
+            .color(Colors::gray())
         );
         ui.add_space(6.0);
 
         let ftl = NodeConfig::get_ftl();
-        View::button(ui, format!("{} {}", CLOCK_CLOCKWISE, ftl.clone()), Colors::BUTTON, || {
+        View::button(ui, format!("{} {}", CLOCK_CLOCKWISE, ftl.clone()), Colors::button(), || {
             // Setup values for modal.
             self.ftl_edit = ftl;
             // Show ftl value setup modal.
@@ -462,7 +462,7 @@ impl NodeSetup {
         ui.add_space(6.0);
         ui.label(RichText::new(t!("network_settings.ftl_description"))
             .size(16.0)
-            .color(Colors::INACTIVE_TEXT)
+            .color(Colors::inactive_text())
         );
     }
 
@@ -472,7 +472,7 @@ impl NodeSetup {
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.ftl"))
                 .size(17.0)
-                .color(Colors::GRAY));
+                .color(Colors::gray()));
             ui.add_space(8.0);
 
             // Draw ftl value text edit.
@@ -484,7 +484,7 @@ impl NodeSetup {
                 ui.add_space(12.0);
                 ui.label(RichText::new(t!("network_settings.not_valid_value"))
                     .size(17.0)
-                    .color(Colors::RED));
+                    .color(Colors::red()));
             } else {
                 NetworkSettings::node_restart_required_ui(ui);
             }
@@ -507,14 +507,14 @@ impl NodeSetup {
 
             ui.columns(2, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
-                    View::button(ui, t!("modal.cancel"), Colors::WHITE, || {
+                    View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                         // Close modal.
                         cb.hide_keyboard();
                         modal.close();
                     });
                 });
                 columns[1].vertical_centered_justified(|ui| {
-                    View::button(ui, t!("modal.save"), Colors::WHITE, on_save);
+                    View::button(ui, t!("modal.save"), Colors::white_or_black(false), on_save);
                 });
             });
             ui.add_space(6.0);
@@ -530,7 +530,7 @@ impl NodeSetup {
         ui.add_space(4.0);
         ui.label(RichText::new(t!("network_settings.full_validation_description"))
             .size(16.0)
-            .color(Colors::INACTIVE_TEXT)
+            .color(Colors::inactive_text())
         );
     }
 
@@ -543,7 +543,7 @@ impl NodeSetup {
         ui.add_space(4.0);
         ui.label(RichText::new(t!("network_settings.archive_mode_desc"))
             .size(16.0)
-            .color(Colors::INACTIVE_TEXT)
+            .color(Colors::inactive_text())
         );
     }
 }

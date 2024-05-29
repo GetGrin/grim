@@ -97,7 +97,7 @@ impl StratumSetup {
         self.current_modal_ui(ui, frame, cb);
 
         View::sub_title(ui, format!("{} {}", HARD_DRIVES, t!("network_mining.server")));
-        View::horizontal_line(ui, Colors::STROKE);
+        View::horizontal_line(ui, Colors::stroke());
         ui.add_space(6.0);
 
         ui.vertical_centered(|ui| {
@@ -112,14 +112,14 @@ impl StratumSetup {
                 } else if Node::get_stratum_stats().is_running {
                     ui.add_space(6.0);
                     let disable_text = format!("{} {}", POWER, t!("network_settings.disable"));
-                    View::button(ui, disable_text, Colors::GOLD, || {
+                    View::action_button(ui, disable_text, || {
                         Node::stop_stratum();
                     });
                     ui.add_space(6.0);
                 } else {
                     ui.add_space(6.0);
                     let enable_text = format!("{} {}", POWER, t!("network_settings.enable"));
-                    View::button(ui, enable_text, Colors::GOLD, || {
+                    View::action_button(ui, enable_text, || {
                         Node::start_stratum();
                     });
                     ui.add_space(6.0);
@@ -137,13 +137,13 @@ impl StratumSetup {
                 ui.add_space(2.0);
                 ui.label(RichText::new(t!("network_mining.restart_server_required"))
                     .size(16.0)
-                    .color(Colors::INACTIVE_TEXT)
+                    .color(Colors::inactive_text())
                 );
             }
             ui.add_space(8.0);
         });
 
-        View::horizontal_line(ui, Colors::ITEM_STROKE);
+        View::horizontal_line(ui, Colors::item_stroke());
         ui.add_space(6.0);
 
         // Show message when IP addresses are not available on the system.
@@ -155,7 +155,7 @@ impl StratumSetup {
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.stratum_ip"))
                 .size(16.0)
-                .color(Colors::GRAY)
+                .color(Colors::gray())
             );
             ui.add_space(6.0);
             // Show stratum IP addresses to select.
@@ -168,13 +168,13 @@ impl StratumSetup {
             // Show stratum port setup.
             self.port_setup_ui(ui, cb);
 
-            View::horizontal_line(ui, Colors::ITEM_STROKE);
+            View::horizontal_line(ui, Colors::item_stroke());
             ui.add_space(6.0);
 
             // Show attempt time setup.
             self.attempt_time_ui(ui, cb);
 
-            View::horizontal_line(ui, Colors::ITEM_STROKE);
+            View::horizontal_line(ui, Colors::item_stroke());
             ui.add_space(6.0);
 
             // Show minimum acceptable share difficulty setup.
@@ -186,12 +186,12 @@ impl StratumSetup {
     fn port_setup_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         ui.label(RichText::new(t!("network_settings.stratum_port"))
             .size(16.0)
-            .color(Colors::GRAY)
+            .color(Colors::gray())
         );
         ui.add_space(6.0);
 
         let (_, port) = NodeConfig::get_stratum_address();
-        View::button(ui, format!("{} {}", PLUG, port.clone()), Colors::BUTTON, || {
+        View::button(ui, format!("{} {}", PLUG, port.clone()), Colors::button(), || {
             // Setup values for modal.
             self.stratum_port_edit = port;
             self.stratum_port_available_edit = self.is_port_available;
@@ -209,7 +209,7 @@ impl StratumSetup {
             ui.add_space(6.0);
             ui.label(RichText::new(t!("network_settings.port_unavailable"))
                 .size(16.0)
-                .color(Colors::RED));
+                .color(Colors::red()));
             ui.add_space(12.0);
         }
     }
@@ -220,7 +220,7 @@ impl StratumSetup {
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.stratum_port"))
                 .size(17.0)
-                .color(Colors::GRAY));
+                .color(Colors::gray()));
             ui.add_space(8.0);
 
             // Draw stratum port text edit.
@@ -232,7 +232,7 @@ impl StratumSetup {
                 ui.add_space(12.0);
                 ui.label(RichText::new(t!("network_settings.port_unavailable"))
                     .size(17.0)
-                    .color(Colors::RED));
+                    .color(Colors::red()));
             } else {
                 server_restart_required_ui(ui);
             }
@@ -266,14 +266,14 @@ impl StratumSetup {
 
                 ui.columns(2, |columns| {
                     columns[0].vertical_centered_justified(|ui| {
-                        View::button(ui, t!("modal.cancel"), Colors::WHITE, || {
+                        View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                             // Close modal.
                             cb.hide_keyboard();
                             modal.close();
                         });
                     });
                     columns[1].vertical_centered_justified(|ui| {
-                        View::button(ui, t!("modal.save"), Colors::WHITE, on_save);
+                        View::button(ui, t!("modal.save"), Colors::white_or_black(false), on_save);
                     });
                 });
                 ui.add_space(6.0);
@@ -285,12 +285,12 @@ impl StratumSetup {
     fn attempt_time_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         ui.label(RichText::new(t!("network_settings.attempt_time"))
             .size(16.0)
-            .color(Colors::GRAY)
+            .color(Colors::gray())
         );
         ui.add_space(6.0);
 
         let time = NodeConfig::get_stratum_attempt_time();
-        View::button(ui, format!("{} {}", TIMER, time.clone()), Colors::BUTTON, || {
+        View::button(ui, format!("{} {}", TIMER, time.clone()), Colors::button(), || {
             // Setup values for modal.
             self.attempt_time_edit = time;
 
@@ -304,7 +304,7 @@ impl StratumSetup {
         ui.add_space(6.0);
         ui.label(RichText::new(t!("network_settings.attempt_time_desc"))
             .size(16.0)
-            .color(Colors::INACTIVE_TEXT)
+            .color(Colors::inactive_text())
         );
         ui.add_space(6.0);
     }
@@ -315,7 +315,7 @@ impl StratumSetup {
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.attempt_time"))
                 .size(17.0)
-                .color(Colors::GRAY));
+                .color(Colors::gray()));
             ui.add_space(8.0);
 
             // Draw attempt time text edit.
@@ -327,7 +327,7 @@ impl StratumSetup {
                 ui.add_space(12.0);
                 ui.label(RichText::new(t!("network_settings.not_valid_value"))
                     .size(17.0)
-                    .color(Colors::RED));
+                    .color(Colors::red()));
             } else {
                 server_restart_required_ui(ui);
             }
@@ -350,14 +350,14 @@ impl StratumSetup {
 
             ui.columns(2, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
-                    View::button(ui, t!("modal.cancel"), Colors::WHITE, || {
+                    View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                         // Close modal.
                         cb.hide_keyboard();
                         modal.close();
                     });
                 });
                 columns[1].vertical_centered_justified(|ui| {
-                    View::button(ui, t!("modal.save"), Colors::WHITE, on_save);
+                    View::button(ui, t!("modal.save"), Colors::white_or_black(false), on_save);
                 });
             });
             ui.add_space(6.0);
@@ -368,12 +368,12 @@ impl StratumSetup {
     fn min_diff_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         ui.label(RichText::new(t!("network_settings.min_share_diff"))
             .size(16.0)
-            .color(Colors::GRAY)
+            .color(Colors::gray())
         );
         ui.add_space(6.0);
 
         let diff = NodeConfig::get_stratum_min_share_diff();
-        View::button(ui, format!("{} {}", BARBELL, diff.clone()), Colors::BUTTON, || {
+        View::button(ui, format!("{} {}", BARBELL, diff.clone()), Colors::button(), || {
             // Setup values for modal.
             self.min_share_diff_edit = diff;
 
@@ -393,7 +393,7 @@ impl StratumSetup {
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.min_share_diff"))
                 .size(17.0)
-                .color(Colors::GRAY));
+                .color(Colors::gray()));
             ui.add_space(8.0);
 
             // Draw share difficulty text edit.
@@ -405,7 +405,7 @@ impl StratumSetup {
                 ui.add_space(12.0);
                 ui.label(RichText::new(t!("network_settings.not_valid_value"))
                     .size(17.0)
-                    .color(Colors::RED));
+                    .color(Colors::red()));
             } else {
                 server_restart_required_ui(ui);
             }
@@ -428,14 +428,14 @@ impl StratumSetup {
 
             ui.columns(2, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
-                    View::button(ui, t!("modal.cancel"), Colors::WHITE, || {
+                    View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                         // Close modal.
                         cb.hide_keyboard();
                         modal.close();
                     });
                 });
                 columns[1].vertical_centered_justified(|ui| {
-                    View::button(ui, t!("modal.save"), Colors::WHITE, on_save);
+                    View::button(ui, t!("modal.save"), Colors::white_or_black(false), on_save);
                 });
             });
             ui.add_space(6.0);
@@ -449,7 +449,7 @@ pub fn server_restart_required_ui(ui: &mut egui::Ui) {
         ui.add_space(12.0);
         ui.label(RichText::new(t!("network_mining.restart_server_required"))
             .size(16.0)
-            .color(Colors::GREEN)
+            .color(Colors::green())
         );
     }
 }

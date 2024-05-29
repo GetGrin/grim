@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::{Id, Margin, RichText, ScrollArea, vec2};
+use egui::{Id, Margin, RichText, ScrollArea, vec2, Widget};
 use egui::scroll_area::ScrollBarVisibility;
 use grin_util::ZeroingString;
 
-use crate::built_info;
+use crate::{AppConfig, built_info};
 use crate::gui::Colors;
 use crate::gui::icons::{CHECK, CLIPBOARD_TEXT, COPY, FOLDER_PLUS, SCAN, SHARE_FAT};
 use crate::gui::platform::PlatformCallbacks;
@@ -74,8 +74,8 @@ impl WalletCreation {
         if self.step.is_some() {
             egui::TopBottomPanel::bottom("wallet_creation_step_panel")
                 .frame(egui::Frame {
-                    stroke: View::DEFAULT_STROKE,
-                    fill: Colors::FILL,
+                    fill: Colors::fill(),
+                    stroke: View::default_stroke(),
                     inner_margin: Margin {
                         left: View::far_left_inset_margin(ui) + 8.0,
                         right: View::get_right_inset() + 8.0,
@@ -99,7 +99,8 @@ impl WalletCreation {
         // Show wallet creation step content panel.
         egui::CentralPanel::default()
             .frame(egui::Frame {
-                stroke: View::DEFAULT_STROKE,
+                fill: Colors::fill(),
+                stroke: View::default_stroke(),
                 inner_margin: Margin {
                     left: View::far_left_inset_margin(ui) + 4.0,
                     right: View::get_right_inset() + 4.0,
@@ -168,14 +169,14 @@ impl WalletCreation {
             };
             // Show step description.
             ui.add_space(2.0);
-            ui.label(RichText::new(step_text).size(16.0).color(Colors::GRAY));
+            ui.label(RichText::new(step_text).size(16.0).color(Colors::gray()));
             ui.add_space(2.0);
             // Show error if entered phrase is not valid.
             if !self.mnemonic_setup.valid_phrase {
                 step_available = false;
                 ui.label(RichText::new(t!("wallets.not_valid_phrase"))
                     .size(16.0)
-                    .color(Colors::RED));
+                    .color(Colors::red()));
                 ui.add_space(2.0);
             }
             if step == Step::EnterMnemonic {
@@ -197,7 +198,7 @@ impl WalletCreation {
                         } else {
                             // Show QR code scan button.
                             let scan_text = format!("{} {}", SCAN, t!("scan").to_uppercase());
-                            View::button(ui, scan_text, Colors::WHITE, || {
+                            View::button(ui, scan_text, Colors::white_or_black(false), || {
                                 self.mnemonic_setup.show_qr_scan_modal(cb);
                             });
                         }
@@ -221,14 +222,14 @@ impl WalletCreation {
             PhraseMode::Generate => {
                 // Show copy button.
                 let c_t = format!("{} {}", COPY, t!("copy").to_uppercase());
-                View::button(ui, c_t.to_uppercase(), Colors::WHITE, || {
+                View::button(ui, c_t.to_uppercase(), Colors::white_or_black(false), || {
                     cb.copy_string_to_buffer(self.mnemonic_setup.mnemonic.get_phrase());
                 });
             }
             PhraseMode::Import => {
                 // Show paste button.
                 let p_t = format!("{} {}", CLIPBOARD_TEXT, t!("paste").to_uppercase());
-                View::button(ui, p_t, Colors::WHITE, || {
+                View::button(ui, p_t, Colors::white_or_black(false), || {
                     let data = ZeroingString::from(cb.get_string_from_buffer().trim());
                     self.mnemonic_setup.mnemonic.import_text(&data);
                 });
@@ -242,15 +243,15 @@ impl WalletCreation {
                            step: Step,
                            on_create: impl FnOnce(Wallet)) {
         // Setup button text.
-        let (next_text, color) = if step == Step::SetupConnection {
-            (format!("{} {}", CHECK, t!("complete")), Colors::GOLD)
+        let (next_text, text_color, bg_color) = if step == Step::SetupConnection {
+            (format!("{} {}", CHECK, t!("complete")), Colors::title(true), Colors::gold())
         } else {
             let text = format!("{} {}", SHARE_FAT, t!("continue"));
-            (text, Colors::WHITE)
+            (text, Colors::text_button(), Colors::white_or_black(false))
         };
 
         // Show next step button.
-        View::button(ui, next_text.to_uppercase(), color, || {
+        View::colored_text_button(ui, next_text.to_uppercase(), text_color, bg_color, || {
             self.step = if let Some(step) = &self.step {
                 match step {
                     Step::EnterMnemonic => {
@@ -310,28 +311,31 @@ impl WalletCreation {
             None => {
                 // Show wallet creation message if step is empty.
                 View::center_content(ui, 350.0 + View::get_bottom_inset(), |ui| {
-                    ui.add(
-                        egui::Image::new(egui::include_image!("../../../../../img/logo.png"))
-                            .fit_to_exact_size(vec2(180.0, 180.0))
-                    );
+                    let logo = if AppConfig::dark_theme().unwrap_or(false) {
+                        egui::include_image!("../../../../../img/logo_light.png")
+                    } else {
+                        egui::include_image!("../../../../../img/logo.png")
+                    };
+                    // Show app logo.
+                    egui::Image::new(logo).fit_to_exact_size(vec2(180.0, 180.0)).ui(ui);
                     ui.add_space(-15.0);
                     ui.label(RichText::new("GRIM")
                         .size(24.0)
-                        .color(Colors::BLACK)
+                        .color(Colors::white_or_black(true))
                     );
                     ui.label(RichText::new(built_info::PKG_VERSION)
                         .size(16.0)
-                        .color(Colors::BLACK)
+                        .color(Colors::white_or_black(true))
                     );
                     ui.add_space(4.0);
                     let text = t!("wallets.create_desc");
                     ui.label(RichText::new(text)
                         .size(16.0)
-                        .color(Colors::GRAY)
+                        .color(Colors::gray())
                     );
                     ui.add_space(8.0);
                     let add_text = format!("{} {}", FOLDER_PLUS, t!("wallets.add"));
-                    View::button(ui, add_text, Colors::WHITE, || {
+                    View::button(ui, add_text, Colors::white_or_black(false), || {
                         self.show_name_pass_modal(cb);
                     });
                 });
@@ -399,7 +403,7 @@ impl WalletCreation {
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("wallets.name"))
                 .size(17.0)
-                .color(Colors::GRAY));
+                .color(Colors::gray()));
             ui.add_space(8.0);
 
             // Show wallet name text edit.
@@ -414,7 +418,7 @@ impl WalletCreation {
 
             ui.label(RichText::new(t!("wallets.pass"))
                 .size(17.0)
-                .color(Colors::GRAY));
+                .color(Colors::gray()));
             ui.add_space(8.0);
 
             // Draw wallet password text edit.
@@ -432,7 +436,7 @@ impl WalletCreation {
 
             ui.columns(2, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
-                    View::button(ui, t!("modal.cancel"), Colors::WHITE, || {
+                    View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                         // Close modal.
                         cb.hide_keyboard();
                         modal.close();
@@ -454,7 +458,7 @@ impl WalletCreation {
                         (on_next)();
                     });
 
-                    View::button(ui, t!("continue"), Colors::WHITE, on_next);
+                    View::button(ui, t!("continue"), Colors::white_or_black(false), on_next);
                 });
             });
             ui.add_space(6.0);

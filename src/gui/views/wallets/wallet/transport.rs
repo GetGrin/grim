@@ -90,8 +90,8 @@ impl WalletTab for WalletTransport {
         // Show transport content panel.
         egui::CentralPanel::default()
             .frame(egui::Frame {
-                stroke: View::ITEM_STROKE,
-                fill: Colors::WHITE,
+                stroke: View::item_stroke(),
+                fill: Colors::white_or_black(false),
                 inner_margin: Margin {
                     left: View::far_left_inset_margin(ui) + 4.0,
                     right: View::get_right_inset() + 4.0,
@@ -159,7 +159,7 @@ impl WalletTransport {
         ui.add_space(3.0);
         ui.label(RichText::new(t!("transport.desc"))
             .size(16.0)
-            .color(Colors::INACTIVE_TEXT));
+            .color(Colors::inactive_text()));
         ui.add_space(7.0);
 
         // Draw Tor content.
@@ -223,7 +223,7 @@ impl WalletTransport {
         // Draw round background.
         let bg_rect = rect.clone();
         let item_rounding = View::item_rounding(0, 2, false);
-        ui.painter().rect(bg_rect, item_rounding, Colors::BUTTON, View::ITEM_STROKE);
+        ui.painter().rect(bg_rect, item_rounding, Colors::button(), View::item_stroke());
 
         ui.vertical(|ui| {
             ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
@@ -237,14 +237,14 @@ impl WalletTransport {
                 let service_id = &wallet.identifier();
                 if  !Tor::is_service_starting(service_id) && wallet.foreign_api_port().is_some() {
                     if !Tor::is_service_running(service_id) {
-                        View::item_button(ui, Rounding::default(), POWER, Some(Colors::GREEN), || {
+                        View::item_button(ui, Rounding::default(), POWER, Some(Colors::green()), || {
                             if let Ok(key) = wallet.secret_key() {
                                 let api_port = wallet.foreign_api_port().unwrap();
                                 Tor::start_service(api_port, key, service_id);
                             }
                         });
                     } else {
-                        View::item_button(ui, Rounding::default(), POWER, Some(Colors::RED), || {
+                        View::item_button(ui, Rounding::default(), POWER, Some(Colors::red()), || {
                             Tor::stop_service(service_id);
                         });
                     }
@@ -257,7 +257,7 @@ impl WalletTransport {
                         ui.add_space(3.0);
                         ui.label(RichText::new(t!("transport.tor_network"))
                             .size(18.0)
-                            .color(Colors::TITLE));
+                            .color(Colors::title(false)));
 
                         // Setup bridges status text.
                         let bridge = TorConfig::get_bridge();
@@ -272,7 +272,7 @@ impl WalletTransport {
                                         t!("transport.bridge_name", "b" = name))
                             }
                         };
-                        ui.label(RichText::new(bridges_text).size(15.0).color(Colors::TEXT));
+                        ui.label(RichText::new(bridges_text).size(15.0).color(Colors::text(false)));
                         ui.add_space(1.0);
 
                         // Setup Tor status text.
@@ -291,7 +291,7 @@ impl WalletTransport {
                             (X_CIRCLE, t!("transport.disconnected"))
                         };
                         let status_text = format!("{} {}", icon, text);
-                        ui.label(RichText::new(status_text).size(15.0).color(Colors::GRAY));
+                        ui.label(RichText::new(status_text).size(15.0).color(Colors::gray()));
                     });
                 });
             });
@@ -340,13 +340,13 @@ impl WalletTransport {
                 // Show buttons to close modal or come back to sending input.
                 ui.columns(2, |cols| {
                     cols[0].vertical_centered_justified(|ui| {
-                        View::button(ui, t!("close"), Colors::WHITE, || {
+                        View::button(ui, t!("close"), Colors::white_or_black(false), || {
                             on_stop(&mut self.bridge_qr_scan_content);
                             modal.close();
                         });
                     });
                     cols[1].vertical_centered_justified(|ui| {
-                        View::button(ui, t!("back"), Colors::WHITE, || {
+                        View::button(ui, t!("back"), Colors::white_or_black(false), || {
                             on_stop(&mut self.bridge_qr_scan_content);
                         });
                     });
@@ -364,7 +364,7 @@ impl WalletTransport {
             ui.vertical_centered(|ui| {
                 ui.label(RichText::new(t!("transport.bridges_desc"))
                     .size(17.0)
-                    .color(Colors::INACTIVE_TEXT));
+                    .color(Colors::inactive_text()));
 
                 // Draw checkbox to enable/disable bridges.
                 View::checkbox(ui, bridge.is_some(), t!("transport.bridges"), || {
@@ -423,7 +423,7 @@ impl WalletTransport {
                 ui.vertical_centered(|ui| {
                     ui.label(RichText::new(t!("transport.bin_file"))
                         .size(17.0)
-                        .color(Colors::INACTIVE_TEXT));
+                        .color(Colors::inactive_text()));
                     ui.add_space(6.0);
                     View::text_edit(ui, cb, &mut self.bridge_bin_path_edit, &mut bin_edit_opts);
                     ui.add_space(6.0);
@@ -441,7 +441,7 @@ impl WalletTransport {
                 ui.vertical_centered(|ui| {
                     ui.label(RichText::new(t!("transport.conn_line"))
                         .size(17.0)
-                        .color(Colors::INACTIVE_TEXT));
+                        .color(Colors::inactive_text()));
                     ui.add_space(6.0);
                     View::text_edit(ui, cb, &mut self.bridge_conn_line_edit, &mut conn_edit_opts);
                     // Check if scan button was pressed.
@@ -474,14 +474,14 @@ impl WalletTransport {
             }
 
             ui.add_space(6.0);
-            View::horizontal_line(ui, Colors::ITEM_STROKE);
+            View::horizontal_line(ui, Colors::item_stroke());
             ui.add_space(6.0);
         }
 
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("transport.tor_autorun_desc"))
                 .size(17.0)
-                .color(Colors::INACTIVE_TEXT));
+                .color(Colors::inactive_text()));
 
             // Show Tor service autorun checkbox.
             let autorun = wallet.auto_start_tor_listener();
@@ -491,7 +491,7 @@ impl WalletTransport {
         });
         ui.add_space(6.0);
         ui.vertical_centered_justified(|ui| {
-            View::button(ui, t!("close"), Colors::WHITE, || {
+            View::button(ui, t!("close"), Colors::white_or_black(false), || {
                 if self.tor_settings_changed {
                     self.tor_settings_changed = false;
                     // Restart running service or rebuild client.
@@ -532,7 +532,7 @@ impl WalletTransport {
         } else {
             View::item_rounding(1, 2, false)
         };
-        ui.painter().rect(bg_rect, item_rounding, Colors::BUTTON, View::ITEM_STROKE);
+        ui.painter().rect(bg_rect, item_rounding, Colors::button(), View::item_stroke());
 
         ui.vertical(|ui| {
             ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
@@ -565,18 +565,18 @@ impl WalletTransport {
                         // Show wallet Slatepack address.
                         let address_color = if Tor::is_service_starting(service_id) ||
                             wallet.foreign_api_port().is_none() {
-                            Colors::INACTIVE_TEXT
+                            Colors::inactive_text()
                         } else if Tor::is_service_running(service_id) {
-                            Colors::GREEN
+                            Colors::green()
                         } else {
-                            Colors::RED
+                            Colors::red()
                         };
                         View::ellipsize_text(ui, slatepack_addr, 15.0, address_color);
 
                         let address_label = format!("{} {}",
                                                     GLOBE_SIMPLE,
                                                     t!("network_mining.address"));
-                        ui.label(RichText::new(address_label).size(15.0).color(Colors::GRAY));
+                        ui.label(RichText::new(address_label).size(15.0).color(Colors::gray()));
                     });
                 });
             });
@@ -593,7 +593,7 @@ impl WalletTransport {
         ui.add_space(10.0);
 
         ui.vertical_centered_justified(|ui| {
-            View::button(ui, t!("close"), Colors::WHITE, || {
+            View::button(ui, t!("close"), Colors::white_or_black(false), || {
                 self.qr_address_content.clear_state();
                 m.close();
             });
@@ -610,14 +610,14 @@ impl WalletTransport {
         // Draw round background.
         let bg_rect = rect.clone();
         let item_rounding = View::item_rounding(1, 2, false);
-        ui.painter().rect(bg_rect, item_rounding, Colors::FILL, View::ITEM_STROKE);
+        ui.painter().rect(bg_rect, item_rounding, Colors::fill(), View::item_stroke());
 
         ui.vertical(|ui| {
             ui.allocate_ui_with_layout(rect.size(), Layout::top_down(Align::Center), |ui| {
                 ui.add_space(7.0);
                 // Draw button to open sending modal.
                 let send_text = format!("{} {}", EXPORT, t!("wallets.send"));
-                View::button(ui, send_text, Colors::WHITE, || {
+                View::button(ui, send_text, Colors::white_or_black(false), || {
                     self.show_send_tor_modal(cb, None);
                 });
             });
@@ -699,13 +699,13 @@ impl WalletTransport {
                     // Show buttons to close modal or come back to sending input.
                     ui.columns(2, |cols| {
                         cols[0].vertical_centered_justified(|ui| {
-                            View::button(ui, t!("close"), Colors::WHITE, || {
+                            View::button(ui, t!("close"), Colors::white_or_black(false), || {
                                 on_stop(&mut self.address_scan_content);
                                 modal.close();
                             });
                         });
                         cols[1].vertical_centered_justified(|ui| {
-                            View::button(ui, t!("back"), Colors::WHITE, || {
+                            View::button(ui, t!("back"), Colors::white_or_black(false), || {
                                 self.modal_just_opened = true;
                                 on_stop(&mut self.address_scan_content);
                                 cb.show_keyboard();
@@ -723,7 +723,7 @@ impl WalletTransport {
                 let enter_text = t!("wallets.enter_amount_send","amount" => amount);
                 ui.label(RichText::new(enter_text)
                     .size(17.0)
-                    .color(Colors::GRAY));
+                    .color(Colors::gray()));
             });
             ui.add_space(8.0);
 
@@ -778,11 +778,11 @@ impl WalletTransport {
                 if self.address_error {
                     ui.label(RichText::new(t!("transport.incorrect_addr_err"))
                         .size(17.0)
-                        .color(Colors::RED));
+                        .color(Colors::red()));
                 } else {
                     ui.label(RichText::new(t!("transport.receiver_address"))
                         .size(17.0)
-                        .color(Colors::GRAY));
+                        .color(Colors::gray()));
                 }
             });
             ui.add_space(6.0);
@@ -814,7 +814,7 @@ impl WalletTransport {
 
             ui.columns(2, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
-                    View::button(ui, t!("modal.cancel"), Colors::WHITE, || {
+                    View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                         self.amount_edit = "".to_string();
                         self.address_edit = "".to_string();
                         cb.hide_keyboard();
@@ -822,7 +822,7 @@ impl WalletTransport {
                     });
                 });
                 columns[1].vertical_centered_justified(|ui| {
-                    View::button(ui, t!("continue"), Colors::WHITE, || {
+                    View::button(ui, t!("continue"), Colors::white_or_black(false), || {
                         if self.amount_edit.is_empty() {
                             return;
                         }
@@ -869,7 +869,7 @@ impl WalletTransport {
             ui.vertical_centered(|ui| {
                 ui.label(RichText::new(t!("transport.tor_send_error"))
                     .size(17.0)
-                    .color(Colors::RED));
+                    .color(Colors::red()));
             });
             ui.add_space(12.0);
 
@@ -878,7 +878,7 @@ impl WalletTransport {
 
             ui.columns(2, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
-                    View::button(ui, t!("modal.cancel"), Colors::WHITE, || {
+                    View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                         self.amount_edit = "".to_string();
                         self.address_edit = "".to_string();
                         cb.hide_keyboard();
@@ -886,7 +886,7 @@ impl WalletTransport {
                     });
                 });
                 columns[1].vertical_centered_justified(|ui| {
-                    View::button(ui, t!("repeat"), Colors::WHITE, || {
+                    View::button(ui, t!("repeat"), Colors::white_or_black(false), || {
                         // Parse amount and send over Tor.
                         if let Ok(a) = amount_from_hr_string(self.amount_edit.as_str()) {
                             let mut w_send_error = self.tor_send_error.write();
@@ -929,7 +929,7 @@ impl WalletTransport {
                 ui.add_space(12.0);
                 ui.label(RichText::new(t!("transport.tor_sending", "amount" => self.amount_edit))
                     .size(17.0)
-                    .color(Colors::GRAY));
+                    .color(Colors::gray()));
             });
             ui.add_space(10.0);
 

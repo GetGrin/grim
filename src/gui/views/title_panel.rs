@@ -59,7 +59,7 @@ impl TitlePanel {
             .exact_height(Self::DEFAULT_HEIGHT)
             .frame(egui::Frame {
                 inner_margin: Self::inner_margin(ui),
-                fill: Colors::YELLOW,
+                fill: Colors::yellow(),
                 ..Default::default()
             })
             .show_inside(ui, |ui| {
@@ -118,7 +118,7 @@ impl TitlePanel {
                 strip.cell(|ui| {
                     ui.add_space(2.0);
                     ui.centered_and_justified(|ui| {
-                        View::ellipsize_text(ui, text, 19.0, Colors::TITLE);
+                        View::ellipsize_text(ui, text, 19.0, Colors::title(true));
                     });
                 });
             }
@@ -149,12 +149,12 @@ impl TitlePanel {
                 strip.cell(|ui| {
                     ui.add_space(4.0);
                     ui.centered_and_justified(|ui| {
-                        View::ellipsize_text(ui, title, 18.0, Colors::TITLE);
+                        View::ellipsize_text(ui, title, 18.0, Colors::title(true));
                     });
                 });
                 strip.cell(|ui| {
                     ui.centered_and_justified(|ui| {
-                        View::animate_text(ui, subtitle, 15.0, Colors::TEXT, animate_sub);
+                        View::animate_text(ui, subtitle, 15.0, Colors::text(true), animate_sub);
                     });
                 });
             });

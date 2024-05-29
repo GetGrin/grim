@@ -90,8 +90,8 @@ impl WalletContent {
             && !wallet.sync_error() && !wallet.is_repairing();
         egui::TopBottomPanel::top(Id::from("wallet_balance").with(wallet.identifier()))
             .frame(egui::Frame {
-                fill: Colors::FILL,
-                stroke: View::DEFAULT_STROKE,
+                fill: Colors::fill(),
+                stroke: View::default_stroke(),
                 inner_margin: Margin {
                     left: View::far_left_inset_margin(ui) + 4.0,
                     right: View::get_right_inset() + 4.0,
@@ -118,8 +118,8 @@ impl WalletContent {
         // Show wallet tabs panel.
         egui::TopBottomPanel::bottom("wallet_tabs")
             .frame(egui::Frame {
-                stroke: View::ITEM_STROKE,
-                fill: Colors::FILL,
+                stroke: View::item_stroke(),
+                fill: Colors::fill(),
                 inner_margin: Margin {
                     left: View::far_left_inset_margin(ui) + 4.0,
                     right: View::get_right_inset() + 4.0,
@@ -140,8 +140,8 @@ impl WalletContent {
         // Show tab content panel.
         egui::CentralPanel::default()
             .frame(egui::Frame {
-                fill: Colors::WHITE,
-                stroke: View::DEFAULT_STROKE,
+                fill: Colors::white_or_black(false),
+                stroke: View::default_stroke(),
                 ..Default::default()
             })
             .show_inside(ui, |ui| {
@@ -191,7 +191,7 @@ impl WalletContent {
         rect.set_height(75.0);
         // Draw round background.
         let rounding = View::item_rounding(0, 2, false);
-        ui.painter().rect(rect, rounding, Colors::BUTTON, View::HOVER_STROKE);
+        ui.painter().rect(rect, rounding, Colors::button(), View::hover_stroke());
 
         ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
             // Draw button to scan QR code.
@@ -228,7 +228,9 @@ impl WalletContent {
                     // Show spendable amount.
                     let amount = amount_to_hr_string(data.info.amount_currently_spendable, true);
                     let amount_text = format!("{} {}", amount, GRIN);
-                    ui.label(RichText::new(amount_text).size(18.0).color(Colors::BLACK));
+                    ui.label(RichText::new(amount_text)
+                        .size(18.0)
+                        .color(Colors::white_or_black(true)));
                     ui.add_space(-2.0);
 
                     // Show account label.
@@ -240,11 +242,11 @@ impl WalletContent {
                         account.to_owned()
                     };
                     let acc_text = format!("{} {}", FOLDER_USER, acc_label);
-                    View::ellipsize_text(ui, acc_text, 15.0, Colors::TEXT);
+                    View::ellipsize_text(ui, acc_text, 15.0, Colors::text(false));
 
                     // Show confirmed height.
                     let height_text = format!("{} {}", PACKAGE, data.info.last_confirmed_height);
-                    View::animate_text(ui, height_text, 15.0, Colors::GRAY, wallet.syncing());
+                    View::animate_text(ui, height_text, 15.0, Colors::gray(), wallet.syncing());
                 })
             });
         });
@@ -261,7 +263,7 @@ impl WalletContent {
             ui.vertical_centered(|ui| {
                 ui.label(RichText::new(t!("wallets.new_account_desc"))
                     .size(17.0)
-                    .color(Colors::GRAY));
+                    .color(Colors::gray()));
                 ui.add_space(8.0);
 
                 // Draw account name edit.
@@ -274,7 +276,7 @@ impl WalletContent {
                     ui.add_space(12.0);
                     ui.label(RichText::new(t!("error"))
                         .size(17.0)
-                        .color(Colors::RED));
+                        .color(Colors::red()));
                 }
                 ui.add_space(12.0);
             });
@@ -285,7 +287,7 @@ impl WalletContent {
             // Show modal buttons.
             ui.columns(2, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
-                    View::button(ui, t!("modal.cancel"), Colors::WHITE, || {
+                    View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                         // Close modal.
                         cb.hide_keyboard();
                         modal.close();
@@ -311,7 +313,7 @@ impl WalletContent {
                         (on_create)();
                     });
 
-                    View::button(ui, t!("create"), Colors::WHITE, on_create);
+                    View::button(ui, t!("create"), Colors::white_or_black(false), on_create);
                 });
             });
             ui.add_space(6.0);
@@ -340,7 +342,7 @@ impl WalletContent {
                 });
 
             ui.add_space(2.0);
-            View::horizontal_line(ui, Colors::STROKE);
+            View::horizontal_line(ui, Colors::stroke());
             ui.add_space(6.0);
 
             // Setup spacing between buttons.
@@ -349,12 +351,12 @@ impl WalletContent {
             // Show modal buttons.
             ui.columns(2, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
-                    View::button(ui, t!("modal.cancel"), Colors::WHITE, || {
+                    View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                         modal.close();
                     });
                 });
                 columns[1].vertical_centered_justified(|ui| {
-                    View::button(ui, t!("create"), Colors::WHITE, || {
+                    View::button(ui, t!("create"), Colors::white_or_black(false), || {
                         self.account_creating = true;
                         cb.show_keyboard();
                     });
@@ -373,7 +375,7 @@ impl WalletContent {
         // Show scan result if exists or show camera content while scanning.
         if let Some(result) = &self.qr_scan_result {
             let mut result_text = result.text();
-            View::horizontal_line(ui, Colors::ITEM_STROKE);
+            View::horizontal_line(ui, Colors::item_stroke());
             ui.add_space(3.0);
             ScrollArea::vertical()
                 .id_source(Id::from("qr_scan_result_input").with(wallet.get_config().id))
@@ -391,20 +393,20 @@ impl WalletContent {
                     ui.add_space(6.0);
                 });
             ui.add_space(2.0);
-            View::horizontal_line(ui, Colors::ITEM_STROKE);
+            View::horizontal_line(ui, Colors::item_stroke());
             ui.add_space(6.0);
 
             // Show copy button.
             ui.vertical_centered(|ui| {
                 let copy_text = format!("{} {}", COPY, t!("copy"));
-                View::button(ui, copy_text, Colors::BUTTON, || {
+                View::button(ui, copy_text, Colors::button(), || {
                     cb.copy_string_to_buffer(result_text.to_string());
                     self.qr_scan_result = None;
                     modal.close();
                 });
             });
             ui.add_space(6.0);
-            View::horizontal_line(ui, Colors::ITEM_STROKE);
+            View::horizontal_line(ui, Colors::item_stroke());
             ui.add_space(6.0);
         } else if let Some(result) = self.camera_content.qr_scan_result() {
             cb.stop_camera();
@@ -448,13 +450,13 @@ impl WalletContent {
 
             ui.columns(2, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
-                    View::button(ui, t!("close"), Colors::WHITE, || {
+                    View::button(ui, t!("close"), Colors::white_or_black(false), || {
                         self.qr_scan_result = None;
                         modal.close();
                     });
                 });
                 columns[1].vertical_centered_justified(|ui| {
-                    View::button(ui, t!("repeat"), Colors::WHITE, || {
+                    View::button(ui, t!("repeat"), Colors::white_or_black(false), || {
                         Modal::set_title(t!("scan_qr"));
                         self.qr_scan_result = None;
                         cb.start_camera();
@@ -463,7 +465,7 @@ impl WalletContent {
             });
         } else {
             ui.vertical_centered_justified(|ui| {
-                View::button(ui, t!("modal.cancel"), Colors::WHITE, || {
+                View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                     cb.stop_camera();
                     modal.close();
                 });
@@ -524,7 +526,7 @@ impl WalletContent {
                 View::center_content(ui, 108.0, |ui| {
                     View::max_width_ui(ui, Root::SIDE_PANEL_WIDTH * 1.5, |ui| {
                         let text = t!("wallets.enable_node", "settings" => GEAR_FINE);
-                        ui.label(RichText::new(text).size(16.0).color(Colors::INACTIVE_TEXT));
+                        ui.label(RichText::new(text).size(16.0).color(Colors::inactive_text()));
                         ui.add_space(8.0);
                         // Show button to enable integrated node at non-dual root panel mode
                         // or when network connections are not showing and node is not stopping
@@ -532,7 +534,7 @@ impl WalletContent {
                         if (!dual_panel_root || AppConfig::show_connections_network_panel())
                             && !Node::is_stopping() {
                             let enable_text = format!("{} {}", POWER, t!("network.enable_node"));
-                            View::button(ui, enable_text, Colors::GOLD, || {
+                            View::action_button(ui, enable_text, || {
                                 Node::start();
                             });
                         }
@@ -561,10 +563,10 @@ impl WalletContent {
     fn sync_error_ui(ui: &mut egui::Ui, wallet: &Wallet) {
         View::center_content(ui, 108.0, |ui| {
             let text = t!("wallets.wallet_loading_err", "settings" => GEAR_FINE);
-            ui.label(RichText::new(text).size(16.0).color(Colors::INACTIVE_TEXT));
+            ui.label(RichText::new(text).size(16.0).color(Colors::inactive_text()));
             ui.add_space(8.0);
             let retry_text = format!("{} {}", ARROWS_CLOCKWISE, t!("retry"));
-            View::button(ui, retry_text, Colors::GOLD, || {
+            View::action_button(ui, retry_text, || {
                 wallet.set_sync_error(false);
             });
         });
@@ -620,7 +622,7 @@ impl WalletContent {
                         }
                     }
                 };
-                ui.label(RichText::new(text).size(16.0).color(Colors::INACTIVE_TEXT));
+                ui.label(RichText::new(text).size(16.0).color(Colors::inactive_text()));
             });
         });
     }
@@ -642,7 +644,7 @@ fn account_item_ui(ui: &mut egui::Ui,
     // Draw round background.
     let bg_rect = rect.clone();
     let item_rounding = View::item_rounding(index, size, false);
-    ui.painter().rect(bg_rect, item_rounding, Colors::FILL, View::ITEM_STROKE);
+    ui.painter().rect(bg_rect, item_rounding, Colors::fill(), View::item_stroke());
 
     ui.vertical(|ui| {
         ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
@@ -656,7 +658,7 @@ fn account_item_ui(ui: &mut egui::Ui,
                 });
             } else {
                 ui.add_space(12.0);
-                ui.label(RichText::new(CHECK_FAT).size(20.0).color(Colors::GREEN));
+                ui.label(RichText::new(CHECK_FAT).size(20.0).color(Colors::green()));
             }
 
             let layout_size = ui.available_size();
@@ -667,7 +669,7 @@ fn account_item_ui(ui: &mut egui::Ui,
                     // Show spendable amount.
                     let amount = amount_to_hr_string(acc.spendable_amount, true);
                     let amount_text = format!("{} {}", amount, GRIN);
-                    ui.label(RichText::new(amount_text).size(18.0).color(Colors::BLACK));
+                    ui.label(RichText::new(amount_text).size(18.0).color(Colors::white_or_black(true)));
                     ui.add_space(-2.0);
 
                     // Show account name.
@@ -678,11 +680,11 @@ fn account_item_ui(ui: &mut egui::Ui,
                         acc.label.to_owned()
                     };
                     let acc_name = format!("{} {}", FOLDER_USER, acc_label);
-                    View::ellipsize_text(ui, acc_name, 15.0, Colors::TEXT);
+                    View::ellipsize_text(ui, acc_name, 15.0, Colors::text(false));
 
                     // Show account BIP32 derivation path.
                     let acc_path = format!("{} {}", PATH, acc.path);
-                    ui.label(RichText::new(acc_path).size(15.0).color(Colors::GRAY));
+                    ui.label(RichText::new(acc_path).size(15.0).color(Colors::gray()));
                     ui.add_space(3.0);
                 });
             });

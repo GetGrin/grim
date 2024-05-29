@@ -72,14 +72,18 @@ impl CommonSetup {
             let wallet_name = wallet.get_config().name;
             // Show wallet name.
             ui.add_space(2.0);
-            ui.label(RichText::new(t!("wallets.name")).size(16.0).color(Colors::GRAY));
+            ui.label(RichText::new(t!("wallets.name"))
+                .size(16.0)
+                .color(Colors::gray()));
             ui.add_space(2.0);
-            ui.label(RichText::new(wallet_name.clone()).size(16.0).color(Colors::BLACK));
+            ui.label(RichText::new(wallet_name.clone())
+                .size(16.0)
+                .color(Colors::white_or_black(true)));
             ui.add_space(8.0);
 
             // Show wallet name setup.
             let name_text = format!("{} {}", PENCIL, t!("change"));
-            View::button(ui, name_text, Colors::BUTTON, || {
+            View::button(ui, name_text, Colors::button(), || {
                 self.name_edit = wallet_name;
                 // Show wallet name modal.
                 Modal::new(NAME_EDIT_MODAL)
@@ -90,14 +94,14 @@ impl CommonSetup {
             });
 
             ui.add_space(12.0);
-            View::horizontal_line(ui, Colors::ITEM_STROKE);
+            View::horizontal_line(ui, Colors::item_stroke());
             ui.add_space(6.0);
-            ui.label(RichText::new(t!("wallets.pass")).size(16.0).color(Colors::GRAY));
+            ui.label(RichText::new(t!("wallets.pass")).size(16.0).color(Colors::gray()));
             ui.add_space(6.0);
 
             // Show wallet password setup.
             let pass_text = format!("{} {}", PASSWORD, t!("change"));
-            View::button(ui, pass_text, Colors::BUTTON, || {
+            View::button(ui, pass_text, Colors::button(), || {
                 // Setup modal values.
                 self.first_edit_pass_opening = true;
                 self.old_pass_edit = "".to_string();
@@ -112,15 +116,15 @@ impl CommonSetup {
             });
 
             ui.add_space(12.0);
-            View::horizontal_line(ui, Colors::ITEM_STROKE);
+            View::horizontal_line(ui, Colors::item_stroke());
             ui.add_space(6.0);
-            ui.label(RichText::new(t!("wallets.min_tx_conf_count")).size(16.0).color(Colors::GRAY));
+            ui.label(RichText::new(t!("wallets.min_tx_conf_count")).size(16.0).color(Colors::gray()));
             ui.add_space(6.0);
 
             // Show minimum amount of confirmations value setup.
             let min_confirmations = wallet.get_config().min_confirmations;
             let min_conf_text = format!("{} {}", CLOCK_COUNTDOWN, min_confirmations);
-            View::button(ui, min_conf_text, Colors::BUTTON, || {
+            View::button(ui, min_conf_text, Colors::button(), || {
                 self.min_confirmations_edit = min_confirmations.to_string();
                 // Show minimum amount of confirmations value modal.
                 Modal::new(MIN_CONFIRMATIONS_EDIT_MODAL)
@@ -131,7 +135,7 @@ impl CommonSetup {
             });
 
             ui.add_space(12.0);
-            View::horizontal_line(ui, Colors::STROKE);
+            View::horizontal_line(ui, Colors::stroke());
             ui.add_space(4.0);
         });
     }
@@ -176,7 +180,7 @@ impl CommonSetup {
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("wallets.name"))
                 .size(17.0)
-                .color(Colors::GRAY));
+                .color(Colors::gray()));
             ui.add_space(8.0);
 
             // Show wallet name text edit.
@@ -193,7 +197,7 @@ impl CommonSetup {
 
             ui.columns(2, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
-                    View::button(ui, t!("modal.cancel"), Colors::WHITE, || {
+                    View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                         // Close modal.
                         cb.hide_keyboard();
                         modal.close();
@@ -213,7 +217,7 @@ impl CommonSetup {
                         (on_save)();
                     });
 
-                    View::button(ui, t!("modal.save"), Colors::WHITE, on_save);
+                    View::button(ui, t!("modal.save"), Colors::white_or_black(false), on_save);
                 });
             });
             ui.add_space(6.0);
@@ -232,7 +236,7 @@ impl CommonSetup {
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("wallets.current_pass"))
                 .size(17.0)
-                .color(Colors::GRAY));
+                .color(Colors::gray()));
             ui.add_space(8.0);
 
             // Draw old password text edit.
@@ -247,7 +251,7 @@ impl CommonSetup {
 
             ui.label(RichText::new(t!("wallets.new_pass"))
                 .size(17.0)
-                .color(Colors::GRAY));
+                .color(Colors::gray()));
             ui.add_space(8.0);
 
             // Draw new password text edit.
@@ -262,12 +266,12 @@ impl CommonSetup {
                 ui.add_space(10.0);
                 ui.label(RichText::new(t!("wallets.pass_empty"))
                     .size(17.0)
-                    .color(Colors::INACTIVE_TEXT));
+                    .color(Colors::inactive_text()));
             } else if self.wrong_pass {
                 ui.add_space(10.0);
                 ui.label(RichText::new(t!("wallets.wrong_pass"))
                     .size(17.0)
-                    .color(Colors::RED));
+                    .color(Colors::red()));
             }
             ui.add_space(12.0);
         });
@@ -279,7 +283,7 @@ impl CommonSetup {
 
             ui.columns(2, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
-                    View::button(ui, t!("modal.cancel"), Colors::WHITE, || {
+                    View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                         // Close modal.
                         cb.hide_keyboard();
                         modal.close();
@@ -311,7 +315,7 @@ impl CommonSetup {
                         (on_continue)();
                     });
 
-                    View::button(ui, t!("change"), Colors::WHITE, on_continue);
+                    View::button(ui, t!("change"), Colors::white_or_black(false), on_continue);
                 });
             });
             ui.add_space(6.0);
@@ -328,7 +332,7 @@ impl CommonSetup {
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("wallets.min_tx_conf_count"))
                 .size(17.0)
-                .color(Colors::GRAY));
+                .color(Colors::gray()));
             ui.add_space(8.0);
 
             // Minimum amount of confirmations text edit.
@@ -340,7 +344,7 @@ impl CommonSetup {
                 ui.add_space(12.0);
                 ui.label(RichText::new(t!("network_settings.not_valid_value"))
                     .size(17.0)
-                    .color(Colors::RED));
+                    .color(Colors::red()));
             }
             ui.add_space(12.0);
         });
@@ -352,7 +356,7 @@ impl CommonSetup {
 
             ui.columns(2, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
-                    View::button(ui, t!("modal.cancel"), Colors::WHITE, || {
+                    View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                         // Close modal.
                         cb.hide_keyboard();
                         modal.close();
@@ -372,7 +376,7 @@ impl CommonSetup {
                         (on_save)();
                     });
 
-                    View::button(ui, t!("modal.save"), Colors::WHITE, on_save);
+                    View::button(ui, t!("modal.save"), Colors::white_or_black(false), on_save);
                 });
             });
             ui.add_space(6.0);

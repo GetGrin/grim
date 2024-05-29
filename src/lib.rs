@@ -41,10 +41,10 @@ pub mod built_info {
     include!(concat!(env!("OUT_DIR"), "/built.rs"));
 }
 
+/// Android platform entry point.
 #[allow(dead_code)]
 #[cfg(target_os = "android")]
 #[no_mangle]
-/// Android platform entry point.
 fn android_main(app: AndroidApp) {
     #[cfg(debug_assertions)]
     {
@@ -58,6 +58,12 @@ fn android_main(app: AndroidApp) {
     use gui::platform::Android;
     let platform = Android::new(app.clone());
     use winit::platform::android::EventLoopBuilderExtAndroid;
+
+    // Setup system theme if not set.
+    if let None = AppConfig::dark_theme() {
+        let use_dark = system_dark_theme(&platform);
+        AppConfig::set_dark_theme(use_dark);
+    }
 
     let width = app.config().screen_width_dp().unwrap() as f32;
     let height = app.config().screen_height_dp().unwrap() as f32;
@@ -82,7 +88,16 @@ fn android_main(app: AndroidApp) {
         builder.with_android_app(app);
     }));
 
-    start(options, app_creator(PlatformApp::new(platform)));
+    let app = PlatformApp::new(platform);
+    start(options, app_creator(app));
+}
+
+/// Check if system is using dark theme.
+#[allow(dead_code)]
+#[cfg(target_os = "android")]
+fn system_dark_theme(platform: &gui::platform::Android) -> bool {
+    let res = platform.call_java_method("useDarkTheme", "()Z", &[]).unwrap();
+    unsafe { res.z != 0 }
 }
 
 /// [`PlatformApp`] setup for [`eframe`].
@@ -132,17 +147,27 @@ pub fn setup_visuals(ctx: &Context) {
     // Setup style
     ctx.set_style(style);
 
-    let mut visuals = egui::Visuals::light();
+    // Setup visuals based on app color theme.
+    let use_dark = AppConfig::dark_theme().unwrap_or(false);
+    let mut visuals = if use_dark {
+        egui::Visuals::dark()
+    } else {
+        egui::Visuals::light()
+    };
     // Setup selection color.
-    visuals.selection.stroke = Stroke { width: 1.0, color: Colors::TEXT };
-    visuals.selection.bg_fill = Colors::GOLD;
+    visuals.selection.stroke = Stroke { width: 1.0, color: Colors::text(false) };
+    visuals.selection.bg_fill = Colors::gold();
     // Disable stroke around panels by default.
     visuals.widgets.noninteractive.bg_stroke = Stroke::NONE;
     // Setup stroke around inactive widgets.
-    visuals.widgets.inactive.bg_stroke = View::DEFAULT_STROKE;
+    visuals.widgets.inactive.bg_stroke = View::default_stroke();
     // Setup background and foreground stroke color for widgets like pull-to-refresher.
-    visuals.widgets.inactive.bg_fill = Colors::YELLOW;
-    visuals.widgets.inactive.fg_stroke.color = Colors::ITEM_BUTTON;
+    visuals.widgets.inactive.bg_fill = if use_dark {
+        Colors::white_or_black(false)
+    } else {
+        Colors::yellow()
+    };
+    visuals.widgets.inactive.fg_stroke.color = Colors::item_button();
     // Setup visuals
     ctx.set_visuals(visuals);
 }

@@ -100,7 +100,7 @@ impl MnemonicSetup {
         self.mode_type_ui(ui);
 
         ui.add_space(12.0);
-        View::horizontal_line(ui, Colors::ITEM_STROKE);
+        View::horizontal_line(ui, Colors::item_stroke());
         ui.add_space(6.0);
 
         // Show words setup.
@@ -118,7 +118,7 @@ impl MnemonicSetup {
         ui.add_space(4.0);
         ui.vertical_centered(|ui| {
             let text = format!("{}:", t!("wallets.recovery_phrase"));
-            ui.label(RichText::new(text).size(16.0).color(Colors::GRAY));
+            ui.label(RichText::new(text).size(16.0).color(Colors::gray()));
         });
         ui.add_space(4.0);
         self.word_list_ui(ui, true, cb);
@@ -148,7 +148,7 @@ impl MnemonicSetup {
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("wallets.words_count"))
                 .size(16.0)
-                .color(Colors::GRAY)
+                .color(Colors::gray())
             );
         });
         ui.add_space(6.0);
@@ -240,7 +240,7 @@ impl MnemonicSetup {
                     cb: &dyn PlatformCallbacks) {
         if edit {
             ui.add_space(6.0);
-            View::button(ui, PENCIL.to_string(), Colors::BUTTON, || {
+            View::button(ui, PENCIL.to_string(), Colors::button(), || {
                 // Setup modal values.
                 self.word_num_edit = num;
                 self.word_edit = word.clone();
@@ -254,11 +254,11 @@ impl MnemonicSetup {
             });
             ui.label(RichText::new(format!("#{} {}", num, word))
                 .size(17.0)
-                .color(Colors::BLACK));
+                .color(Colors::white_or_black(true)));
         } else {
             ui.add_space(12.0);
             let text = format!("#{} {}", num, word);
-            ui.label(RichText::new(text).size(17.0).color(Colors::BLACK));
+            ui.label(RichText::new(text).size(17.0).color(Colors::white_or_black(true)));
         }
     }
 
@@ -273,7 +273,7 @@ impl MnemonicSetup {
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("wallets.enter_word", "number" => self.word_num_edit))
                 .size(17.0)
-                .color(Colors::GRAY));
+                .color(Colors::gray()));
             ui.add_space(8.0);
 
             // Draw word value text edit.
@@ -287,7 +287,7 @@ impl MnemonicSetup {
                 ui.add_space(12.0);
                 ui.label(RichText::new(t!("wallets.not_valid_word"))
                     .size(17.0)
-                    .color(Colors::RED));
+                    .color(Colors::red()));
             }
             ui.add_space(12.0);
         });
@@ -299,7 +299,7 @@ impl MnemonicSetup {
 
             ui.columns(2, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
-                    View::button(ui, t!("modal.cancel"), Colors::WHITE, || {
+                    View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                         // Close modal.
                         cb.hide_keyboard();
                         modal.close();
@@ -346,7 +346,7 @@ impl MnemonicSetup {
                         (save)();
                     });
                     // Show save button.
-                    View::button(ui, t!("continue"), Colors::WHITE, save);
+                    View::button(ui, t!("continue"), Colors::white_or_black(false), save);
                 });
             });
             ui.add_space(6.0);
@@ -376,7 +376,7 @@ impl MnemonicSetup {
             ui.vertical_centered(|ui| {
                 ui.label(RichText::new(t!("wallets.rec_phrase_not_found"))
                     .size(17.0)
-                    .color(Colors::RED));
+                    .color(Colors::red()));
             });
             ui.add_space(6.0);
         } else if let Some(result) = self.camera_content.qr_scan_result() {
@@ -408,13 +408,13 @@ impl MnemonicSetup {
 
             ui.columns(2, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
-                    View::button(ui, t!("close"), Colors::WHITE, || {
+                    View::button(ui, t!("close"), Colors::white_or_black(false), || {
                         self.scan_phrase_not_found = None;
                         modal.close();
                     });
                 });
                 columns[1].vertical_centered_justified(|ui| {
-                    View::button(ui, t!("repeat"), Colors::WHITE, || {
+                    View::button(ui, t!("repeat"), Colors::white_or_black(false), || {
                         Modal::set_title(t!("scan_qr"));
                         self.scan_phrase_not_found = None;
                         cb.start_camera();
@@ -423,7 +423,7 @@ impl MnemonicSetup {
             });
         } else {
             ui.vertical_centered_justified(|ui| {
-                View::button(ui, t!("modal.cancel"), Colors::WHITE, || {
+                View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                     cb.stop_camera();
                     modal.close();
                 });

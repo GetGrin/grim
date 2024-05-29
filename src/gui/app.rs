@@ -18,7 +18,6 @@ use egui::{Context, Modifiers};
 use lazy_static::lazy_static;
 
 use crate::AppConfig;
-use crate::gui::Colors;
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::Root;
 
@@ -75,7 +74,6 @@ impl<Platform: PlatformCallbacks> eframe::App for PlatformApp<Platform> {
         // Show main content.
         egui::CentralPanel::default()
             .frame(egui::Frame {
-                fill: Colors::YELLOW,
                 ..Default::default()
             })
             .show(ctx, |ui| {

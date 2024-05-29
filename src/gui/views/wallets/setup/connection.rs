@@ -143,7 +143,7 @@ impl ConnectionSetup {
 
         ui.add_space(2.0);
         View::sub_title(ui, format!("{} {}", GLOBE, t!("wallets.conn_method")));
-        View::horizontal_line(ui, Colors::STROKE);
+        View::horizontal_line(ui, Colors::stroke());
         ui.add_space(6.0);
 
         ui.vertical_centered(|ui| {
@@ -153,12 +153,12 @@ impl ConnectionSetup {
 
             // Show external connections.
             ui.add_space(8.0);
-            ui.label(RichText::new(t!("wallets.ext_conn")).size(16.0).color(Colors::GRAY));
+            ui.label(RichText::new(t!("wallets.ext_conn")).size(16.0).color(Colors::gray()));
             ui.add_space(6.0);
 
             // Show button to add new external node connection.
             let add_node_text = format!("{} {}", PLUS_CIRCLE, t!("wallets.add_node"));
-            View::button(ui, add_node_text, Colors::WHITE, || {
+            View::button(ui, add_node_text, Colors::white_or_black(false), || {
                 self.show_add_ext_conn_modal(cb);
             });
             ui.add_space(4.0);
@@ -196,7 +196,7 @@ impl ConnectionSetup {
         let mut rect = ui.available_rect_before_wrap();
         rect.set_height(78.0);
         let rounding = View::item_rounding(0, 1, false);
-        ui.painter().rect(rect, rounding, Colors::FILL, View::ITEM_STROKE);
+        ui.painter().rect(rect, rounding, Colors::fill(), View::item_stroke());
 
         ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
             // Setup padding for item buttons.
@@ -210,13 +210,13 @@ impl ConnectionSetup {
                 });
             } else {
                 ui.add_space(14.0);
-                ui.label(RichText::new(CHECK_FAT).size(20.0).color(Colors::GREEN));
+                ui.label(RichText::new(CHECK_FAT).size(20.0).color(Colors::green()));
                 ui.add_space(14.0);
             }
 
             if !Node::is_running() {
                 // Draw button to start integrated node.
-                View::item_button(ui, Rounding::default(), POWER, Some(Colors::GREEN), || {
+                View::item_button(ui, Rounding::default(), POWER, Some(Colors::green()), || {
                     Node::start();
                 });
             }
@@ -228,12 +228,12 @@ impl ConnectionSetup {
                     ui.add_space(3.0);
                     ui.label(RichText::new(t!("network.node"))
                         .size(18.0)
-                        .color(Colors::TITLE));
+                        .color(Colors::title(false)));
 
                     // Setup node API address text.
                     let api_address = NodeConfig::get_api_address();
                     let address_text = format!("{} http://{}", COMPUTER_TOWER, api_address);
-                    ui.label(RichText::new(address_text).size(15.0).color(Colors::TEXT));
+                    ui.label(RichText::new(address_text).size(15.0).color(Colors::text(false)));
                     ui.add_space(1.0);
 
                     // Setup node status text.
@@ -245,7 +245,7 @@ impl ConnectionSetup {
                         DOTS_THREE_CIRCLE
                     };
                     let status_text = format!("{} {}", status_icon, Node::get_sync_status_text());
-                    ui.label(RichText::new(status_text).size(15.0).color(Colors::GRAY));
+                    ui.label(RichText::new(status_text).size(15.0).color(Colors::gray()));
                 })
             });
         });
@@ -265,7 +265,7 @@ impl ConnectionSetup {
         // Draw round background.
         let bg_rect = rect.clone();
         let item_rounding = View::item_rounding(index, len, false);
-        ui.painter().rect(bg_rect, item_rounding, Colors::FILL, View::ITEM_STROKE);
+        ui.painter().rect(bg_rect, item_rounding, Colors::fill(), View::item_stroke());
 
         ui.vertical(|ui| {
             ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
@@ -286,7 +286,7 @@ impl ConnectionSetup {
                     });
                 } else {
                     ui.add_space(12.0);
-                    ui.label(RichText::new(CHECK_FAT).size(20.0).color(Colors::GREEN));
+                    ui.label(RichText::new(CHECK_FAT).size(20.0).color(Colors::green()));
                 }
 
                 let layout_size = ui.available_size();
@@ -296,7 +296,7 @@ impl ConnectionSetup {
                         // Draw connections URL.
                         ui.add_space(4.0);
                         let conn_text = format!("{} {}", GLOBE_SIMPLE, conn.url);
-                        View::ellipsize_text(ui, conn_text, 15.0, Colors::TITLE);
+                        View::ellipsize_text(ui, conn_text, 15.0, Colors::title(false));
                         ui.add_space(1.0);
                         // Setup connection status text.
                         let status_text = if let Some(available) = conn.available {
@@ -308,7 +308,7 @@ impl ConnectionSetup {
                         } else {
                             format!("{} {}", DOTS_THREE_CIRCLE, t!("network.availability_check"))
                         };
-                        ui.label(RichText::new(status_text).size(15.0).color(Colors::GRAY));
+                        ui.label(RichText::new(status_text).size(15.0).color(Colors::gray()));
                         ui.add_space(3.0);
                     });
                 });
@@ -340,7 +340,7 @@ impl ConnectionSetup {
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("wallets.node_url"))
                 .size(17.0)
-                .color(Colors::GRAY));
+                .color(Colors::gray()));
             ui.add_space(8.0);
 
             // Draw node URL text edit.
@@ -355,7 +355,7 @@ impl ConnectionSetup {
 
             ui.label(RichText::new(t!("wallets.node_secret"))
                 .size(17.0)
-                .color(Colors::GRAY));
+                .color(Colors::gray()));
             ui.add_space(8.0);
 
             // Draw node API secret text edit.
@@ -368,7 +368,7 @@ impl ConnectionSetup {
                 ui.add_space(10.0);
                 ui.label(RichText::new(t!("wallets.invalid_url"))
                     .size(17.0)
-                    .color(Colors::RED));
+                    .color(Colors::red()));
             }
             ui.add_space(10.0);
         });
@@ -380,7 +380,7 @@ impl ConnectionSetup {
 
             ui.columns(2, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
-                    View::button(ui, t!("modal.cancel"), Colors::WHITE, || {
+                    View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                         // Close modal.
                         cb.hide_keyboard();
                         modal.close();
@@ -418,7 +418,7 @@ impl ConnectionSetup {
                         (on_add)();
                     });
 
-                    View::button(ui, t!("modal.add"), Colors::WHITE, on_add);
+                    View::button(ui, t!("modal.add"), Colors::white_or_black(false), on_add);
                 });
             });
             ui.add_space(6.0);

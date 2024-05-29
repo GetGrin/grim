@@ -131,8 +131,8 @@ impl QrCodeContent {
                 };
                 if !sharing {
                     // Show button to share QR.
-                    let share_text = format!("{} {}", IMAGES_SQUARE, t!("share"));
-                    View::button(ui, share_text, Colors::GOLD, || {
+                    let share_txt = format!("{} {}", IMAGES_SQUARE, t!("share"));
+                    View::action_button(ui, share_txt, || {
                         {
                             let mut w_state = self.qr_image_state.write();
                             w_state.exporting = true;
@@ -211,13 +211,13 @@ impl QrCodeContent {
             ui.add_space(6.0);
 
             // Show QR code text.
-            View::ellipsize_text(ui, text.clone(), 16.0, Colors::INACTIVE_TEXT);
+            View::ellipsize_text(ui, text.clone(), 16.0, Colors::inactive_text());
             ui.add_space(6.0);
 
             // Show button to share QR.
             ui.vertical_centered(|ui| {
                 let share_text = format!("{} {}", IMAGES_SQUARE, t!("share"));
-                View::button(ui, share_text, Colors::GOLD, || {
+                View::action_button(ui, share_text, || {
                     if let Ok(qr) = QrCode::encode_text(text.as_str(), qrcodegen::QrCodeEcc::Low) {
                         if let Some(data) = Self::qr_to_image_data(qr, DEFAULT_QR_SIZE as usize) {
                             let mut png = vec![];

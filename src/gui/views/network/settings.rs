@@ -97,35 +97,35 @@ impl NetworkTab for NetworkSettings {
                         self.node.ui(ui, frame, cb);
 
                         ui.add_space(6.0);
-                        View::horizontal_line(ui, Colors::STROKE);
+                        View::horizontal_line(ui, Colors::stroke());
                         ui.add_space(4.0);
 
                         // Draw P2P server setup section.
                         self.p2p.ui(ui, frame, cb);
 
                         ui.add_space(6.0);
-                        View::horizontal_line(ui, Colors::STROKE);
+                        View::horizontal_line(ui, Colors::stroke());
                         ui.add_space(4.0);
 
                         // Draw Stratum server setup section.
                         self.stratum.ui(ui, frame, cb);
 
                         ui.add_space(6.0);
-                        View::horizontal_line(ui, Colors::STROKE);
+                        View::horizontal_line(ui, Colors::stroke());
                         ui.add_space(4.0);
 
                         // Draw pool setup section.
                         self.pool.ui(ui, frame, cb);
 
                         ui.add_space(6.0);
-                        View::horizontal_line(ui, Colors::STROKE);
+                        View::horizontal_line(ui, Colors::stroke());
                         ui.add_space(4.0);
 
                         // Draw Dandelion server setup section.
                         self.dandelion.ui(ui, frame, cb);
 
                         ui.add_space(6.0);
-                        View::horizontal_line(ui, Colors::STROKE);
+                        View::horizontal_line(ui, Colors::stroke());
                         ui.add_space(6.0);
 
                         // Draw reset settings content.
@@ -143,7 +143,7 @@ impl NetworkSettings {
             ui.add_space(12.0);
             ui.label(RichText::new(t!("network_settings.restart_node_required"))
                 .size(16.0)
-                .color(Colors::GREEN)
+                .color(Colors::green())
             );
         }
     }
@@ -192,7 +192,7 @@ impl NetworkSettings {
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network.no_ips"))
                 .size(16.0)
-                .color(Colors::INACTIVE_TEXT)
+                .color(Colors::inactive_text())
             );
             ui.add_space(6.0);
         });
@@ -204,12 +204,12 @@ fn reset_settings_ui(ui: &mut egui::Ui) {
     ui.vertical_centered(|ui| {
         ui.label(RichText::new(t!("network_settings.reset_settings_desc"))
             .size(16.0)
-            .color(Colors::TEXT));
+            .color(Colors::text(false)));
         ui.add_space(8.0);
         let button_text = format!("{} {}",
                                   ARROW_COUNTER_CLOCKWISE,
                                   t!("network_settings.reset_settings"));
-        View::button(ui, button_text, Colors::GOLD, || {
+        View::action_button(ui, button_text, || {
             // Show modal to confirm settings reset.
             Modal::new(RESET_SETTINGS_MODAL)
                 .position(ModalPosition::Center)
@@ -222,7 +222,7 @@ fn reset_settings_ui(ui: &mut egui::Ui) {
             ui.add_space(12.0);
             ui.label(RichText::new(t!("network_settings.restart_node_required"))
                 .size(16.0)
-                .color(Colors::GRAY)
+                .color(Colors::gray())
             );
         }
         ui.add_space(12.0);
@@ -237,24 +237,24 @@ fn reset_settings_confirmation_modal(ui: &mut egui::Ui, modal: &Modal) {
         let reset_text = format!("{}?", t!("network_settings.reset_settings_desc"));
         ui.label(RichText::new(reset_text)
             .size(17.0)
-            .color(Colors::TEXT));
+            .color(Colors::text(false)));
         ui.add_space(8.0);
     });
 
     // Show modal buttons.
     ui.scope(|ui| {
         // Setup spacing between buttons.
-        ui.spacing_mut().item_spacing = egui::Vec2::new(6.0, 0.0);
+        ui.spacing_mut().item_spacing = egui::Vec2::new(8.0, 0.0);
 
         ui.columns(2, |columns| {
             columns[0].vertical_centered_justified(|ui| {
-                View::button(ui, t!("network_settings.reset"), Colors::WHITE, || {
+                View::button(ui, t!("network_settings.reset"), Colors::white_or_black(false), || {
                     NodeConfig::reset_to_default();
                     modal.close();
                 });
             });
             columns[1].vertical_centered_justified(|ui| {
-                View::button(ui, t!("modal.cancel"), Colors::WHITE, || {
+                View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                     modal.close();
                 });
             });
