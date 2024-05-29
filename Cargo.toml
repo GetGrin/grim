@@ -61,7 +61,6 @@ rqrr = "0.7.1"
 qrcodegen = "1.8.0"
 ur = "0.4.1"
 gif = "0.13.1"
-dark-light = "1.1.1"
 
 ## tor
 arti-client = { version = "0.18.0", features = ["pt-client", "static", "onion-service-service", "onion-service-client"] }
@@ -102,6 +101,7 @@ winit = { version = "0.29.15" }
 eframe = { version = "0.27.2", features = ["wgpu"] }
 arboard = "3.2.0"
 rfd = "0.14.1"
+dark-light = "1.1.1"
 # camera
 nokhwa = { git = "https://github.com/l1npengtul/nokhwa", branch = "0.10", features = ["input-native", "output-threaded"] }
 

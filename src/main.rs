@@ -12,8 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use dark_light::Mode;
-
 pub fn main() {
     #[allow(dead_code)]
     #[cfg(not(target_os = "android"))]
@@ -39,6 +37,7 @@ fn real_main() {
     let platform = Desktop::default();
 
     // Setup system theme if not set.
+    use dark_light::Mode;
     if let None = AppConfig::dark_theme() {
         let dark = match dark_light::detect() {
             Mode::Dark => true,
