@@ -1,9 +1,11 @@
-[workspace]
-#members = ["wallet", "config"]
-
 [package]
 name = "grim"
 version = "0.1.0"
+authors = ["Ardocrat <ardocrat@proton.me>"]
+description = "Cross-platform GUI for Grin with focus on usability and availability to be used by anyone, anywhere."
+license = "Apache-2.0"
+repository = "https://github.com/ardocrat/grim"
+keywords = [ "crypto", "grin", "mimblewimble" ]
 edition = "2021"
 build = "src/build/build.rs"
 
@@ -81,6 +83,11 @@ tls-api-native-tls = "0.9.0"
 
 ## stratum server
 tokio-util = { version = "0.7.8", features = ["codec"] }
+
+### patch grin store
+#grin_store = "5.3.1"
+#[patch.crates-io]
+#grin_store = { path = "../grin-store" }
 
 [build-dependencies]
 built = { version = "0.7.0", features = ["git2"]}
