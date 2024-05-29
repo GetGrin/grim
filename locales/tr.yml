@@ -22,7 +22,7 @@ repeat: Tekrar
 scan_result: Tarama sonucu
 back: Geri
 share: Paylasmak
-theme: Tema
+theme: 'Tema:'
 dark: Karanlik
 light: Isik
 wallets:

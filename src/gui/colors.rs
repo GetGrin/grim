@@ -109,7 +109,7 @@ impl Colors {
 
     pub fn gold() -> Color32 {
         if use_dark() {
-            GOLD.linear_multiply(0.85)
+            GOLD.linear_multiply(0.9)
         } else {
             GOLD
         }

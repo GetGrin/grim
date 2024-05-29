@@ -22,7 +22,7 @@ repeat: Repeat
 scan_result: Scan result
 back: Back
 share: Share
-theme: Theme
+theme: 'Theme:'
 dark: Dark
 light: Light
 wallets:

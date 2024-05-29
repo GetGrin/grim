@@ -22,7 +22,7 @@ repeat: Повторить
 scan_result: Результат сканирования
 back: Назад
 share: Поделиться
-theme: Тема
+theme: 'Тема:'
 dark: Тёмная
 light: Светлая
 wallets:
