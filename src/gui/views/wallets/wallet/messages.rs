@@ -253,7 +253,7 @@ impl WalletMessages {
                 columns[0].vertical_centered_justified(|ui| {
                     // Draw sending request creation button.
                     let send_text = format!("{} {}", UPLOAD_SIMPLE, t!("wallets.send"));
-                    View::button(ui, send_text, Colors::BUTTON, || {
+                    View::colored_text_button(ui, send_text, Colors::RED, Colors::BUTTON, || {
                         self.show_request_modal(false, cb);
                     });
                 });
@@ -271,7 +271,7 @@ impl WalletMessages {
     /// Draw invoice request creation button.
     fn receive_button_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         let receive_text = format!("{} {}", DOWNLOAD_SIMPLE, t!("wallets.receive"));
-        View::button(ui, receive_text, Colors::BUTTON, || {
+        View::colored_text_button(ui, receive_text, Colors::GREEN, Colors::BUTTON, || {
             self.show_request_modal(true, cb);
         });
     }

@@ -72,6 +72,7 @@ const ACCOUNT_LIST_MODAL: &'static str = "account_list_modal";
 const QR_CODE_SCAN_MODAL: &'static str = "qr_code_scan_modal";
 
 impl WalletContent {
+    /// Draw wallet content.
     pub fn ui(&mut self,
               ui: &mut egui::Ui,
               frame: &mut eframe::Frame,
@@ -83,11 +84,11 @@ impl WalletContent {
         let data = wallet.get_data();
         let data_empty = data.is_none();
 
-        // Show wallet balance panel not on Settings tab, when wallet is not repairing,
-        // there is no error and data is not empty.
+        // Show wallet balance panel not on Settings tab with selected non-repairing
+        // wallet, when there is no error and data is not empty.
         let show_balance = self.current_tab.get_type() != WalletTabType::Settings && !data_empty
             && !wallet.sync_error() && !wallet.is_repairing();
-        egui::TopBottomPanel::top("wallet_balance")
+        egui::TopBottomPanel::top(Id::from("wallet_balance").with(wallet.identifier()))
             .frame(egui::Frame {
                 fill: Colors::FILL,
                 stroke: View::DEFAULT_STROKE,

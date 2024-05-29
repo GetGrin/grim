@@ -529,6 +529,7 @@ impl WalletTransactions {
             .filter(|tx| tx.data.id == tx_id)
             .collect::<Vec<&WalletTransaction>>();
         if txs.is_empty() {
+            cb.hide_keyboard();
             modal.close();
             return;
         }
@@ -693,6 +694,7 @@ impl WalletTransactions {
                               modal: &Modal,
                               cb: &dyn PlatformCallbacks) {
         if self.tx_info_slate.is_none() {
+            cb.hide_keyboard();
             modal.close();
             return;
         }

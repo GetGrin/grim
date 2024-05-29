@@ -671,6 +671,7 @@ impl WalletTransport {
                        modal: &Modal,
                        cb: &dyn PlatformCallbacks) {
         ui.add_space(6.0);
+
         let has_send_err = self.has_tor_send_error();
         let sending = self.tor_sending();
         if !has_send_err && !sending {
@@ -690,7 +691,7 @@ impl WalletTransport {
                     cb.show_keyboard();
                 } else {
                     self.address_scan_content.ui(ui, cb);
-                    ui.add_space(12.0);
+                    ui.add_space(6.0);
 
                     // Setup spacing between buttons.
                     ui.spacing_mut().item_spacing = egui::Vec2::new(6.0, 0.0);
@@ -740,6 +741,8 @@ impl WalletTransport {
             // Check value if input was changed.
             if amount_edit_before != self.amount_edit {
                 if !self.amount_edit.is_empty() {
+                    // Trim text, replace "," by "." and parse amount.
+                    self.amount_edit = self.amount_edit.trim().replace(",", ".");
                     match amount_from_hr_string(self.amount_edit.as_str()) {
                         Ok(a) => {
                             if !self.amount_edit.contains(".") {

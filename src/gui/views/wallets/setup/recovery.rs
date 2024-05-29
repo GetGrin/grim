@@ -121,7 +121,7 @@ impl RecoverySetup {
             ui.add_space(12.0);
             View::horizontal_line(ui, Colors::ITEM_STROKE);
             ui.add_space(6.0);
-            ui.label(RichText::new(t!("wallets.delete_desc")).size(16.0).color(Colors::TEXT));
+            ui.label(RichText::new(t!("wallets.delete_desc")).size(16.0).color(Colors::RED));
             ui.add_space(6.0);
 
             // Draw button to delete the wallet.

@@ -81,7 +81,7 @@ wallets:
   tx: Transaction
   messages: Messages
   transport: Transport
-  input_slatepack_desc: 'Enter message to create response or finalize the request:'
+  input_slatepack_desc: 'Enter received Slatepack message to create response or finalize request:'
   parse_slatepack_err: 'An error occurred during reading of the message, check input:'
   pay_balance_error: 'Account balance is insufficient to pay %{amount} ツ and network fee.'
   parse_i1_slatepack_desc: 'To pay %{amount} ツ send this message to the receiver:'
@@ -109,7 +109,7 @@ wallets:
   repair_unavailable: You need an active connection to the node and completed wallet synchronization.
   delete: Delete wallet
   delete_conf: Are you sure you want to delete the wallet?
-  delete_desc: Make sure you have saved your recovery phrase to access funds.
+  delete_desc: Make sure you have saved your recovery phrase to access funds later.
   wallet_loading_err: 'An error occurred during synchronization of the wallet, you can retry or change connection settings by selecting %{settings} at the bottom of the screen.'
   wallet: Wallet
   send: Send
