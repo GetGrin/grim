@@ -55,7 +55,6 @@ impl NetworkContent {
             .resizable(false)
             .frame(egui::Frame {
                 fill: Colors::fill(),
-                stroke: View::item_stroke(),
                 inner_margin: Margin {
                     left: View::get_left_inset() + 4.0,
                     right: View::far_right_inset_margin(ui) + 4.0,
@@ -78,14 +77,13 @@ impl NetworkContent {
             .resizable(false)
             .exact_width(ui.available_width())
             .frame(egui::Frame {
-                stroke: View::default_stroke(),
                 ..Default::default()
             })
             .show_animated_inside(ui, !show_connections, |ui| {
                 egui::CentralPanel::default()
                     .frame(egui::Frame {
                         fill: Colors::white_or_black(false),
-                        stroke: View::default_stroke(),
+                        stroke: View::item_stroke(),
                         inner_margin: Margin {
                             left: View::get_left_inset() + 4.0,
                             right: View::far_right_inset_margin(ui) + 4.0,
@@ -104,7 +102,11 @@ impl NetworkContent {
         egui::CentralPanel::default()
             .frame(egui::Frame {
                 stroke: if show_connections{
-                    View::default_stroke()
+                    if Root::is_dual_panel_mode(ui)  {
+                        View::default_stroke()
+                    } else {
+                        Stroke::NONE
+                    }
                 } else {
                     Stroke::NONE
                 },

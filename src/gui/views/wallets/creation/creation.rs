@@ -99,8 +99,7 @@ impl WalletCreation {
         // Show wallet creation step content panel.
         egui::CentralPanel::default()
             .frame(egui::Frame {
-                fill: Colors::fill(),
-                stroke: View::default_stroke(),
+                stroke: View::item_stroke(),
                 inner_margin: Margin {
                     left: View::far_left_inset_margin(ui) + 4.0,
                     right: View::get_right_inset() + 4.0,

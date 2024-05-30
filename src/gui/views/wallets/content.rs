@@ -118,7 +118,7 @@ impl WalletsContent {
                     Colors::fill_deep()
                 } else {
                     if create_wallet {
-                        Colors::white_or_black(true)
+                        Colors::white_or_black(false)
                     } else {
                         Colors::button()
                     }
@@ -175,7 +175,6 @@ impl WalletsContent {
         // Show wallets bottom panel.
         egui::TopBottomPanel::bottom("wallets_bottom_panel")
             .frame(egui::Frame {
-                stroke: View::item_stroke(),
                 fill: Colors::fill(),
                 inner_margin: Margin {
                     left: View::get_left_inset() + 4.0,
@@ -197,9 +196,7 @@ impl WalletsContent {
                 });
             });
 
-        // Show non-empty list if wallet is not creating and list not hidden.
         if !list_hidden {
-            // Show wallet list panel.
             egui::CentralPanel::default()
                 .frame(egui::Frame {
                     stroke: View::default_stroke(),
@@ -353,6 +350,9 @@ impl WalletsContent {
                             let mut list = self.wallets.list().clone();
                             // Remove deleted wallet from the list.
                             list.retain(|w| !w.is_deleted());
+                            if !dual_panel {
+                                ui.add_space(1.0);
+                            }
                             for wallet in &list {
                                 // Check if wallet reopen is needed.
                                 if !wallet.is_open() && wallet.reopen_needed() {
@@ -384,11 +384,7 @@ impl WalletsContent {
         rect.set_height(78.0);
         let rounding = View::item_rounding(0, 1, false);
         let bg = if current {
-            if AppConfig::dark_theme().unwrap_or(false) {
-                egui::Color32::from_gray(32)
-            } else {
-                egui::Color32::from_gray(233)
-            }
+            Colors::item_current()
         } else {
             Colors::fill()
         };

@@ -216,7 +216,7 @@ impl WalletTransactions {
                     .scroll_bar_visibility(ScrollBarVisibility::AlwaysHidden)
                     .auto_shrink([false; 2])
                     .show_rows(ui, TX_ITEM_HEIGHT, data.txs.len(), |ui, row_range| {
-                        ui.add_space(3.0);
+                        ui.add_space(1.0);
                         View::max_width_ui(ui, Root::SIDE_PANEL_WIDTH * 1.3, |ui| {
                             let padding = amount_conf != 0 || amount_fin != 0 || amount_locked != 0;
                             for index in row_range {

@@ -34,9 +34,9 @@ const GREEN: Color32 = Color32::from_rgb(0, 0x64, 0);
 const RED: Color32 = Color32::from_rgb(0x8B, 0, 0);
 
 const FILL: Color32 = Color32::from_gray(244);
-const FILL_DEEP: Color32 = Color32::from_gray(238);
-
 const FILL_DARK: Color32 = Color32::from_gray(24);
+
+const FILL_DEEP: Color32 = Color32::from_gray(238);
 const FILL_DEEP_DARK: Color32 = Color32::from_gray(18);
 
 const TEXT: Color32 = Color32::from_gray(80);
@@ -58,7 +58,7 @@ const GRAY: Color32 = Color32::from_gray(120);
 const GRAY_DARK: Color32 = Color32::from_gray(145);
 
 const STROKE: Color32 = Color32::from_gray(200);
-const STROKE_DARK: Color32 = Color32::from_gray(65);
+const STROKE_DARK: Color32 = Color32::from_gray(50);
 
 const INACTIVE_TEXT: Color32 = Color32::from_gray(150);
 const INACTIVE_TEXT_DARK: Color32 = Color32::from_gray(115);
@@ -67,13 +67,13 @@ const ITEM_BUTTON: Color32 = Color32::from_gray(90);
 const ITEM_BUTTON_DARK: Color32 = Color32::from_gray(175);
 
 const ITEM_STROKE: Color32 = Color32::from_gray(220);
-const ITEM_STROKE_DARK: Color32 = Color32::from_gray(45);
+const ITEM_STROKE_DARK: Color32 = Color32::from_gray(40);
 
 const ITEM_HOVER: Color32 = Color32::from_gray(205);
-const ITEM_HOVER_DARK: Color32 = Color32::from_gray(60);
+const ITEM_HOVER_DARK: Color32 = Color32::from_gray(48);
 
-const ITEM_CURRENT: Color32 = Color32::from_gray(227);
-const ITEM_CURRENT_DARK: Color32 = Color32::from_gray(38);
+const ITEM_CURRENT: Color32 = Color32::from_gray(233);
+const ITEM_CURRENT_DARK: Color32 = Color32::from_gray(34);
 
 /// Check if dark theme should be used.
 fn use_dark() -> bool {

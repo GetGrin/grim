@@ -91,7 +91,7 @@ impl WalletContent {
         egui::TopBottomPanel::top(Id::from("wallet_balance").with(wallet.identifier()))
             .frame(egui::Frame {
                 fill: Colors::fill(),
-                stroke: View::default_stroke(),
+                stroke: View::item_stroke(),
                 inner_margin: Margin {
                     left: View::far_left_inset_margin(ui) + 4.0,
                     right: View::get_right_inset() + 4.0,
@@ -102,7 +102,11 @@ impl WalletContent {
                     left: 0.0,
                     right: 0.0,
                     top: 0.0,
-                    bottom: -1.0,
+                    bottom: if !Root::is_dual_panel_mode(ui) {
+                        0.0
+                    } else {
+                        -1.0
+                    },
                 },
                 ..Default::default()
             })
@@ -118,7 +122,6 @@ impl WalletContent {
         // Show wallet tabs panel.
         egui::TopBottomPanel::bottom("wallet_tabs")
             .frame(egui::Frame {
-                stroke: View::item_stroke(),
                 fill: Colors::fill(),
                 inner_margin: Margin {
                     left: View::far_left_inset_margin(ui) + 4.0,
@@ -141,7 +144,6 @@ impl WalletContent {
         egui::CentralPanel::default()
             .frame(egui::Frame {
                 fill: Colors::white_or_black(false),
-                stroke: View::default_stroke(),
                 ..Default::default()
             })
             .show_inside(ui, |ui| {
