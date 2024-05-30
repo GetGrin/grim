@@ -341,11 +341,19 @@ impl WalletsContent {
                         View::max_width_ui(ui, Root::SIDE_PANEL_WIDTH * 1.3, |ui| {
                             // Show application logo and name.
                             View::app_logo_name_version(ui);
-                            ui.add_space(20.0);
+                            ui.add_space(15.0);
 
                             let mut list = self.wallets.list().clone();
                             // Remove deleted wallet from the list.
-                            list.retain(|w| !w.is_deleted());
+                            list.retain(|w| {
+                                let deleted = w.is_deleted();
+                                if deleted {
+                                    self.wallets.select(None);
+                                    self.wallets.remove(w.get_config().id);
+                                    ui.ctx().request_repaint();
+                                }
+                                !deleted
+                            });
                             for wallet in &list {
                                 // Check if wallet reopen is needed.
                                 if !wallet.is_open() && wallet.reopen_needed() {

@@ -637,7 +637,7 @@ impl View {
         };
         // Show application logo and name.
         egui::Image::new(logo).fit_to_exact_size(egui::vec2(180.0, 180.0)).ui(ui);
-        ui.add_space(-17.0);
+        ui.add_space(-12.0);
         ui.label(RichText::new("GRIM")
             .size(24.0)
             .color(Colors::white_or_black(true))

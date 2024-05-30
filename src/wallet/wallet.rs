@@ -1018,19 +1018,21 @@ impl Wallet {
 
     /// Close the wallet, delete its files and mark it as deleted.
     pub fn delete_wallet(&self) {
-        let wallet_delete = self.clone();
-        // Close wallet if open.
         if self.is_open() {
             self.close();
         }
+        // Mark wallet as deleted.
+        let wallet_delete = self.clone();
+        wallet_delete.deleted.store(true, Ordering::Relaxed);
+
         thread::spawn(move || {
             // Wait wallet to be closed.
             if wallet_delete.is_open() {
-                thread::sleep(Duration::from_millis(300));
+                thread::sleep(Duration::from_millis(100));
             }
             // Remove wallet files.
             let _ = fs::remove_dir_all(wallet_delete.get_config().get_data_path());
-            // Mark wallet as not opened and deleted.
+            // Mark wallet as deleted.
             wallet_delete.deleted.store(true, Ordering::Relaxed);
             // Start sync to close thread.
             wallet_delete.sync(true);

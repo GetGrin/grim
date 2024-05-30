@@ -21,7 +21,7 @@ use crate::gui::icons::{AT, CUBE, DEVICES, FLOW_ARROW, HANDSHAKE, PACKAGE, SHARE
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{NetworkContent, Root, View};
 use crate::gui::views::network::types::{NetworkTab, NetworkTabType};
-use crate::node::Node;
+use crate::node::{Node, NodeConfig};
 
 /// Integrated node tab content.
 #[derive(Default)]
@@ -176,10 +176,10 @@ fn node_stats_ui(ui: &mut egui::Ui) {
                               [false, false, true, false]);
         });
         columns[1].vertical_centered(|ui| {
-            View::rounded_box(ui,
-                              stats.peer_count.to_string(),
-                              t!("network_node.peers"),
-                              [false, false, false, true]);
+            let peers_txt = format!("{} ({})",
+                                    stats.peer_count,
+                                    NodeConfig::get_max_outbound_peers());
+            View::rounded_box(ui, peers_txt, t!("network_node.peers"), [false, false, false, true]);
         });
     });
     ui.add_space(5.0);

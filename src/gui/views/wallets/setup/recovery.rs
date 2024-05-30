@@ -70,10 +70,11 @@ impl RecoverySetup {
             let integrated_node = wallet.get_current_ext_conn().is_none();
             let integrated_node_ready = Node::get_sync_status() == Some(SyncStatus::NoSync);
             if wallet.sync_error() || (integrated_node && !integrated_node_ready) {
-                ui.add_space(6.0);
+                ui.add_space(2.0);
                 ui.label(RichText::new(t!("wallets.repair_unavailable"))
                     .size(16.0)
                     .color(Colors::red()));
+                ui.add_space(2.0);
             } else if !wallet.is_repairing() {
                 ui.add_space(6.0);
 
