@@ -12,11 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::{Id, Margin, RichText, ScrollArea, vec2, Widget};
+use egui::{Id, Margin, RichText, ScrollArea};
 use egui::scroll_area::ScrollBarVisibility;
 use grin_util::ZeroingString;
 
-use crate::{AppConfig, built_info};
 use crate::gui::Colors;
 use crate::gui::icons::{CHECK, CLIPBOARD_TEXT, COPY, FOLDER_PLUS, SCAN, SHARE_FAT};
 use crate::gui::platform::PlatformCallbacks;
@@ -310,29 +309,17 @@ impl WalletCreation {
             None => {
                 // Show wallet creation message if step is empty.
                 View::center_content(ui, 350.0 + View::get_bottom_inset(), |ui| {
-                    let logo = if AppConfig::dark_theme().unwrap_or(false) {
-                        egui::include_image!("../../../../../img/logo_light.png")
-                    } else {
-                        egui::include_image!("../../../../../img/logo.png")
-                    };
                     // Show app logo.
-                    egui::Image::new(logo).fit_to_exact_size(vec2(180.0, 180.0)).ui(ui);
-                    ui.add_space(-15.0);
-                    ui.label(RichText::new("GRIM")
-                        .size(24.0)
-                        .color(Colors::white_or_black(true))
-                    );
-                    ui.label(RichText::new(built_info::PKG_VERSION)
-                        .size(16.0)
-                        .color(Colors::white_or_black(true))
-                    );
+                    View::app_logo_name_version(ui);
                     ui.add_space(4.0);
+
                     let text = t!("wallets.create_desc");
                     ui.label(RichText::new(text)
                         .size(16.0)
                         .color(Colors::gray())
                     );
                     ui.add_space(8.0);
+                    // Show wallet creation button.
                     let add_text = format!("{} {}", FOLDER_PLUS, t!("wallets.add"));
                     View::button(ui, add_text, Colors::white_or_black(false), || {
                         self.show_name_pass_modal(cb);

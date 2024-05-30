@@ -101,7 +101,7 @@ impl WalletsContent {
 
         // Setup panels parameters.
         let dual_panel = is_dual_panel_mode(ui);
-        let open_wallet_panel = dual_panel || show_wallet || create_wallet || empty_list;
+        let open_wallet_panel = show_wallet || create_wallet || empty_list;
         let wallet_panel_width = self.wallet_panel_width(ui, empty_list, dual_panel, show_wallet);
         let content_width = ui.available_width();
 
@@ -169,8 +169,7 @@ impl WalletsContent {
         // Setup flag to show wallets bottom panel if wallet is not showing
         // at non-dual panel mode and network is no open or showing at dual panel mode.
         let show_bottom_panel = !list_hidden &&
-            ((!show_wallet && !dual_panel && !Root::is_network_panel_open()) ||
-                (dual_panel && show_wallet));
+            ((!show_wallet && !dual_panel && !Root::is_network_panel_open()) || dual_panel);
 
         // Show wallets bottom panel.
         egui::TopBottomPanel::bottom("wallets_bottom_panel")
@@ -223,7 +222,7 @@ impl WalletsContent {
                         ui.ctx().request_repaint_after(Duration::from_millis(1000));
                     }
                     // Show list of wallets.
-                    self.wallet_list_ui(ui, dual_panel, cb);
+                    self.wallet_list_ui(ui, cb);
                 });
         }
     }
@@ -331,7 +330,6 @@ impl WalletsContent {
     /// Draw list of wallets.
     fn wallet_list_ui(&mut self,
                       ui: &mut egui::Ui,
-                      dual_panel: bool,
                       cb: &dyn PlatformCallbacks) {
         ui.scope(|ui| {
             ScrollArea::vertical()
@@ -340,16 +338,11 @@ impl WalletsContent {
                 .auto_shrink([false; 2])
                 .show(ui, |ui| {
                     ui.vertical_centered(|ui| {
-                        if !dual_panel {
-                            ui.add_space(1.0);
-                        }
-                        // Setup wallet list width.
-                        let max_width = if !dual_panel {
-                            Root::SIDE_PANEL_WIDTH * 1.3
-                        } else {
-                            ui.available_width()
-                        };
-                        View::max_width_ui(ui, max_width, |ui| {
+                        View::max_width_ui(ui, Root::SIDE_PANEL_WIDTH * 1.3, |ui| {
+                            // Show application logo and name.
+                            View::app_logo_name_version(ui);
+                            ui.add_space(20.0);
+
                             let mut list = self.wallets.list().clone();
                             // Remove deleted wallet from the list.
                             list.retain(|w| !w.is_deleted());

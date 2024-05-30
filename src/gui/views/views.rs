@@ -23,7 +23,7 @@ use egui::epaint::text::TextWrapping;
 use egui::os::OperatingSystem;
 use egui::text::{LayoutJob, TextFormat};
 use egui::text_edit::TextEditState;
-use crate::AppConfig;
+use crate::{AppConfig, built_info};
 
 use crate::gui::Colors;
 use crate::gui::icons::{CHECK_SQUARE, CLIPBOARD_TEXT, COPY, EYE, EYE_SLASH, SCAN, SQUARE};
@@ -33,6 +33,14 @@ use crate::gui::views::types::TextEditOptions;
 pub struct View;
 
 impl View {
+    /// Format timestamp in seconds with local UTC offset.
+    pub fn format_time(ts: i64) -> String {
+        let utc_offset = chrono::Local::now().offset().local_minus_utc();
+        let utc_time = ts + utc_offset as i64;
+        let tx_time = chrono::DateTime::from_timestamp(utc_time, 0).unwrap();
+        tx_time.format("%d/%m/%Y %H:%M:%S").to_string()
+    }
+
     /// Get default stroke around views.
     pub fn default_stroke() -> Stroke {
         Stroke { width: 1.0, color: Colors::stroke() }
@@ -619,12 +627,26 @@ impl View {
                       Stroke { width: 1.0, color });
     }
 
-    /// Format timestamp in seconds with local UTC offset.
-    pub fn format_time(ts: i64) -> String {
-        let utc_offset = chrono::Local::now().offset().local_minus_utc();
-        let utc_time = ts + utc_offset as i64;
-        let tx_time = chrono::DateTime::from_timestamp(utc_time, 0).unwrap();
-        tx_time.format("%d/%m/%Y %H:%M:%S").to_string()
+    /// Draw application logo image with name and version.
+    pub fn app_logo_name_version(ui: &mut egui::Ui) {
+        ui.add_space(-1.0);
+        let logo = if AppConfig::dark_theme().unwrap_or(false) {
+            egui::include_image!("../../../img/logo_light.png")
+        } else {
+            egui::include_image!("../../../img/logo.png")
+        };
+        // Show application logo and name.
+        egui::Image::new(logo).fit_to_exact_size(egui::vec2(180.0, 180.0)).ui(ui);
+        ui.add_space(-17.0);
+        ui.label(RichText::new("GRIM")
+            .size(24.0)
+            .color(Colors::white_or_black(true))
+        );
+        ui.add_space(-2.0);
+        ui.label(RichText::new(built_info::PKG_VERSION)
+            .size(16.0)
+            .color(Colors::white_or_black(true))
+        );
     }
 
     /// Get top display inset (cutout) size.
