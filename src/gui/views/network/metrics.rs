@@ -77,7 +77,7 @@ impl NetworkTab for NetworkMetrics {
     }
 }
 
-const BLOCK_ITEM_HEIGHT: f32 = 79.0;
+const BLOCK_ITEM_HEIGHT: f32 = 78.0;
 
 /// Draw emission and difficulty info.
 fn info_ui(ui: &mut egui::Ui, stats: &ServerStats) {
@@ -147,7 +147,7 @@ fn blocks_ui(ui: &mut egui::Ui, stats: &ServerStats) {
         .stick_to_bottom(true)
         .show_rows(
             ui,
-            BLOCK_ITEM_HEIGHT - 1.0,
+            BLOCK_ITEM_HEIGHT,
             blocks_size,
             |ui, row_range| {
                 for index in row_range {
@@ -206,7 +206,6 @@ fn block_item_ui(ui: &mut egui::Ui, db: &DiffBlock, rounding: Rounding) {
                         .color(Colors::gray())
                         .size(16.0));
                 });
-
                 ui.add_space(3.0);
             });
             ui.add_space(6.0);

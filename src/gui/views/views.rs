@@ -540,7 +540,7 @@ impl View {
                     // Draw box label.
                     ui.label(RichText::new(label).color(Colors::gray()).size(15.0));
                 });
-                ui.add_space(3.0);
+                ui.add_space(2.0);
             });
         }).response;
 

@@ -158,7 +158,7 @@ impl ConnectionSetup {
 
             // Show button to add new external node connection.
             let add_node_text = format!("{} {}", PLUS_CIRCLE, t!("wallets.add_node"));
-            View::button(ui, add_node_text, Colors::white_or_black(false), || {
+            View::button(ui, add_node_text, Colors::button(), || {
                 self.show_add_ext_conn_modal(cb);
             });
             ui.add_space(4.0);

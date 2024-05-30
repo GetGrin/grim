@@ -201,7 +201,7 @@ fn peer_item_ui(ui: &mut egui::Ui, peer: &PeerStats, rounding: Rounding) {
     rect.set_height(79.0);
     ui.allocate_ui_at_rect(rect, |ui| {
         ui.vertical(|ui| {
-            ui.add_space(3.0);
+            ui.add_space(4.0);
 
             // Draw round background.
             ui.painter().rect(rect, rounding, Colors::white_or_black(false), View::item_stroke());
