@@ -271,8 +271,8 @@ impl ConnectionSetup {
             ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
                 // Draw button to select connection.
                 let is_current_method = if let Some(wallet) = wallet {
-                    if let Some(cur) = wallet.get_current_ext_conn() {
-                        &cur == conn
+                    if let Some(cur) = wallet.get_config().ext_conn_id {
+                        cur == conn.id
                     } else {
                         false
                     }

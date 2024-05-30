@@ -554,11 +554,14 @@ impl WalletTransactions {
             }
         }
 
-        // Show transaction Slatepack message response or finalization input.
+        // Show Slatepack message or reset flag to show QR if not available.
         if !tx.posting && !tx.data.confirmed && !tx.cancelling &&
             (tx.data.tx_type == TxLogEntryType::TxSent ||
             tx.data.tx_type == TxLogEntryType::TxReceived) {
             self.tx_info_modal_slate_ui(ui, tx, wallet, modal, cb);
+        } else if self.tx_info_show_qr {
+            self.tx_info_qr_code_content.clear_state();
+            self.tx_info_show_qr = false;
         }
         ui.add_space(8.0);
 
@@ -589,6 +592,7 @@ impl WalletTransactions {
                     cols[0].vertical_centered_justified(|ui| {
                         View::button(ui, t!("close"), Colors::white_or_black(false), || {
                             cb.stop_camera();
+                            self.tx_info_scanner_content.clear_state();
                             self.tx_info_show_scanner = false;
                             modal.close();
                         });
@@ -596,6 +600,7 @@ impl WalletTransactions {
                     cols[1].vertical_centered_justified(|ui| {
                         View::button(ui, t!("back"), Colors::white_or_black(false), || {
                             cb.stop_camera();
+                            self.tx_info_scanner_content.clear_state();
                             self.tx_info_show_scanner = false;
                             modal.enable_closing();
                         });
@@ -711,6 +716,7 @@ impl WalletTransactions {
                 self.on_finalization_input_change(tx, wallet, modal, cb);
 
                 modal.enable_closing();
+                self.tx_info_scanner_content.clear_state();
                 self.tx_info_show_scanner = false;
             } else {
                 self.tx_info_scanner_content.ui(ui, cb);
@@ -770,6 +776,7 @@ impl WalletTransactions {
         if self.tx_info_show_qr {
             let text = message_edit.clone();
             if text.is_empty() {
+                self.tx_info_qr_code_content.clear_state();
                 self.tx_info_show_qr = false;
             } else {
                 // Draw QR code content.
