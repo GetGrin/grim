@@ -3775,6 +3775,7 @@ dependencies = [
  "nokhwa",
  "openssl-sys",
  "parking_lot 0.12.3",
+ "qrcode",
  "qrcodegen",
  "rand 0.8.5",
  "rfd",
@@ -6984,6 +6985,15 @@ name = "qr_code"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5520fbcd7da152a449261c5a533a1c7fad044e9e8aa9528cfec3f464786c7926"
+
+[[package]]
+name = "qrcode"
+version = "0.14.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "23e719ca51966ff9f5a8436edb00d6115b3c606a0bb27c8f8ca74a38ff2b036d"
+dependencies = [
+ "image 0.25.1",
+]
 
 [[package]]
 name = "qrcodegen"

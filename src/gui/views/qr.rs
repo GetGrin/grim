@@ -345,34 +345,42 @@ impl QrCodeContent {
                 let mut ur_enc = ur::Encoder::bytes(text.as_bytes(), 100).unwrap();
                 for _ in 0..ur_enc.fragment_count() {
                     let ur = ur_enc.next_part().unwrap();
-                    if let Ok(qr) = QrCode::encode_text(ur.as_str(), qrcodegen::QrCodeEcc::Low) {
-                        qrs.push(qr);
+                    if let Ok(qr) = qrcode::QrCode::with_error_correction_level(
+                        ur.as_bytes(),
+                        qrcode::EcLevel::L
+                    ) {
+                        // Create an image from QR data.
+                        let image = qr.render()
+                            .max_dimensions(size as u32, size as u32)
+                            .dark_color(image::Rgb([0, 0, 0]))
+                            .light_color(image::Rgb([255, 255, 255]))
+                            .build();
+                        qrs.push(image);
                     }
                 }
-                // Generate GIF data.
-                let color_map = &[0, 0, 0, 0xFF, 0xFF, 0xFF];
-                let mut gif_enc = gif::Encoder::new(&mut gif,
-                                                    size as u16,
-                                                    size as u16,
-                                                    color_map).unwrap();
-                gif_enc.set_repeat(gif::Repeat::Infinite).unwrap();
-                for qr in qrs {
-                    // Create an image from QR data and write it to encoder.
-                    if let Some(image) = Self::qr_to_image_data(qr, size) {
-                        let mut frame = gif::Frame::from_indexed_pixels(size as u16,
-                                                                        size as u16,
-                                                                        image.as_slice(),
-                                                                        None);
+
+                if !qrs.is_empty() {
+                    // Generate GIF data.
+                    let color_map = &[0, 0, 0, 0xFF, 0xFF, 0xFF];
+                    let mut gif_enc = gif::Encoder::new(&mut gif,
+                                                        qrs[0].width() as u16,
+                                                        qrs[0].height() as u16,
+                                                        color_map).unwrap();
+                    gif_enc.set_repeat(gif::Repeat::Infinite).unwrap();
+                    for qr in qrs {
+                        let mut frame = gif::Frame::from_rgb(qr.width() as u16,
+                                                             qr.height() as u16,
+                                                             qr.as_raw().as_slice());
                         frame.delay = 10;
                         // Write an image to GIF encoder.
                         if let Ok(_) = gif_enc.write_frame(&frame) {
                             continue;
                         }
+                        // Exit on error.
+                        let mut w_state = qr_state.write();
+                        w_state.gif_creating = false;
+                        return;
                     }
-                    // Exit on error.
-                    let mut w_state = qr_state.write();
-                    w_state.gif_creating = false;
-                    return;
                 }
             }
             // Setup GIF image data.

@@ -518,7 +518,7 @@ impl View {
         // Draw box content.
         let content_resp = ui.allocate_ui_at_rect(rect, |ui| {
             ui.vertical_centered_justified(|ui| {
-                ui.add_space(3.0);
+                ui.add_space(4.0);
                 ui.scope(|ui| {
                     // Correct vertical spacing between items.
                     ui.style_mut().spacing.item_spacing.y = -3.0;
