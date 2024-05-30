@@ -129,6 +129,7 @@ impl WalletTab for WalletMessages {
 
         egui::CentralPanel::default()
             .frame(egui::Frame {
+                stroke: View::item_stroke(),
                 fill: Colors::white_or_black(false),
                 inner_margin: Margin {
                     left: View::far_left_inset_margin(ui) + 4.0,
@@ -370,6 +371,7 @@ impl WalletMessages {
             if amount_edit_before != self.request_amount_edit {
                 self.request_error = None;
                 if !self.request_amount_edit.is_empty() {
+                    self.request_amount_edit = self.request_amount_edit.trim().replace(",", ".");
                     match amount_from_hr_string(self.request_amount_edit.as_str()) {
                         Ok(a) => {
                             if !self.request_amount_edit.contains(".") {

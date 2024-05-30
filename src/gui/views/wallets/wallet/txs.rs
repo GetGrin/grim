@@ -109,6 +109,7 @@ impl WalletTab for WalletTransactions {
         // Show wallet transactions content.
         egui::CentralPanel::default()
             .frame(egui::Frame {
+                stroke: View::item_stroke(),
                 fill: Colors::button(),
                 inner_margin: Margin {
                     left: View::far_left_inset_margin(ui) + 4.0,
