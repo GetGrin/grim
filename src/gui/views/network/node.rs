@@ -17,7 +17,7 @@ use egui::scroll_area::ScrollBarVisibility;
 use grin_servers::PeerStats;
 
 use crate::gui::Colors;
-use crate::gui::icons::{AT, CUBE, DEVICES, FLOW_ARROW, HANDSHAKE, PACKAGE, PLUGS_CONNECTED, SHARE_NETWORK};
+use crate::gui::icons::{AT, CUBE, DEVICES, FLOW_ARROW, HANDSHAKE, PACKAGE, SHARE_NETWORK};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{NetworkContent, Root, View};
 use crate::gui::views::network::types::{NetworkTab, NetworkTabType};
@@ -190,30 +190,26 @@ fn node_stats_ui(ui: &mut egui::Ui) {
         let peers = &stats.peer_stats;
         for (index, ps) in peers.iter().enumerate() {
             peer_item_ui(ui, ps, View::item_rounding(index, peers.len(), false));
-            // Add space after the last item.
-            if index == peers.len() - 1 {
-                ui.add_space(5.0);
-            }
         }
+        ui.add_space(5.0);
     }
 }
 
 /// Draw connected peer info item.
 fn peer_item_ui(ui: &mut egui::Ui, peer: &PeerStats, rounding: Rounding) {
     let mut rect = ui.available_rect_before_wrap();
-    rect.set_height(77.0);
+    rect.set_height(79.0);
     ui.allocate_ui_at_rect(rect, |ui| {
         ui.vertical(|ui| {
+            ui.add_space(3.0);
+
             // Draw round background.
             ui.painter().rect(rect, rounding, Colors::white_or_black(false), View::item_stroke());
 
-            ui.add_space(2.0);
-
             // Draw peer address
             ui.horizontal(|ui| {
-                ui.add_space(5.0);
-                let addr_text = format!("{} {}", PLUGS_CONNECTED, &peer.addr);
-                ui.label(RichText::new(addr_text).color(Colors::white_or_black(true)).size(17.0));
+                ui.add_space(7.0);
+                ui.label(RichText::new(&peer.addr).color(Colors::white_or_black(true)).size(17.0));
             });
             // Draw peer difficulty and height
             ui.horizontal(|ui| {
@@ -232,7 +228,7 @@ fn peer_item_ui(ui: &mut egui::Ui, peer: &PeerStats, rounding: Rounding) {
                 ui.label(RichText::new(agent_text).color(Colors::gray()).size(16.0));
             });
 
-            ui.add_space(2.0);
+            ui.add_space(3.0);
         });
     });
 }

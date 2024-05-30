@@ -518,8 +518,7 @@ impl View {
         // Draw box content.
         let content_resp = ui.allocate_ui_at_rect(rect, |ui| {
             ui.vertical_centered_justified(|ui| {
-                ui.add_space(2.0);
-
+                ui.add_space(3.0);
                 ui.scope(|ui| {
                     // Correct vertical spacing between items.
                     ui.style_mut().spacing.item_spacing.y = -3.0;
@@ -541,8 +540,7 @@ impl View {
                     // Draw box label.
                     ui.label(RichText::new(label).color(Colors::gray()).size(15.0));
                 });
-
-                ui.add_space(2.0);
+                ui.add_space(3.0);
             });
         }).response;
 

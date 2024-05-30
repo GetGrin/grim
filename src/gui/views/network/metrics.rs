@@ -17,7 +17,7 @@ use egui::scroll_area::ScrollBarVisibility;
 use grin_servers::{DiffBlock, ServerStats};
 
 use crate::gui::Colors;
-use crate::gui::icons::{AT, COINS, CUBE_TRANSPARENT, HASH, HOURGLASS_LOW, HOURGLASS_MEDIUM, TIMER};
+use crate::gui::icons::{AT, COINS, CUBE_TRANSPARENT, HOURGLASS_LOW, HOURGLASS_MEDIUM, TIMER};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{NetworkContent, Root, View};
 use crate::gui::views::network::types::{NetworkTab, NetworkTabType};
@@ -77,7 +77,7 @@ impl NetworkTab for NetworkMetrics {
     }
 }
 
-const BLOCK_ITEM_HEIGHT: f32 = 77.0;
+const BLOCK_ITEM_HEIGHT: f32 = 79.0;
 
 /// Draw emission and difficulty info.
 fn info_ui(ui: &mut egui::Ui, stats: &ServerStats) {
@@ -170,17 +170,17 @@ fn block_item_ui(ui: &mut egui::Ui, db: &DiffBlock, rounding: Rounding) {
         ui.horizontal(|ui| {
             ui.add_space(6.0);
             ui.vertical(|ui| {
+                ui.add_space(3.0);
+
                 // Draw round background.
                 rect.min += vec2(8.0, 0.0);
                 rect.max -= vec2(8.0, 0.0);
                 ui.painter().rect(rect, rounding, Colors::white_or_black(false), View::item_stroke());
 
-                ui.add_space(2.0);
-
                 // Draw block hash.
                 ui.horizontal(|ui| {
-                    ui.add_space(5.0);
-                    ui.label(RichText::new(format!("{} {}", HASH, db.block_hash))
+                    ui.add_space(7.0);
+                    ui.label(RichText::new(db.block_hash.to_string())
                         .color(Colors::white_or_black(true))
                         .size(17.0));
                 });
@@ -207,9 +207,9 @@ fn block_item_ui(ui: &mut egui::Ui, db: &DiffBlock, rounding: Rounding) {
                         .size(16.0));
                 });
 
-                ui.add_space(2.0);
+                ui.add_space(3.0);
             });
-            ui.add_space(8.0);
+            ui.add_space(6.0);
         });
     });
 }
