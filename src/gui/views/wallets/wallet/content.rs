@@ -81,6 +81,8 @@ impl WalletContent {
         // Show modal content for this ui container.
         self.modal_content_ui(ui, wallet, cb);
 
+        let dual_panel = Root::is_dual_panel_mode(ui);
+
         let data = wallet.get_data();
         let data_empty = data.is_none();
 
@@ -102,7 +104,7 @@ impl WalletContent {
                     left: 0.0,
                     right: 0.0,
                     top: 0.0,
-                    bottom: if !Root::is_dual_panel_mode(ui) {
+                    bottom: if !dual_panel {
                         0.0
                     } else {
                         -1.0
@@ -112,6 +114,9 @@ impl WalletContent {
             })
             .show_animated_inside(ui, show_balance, |ui| {
                 ui.vertical_centered(|ui| {
+                    if !dual_panel {
+                        ui.add_space(1.0);
+                    }
                     // Draw account info.
                     View::max_width_ui(ui, Root::SIDE_PANEL_WIDTH * 1.3, |ui| {
                         self.account_ui(ui, wallet, data.unwrap(), cb);
@@ -143,6 +148,7 @@ impl WalletContent {
         // Show tab content panel.
         egui::CentralPanel::default()
             .frame(egui::Frame {
+                stroke: View::item_stroke(),
                 fill: Colors::white_or_black(false),
                 ..Default::default()
             })
@@ -396,7 +402,7 @@ impl WalletContent {
                 });
             ui.add_space(2.0);
             View::horizontal_line(ui, Colors::item_stroke());
-            ui.add_space(6.0);
+            ui.add_space(10.0);
 
             // Show copy button.
             ui.vertical_centered(|ui| {
@@ -407,7 +413,7 @@ impl WalletContent {
                     modal.close();
                 });
             });
-            ui.add_space(6.0);
+            ui.add_space(10.0);
             View::horizontal_line(ui, Colors::item_stroke());
             ui.add_space(6.0);
         } else if let Some(result) = self.camera_content.qr_scan_result() {

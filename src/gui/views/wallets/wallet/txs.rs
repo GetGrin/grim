@@ -106,10 +106,9 @@ impl WalletTab for WalletTransactions {
         // Show modal content for this ui container.
         self.modal_content_ui(ui, wallet, cb);
 
-        // Show wallet transactions panel.
+        // Show wallet transactions content.
         egui::CentralPanel::default()
             .frame(egui::Frame {
-                stroke: View::item_stroke(),
                 fill: Colors::button(),
                 inner_margin: Margin {
                     left: View::far_left_inset_margin(ui) + 4.0,

@@ -101,12 +101,8 @@ impl NetworkContent {
         // Show connections content.
         egui::CentralPanel::default()
             .frame(egui::Frame {
-                stroke: if show_connections{
-                    if Root::is_dual_panel_mode(ui)  {
-                        View::default_stroke()
-                    } else {
-                        Stroke::NONE
-                    }
+                stroke: if show_connections {
+                    View::item_stroke()
                 } else {
                     Stroke::NONE
                 },

@@ -129,7 +129,6 @@ impl WalletTab for WalletMessages {
 
         egui::CentralPanel::default()
             .frame(egui::Frame {
-                stroke: View::item_stroke(),
                 fill: Colors::white_or_black(false),
                 inner_margin: Margin {
                     left: View::far_left_inset_margin(ui) + 4.0,

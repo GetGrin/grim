@@ -164,6 +164,7 @@ impl QrCodeContent {
                 if !sharing {
                     // Show button to share QR.
                     let share_txt = format!("{} {}", IMAGES_SQUARE, t!("share"));
+                    ui.add_space(4.0);
                     View::action_button(ui, share_txt, || {
                         {
                             let mut w_state = self.qr_image_state.write();

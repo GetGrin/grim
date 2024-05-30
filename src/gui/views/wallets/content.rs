@@ -199,7 +199,7 @@ impl WalletsContent {
         if !list_hidden {
             egui::CentralPanel::default()
                 .frame(egui::Frame {
-                    stroke: View::default_stroke(),
+                    stroke: View::item_stroke(),
                     fill: Colors::fill_deep(),
                     inner_margin: Margin {
                         left: if list_hidden {
@@ -340,6 +340,9 @@ impl WalletsContent {
                 .auto_shrink([false; 2])
                 .show(ui, |ui| {
                     ui.vertical_centered(|ui| {
+                        if !dual_panel {
+                            ui.add_space(1.0);
+                        }
                         // Setup wallet list width.
                         let max_width = if !dual_panel {
                             Root::SIDE_PANEL_WIDTH * 1.3
@@ -350,9 +353,6 @@ impl WalletsContent {
                             let mut list = self.wallets.list().clone();
                             // Remove deleted wallet from the list.
                             list.retain(|w| !w.is_deleted());
-                            if !dual_panel {
-                                ui.add_space(1.0);
-                            }
                             for wallet in &list {
                                 // Check if wallet reopen is needed.
                                 if !wallet.is_open() && wallet.reopen_needed() {
