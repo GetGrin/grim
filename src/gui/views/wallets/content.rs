@@ -205,8 +205,8 @@ impl WalletsContent {
                     inner_margin: Margin {
                         left: View::far_left_inset_margin(ui) + 4.0,
                         right: View::far_right_inset_margin(ui) + 4.0,
-                        top: 4.0,
-                        bottom: View::get_bottom_inset() + 4.0,
+                        top: 3.0,
+                        bottom: 4.0,
                     },
                     ..Default::default()
                 }
@@ -325,44 +325,42 @@ impl WalletsContent {
     fn wallet_list_ui(&mut self,
                       ui: &mut egui::Ui,
                       cb: &dyn PlatformCallbacks) {
-        ui.scope(|ui| {
-            ScrollArea::vertical()
-                .id_source("wallet_list")
-                .scroll_bar_visibility(ScrollBarVisibility::AlwaysHidden)
-                .auto_shrink([false; 2])
-                .show(ui, |ui| {
-                    ui.vertical_centered(|ui| {
-                        View::max_width_ui(ui, Root::SIDE_PANEL_WIDTH * 1.3, |ui| {
-                            // Show application logo and name.
-                            View::app_logo_name_version(ui);
-                            ui.add_space(15.0);
+        ScrollArea::vertical()
+            .id_source("wallet_list")
+            .scroll_bar_visibility(ScrollBarVisibility::AlwaysHidden)
+            .auto_shrink([false; 2])
+            .show(ui, |ui| {
+                ui.vertical_centered(|ui| {
+                    View::max_width_ui(ui, Root::SIDE_PANEL_WIDTH * 1.3, |ui| {
+                        // Show application logo and name.
+                        View::app_logo_name_version(ui);
+                        ui.add_space(15.0);
 
-                            let mut list = self.wallets.list().clone();
-                            // Remove deleted wallet from the list.
-                            list.retain(|w| {
-                                let deleted = w.is_deleted();
-                                if deleted {
-                                    self.wallets.select(None);
-                                    self.wallets.remove(w.get_config().id);
-                                    ui.ctx().request_repaint();
-                                }
-                                !deleted
-                            });
-                            for wallet in &list {
-                                // Check if wallet reopen is needed.
-                                if !wallet.is_open() && wallet.reopen_needed() {
-                                    wallet.set_reopen(false);
-                                    self.wallets.select(Some(wallet.get_config().id));
-                                    self.show_open_wallet_modal(cb);
-                                }
-                                // Draw wallet list item.
-                                self.wallet_item_ui(ui, wallet, cb);
-                                ui.add_space(5.0);
+                        let mut list = self.wallets.list().clone();
+                        // Remove deleted wallet from the list.
+                        list.retain(|w| {
+                            let deleted = w.is_deleted();
+                            if deleted {
+                                self.wallets.select(None);
+                                self.wallets.remove(w.get_config().id);
+                                ui.ctx().request_repaint();
                             }
+                            !deleted
                         });
+                        for wallet in &list {
+                            // Check if wallet reopen is needed.
+                            if !wallet.is_open() && wallet.reopen_needed() {
+                                wallet.set_reopen(false);
+                                self.wallets.select(Some(wallet.get_config().id));
+                                self.show_open_wallet_modal(cb);
+                            }
+                            // Draw wallet list item.
+                            self.wallet_item_ui(ui, wallet, cb);
+                            ui.add_space(5.0);
+                        }
                     });
                 });
-        });
+            });
     }
 
     /// Draw wallet list item.

@@ -640,7 +640,7 @@ impl View {
             ui.set_opacity(0.9);
             egui::Image::new(logo).fit_to_exact_size(egui::vec2(182.0, 182.0)).ui(ui);
         });
-        ui.add_space(-12.0);
+        ui.add_space(-11.0);
         ui.label(RichText::new("GRIM")
             .size(24.0)
             .color(Colors::white_or_black(true))
