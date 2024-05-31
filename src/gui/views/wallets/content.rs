@@ -195,36 +195,26 @@ impl WalletsContent {
                 });
             });
 
-        if !list_hidden {
-            egui::CentralPanel::default()
-                .frame(egui::Frame {
-                    stroke: View::item_stroke(),
-                    fill: Colors::fill_deep(),
-                    inner_margin: Margin {
-                        left: if list_hidden {
-                            0.0
-                        } else {
-                            View::far_left_inset_margin(ui) + 4.0
-                        },
-                        right: if list_hidden {
-                            0.0
-                        } else {
-                            View::far_right_inset_margin(ui) + 4.0
-                        },
-                        top: 4.0,
-                        bottom: View::get_bottom_inset() + 4.0,
-                    },
-                    ..Default::default()
-                })
-                .show_inside(ui, |ui| {
-                    // Update ui after 1 sec at single panel mode.
-                    if !dual_panel {
-                        ui.ctx().request_repaint_after(Duration::from_millis(1000));
-                    }
-                    // Show list of wallets.
-                    self.wallet_list_ui(ui, cb);
-                });
-        }
+        egui::CentralPanel::default()
+            .frame(egui::Frame {
+                stroke: View::item_stroke(),
+                fill: Colors::fill_deep(),
+                inner_margin: Margin {
+                    left: View::far_left_inset_margin(ui) + 4.0,
+                    right: View::far_right_inset_margin(ui) + 4.0,
+                    top: 4.0,
+                    bottom: View::get_bottom_inset() + 4.0,
+                },
+                ..Default::default()
+            })
+            .show_inside(ui, |ui| {
+                // Update ui after 1 sec at single panel mode.
+                if !dual_panel {
+                    ui.ctx().request_repaint_after(Duration::from_millis(1000));
+                }
+                // Show list of wallets.
+                self.wallet_list_ui(ui, cb);
+            });
     }
 
     /// Draw [`TitlePanel`] content.

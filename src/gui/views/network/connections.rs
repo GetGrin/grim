@@ -94,7 +94,7 @@ impl ConnectionsContent {
         if saved_chain_type != AppConfig::chain_type() {
             ExternalConnection::start_ext_conn_availability_check();
         }
-        ui.add_space(5.0);
+        ui.add_space(6.0);
 
         // Show integrated node info content.
         Self::integrated_node_item_ui(ui);

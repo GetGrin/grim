@@ -636,7 +636,10 @@ impl View {
             egui::include_image!("../../../img/logo.png")
         };
         // Show application logo and name.
-        egui::Image::new(logo).fit_to_exact_size(egui::vec2(180.0, 180.0)).ui(ui);
+        ui.scope(|ui| {
+            ui.set_opacity(0.9);
+            egui::Image::new(logo).fit_to_exact_size(egui::vec2(182.0, 182.0)).ui(ui);
+        });
         ui.add_space(-12.0);
         ui.label(RichText::new("GRIM")
             .size(24.0)
@@ -645,7 +648,7 @@ impl View {
         ui.add_space(-2.0);
         ui.label(RichText::new(built_info::PKG_VERSION)
             .size(16.0)
-            .color(Colors::white_or_black(true))
+            .color(Colors::title(false))
         );
     }
 
