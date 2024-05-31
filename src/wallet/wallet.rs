@@ -35,6 +35,7 @@ use grin_util::{Mutex, ToHex};
 use grin_util::secp::SecretKey;
 use grin_util::types::ZeroingString;
 use grin_wallet_api::Owner;
+use grin_wallet_controller::command::parse_slatepack;
 use grin_wallet_controller::controller;
 use grin_wallet_controller::controller::ForeignAPIHandlerV2;
 use grin_wallet_impls::{DefaultLCProvider, DefaultWalletImpl, HTTPNodeClient};
@@ -591,9 +592,12 @@ impl Wallet {
     }
 
     /// Parse Slatepack message into [`Slate`].
-    pub fn parse_slatepack(&self, message: &String) -> Result<Slate, Error> {
-        let api = Owner::new(self.instance.clone().unwrap(), None);
-        api.slate_from_slatepack_message(None, message.clone(), vec![])
+    pub fn parse_slatepack(&self, message: &String) -> Result<Slate, grin_wallet_controller::Error> {
+        let mut api = Owner::new(self.instance.clone().unwrap(), None);
+        return match parse_slatepack(&mut api, None, None, Some(message.clone())) {
+            Ok(s) => Ok(s.0),
+            Err(e) => Err(e)
+        }
     }
 
     /// Create Slatepack message from provided slate.
@@ -833,55 +837,64 @@ impl Wallet {
 
     /// Handle message from the invoice issuer to send founds, return response for funds receiver.
     pub fn pay(&self, message: &String) -> Result<String, Error> {
-        let slate = self.parse_slatepack(message)?;
-        let config = self.get_config();
-        let args = InitTxArgs {
-            src_acct_name: None,
-            amount: slate.amount,
-            minimum_confirmations: config.min_confirmations,
-            selection_strategy_is_use_all: false,
-            ..Default::default()
-        };
-        let api = Owner::new(self.instance.clone().unwrap(), None);
-        let slate = api.process_invoice_tx(None, &slate, args)?;
-        api.tx_lock_outputs(None, &slate)?;
+        if let Ok(slate) = self.parse_slatepack(message) {
+            let config = self.get_config();
+            let args = InitTxArgs {
+                src_acct_name: None,
+                amount: slate.amount,
+                minimum_confirmations: config.min_confirmations,
+                selection_strategy_is_use_all: false,
+                ..Default::default()
+            };
+            let api = Owner::new(self.instance.clone().unwrap(), None);
+            let slate = api.process_invoice_tx(None, &slate, args)?;
+            api.tx_lock_outputs(None, &slate)?;
 
-        // Create Slatepack message response.
-        let response = self.create_slatepack_message(&slate)?;
+            // Create Slatepack message response.
+            let response = self.create_slatepack_message(&slate)?;
 
-        // Sync wallet info.
-        self.sync(false);
+            // Sync wallet info.
+            self.sync(false);
 
-        Ok(response)
+            Ok(response)
+        } else {
+            Err(Error::SlatepackDeser("Slatepack parsing error".to_string()))
+        }
     }
 
     /// Handle message to receive funds, return response to sender.
     pub fn receive(&self, message: &String) -> Result<String, Error> {
-        let mut slate = self.parse_slatepack(message)?;
-        let api = Owner::new(self.instance.clone().unwrap(), None);
-        controller::foreign_single_use(api.wallet_inst.clone(), None, |api| {
-            slate = api.receive_tx(&slate, Some(self.get_config().account.as_str()), None)?;
-            Ok(())
-        })?;
-        // Create Slatepack message response.
-        let response = self.create_slatepack_message(&slate)?;
+        if let Ok(mut slate) = self.parse_slatepack(message) {
+            let api = Owner::new(self.instance.clone().unwrap(), None);
+            controller::foreign_single_use(api.wallet_inst.clone(), None, |api| {
+                slate = api.receive_tx(&slate, Some(self.get_config().account.as_str()), None)?;
+                Ok(())
+            })?;
+            // Create Slatepack message response.
+            let response = self.create_slatepack_message(&slate)?;
 
-        // Sync wallet info.
-        self.sync(false);
+            // Sync wallet info.
+            self.sync(false);
 
-        Ok(response)
+            Ok(response)
+        } else {
+            Err(Error::SlatepackDeser("Slatepack parsing error".to_string()))
+        }
     }
 
     /// Finalize transaction from provided message as sender or invoice issuer with Dandelion.
     pub fn finalize(&self, message: &String, dandelion: bool) -> Result<Slate, Error> {
-        let mut slate = self.parse_slatepack(message)?;
-        let api = Owner::new(self.instance.clone().unwrap(), None);
-        slate = api.finalize_tx(None, &slate)?;
-        // Save Slatepack message to file.
-        let _ = self.create_slatepack_message(&slate)?;
-        // Post transaction to blockchain.
-        let _ = self.post(&slate, dandelion);
-        Ok(slate)
+        if let Ok(mut slate) = self.parse_slatepack(message) {
+            let api = Owner::new(self.instance.clone().unwrap(), None);
+            slate = api.finalize_tx(None, &slate)?;
+            // Save Slatepack message to file.
+            let _ = self.create_slatepack_message(&slate)?;
+            // Post transaction to blockchain.
+            let _ = self.post(&slate, dandelion);
+            Ok(slate)
+        } else {
+            Err(Error::SlatepackDeser("Slatepack parsing error".to_string()))
+        }
     }
 
     /// Post transaction to blockchain.
