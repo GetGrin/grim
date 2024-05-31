@@ -196,16 +196,20 @@ impl WalletsContent {
             });
 
         egui::CentralPanel::default()
-            .frame(egui::Frame {
-                stroke: View::item_stroke(),
-                fill: Colors::fill_deep(),
-                inner_margin: Margin {
-                    left: View::far_left_inset_margin(ui) + 4.0,
-                    right: View::far_right_inset_margin(ui) + 4.0,
-                    top: 4.0,
-                    bottom: View::get_bottom_inset() + 4.0,
-                },
-                ..Default::default()
+            .frame(if list_hidden {
+                egui::Frame::default()
+            } else {
+                egui::Frame {
+                    stroke: View::item_stroke(),
+                    fill: Colors::fill_deep(),
+                    inner_margin: Margin {
+                        left: View::far_left_inset_margin(ui) + 4.0,
+                        right: View::far_right_inset_margin(ui) + 4.0,
+                        top: 4.0,
+                        bottom: View::get_bottom_inset() + 4.0,
+                    },
+                    ..Default::default()
+                }
             })
             .show_inside(ui, |ui| {
                 // Update ui after 1 sec at single panel mode.
