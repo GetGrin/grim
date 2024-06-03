@@ -69,9 +69,17 @@ fn real_main() {
         viewport = viewport.with_position(pos2(x, y));
     }
 
-    let options = eframe::NativeOptions {
+    let mut options = eframe::NativeOptions {
         viewport,
         ..Default::default()
     };
-    grim::start(options, grim::app_creator(PlatformApp::new(platform)));
+    options.renderer = eframe::Renderer::Wgpu;
+    match grim::start(options.clone(), grim::app_creator(PlatformApp::new(platform.clone()))) {
+        Ok(_) => {}
+        Err(_) => {
+            // Start with Glow renderer on error.
+            options.renderer = eframe::Renderer::Glow;
+            grim::start(options, grim::app_creator(PlatformApp::new(platform))).unwrap();
+        }
+    }
 }

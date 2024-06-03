@@ -15,6 +15,7 @@
 #[macro_use]
 extern crate rust_i18n;
 
+use eframe::NativeOptions;
 use egui::{Context, Stroke};
 
 #[cfg(target_os = "android")]
@@ -68,7 +69,7 @@ fn android_main(app: AndroidApp) {
     let width = app.config().screen_width_dp().unwrap() as f32;
     let height = app.config().screen_height_dp().unwrap() as f32;
     let size = egui::emath::vec2(width, height);
-    let mut options = eframe::NativeOptions {
+    let mut options = NativeOptions {
         viewport: egui::ViewportBuilder::default().with_inner_size(size),
         ..Default::default()
     };
@@ -89,7 +90,7 @@ fn android_main(app: AndroidApp) {
     }));
 
     let app = PlatformApp::new(platform);
-    start(options, app_creator(app));
+    start(options, app_creator(app)).unwrap();
 }
 
 /// Check if system is using dark theme.
@@ -116,9 +117,12 @@ pub fn app_creator<T: 'static>(app: PlatformApp<T>) -> eframe::AppCreator
 }
 
 /// Entry point to start ui with [`eframe`].
-pub fn start(mut options: eframe::NativeOptions, app_creator: eframe::AppCreator) {
-    options.default_theme = eframe::Theme::Light;
-    options.renderer = eframe::Renderer::Wgpu;
+pub fn start(mut options: NativeOptions, app_creator: eframe::AppCreator) -> eframe::Result<()> {
+    options.default_theme = if AppConfig::dark_theme().unwrap_or(false) {
+        eframe::Theme::Dark
+    } else {
+        eframe::Theme::Light
+    };
     // Setup translations.
     setup_i18n();
     // Start integrated node if needed.
@@ -126,7 +130,7 @@ pub fn start(mut options: eframe::NativeOptions, app_creator: eframe::AppCreator
         Node::start();
     }
     // Launch graphical interface.
-    eframe::run_native("Grim", options, app_creator).unwrap();
+    eframe::run_native("Grim", options, app_creator)
 }
 
 /// Setup application [`egui::Style`] and [`egui::Visuals`].

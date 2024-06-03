@@ -27,6 +27,7 @@ use rfd::FileDialog;
 use crate::gui::platform::PlatformCallbacks;
 
 /// Desktop platform related actions.
+#[derive(Clone)]
 pub struct Desktop {
     /// Flag to check if camera stop is needed.
     stop_camera: Arc<AtomicBool>,
