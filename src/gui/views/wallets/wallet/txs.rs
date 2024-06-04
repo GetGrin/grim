@@ -318,7 +318,7 @@ impl WalletTransactions {
 
         ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
             // Draw button to show transaction info.
-            if can_show_info {
+            if can_show_info && tx.data.tx_slate_id.is_some() {
                 rounding.nw = 0.0;
                 rounding.sw = 0.0;
                 View::item_button(ui, rounding, FILE_TEXT, None, || {
@@ -358,8 +358,8 @@ impl WalletTransactions {
 
             // Draw cancel button for tx that can be reposted and canceled.
             let wallet_loaded = wallet.foreign_api_port().is_some();
-            if ((!can_show_info && !self.tx_info_finalizing) || can_show_info) &&
-                (tx.can_repost(data) || tx.can_cancel()) && wallet_loaded {
+            if wallet_loaded && ((!can_show_info && !self.tx_info_finalizing) || can_show_info) &&
+                (tx.can_repost(data) || tx.can_cancel()) {
                 View::item_button(ui, Rounding::default(), PROHIBIT, Some(Colors::red()), || {
                     if can_show_info {
                         self.confirm_cancel_tx_id = Some(tx.data.id);
