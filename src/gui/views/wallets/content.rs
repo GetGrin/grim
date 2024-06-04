@@ -418,7 +418,7 @@ impl WalletsContent {
 
             let layout_size = ui.available_size();
             ui.allocate_ui_with_layout(layout_size, Layout::left_to_right(Align::Center), |ui| {
-                ui.add_space(7.0);
+                ui.add_space(6.0);
                 ui.vertical(|ui| {
                     ui.add_space(3.0);
                     // Setup wallet name text.
@@ -431,15 +431,6 @@ impl WalletsContent {
                             ui.add_space(1.0);
                             View::ellipsize_text(ui, config.name, 18.0, name_color);
                     });
-
-                    // Setup wallet connection text.
-                    let conn_text = if let Some(conn) = wallet.get_current_ext_conn() {
-                        format!("{} {}", GLOBE_SIMPLE, conn.url)
-                    } else {
-                        format!("{} {}", COMPUTER_TOWER, t!("network.node"))
-                    };
-                    View::ellipsize_text(ui, conn_text, 15.0, Colors::text(false));
-                    ui.add_space(1.0);
 
                     // Setup wallet status text.
                     let status_text = if wallet.is_open() {
@@ -462,10 +453,10 @@ impl WalletsContent {
                             if info_progress == 100 || info_progress == 0 {
                                 format!("{} {}", SPINNER, t!("wallets.loading"))
                             } else {
-                                    format!("{} {}: {}%",
-                                            SPINNER,
-                                            t!("wallets.loading"),
-                                            info_progress)
+                                format!("{} {}: {}%",
+                                        SPINNER,
+                                        t!("wallets.loading"),
+                                        info_progress)
                             }
                         } else {
                             format!("{} {}", FOLDER_OPEN, t!("wallets.unlocked"))
@@ -473,7 +464,16 @@ impl WalletsContent {
                     } else {
                         format!("{} {}", FOLDER_LOCK, t!("wallets.locked"))
                     };
-                    ui.label(RichText::new(status_text).size(15.0).color(Colors::gray()));
+                    View::ellipsize_text(ui, status_text, 15.0, Colors::text(false));
+                    ui.add_space(1.0);
+
+                    // Setup wallet connection text.
+                    let conn_text = if let Some(conn) = wallet.get_current_ext_conn() {
+                        format!("{} {}", GLOBE_SIMPLE, conn.url)
+                    } else {
+                        format!("{} {}", COMPUTER_TOWER, t!("network.node"))
+                    };
+                    ui.label(RichText::new(conn_text).size(15.0).color(Colors::gray()));
                     ui.add_space(3.0);
                 });
             });
