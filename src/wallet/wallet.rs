@@ -1184,9 +1184,11 @@ fn start_sync(wallet: Wallet) -> Thread {
 
 /// Retrieve [`WalletData`] from local base or node.
 fn sync_wallet_data(wallet: &Wallet, from_node: bool) {
+    let fresh_sync = wallet.get_data().is_none();
+
+    // Update info sync progress at separate thread.
     let wallet_info = wallet.clone();
     let (info_tx, info_rx) = mpsc::channel::<StatusMessage>();
-    // Update info sync progress at separate thread.
     thread::spawn(move || {
         while let Ok(m) = info_rx.recv() {
             match m {
@@ -1290,12 +1292,12 @@ fn sync_wallet_data(wallet: &Wallet, from_node: bool) {
                             tx.amount_credited - tx.amount_debited
                         };
 
-                        let unc_sent_or_received = tx.tx_slate_id.is_some() &&
+                        let unconfirmed_sent_or_received = tx.tx_slate_id.is_some() &&
                             !tx.confirmed && (tx.tx_type == TxLogEntryType::TxSent ||
                             tx.tx_type == TxLogEntryType::TxReceived);
 
                         // Setup transaction posting status based on slate state.
-                        let posting = if unc_sent_or_received {
+                        let posting = if unconfirmed_sent_or_received {
                             // Create slate to check existing file.
                             let is_invoice = tx.tx_type == TxLogEntryType::TxReceived;
                             let mut slate = Slate::blank(0, is_invoice);
@@ -1324,7 +1326,8 @@ fn sync_wallet_data(wallet: &Wallet, from_node: bool) {
                         };
 
                         // Setup flag for ability to finalize transaction.
-                        let can_finalize = if from_node && !posting && unc_sent_or_received {
+                        let can_finalize = if (from_node || !fresh_sync) && !posting &&
+                            unconfirmed_sent_or_received {
                             // Check existing file.
                             let mut slate = Slate::blank(1, false);
                             slate.id = tx.tx_slate_id.unwrap();
@@ -1403,7 +1406,7 @@ fn sync_wallet_data(wallet: &Wallet, from_node: bool) {
                             can_finalize,
                             conf_height,
                             repost_height,
-                            from_node
+                            from_node: from_node || !fresh_sync
                         });
                     }
 
