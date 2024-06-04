@@ -305,7 +305,7 @@ impl NodeSetup {
         // Show modal buttons.
         ui.scope(|ui| {
             // Setup spacing between buttons.
-            ui.spacing_mut().item_spacing = egui::Vec2::new(6.0, 0.0);
+            ui.spacing_mut().item_spacing = egui::Vec2::new(8.0, 0.0);
 
             // Save button callback.
             let on_save = || {
@@ -408,7 +408,7 @@ impl NodeSetup {
         // Show modal buttons.
         ui.scope(|ui| {
             // Setup spacing between buttons.
-            ui.spacing_mut().item_spacing = egui::Vec2::new(6.0, 0.0);
+            ui.spacing_mut().item_spacing = egui::Vec2::new(8.0, 0.0);
 
             // Save button callback.
             let on_save = || {

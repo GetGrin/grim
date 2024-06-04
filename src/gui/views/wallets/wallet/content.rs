@@ -314,7 +314,7 @@ impl WalletContent {
             });
 
             // Setup spacing between buttons.
-            ui.spacing_mut().item_spacing = egui::Vec2::new(6.0, 0.0);
+            ui.spacing_mut().item_spacing = egui::Vec2::new(8.0, 0.0);
 
             // Show modal buttons.
             ui.columns(2, |columns| {
@@ -378,7 +378,7 @@ impl WalletContent {
             ui.add_space(6.0);
 
             // Setup spacing between buttons.
-            ui.spacing_mut().item_spacing = egui::Vec2::new(6.0, 0.0);
+            ui.spacing_mut().item_spacing = egui::Vec2::new(8.0, 0.0);
 
             // Show modal buttons.
             ui.columns(2, |columns| {
@@ -478,7 +478,7 @@ impl WalletContent {
 
         if self.qr_scan_result.is_some() {
             // Setup spacing between buttons.
-            ui.spacing_mut().item_spacing = egui::Vec2::new(6.0, 0.0);
+            ui.spacing_mut().item_spacing = egui::Vec2::new(8.0, 0.0);
 
             ui.columns(2, |columns| {
                 columns[0].vertical_centered_justified(|ui| {

@@ -578,7 +578,7 @@ impl WalletTransactions {
 
         if !self.tx_info_finalizing {
             // Setup spacing between buttons.
-            ui.spacing_mut().item_spacing = egui::Vec2::new(6.0, 0.0);
+            ui.spacing_mut().item_spacing = egui::Vec2::new(8.0, 0.0);
 
             if self.tx_info_show_qr {
                 // Show buttons to close modal or come back to text request content.
@@ -833,7 +833,7 @@ impl WalletTransactions {
         }
 
         // Setup spacing between buttons.
-        ui.spacing_mut().item_spacing = egui::Vec2::new(6.0, 0.0);
+        ui.spacing_mut().item_spacing = egui::Vec2::new(8.0, 0.0);
 
         if self.tx_info_finalize {
             ui.columns(2, |columns| {
@@ -958,7 +958,7 @@ impl WalletTransactions {
         // Show modal buttons.
         ui.scope(|ui| {
             // Setup spacing between buttons.
-            ui.spacing_mut().item_spacing = egui::Vec2::new(6.0, 0.0);
+            ui.spacing_mut().item_spacing = egui::Vec2::new(8.0, 0.0);
 
             ui.columns(2, |columns| {
                 columns[0].vertical_centered_justified(|ui| {

@@ -335,7 +335,7 @@ impl WalletTransport {
                 ui.add_space(12.0);
 
                 // Setup spacing between buttons.
-                ui.spacing_mut().item_spacing = egui::Vec2::new(6.0, 0.0);
+                ui.spacing_mut().item_spacing = egui::Vec2::new(8.0, 0.0);
 
                 // Show buttons to close modal or come back to sending input.
                 ui.columns(2, |cols| {
@@ -590,15 +590,15 @@ impl WalletTransport {
         // Draw QR code content.
         let text = self.qr_address_content.text.clone();
         self.qr_address_content.ui(ui, text.clone(), cb);
-        ui.add_space(10.0);
+        ui.add_space(6.0);
 
         ui.vertical_centered_justified(|ui| {
             View::button(ui, t!("close"), Colors::white_or_black(false), || {
                 self.qr_address_content.clear_state();
                 m.close();
             });
-            ui.add_space(6.0);
         });
+        ui.add_space(6.0);
     }
 
     /// Draw Tor send content.
@@ -694,7 +694,7 @@ impl WalletTransport {
                     ui.add_space(6.0);
 
                     // Setup spacing between buttons.
-                    ui.spacing_mut().item_spacing = egui::Vec2::new(6.0, 0.0);
+                    ui.spacing_mut().item_spacing = egui::Vec2::new(8.0, 0.0);
 
                     // Show buttons to close modal or come back to sending input.
                     ui.columns(2, |cols| {
@@ -810,7 +810,7 @@ impl WalletTransport {
             }
 
             // Setup spacing between buttons.
-            ui.spacing_mut().item_spacing = egui::Vec2::new(6.0, 0.0);
+            ui.spacing_mut().item_spacing = egui::Vec2::new(8.0, 0.0);
 
             ui.columns(2, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
@@ -874,7 +874,7 @@ impl WalletTransport {
             ui.add_space(12.0);
 
             // Setup spacing between buttons.
-            ui.spacing_mut().item_spacing = egui::Vec2::new(6.0, 0.0);
+            ui.spacing_mut().item_spacing = egui::Vec2::new(8.0, 0.0);
 
             ui.columns(2, |columns| {
                 columns[0].vertical_centered_justified(|ui| {

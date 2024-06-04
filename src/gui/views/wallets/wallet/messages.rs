@@ -246,7 +246,7 @@ impl WalletMessages {
         let data = wallet.get_data().unwrap();
         if data.info.amount_currently_spendable > 0 {
             // Setup spacing between buttons.
-            ui.spacing_mut().item_spacing = egui::Vec2::new(6.0, 0.0);
+            ui.spacing_mut().item_spacing = egui::Vec2::new(8.0, 0.0);
 
             ui.columns(2, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
@@ -419,7 +419,7 @@ impl WalletMessages {
             ui.add_space(12.0);
 
             // Setup spacing between buttons.
-            ui.spacing_mut().item_spacing = egui::Vec2::new(6.0, 0.0);
+            ui.spacing_mut().item_spacing = egui::Vec2::new(8.0, 0.0);
 
             ui.columns(2, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
@@ -532,7 +532,7 @@ impl WalletMessages {
 
             ui.scope(|ui| {
                 // Setup spacing between buttons.
-                ui.spacing_mut().item_spacing = egui::Vec2::new(6.0, 0.0);
+                ui.spacing_mut().item_spacing = egui::Vec2::new(8.0, 0.0);
 
                 ui.columns(2, |columns| {
                     columns[0].vertical_centered_justified(|ui| {
@@ -689,7 +689,7 @@ impl WalletMessages {
         let mut show_dandelion = false;
         ui.scope(|ui| {
             // Setup spacing between buttons.
-            ui.spacing_mut().item_spacing = egui::Vec2::new(6.0, 0.0);
+            ui.spacing_mut().item_spacing = egui::Vec2::new(8.0, 0.0);
 
             ui.columns(columns_num, |columns| {
                 let first_column_content = |ui: &mut egui::Ui| {
@@ -868,7 +868,7 @@ impl WalletMessages {
         // Draw QR code content.
         let text = self.qr_message_text.clone().unwrap();
         self.qr_message_content.ui(ui, text.clone(), cb);
-        ui.add_space(6.0);
+        ui.add_space(8.0);
 
         ui.vertical_centered_justified(|ui| {
             View::button(ui, t!("close"), Colors::white_or_black(false), || {
@@ -911,7 +911,7 @@ impl WalletMessages {
             ui.add_space(12.0);
 
             // Setup spacing between buttons.
-            ui.spacing_mut().item_spacing = egui::Vec2::new(6.0, 0.0);
+            ui.spacing_mut().item_spacing = egui::Vec2::new(8.0, 0.0);
 
             ui.columns(2, |columns| {
                 columns[0].vertical_centered_justified(|ui| {

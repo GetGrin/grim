@@ -226,7 +226,7 @@ impl RecoverySetup {
             // Show modal buttons.
             ui.scope(|ui| {
                 // Setup spacing between buttons.
-                ui.spacing_mut().item_spacing = egui::Vec2::new(6.0, 0.0);
+                ui.spacing_mut().item_spacing = egui::Vec2::new(8.0, 0.0);
 
                 ui.columns(2, |columns| {
                     columns[0].vertical_centered_justified(|ui| {
@@ -271,7 +271,7 @@ impl RecoverySetup {
         // Show modal buttons.
         ui.scope(|ui| {
             // Setup spacing between buttons.
-            ui.spacing_mut().item_spacing = egui::Vec2::new(6.0, 0.0);
+            ui.spacing_mut().item_spacing = egui::Vec2::new(8.0, 0.0);
 
             ui.columns(2, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
