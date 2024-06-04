@@ -47,6 +47,7 @@ use crate::AppConfig;
 use crate::node::{Node, NodeConfig};
 use crate::tor::Tor;
 use crate::wallet::{ConnectionsConfig, ExternalConnection, WalletConfig};
+use crate::wallet::store::TxHeightStore;
 use crate::wallet::types::{ConnectionMethod, WalletAccount, WalletData, WalletInstance, WalletTransaction};
 
 /// Contains wallet instance, configuration and state, handles wallet commands.
@@ -82,8 +83,6 @@ pub struct Wallet {
     sync_error: Arc<AtomicBool>,
     /// Info loading progress in percents.
     info_sync_progress: Arc<AtomicU8>,
-    /// Transactions loading progress in percents.
-    txs_sync_progress: Arc<AtomicU8>,
 
     /// Wallet accounts.
     accounts: Arc<RwLock<Vec<WalletAccount>>>,
@@ -117,7 +116,6 @@ impl Wallet {
             deleted: Arc::new(AtomicBool::new(false)),
             sync_error: Arc::from(AtomicBool::new(false)),
             info_sync_progress: Arc::from(AtomicU8::new(0)),
-            txs_sync_progress: Arc::from(AtomicU8::new(0)),
             accounts: Arc::new(RwLock::new(vec![])),
             data: Arc::new(RwLock::new(None)),
             sync_attempts: Arc::new(AtomicU8::new(0)),
@@ -496,7 +494,6 @@ impl Wallet {
 
         // Reset progress values.
         self.info_sync_progress.store(0, Ordering::Relaxed);
-        self.txs_sync_progress.store(0, Ordering::Relaxed);
 
         // Sync wallet data.
         self.sync(false);
@@ -516,11 +513,6 @@ impl Wallet {
     /// Check if wallet reopen is needed.
     pub fn reopen_needed(&self) -> bool {
         self.reopen.load(Ordering::Relaxed)
-    }
-
-    /// Get wallet transactions synchronization progress.
-    pub fn txs_sync_progress(&self) -> u8 {
-        self.txs_sync_progress.load(Ordering::Relaxed)
     }
 
     /// Get wallet info synchronization progress.
@@ -673,7 +665,8 @@ impl Wallet {
     /// Get transaction for [`Slate`] id.
     pub fn tx_by_slate(&self, slate: &Slate) -> Option<WalletTransaction> {
         if let Some(data) = self.get_data() {
-            let txs = data.txs.clone().iter().map(|tx| tx.clone()).filter(|tx| {
+            let data_txs = data.txs.unwrap();
+            let txs = data_txs.iter().map(|tx| tx.clone()).filter(|tx| {
                 tx.data.tx_slate_id == Some(slate.id)
             }).collect::<Vec<WalletTransaction>>();
             return if let Some(tx) = txs.get(0) {
@@ -730,7 +723,7 @@ impl Wallet {
             {
                 let mut w_data = self.data.write();
                 let mut data = w_data.clone().unwrap();
-                let txs = data.txs.iter_mut().map(|tx| {
+                let txs = data.txs.clone().unwrap().iter_mut().map(|tx| {
                     if tx.data.tx_slate_id == Some(id) {
                         tx.cancelling = false;
                         tx.posting = false;
@@ -743,7 +736,7 @@ impl Wallet {
                     }
                     tx.clone()
                 }).collect::<Vec<WalletTransaction>>();
-                data.txs = txs;
+                data.txs = Some(txs);
                 *w_data = Some(data);
             }
             // Refresh wallet info to update statuses.
@@ -912,13 +905,15 @@ impl Wallet {
         if let Some(tx) = self.tx_by_slate(&slate) {
             let mut w_data = self.data.write();
             let mut data = w_data.clone().unwrap();
-            for t in &mut data.txs {
+            let mut data_txs = data.txs.unwrap();
+            for t in &mut data_txs {
                 if t.data.id == tx.data.id {
                     t.repost_height = Some(data.info.last_confirmed_height);
                     t.posting = true;
                     t.can_finalize = false;
                 }
             }
+            data.txs = Some(data_txs);
             *w_data = Some(data);
         }
         // Sync local wallet info.
@@ -932,14 +927,14 @@ impl Wallet {
         {
             let mut w_data = self.data.write();
             let mut data = w_data.clone().unwrap();
-            let txs = data.txs.iter_mut().map(|tx| {
+            let txs = data.txs.clone().unwrap().iter_mut().map(|tx| {
                 if tx.data.id == id {
                     tx.cancelling = true;
                     tx.can_finalize = false;
                 }
                 tx.clone()
             }).collect::<Vec<WalletTransaction>>();
-            data.txs = txs;
+            data.txs = Some(txs);
             *w_data = Some(data);
         }
 
@@ -955,7 +950,8 @@ impl Wallet {
             {
                 let mut w_data = wallet.data.write();
                 let mut data = w_data.clone().unwrap();
-                let txs = data.txs.iter_mut().map(|tx| {
+                let mut data_txs = data.txs.unwrap();
+                let txs = data_txs.iter_mut().map(|tx| {
                     if tx.data.id == id {
                         tx.cancelling = false;
                         tx.posting = false;
@@ -968,7 +964,7 @@ impl Wallet {
                     }
                     tx.clone()
                 }).collect::<Vec<WalletTransaction>>();
-                data.txs = txs;
+                data.txs = Some(txs);
                 *w_data = Some(data);
             }
             // Refresh wallet info to update statuses.
@@ -991,7 +987,7 @@ impl Wallet {
     }
 
     /// Check if wallet is repairing.
-    pub fn is_repairing(&self) -> bool {
+    pub fn  is_repairing(&self) -> bool {
         self.repair_needed.load(Ordering::Relaxed)
     }
 
@@ -1071,7 +1067,6 @@ const SYNC_ATTEMPTS: u8 = 10;
 fn start_sync(wallet: Wallet) -> Thread {
     // Reset progress values.
     wallet.info_sync_progress.store(0, Ordering::Relaxed);
-    wallet.txs_sync_progress.store(0, Ordering::Relaxed);
     wallet.repair_progress.store(0, Ordering::Relaxed);
 
     // To call on sync thread stop.
@@ -1109,7 +1104,6 @@ fn start_sync(wallet: Wallet) -> Thread {
             if not_enabled {
                 // Reset loading progress.
                 wallet.info_sync_progress.store(0, Ordering::Relaxed);
-                wallet.txs_sync_progress.store(0, Ordering::Relaxed);
             }
             // Set an error when required integrated node is not enabled.
             wallet.set_sync_error(not_enabled);
@@ -1123,14 +1117,45 @@ fn start_sync(wallet: Wallet) -> Thread {
         // Scan outputs if repair is needed or sync data if there is no error.
         if !wallet.sync_error() {
             if wallet.is_repairing() {
-                repair_wallet(&wallet)
-            } else {
-                // Retrieve data from database first on empty data.
-                if wallet.get_data().is_none() {
-                    sync_wallet_data(&wallet, false);
+                repair_wallet(&wallet);
+                // Stop sync if wallet was closed.
+                if !wallet.is_open() {
+                    on_thread_stop(wallet);
+                    return;
                 }
-                sync_wallet_data(&wallet, true);
             }
+            // Retrieve data from local database if current data is empty.
+            if wallet.get_data().is_none() {
+                sync_wallet_data(&wallet, false);
+            }
+
+            // Start Foreign API listener if API server is not running.
+            let mut api_server_running = {
+                wallet.foreign_api_server.read().is_some()
+            };
+            if !api_server_running && wallet.is_open() {
+                match start_api_server(&wallet) {
+                    Ok(api_server) => {
+                        let mut api_server_w = wallet.foreign_api_server.write();
+                        *api_server_w = Some(api_server);
+                        api_server_running = true;
+                    }
+                    Err(_) => {}
+                }
+            }
+
+            // Start Tor service if API server is running and wallet is open.
+            if wallet.auto_start_tor_listener() && wallet.is_open() && api_server_running &&
+                !Tor::is_service_running(&wallet.identifier()) {
+                let r_foreign_api = wallet.foreign_api_server.read();
+                let api = r_foreign_api.as_ref().unwrap();
+                if let Ok(sec_key) = wallet.secret_key() {
+                    Tor::start_service(api.1, sec_key, &wallet.identifier());
+                }
+            }
+
+            // Sync wallet from node.
+            sync_wallet_data(&wallet, true);
         }
 
         // Stop sync if wallet was closed.
@@ -1188,39 +1213,12 @@ fn sync_wallet_data(wallet: &Wallet, from_node: bool) {
             from_node,
             config.min_confirmations
         ) {
-            // Do not retrieve txs if wallet was closed or its first sync from local database.
+            // Do not retrieve txs if wallet was closed or its first sync.
             if !wallet.is_open() || !from_node && info.1.last_confirmed_height == 0 {
                 return;
             }
 
             if wallet.info_sync_progress() == 100 || !from_node {
-                if from_node {
-                    // Start Foreign API listener if API server is not running.
-                    let mut api_server_running = {
-                        wallet.foreign_api_server.read().is_some()
-                    };
-                    if !api_server_running && wallet.is_open() {
-                        match start_api_server(&wallet) {
-                            Ok(api_server) => {
-                                let mut api_server_w = wallet.foreign_api_server.write();
-                                *api_server_w = Some(api_server);
-                                api_server_running = true;
-                            }
-                            Err(_) => {}
-                        }
-                    }
-
-                    // Start Tor service if API server is running and wallet is open.
-                    if wallet.auto_start_tor_listener() && wallet.is_open() && api_server_running &&
-                        !Tor::is_service_running(&wallet.identifier()) {
-                        let r_foreign_api = wallet.foreign_api_server.read();
-                        let api = r_foreign_api.as_ref().unwrap();
-                        if let Ok(sec_key) = wallet.secret_key() {
-                            Tor::start_service(api.1, sec_key, &wallet.identifier());
-                        }
-                    }
-                }
-
                 // Setup accounts data.
                 let last_height = info.1.last_confirmed_height;
                 let spendable = if wallet.get_data().is_none() {
@@ -1236,31 +1234,12 @@ fn sync_wallet_data(wallet: &Wallet, from_node: bool) {
                     let txs = if w_data.is_some() {
                         w_data.clone().unwrap().txs
                     } else {
-                        vec![]
+                        None
                     };
                     *w_data = Some(WalletData { info: info.1.clone(), txs });
                 }
 
-                // Update txs sync progress at separate thread.
-                let wallet_txs = wallet.clone();
-                let (txs_tx, txs_rx) = mpsc::channel::<StatusMessage>();
-                thread::spawn(move || {
-                    while let Ok(m) = txs_rx.recv() {
-                        match m {
-                            StatusMessage::UpdatingOutputs(_) => {}
-                            StatusMessage::UpdatingTransactions(_) => {}
-                            StatusMessage::FullScanWarn(_) => {}
-                            StatusMessage::Scanning(_, progress) => {
-                                wallet_txs.txs_sync_progress.store(progress, Ordering::Relaxed);
-                            }
-                            StatusMessage::ScanningComplete(_) => {
-                                wallet_txs.txs_sync_progress.store(100, Ordering::Relaxed);
-                            }
-                            StatusMessage::UpdateWarning(_) => {}
-                        }
-                    }
-                });
-
+                // Retrieve txs from local database.
                 let txs_args = RetrieveTxQueryArgs {
                     exclude_cancelled: Some(false),
                     sort_field: Some(RetrieveTxQuerySortField::CreationTimestamp),
@@ -1269,129 +1248,170 @@ fn sync_wallet_data(wallet: &Wallet, from_node: bool) {
                 };
                 if let Ok(txs) = retrieve_txs(instance.clone(),
                                               None,
-                                              &Some(txs_tx),
-                                              from_node,
+                                              &None,
+                                              false,
                                               None,
                                               None,
                                               Some(txs_args)) {
-                    // Do not sync data if wallet was closed.
+                    // Exit if wallet was closed.
                     if !wallet.is_open() {
                         return;
                     }
-                    // Save data if loading was completed.
-                    if wallet.txs_sync_progress() == 100 || !from_node {
-                        // Reset attempts.
-                        wallet.reset_sync_attempts();
+                    // Reset sync attempts.
+                    wallet.reset_sync_attempts();
 
-                        // Filter transactions for current account.
-                        let filter_txs = txs.1.iter().map(|v| v.clone()).filter(|tx| {
-                            match wallet.get_parent_key_id() {
-                                Ok(key) => {
-                                    tx.parent_key_id == key
-                                }
-                                Err(_) => {
-                                    true
+                    // Filter transactions for current account.
+                    let filter_txs = txs.1.iter().map(|v| v.clone()).filter(|tx| {
+                        match wallet.get_parent_key_id() {
+                            Ok(key) => {
+                                tx.parent_key_id == key
+                            }
+                            Err(_) => {
+                                true
+                            }
+                        }
+                    }).collect::<Vec<TxLogEntry>>();
+
+                    // Initialize tx confirmation height storage.
+                    let tx_height_store = TxHeightStore::new(config.get_extra_db_path());
+                    let data = wallet.get_data().unwrap();
+                    let data_txs = data.txs.unwrap_or(vec![]);
+
+                    // Create wallet txs.
+                    let mut new_txs: Vec<WalletTransaction> = vec![];
+                    for tx in &filter_txs {
+                        // Setup transaction amount.
+                        let amount = if tx.amount_debited > tx.amount_credited {
+                            tx.amount_debited - tx.amount_credited
+                        } else {
+                            tx.amount_credited - tx.amount_debited
+                        };
+
+                        let unconfirmed_sent_or_received = tx.tx_slate_id.is_some() &&
+                            !tx.confirmed && (tx.tx_type == TxLogEntryType::TxSent ||
+                            tx.tx_type == TxLogEntryType::TxReceived);
+
+                        // Setup transaction posting status based on slate state.
+                        let posting = if unconfirmed_sent_or_received {
+                            // Create slate to check existing file.
+                            let is_invoice = tx.tx_type == TxLogEntryType::TxReceived;
+                            let mut slate = Slate::blank(0, is_invoice);
+                            slate.id = tx.tx_slate_id.unwrap();
+                            slate.state = match is_invoice {
+                                true => SlateState::Invoice3,
+                                _ => SlateState::Standard3
+                            };
+
+                            // Setup posting status if we have other tx with same slate id.
+                            let mut same_tx_posting = false;
+                            for t in &mut new_txs {
+                                if t.data.tx_slate_id == tx.tx_slate_id &&
+                                    tx.tx_type != t.data.tx_type {
+                                    same_tx_posting = t.posting ||
+                                        wallet.read_slatepack(&slate).is_some();
+                                    if same_tx_posting && !t.posting {
+                                        t.posting = true;
+                                    }
+                                    break;
                                 }
                             }
-                        }).collect::<Vec<TxLogEntry>>();
+                            same_tx_posting || wallet.read_slatepack(&slate).is_some()
+                        } else {
+                            false
+                        };
 
-                        // Create wallet txs.
-                        let mut new_txs: Vec<WalletTransaction> = vec![];
-                        for tx in &filter_txs {
-                            // Setup transaction amount.
-                            let amount = if tx.amount_debited > tx.amount_credited {
-                                tx.amount_debited - tx.amount_credited
-                            } else {
-                                tx.amount_credited - tx.amount_debited
+                        // Setup flag for ability to finalize transaction.
+                        let can_finalize = if !posting && unconfirmed_sent_or_received {
+                            // Create slate to check existing file.
+                            let mut slate = Slate::blank(1, false);
+                            slate.id = tx.tx_slate_id.unwrap();
+                            slate.state = match tx.tx_type {
+                                TxLogEntryType::TxReceived => SlateState::Invoice1,
+                                _ => SlateState::Standard1
                             };
+                            wallet.read_slatepack(&slate).is_some()
+                        } else {
+                            false
+                        };
 
-                            let unconfirmed_sent_or_received = tx.tx_slate_id.is_some() &&
-                                !tx.confirmed && (tx.tx_type == TxLogEntryType::TxSent ||
-                                tx.tx_type == TxLogEntryType::TxReceived);
-
-                            // Setup transaction posting status based on slate state.
-                            let posting = if unconfirmed_sent_or_received {
-                                // Create slate to check existing file.
-                                let is_invoice = tx.tx_type == TxLogEntryType::TxReceived;
-                                let mut slate = Slate::blank(0, is_invoice);
-                                slate.id = tx.tx_slate_id.unwrap();
-                                slate.state = match is_invoice {
-                                    true => SlateState::Invoice3,
-                                    _ => SlateState::Standard3
-                                };
-
-                                // Setup posting status if we have other tx with same slate id.
-                                let mut same_tx_posting = false;
-                                for t in &mut new_txs {
-                                    if t.data.tx_slate_id == tx.tx_slate_id &&
-                                        tx.tx_type != t.data.tx_type {
-                                        same_tx_posting = t.posting ||
-                                            wallet.read_slatepack(&slate).is_some();
-                                        if same_tx_posting && !t.posting {
-                                            t.posting = true;
+                        // Setup confirmation, reposting height and cancelling status.
+                        let mut conf_height = None;
+                        let mut setup_conf_height = |t: &TxLogEntry, current_empty: bool| -> bool {
+                            if current_empty && t.kernel_lookup_min_height.is_some() &&
+                                t.kernel_excess.is_some() && t.confirmed {
+                                // Get tx height from database or from node.
+                                if let Some(height) = tx_height_store.read_tx_height(t.id) {
+                                    conf_height = Some(height);
+                                } else {
+                                    let mut w_lock = wallet.instance.as_ref().unwrap().lock();
+                                    let w = w_lock.lc_provider()
+                                        .unwrap()
+                                        .wallet_inst()
+                                        .unwrap();
+                                    if let Ok(res) = w.w2n_client().get_kernel(
+                                        t.kernel_excess.as_ref().unwrap(),
+                                        t.kernel_lookup_min_height,
+                                        None
+                                    ) {
+                                        if res.is_some() {
+                                            let h = res.unwrap().1;
+                                            conf_height = Some(h);
+                                            tx_height_store.write_tx_height(t.id, h);
+                                        } else {
+                                            conf_height = Some(0);
                                         }
-                                        break;
+                                    } else {
+                                        conf_height = None;
                                     }
                                 }
-                                same_tx_posting || wallet.read_slatepack(&slate).is_some()
-                            } else {
-                                false
-                            };
+                                return true;
+                            }
+                            false
+                        };
 
-                            // Setup flag for ability to finalize transaction.
-                            let can_finalize = if !posting && unconfirmed_sent_or_received {
-                                // Create slate to check existing file.
-                                let mut slate = Slate::blank(1, false);
-                                slate.id = tx.tx_slate_id.unwrap();
-                                slate.state = match tx.tx_type {
-                                    TxLogEntryType::TxReceived => SlateState::Invoice1,
-                                    _ => SlateState::Standard1
-                                };
-                                wallet.read_slatepack(&slate).is_some()
-                            } else {
-                                false
-                            };
-
-                            // Setup reposting height and cancelling status.
-                            let mut repost_height = None;
-                            let mut cancelling = false;
-                            if posting {
-                                if let Some(data) = wallet.get_data() {
-                                    for t in data.txs {
-                                        if t.data.id == tx.id {
-                                            repost_height = t.repost_height;
-                                            if t.cancelling &&
-                                                tx.tx_type != TxLogEntryType::TxReceivedCancelled &&
-                                                tx.tx_type != TxLogEntryType::TxSentCancelled {
-                                                cancelling = true;
-                                            }
-                                            break;
-                                        }
+                        let mut repost_height = None;
+                        let mut cancelling = false;
+                        if data_txs.is_empty() {
+                            setup_conf_height(tx, true);
+                        } else {
+                            for t in &data_txs {
+                                if t.data.id == tx.id {
+                                    if !setup_conf_height(tx, t.conf_height.is_none() ||
+                                        t.conf_height.unwrap() == 0) {
+                                        conf_height = t.conf_height;
                                     }
+                                    repost_height = t.repost_height;
+                                    if t.cancelling &&
+                                        tx.tx_type != TxLogEntryType::TxReceivedCancelled &&
+                                        tx.tx_type != TxLogEntryType::TxSentCancelled {
+                                        cancelling = true;
+                                    }
+                                    break;
                                 }
                             }
-
-                            // Add transaction to list.
-                            new_txs.push(WalletTransaction {
-                                data: tx.clone(),
-                                amount,
-                                cancelling,
-                                posting,
-                                can_finalize,
-                                repost_height,
-                            })
                         }
 
-                        // Update wallet txs.
-                        let mut w_data = wallet.data.write();
-                        let info = if w_data.is_some() {
-                            w_data.clone().unwrap().info
-                        } else {
-                            info.1
-                        };
-                        *w_data = Some(WalletData { info, txs: new_txs });
-                        return;
+                        // Add transaction to the list.
+                        new_txs.push(WalletTransaction {
+                            data: tx.clone(),
+                            amount,
+                            cancelling,
+                            posting,
+                            can_finalize,
+                            conf_height,
+                            repost_height
+                        });
                     }
+
+                    // Update wallet txs.
+                    let mut w_data = wallet.data.write();
+                    let info = if w_data.is_some() {
+                        w_data.clone().unwrap().info
+                    } else {
+                        info.1
+                    };
+                    *w_data = Some(WalletData { info, txs: Some(new_txs) });
+                    return;
                 }
             }
         }
@@ -1399,7 +1419,6 @@ fn sync_wallet_data(wallet: &Wallet, from_node: bool) {
 
     // Reset progress.
     wallet.info_sync_progress.store(0, Ordering::Relaxed);
-    wallet.txs_sync_progress.store(0, Ordering::Relaxed);
 
     // Exit if wallet was closed.
     if !wallet.is_open() {

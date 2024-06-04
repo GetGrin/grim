@@ -466,15 +466,7 @@ impl WalletsContent {
                                             info_progress)
                                 }
                             } else {
-                                let tx_progress = wallet.txs_sync_progress();
-                                if tx_progress == 0 {
-                                    format!("{} {}", SPINNER, t!("wallets.tx_loading"))
-                                } else {
-                                    format!("{} {}: {}%",
-                                            SPINNER,
-                                            t!("wallets.tx_loading"),
-                                            tx_progress)
-                                }
+                                format!("{} {}", SPINNER, t!("wallets.tx_loading"))
                             }
                         } else {
                             format!("{} {}", FOLDER_OPEN, t!("wallets.unlocked"))

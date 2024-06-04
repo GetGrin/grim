@@ -92,6 +92,12 @@ impl WalletConfig {
         None
     }
 
+    /// Save wallet config.
+    pub fn save(&self) {
+        let config_path = Self::get_config_file_path(self.chain_type, self.id);
+        Settings::write_to_file(self, config_path);
+    }
+
     /// Get wallets base directory path for provided [`ChainTypes`].
     pub fn get_base_path(chain_type: ChainTypes) -> PathBuf {
         let sub_dir = Some(chain_type.shortname());
@@ -134,19 +140,23 @@ impl WalletConfig {
 
     /// Get Slatepacks data path for current wallet.
     pub fn get_slatepack_path(&self, slate: &Slate) -> PathBuf {
-        let mut slatepack_dir = PathBuf::from(self.get_data_path());
-        slatepack_dir.push(SLATEPACKS_DIR_NAME);
-        if !slatepack_dir.exists() {
-            let _ = fs::create_dir_all(slatepack_dir.clone());
+        let mut path = PathBuf::from(self.get_data_path());
+        path.push(SLATEPACKS_DIR_NAME);
+        if !path.exists() {
+            let _ = fs::create_dir_all(path.clone());
         }
         let slatepack_file_name = format!("{}.{}.slatepack", slate.id, slate.state);
-        slatepack_dir.push(slatepack_file_name);
-        slatepack_dir
+        path.push(slatepack_file_name);
+        path
     }
 
-    /// Save wallet config.
-    pub fn save(&self) {
-        let config_path = Self::get_config_file_path(self.chain_type, self.id);
-        Settings::write_to_file(self, config_path);
+    /// Get path to extra db storage.
+    pub fn get_extra_db_path(&self) -> String {
+        let mut path = PathBuf::from(self.get_db_path());
+        path.push("extra");
+        if !path.exists() {
+            let _ = fs::create_dir_all(path.clone());
+        }
+        path.to_str().unwrap().to_string()
     }
 }

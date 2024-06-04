@@ -137,7 +137,7 @@ pub struct WalletData {
     /// Balance data for current account.
     pub info: WalletInfo,
     /// Transactions data.
-    pub txs: Vec<WalletTransaction>
+    pub txs: Option<Vec<WalletTransaction>>
 }
 
 /// Wallet transaction data.
@@ -153,7 +153,9 @@ pub struct WalletTransaction {
     pub posting: bool,
     /// Flag to check if transaction can be finalized based on Slatepack message state.
     pub can_finalize: bool,
-    /// Last wallet block height of transaction reposting.
+    /// Block height when tx was confirmed.
+    pub conf_height: Option<u64>,
+    /// Block height when tx was reposted.
     pub repost_height: Option<u64>
 }
 

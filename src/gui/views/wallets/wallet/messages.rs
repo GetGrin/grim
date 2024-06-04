@@ -1076,7 +1076,7 @@ impl WalletMessages {
         if let Ok(mut slate) = wallet.parse_slatepack(&self.message_edit) {
             // Try to setup empty amount from transaction by id.
             if slate.amount == 0 {
-                let _ = wallet.get_data().unwrap().txs.clone().iter().map(|tx| {
+                let _ = wallet.get_data().unwrap().txs.as_ref().unwrap().iter().map(|tx| {
                     if tx.data.tx_slate_id == Some(slate.id) {
                         if slate.amount == 0 {
                             slate.amount = tx.amount;

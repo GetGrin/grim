@@ -149,7 +149,6 @@ impl WalletTransactions {
 
         // Show transactions info.
         View::max_width_ui(ui, Root::SIDE_PANEL_WIDTH * 1.3, |ui| {
-
             // Show non-zero awaiting confirmation amount.
             if amount_conf != 0 {
                 let awaiting_conf = amount_to_hr_string(amount_conf, true);
@@ -163,7 +162,6 @@ impl WalletTransactions {
                                   t!("wallets.await_conf_amount"),
                                   rounding);
             }
-
             // Show non-zero awaiting finalization amount.
             if amount_fin != 0 {
                 let awaiting_conf = amount_to_hr_string(amount_fin, true);
@@ -177,7 +175,6 @@ impl WalletTransactions {
                                   t!("wallets.await_fin_amount"),
                                   rounding);
             }
-
             // Show non-zero locked amount.
             if amount_locked != 0 {
                 let awaiting_conf = amount_to_hr_string(amount_locked, true);
@@ -187,24 +184,35 @@ impl WalletTransactions {
                                   [false, false, true, true]);
             }
 
-            // Show message when wallet txs are empty.
-            if data.txs.is_empty() {
-                View::center_content(ui, 96.0, |ui| {
-                    let empty_text = t!(
+            // Show message when txs are empty.
+            if let Some(txs) = data.txs.as_ref() {
+                if txs.is_empty() {
+                    View::center_content(ui, 96.0, |ui| {
+                        let empty_text = t!(
                             "wallets.txs_empty",
                             "message" => CHAT_CIRCLE_TEXT,
                             "transport" => BRIDGE,
                             "settings" => GEAR_FINE
                         );
-                    ui.label(RichText::new(empty_text).size(16.0).color(Colors::inactive_text()));
-                });
-                return;
+                        ui.label(RichText::new(empty_text).size(16.0).color(Colors::inactive_text()));
+                    });
+                    return;
+                }
             }
         });
+
+        // Show loader when txs are not loaded.
+        if data.txs.is_none() {
+            ui.centered_and_justified(|ui| {
+                View::big_loading_spinner(ui);
+            });
+            return;
+        }
 
         ui.add_space(4.0);
 
         // Show list of transactions.
+        let txs = data.txs.as_ref().unwrap();
         let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis();
         let refresh = self.manual_sync.unwrap_or(0) + 1600 > now;
         let refresh_resp = PullToRefresh::new(refresh)
@@ -215,14 +223,14 @@ impl WalletTransactions {
                     .id_source(Id::from("txs_content").with(wallet.get_config().id))
                     .scroll_bar_visibility(ScrollBarVisibility::AlwaysHidden)
                     .auto_shrink([false; 2])
-                    .show_rows(ui, TX_ITEM_HEIGHT, data.txs.len(), |ui, row_range| {
+                    .show_rows(ui, TX_ITEM_HEIGHT, txs.len(), |ui, row_range| {
                         ui.add_space(1.0);
                         View::max_width_ui(ui, Root::SIDE_PANEL_WIDTH * 1.3, |ui| {
                             let padding = amount_conf != 0 || amount_fin != 0 || amount_locked != 0;
                             for index in row_range {
                                 // Show transaction item.
-                                let tx = data.txs.get(index).unwrap();
-                                let rounding = View::item_rounding(index, data.txs.len(), false);
+                                let tx = txs.get(index).unwrap();
+                                let rounding = View::item_rounding(index, txs.len(), false);
                                 self.tx_item_ui(ui, tx, rounding, padding, true, &data, wallet);
                             }
                         });
@@ -449,14 +457,15 @@ impl WalletTransactions {
                             }
                         }
                     } else {
-                        let tx_height = tx.data.kernel_lookup_min_height.unwrap_or(0);
                         match tx.data.tx_type {
                             TxLogEntryType::ConfirmedCoinbase => {
                                 format!("{} {}", CHECK_CIRCLE, t!("wallets.tx_confirmed"))
                             },
                             TxLogEntryType::TxSent | TxLogEntryType::TxReceived => {
+                                let height = data.info.last_confirmed_height;
                                 let min_conf = data.info.minimum_confirmations;
-                                if data.info.last_confirmed_height - tx_height > min_conf {
+                                if tx.conf_height.is_none() || (tx.conf_height.unwrap() != 0 &&
+                                    height - tx.conf_height.unwrap() > min_conf - 1) {
                                     let (i, t) = if tx.data.tx_type == TxLogEntryType::TxSent {
                                         (ARROW_CIRCLE_UP, t!("wallets.tx_sent"))
                                     } else {
@@ -464,9 +473,10 @@ impl WalletTransactions {
                                     };
                                     format!("{} {}", i, t)
                                 } else {
-                                    let h = data.info.last_confirmed_height;
-                                    let left_conf = h - tx_height;
-                                    let conf_info = if h >= tx_height && left_conf <= min_conf {
+                                    let tx_height = tx.conf_height.unwrap() - 1;
+                                    let left_conf = height - tx_height;
+                                    let conf_info = if tx_height != 0 && height >= tx_height &&
+                                        left_conf < min_conf {
                                         format!("{}/{}", left_conf, min_conf)
                                     } else {
                                         "".to_string()
@@ -525,9 +535,10 @@ impl WalletTransactions {
         }
         let data = wallet_data.unwrap();
         let tx_id = self.tx_info_id.unwrap();
-        let txs = data.txs.iter()
+        let data_txs = data.txs.clone().unwrap();
+        let txs = data_txs.into_iter()
             .filter(|tx| tx.data.id == tx_id)
-            .collect::<Vec<&WalletTransaction>>();
+            .collect::<Vec<WalletTransaction>>();
         if txs.is_empty() {
             cb.hide_keyboard();
             modal.close();
@@ -920,9 +931,10 @@ impl WalletTransactions {
         ui.vertical_centered(|ui| {
             // Setup confirmation text.
             let data = wallet.get_data().unwrap();
-            let txs = data.txs.iter()
+            let data_txs = data.txs.unwrap();
+            let txs = data_txs.into_iter()
                 .filter(|tx| tx.data.id == self.confirm_cancel_tx_id.unwrap())
-                .collect::<Vec<&WalletTransaction>>();
+                .collect::<Vec<WalletTransaction>>();
             if txs.is_empty() {
                 modal.close();
                 return;

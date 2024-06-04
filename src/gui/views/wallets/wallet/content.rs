@@ -622,12 +622,7 @@ impl WalletContent {
                             format!("{}: {}%", t!("wallets.wallet_loading"), info_progress)
                         }
                     } else {
-                        let tx_progress = wallet.txs_sync_progress();
-                        if tx_progress == 0 {
-                            t!("wallets.tx_loading")
-                        } else {
-                            format!("{}: {}%", t!("wallets.tx_loading"), tx_progress)
-                        }
+                        t!("wallets.tx_loading")
                     }
                 };
                 ui.label(RichText::new(text).size(16.0).color(Colors::inactive_text()));
