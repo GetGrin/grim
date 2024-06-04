@@ -316,84 +316,85 @@ impl WalletTransactions {
         };
         ui.painter().rect(bg_rect, rounding, color, View::item_stroke());
 
-        ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
-            // Draw button to show transaction info.
-            if can_show_info && tx.from_node && tx.data.tx_slate_id.is_some() {
-                rounding.nw = 0.0;
-                rounding.sw = 0.0;
-                View::item_button(ui, rounding, FILE_TEXT, None, || {
-                    self.tx_info_finalize = false;
-                    self.show_tx_info_modal(wallet, tx);
-                });
-            }
-
-            // Draw finalization button for tx that can be finalized.
-            let show_finalization = ((!can_show_info && !self.tx_info_finalizing) || can_show_info)
-                && tx.can_finalize;
-            if show_finalization {
-                let (icon, color) = if !can_show_info && self.tx_info_finalize {
-                    (FILE_TEXT, None)
-                } else {
-                    (CHECK, Some(Colors::green()))
-                };
-                let final_rounding = if can_show_info {
-                    Rounding::default()
-                } else {
+        ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Max), |ui| {
+            ui.horizontal_centered(|ui| {
+                // Draw button to show transaction info.
+                if can_show_info && tx.from_node && tx.data.tx_slate_id.is_some() {
                     rounding.nw = 0.0;
                     rounding.sw = 0.0;
-                    rounding
-                };
-                View::item_button(ui, final_rounding, icon, color, || {
-                    if !can_show_info && self.tx_info_finalize {
+                    View::item_button(ui, rounding, FILE_TEXT, None, || {
                         self.tx_info_finalize = false;
-                        return;
-                    }
-                    self.tx_info_finalize = true;
-                    // Show transaction information modal.
-                    if can_show_info {
                         self.show_tx_info_modal(wallet, tx);
-                    }
-                });
-            }
+                    });
+                }
 
-            // Draw cancel button for tx that can be reposted and canceled.
-            let wallet_loaded = tx.from_node && wallet.foreign_api_port().is_some();
-            if wallet_loaded && ((!can_show_info && !self.tx_info_finalizing) || can_show_info) &&
-                (tx.can_repost(data) || tx.can_cancel()) {
-                View::item_button(ui, Rounding::default(), PROHIBIT, Some(Colors::red()), || {
-                    if can_show_info {
-                        self.confirm_cancel_tx_id = Some(tx.data.id);
-                        // Show transaction cancellation confirmation modal.
-                        Modal::new(CANCEL_TX_CONFIRMATION_MODAL)
-                            .position(ModalPosition::Center)
-                            .title(t!("modal.confirmation"))
-                            .show();
+                // Draw finalization button for tx that can be finalized.
+                let show_finalization = ((!can_show_info && !self.tx_info_finalizing) || can_show_info)
+                    && tx.can_finalize;
+                if show_finalization {
+                    let (icon, color) = if !can_show_info && self.tx_info_finalize {
+                        (FILE_TEXT, None)
                     } else {
-                        wallet.cancel(tx.data.id);
-                    }
-                });
-            }
+                        (CHECK, Some(Colors::green()))
+                    };
+                    let final_rounding = if can_show_info {
+                        Rounding::default()
+                    } else {
+                        rounding.nw = 0.0;
+                        rounding.sw = 0.0;
+                        rounding
+                    };
+                    View::item_button(ui, final_rounding, icon, color, || {
+                        if !can_show_info && self.tx_info_finalize {
+                            self.tx_info_finalize = false;
+                            return;
+                        }
+                        self.tx_info_finalize = true;
+                        // Show transaction information modal.
+                        if can_show_info {
+                            self.show_tx_info_modal(wallet, tx);
+                        }
+                    });
+                }
 
-            // Draw button to repost transaction.
-            if ((!can_show_info && !self.tx_info_finalizing) || can_show_info) &&
-                tx.can_repost(data) {
-                let repost_rounding = if show_finalization || can_show_info {
-                    Rounding::default()
-                } else {
-                    rounding.nw = 0.0;
-                    rounding.sw = 0.0;
-                    rounding
-                };
-                View::item_button(ui, repost_rounding, ARROW_CLOCKWISE, Some(Colors::green()), || {
-                    // Post tx after getting slate from slatepack file.
-                    if let Some((s, _)) = wallet.read_slate_by_tx(tx) {
-                        let _ = wallet.post(&s, wallet.can_use_dandelion());
-                    }
-                });
-            }
+                // Draw cancel button for tx that can be reposted and canceled.
+                let wallet_loaded = tx.from_node && wallet.foreign_api_port().is_some();
+                if wallet_loaded && ((!can_show_info && !self.tx_info_finalizing) || can_show_info) &&
+                    (tx.can_repost(data) || tx.can_cancel()) {
+                    View::item_button(ui, Rounding::default(), PROHIBIT, Some(Colors::red()), || {
+                        if can_show_info {
+                            self.confirm_cancel_tx_id = Some(tx.data.id);
+                            // Show transaction cancellation confirmation modal.
+                            Modal::new(CANCEL_TX_CONFIRMATION_MODAL)
+                                .position(ModalPosition::Center)
+                                .title(t!("modal.confirmation"))
+                                .show();
+                        } else {
+                            wallet.cancel(tx.data.id);
+                        }
+                    });
+                }
 
-            let layout_size = ui.available_size();
-            ui.allocate_ui_with_layout(layout_size, Layout::left_to_right(Align::Center), |ui| {
+                // Draw button to repost transaction.
+                if ((!can_show_info && !self.tx_info_finalizing) || can_show_info) &&
+                    tx.can_repost(data) {
+                    let repost_rounding = if show_finalization || can_show_info {
+                        Rounding::default()
+                    } else {
+                        rounding.nw = 0.0;
+                        rounding.sw = 0.0;
+                        rounding
+                    };
+                    View::item_button(ui, repost_rounding, ARROW_CLOCKWISE, Some(Colors::green()), || {
+                        // Post tx after getting slate from slatepack file.
+                        if let Some((s, _)) = wallet.read_slate_by_tx(tx) {
+                            let _ = wallet.post(&s, wallet.can_use_dandelion());
+                        }
+                    });
+                }
+            });
+
+            ui.with_layout(Layout::left_to_right(Align::Min), |ui| {
                 ui.add_space(6.0);
                 ui.vertical(|ui| {
                     ui.add_space(3.0);
