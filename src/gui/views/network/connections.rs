@@ -97,7 +97,12 @@ impl ConnectionsContent {
         ui.add_space(6.0);
 
         // Show integrated node info content.
-        Self::integrated_node_item_ui(ui);
+        Self::integrated_node_item_ui(ui, |ui| {
+            // Draw button to show integrated node info.
+            View::item_button(ui, View::item_rounding(0, 1, true), CARET_RIGHT, None, || {
+                AppConfig::toggle_show_connections_network_panel();
+            });
+        });
 
         // Show external connections.
         ui.add_space(8.0);
@@ -125,7 +130,7 @@ impl ConnectionsContent {
     }
 
     /// Draw integrated node connection item content.
-    fn integrated_node_item_ui(ui: &mut egui::Ui) {
+    pub fn integrated_node_item_ui(ui: &mut egui::Ui, custom_button: impl FnOnce(&mut egui::Ui)) {
         // Draw round background.
         let mut rect = ui.available_rect_before_wrap();
         rect.set_height(78.0);
@@ -133,10 +138,8 @@ impl ConnectionsContent {
         ui.painter().rect(rect, rounding, Colors::fill(), View::item_stroke());
 
         ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
-            // Draw button to show integrated node info.
-            View::item_button(ui, View::item_rounding(0, 1, true), CARET_RIGHT, None, || {
-                AppConfig::toggle_show_connections_network_panel();
-            });
+            // Draw custom button.
+            custom_button(ui);
 
             if !Node::is_running() {
                 // Draw button to start integrated node.
@@ -155,9 +158,12 @@ impl ConnectionsContent {
                 ui.add_space(6.0);
                 ui.vertical(|ui| {
                     ui.add_space(3.0);
-                    ui.label(RichText::new(t!("network.node"))
-                                 .size(18.0)
-                                 .color(Colors::title(false)));
+                    ui.with_layout(Layout::left_to_right(Align::Min), |ui| {
+                        ui.add_space(1.0);
+                        ui.label(RichText::new(t!("network.node"))
+                            .size(18.0)
+                            .color(Colors::title(false)));
+                    });
 
                     // Setup node API address text.
                     let api_address = NodeConfig::get_api_address();

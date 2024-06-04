@@ -422,7 +422,10 @@ impl WalletTransactions {
                         TxLogEntryType::TxSentCancelled => Colors::text(false),
                         TxLogEntryType::TxReverted => Colors::text(false)
                     };
-                    View::ellipsize_text(ui, amount_text, 18.0, amount_color);
+                    ui.with_layout(Layout::left_to_right(Align::Min), |ui| {
+                        ui.add_space(1.0);
+                        View::ellipsize_text(ui, amount_text, 18.0, amount_color);
+                    });
                     ui.add_space(-2.0);
 
                     // Setup transaction status text.

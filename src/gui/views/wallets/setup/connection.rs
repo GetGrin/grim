@@ -12,15 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::{Align, Id, Layout, RichText, Rounding};
+use egui::{Align, Id, Layout, RichText};
 use url::Url;
 
 use crate::gui::Colors;
-use crate::gui::icons::{CHECK, CHECK_CIRCLE, CHECK_FAT, COMPUTER_TOWER, DOTS_THREE_CIRCLE, GLOBE, GLOBE_SIMPLE, PLUS_CIRCLE, POWER, X_CIRCLE};
+use crate::gui::icons::{CHECK, CHECK_CIRCLE, CHECK_FAT, DOTS_THREE_CIRCLE, GLOBE, GLOBE_SIMPLE, PLUS_CIRCLE, X_CIRCLE};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Modal, View};
+use crate::gui::views::{ConnectionsContent, Modal, View};
 use crate::gui::views::types::{ModalContainer, ModalPosition, TextEditOptions};
-use crate::node::{Node, NodeConfig};
 use crate::wallet::{ConnectionsConfig, ExternalConnection, Wallet};
 use crate::wallet::types::ConnectionMethod;
 
@@ -149,7 +148,19 @@ impl ConnectionSetup {
         ui.vertical_centered(|ui| {
             // Show integrated node selection.
             ui.add_space(6.0);
-            self.integrated_node_item_ui(ui);
+            ConnectionsContent::integrated_node_item_ui(ui, |ui| {
+                // Draw button to select integrated node if it was not selected.
+                let is_current_method = self.method == ConnectionMethod::Integrated;
+                if !is_current_method {
+                    View::item_button(ui, View::item_rounding(0, 1, true), CHECK, None, || {
+                        self.method = ConnectionMethod::Integrated;
+                    });
+                } else {
+                    ui.add_space(14.0);
+                    ui.label(RichText::new(CHECK_FAT).size(20.0).color(Colors::green()));
+                    ui.add_space(14.0);
+                }
+            });
 
             // Show external connections.
             ui.add_space(8.0);
@@ -187,67 +198,6 @@ impl ConnectionSetup {
                     });
                 }
             }
-        });
-    }
-
-    /// Draw integrated node connection item content.
-    fn integrated_node_item_ui(&mut self, ui: &mut egui::Ui) {
-        // Draw round background.
-        let mut rect = ui.available_rect_before_wrap();
-        rect.set_height(78.0);
-        let rounding = View::item_rounding(0, 1, false);
-        ui.painter().rect(rect, rounding, Colors::fill(), View::item_stroke());
-
-        ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
-            // Setup padding for item buttons.
-            ui.style_mut().spacing.button_padding = egui::vec2(14.0, 0.0);
-
-            // Draw button to select integrated node if it was not selected.
-            let is_current_method = self.method == ConnectionMethod::Integrated;
-            if !is_current_method {
-                View::item_button(ui, View::item_rounding(0, 1, true), CHECK, None, || {
-                    self.method = ConnectionMethod::Integrated;
-                });
-            } else {
-                ui.add_space(14.0);
-                ui.label(RichText::new(CHECK_FAT).size(20.0).color(Colors::green()));
-                ui.add_space(14.0);
-            }
-
-            if !Node::is_running() {
-                // Draw button to start integrated node.
-                View::item_button(ui, Rounding::default(), POWER, Some(Colors::green()), || {
-                    Node::start();
-                });
-            }
-
-            let layout_size = ui.available_size();
-            ui.allocate_ui_with_layout(layout_size, Layout::left_to_right(Align::Center), |ui| {
-                ui.add_space(6.0);
-                ui.vertical(|ui| {
-                    ui.add_space(3.0);
-                    ui.label(RichText::new(t!("network.node"))
-                        .size(18.0)
-                        .color(Colors::title(false)));
-
-                    // Setup node API address text.
-                    let api_address = NodeConfig::get_api_address();
-                    let address_text = format!("{} http://{}", COMPUTER_TOWER, api_address);
-                    ui.label(RichText::new(address_text).size(15.0).color(Colors::text(false)));
-                    ui.add_space(1.0);
-
-                    // Setup node status text.
-                    let status_icon = if !Node::is_running() {
-                        X_CIRCLE
-                    } else if Node::not_syncing() {
-                        CHECK_CIRCLE
-                    } else {
-                        DOTS_THREE_CIRCLE
-                    };
-                    let status_text = format!("{} {}", status_icon, Node::get_sync_status_text());
-                    ui.label(RichText::new(status_text).size(15.0).color(Colors::gray()));
-                })
-            });
         });
     }
 

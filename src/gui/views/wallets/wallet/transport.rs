@@ -255,10 +255,12 @@ impl WalletTransport {
                     ui.add_space(6.0);
                     ui.vertical(|ui| {
                         ui.add_space(3.0);
-                        ui.label(RichText::new(t!("transport.tor_network"))
-                            .size(18.0)
-                            .color(Colors::title(false)));
-
+                        ui.with_layout(Layout::left_to_right(Align::Min), |ui| {
+                            ui.add_space(1.0);
+                            ui.label(RichText::new(t!("transport.tor_network"))
+                                .size(18.0)
+                                .color(Colors::title(false)));
+                        });
                         // Setup bridges status text.
                         let bridge = TorConfig::get_bridge();
                         let bridges_text = match &bridge {

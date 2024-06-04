@@ -427,7 +427,10 @@ impl WalletsContent {
                     } else {
                         Colors::title(false)
                     };
-                    View::ellipsize_text(ui, config.name, 18.0, name_color);
+                    ui.with_layout(Layout::left_to_right(Align::Min), |ui| {
+                            ui.add_space(1.0);
+                            View::ellipsize_text(ui, config.name, 18.0, name_color);
+                    });
 
                     // Setup wallet connection text.
                     let conn_text = if let Some(conn) = wallet.get_current_ext_conn() {
@@ -471,8 +474,8 @@ impl WalletsContent {
                         format!("{} {}", FOLDER_LOCK, t!("wallets.locked"))
                     };
                     ui.label(RichText::new(status_text).size(15.0).color(Colors::gray()));
-                    ui.add_space(4.0);
-                })
+                    ui.add_space(3.0);
+                });
             });
         });
     }
