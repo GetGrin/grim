@@ -72,9 +72,6 @@ const ITEM_STROKE_DARK: Color32 = Color32::from_gray(40);
 const ITEM_HOVER: Color32 = Color32::from_gray(205);
 const ITEM_HOVER_DARK: Color32 = Color32::from_gray(48);
 
-const ITEM_CURRENT: Color32 = Color32::from_gray(233);
-const ITEM_CURRENT_DARK: Color32 = Color32::from_gray(34);
-
 /// Check if dark theme should be used.
 fn use_dark() -> bool {
     AppConfig::dark_theme().unwrap_or(false)
@@ -236,14 +233,6 @@ impl Colors {
             ITEM_HOVER_DARK
         } else {
             ITEM_HOVER
-        }
-    }
-
-    pub fn item_current() -> Color32 {
-        if use_dark() {
-            ITEM_CURRENT_DARK
-        } else {
-            ITEM_CURRENT
         }
     }
 }

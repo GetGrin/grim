@@ -376,12 +376,12 @@ impl WalletsContent {
         let mut rect = ui.available_rect_before_wrap();
         rect.set_height(78.0);
         let rounding = View::item_rounding(0, 1, false);
-        let bg = if current {
-            Colors::item_current()
+        let (bg, stroke) = if current {
+            (Colors::fill_deep(), View::item_stroke())
         } else {
-            Colors::fill()
+            (Colors::fill(), View::hover_stroke())
         };
-        ui.painter().rect(rect, rounding, bg, View::hover_stroke());
+        ui.painter().rect(rect, rounding, bg, stroke);
 
         ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
             // Setup padding for item buttons.
