@@ -231,8 +231,7 @@ impl WalletTransactions {
                             for index in row_range {
                                 let tx = txs.get(index).unwrap();
                                 let r = View::item_rounding(index, txs.len(), false);
-                                let show_info = tx.data.tx_slate_id.is_some();
-                                self.tx_item_ui(ui, tx, r, padding, show_info, &data, wallet);
+                                self.tx_item_ui(ui, tx, r, padding, true, &data, wallet);
                             }
                         });
                     })
@@ -319,7 +318,7 @@ impl WalletTransactions {
 
         ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
             // Draw button to show transaction info.
-            if can_show_info && tx.from_node {
+            if can_show_info && tx.from_node && tx.data.tx_slate_id.is_some() {
                 rounding.nw = 0.0;
                 rounding.sw = 0.0;
                 View::item_button(ui, rounding, FILE_TEXT, None, || {
