@@ -20,7 +20,7 @@ use grin_core::core::amount_to_hr_string;
 
 use crate::AppConfig;
 use crate::gui::Colors;
-use crate::gui::icons::{ARROWS_CLOCKWISE, BRIDGE, CHAT_CIRCLE_TEXT, CHECK, CHECK_FAT, COPY, FOLDER_USER, GEAR_FINE, GRAPH, PACKAGE, PATH, POWER, SCAN, USERS_THREE};
+use crate::gui::icons::{ARROWS_CLOCKWISE, BRIDGE, CHAT_CIRCLE_TEXT, CHECK, CHECK_FAT, COPY, FOLDER_USER, GEAR_FINE, GRAPH, PACKAGE, PATH, POWER, SCAN, SPINNER, USERS_THREE};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{CameraContent, Modal, Root, View};
 use crate::gui::views::types::{ModalPosition, QrScanResult, TextEditOptions};
@@ -252,9 +252,33 @@ impl WalletContent {
                     let acc_text = format!("{} {}", FOLDER_USER, acc_label);
                     View::ellipsize_text(ui, acc_text, 15.0, Colors::text(false));
 
-                    // Show confirmed height.
-                    let height_text = format!("{} {}", PACKAGE, data.info.last_confirmed_height);
-                    View::animate_text(ui, height_text, 15.0, Colors::gray(), wallet.syncing());
+                    // Show confirmed height or sync progress.
+                    let status_text = if !wallet.syncing() {
+                        format!("{} {}", PACKAGE, data.info.last_confirmed_height)
+                    } else {
+                        let info_progress = wallet.info_sync_progress();
+                        if info_progress == 100 || info_progress == 0 {
+                            format!("{} {}", SPINNER, t!("wallets.wallet_loading"))
+                        } else {
+                            if wallet.is_repairing() {
+                                let rep_progress = wallet.repairing_progress();
+                                if rep_progress == 0 {
+                                    format!("{} {}", SPINNER, t!("wallets.wallet_checking"))
+                                } else {
+                                    format!("{} {}: {}%",
+                                            SPINNER,
+                                            t!("wallets.wallet_checking"),
+                                            rep_progress)
+                                }
+                            } else {
+                                format!("{} {}: {}%",
+                                        SPINNER,
+                                        t!("wallets.wallet_loading"),
+                                        info_progress)
+                            }
+                        }
+                    };
+                    View::animate_text(ui, status_text, 15.0, Colors::gray(), wallet.syncing());
                 })
             });
         });
@@ -589,7 +613,7 @@ impl WalletContent {
         // Block navigation if wallet is repairing and integrated node is not launching
         // and if wallet is closing or syncing after opening when there is no data to show.
         (wallet.is_repairing() && (integrated_node_ready || !integrated_node) && !sync_error)
-            || wallet.is_closing() || (sync_after_opening && !integrated_node)
+            || wallet.is_closing() || sync_after_opening
     }
 
     /// Draw wallet sync progress content.

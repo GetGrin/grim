@@ -454,19 +454,15 @@ impl WalletsContent {
                                         t!("wallets.checking"),
                                         repair_progress)
                             }
-                        } else if wallet.get_data().is_none() {
+                        } else if wallet.syncing() {
                             let info_progress = wallet.info_sync_progress();
-                            if info_progress != 100 {
-                                if info_progress == 0 {
-                                    format!("{} {}", SPINNER, t!("wallets.loading"))
-                                } else {
+                            if info_progress == 100 || info_progress == 0 {
+                                format!("{} {}", SPINNER, t!("wallets.loading"))
+                            } else {
                                     format!("{} {}: {}%",
                                             SPINNER,
                                             t!("wallets.loading"),
                                             info_progress)
-                                }
-                            } else {
-                                format!("{} {}", SPINNER, t!("wallets.tx_loading"))
                             }
                         } else {
                             format!("{} {}", FOLDER_OPEN, t!("wallets.unlocked"))

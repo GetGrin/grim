@@ -987,7 +987,7 @@ impl Wallet {
     }
 
     /// Check if wallet is repairing.
-    pub fn  is_repairing(&self) -> bool {
+    pub fn is_repairing(&self) -> bool {
         self.repair_needed.load(Ordering::Relaxed)
     }
 
@@ -1093,7 +1093,7 @@ fn start_sync(wallet: Wallet) -> Thread {
         }
 
         // Stop syncing if wallet was closed.
-        if !wallet.is_open() {
+        if !wallet.is_open() || wallet.is_closing() {
             on_thread_stop(wallet);
             return;
         }
@@ -1119,7 +1119,7 @@ fn start_sync(wallet: Wallet) -> Thread {
             if wallet.is_repairing() {
                 repair_wallet(&wallet);
                 // Stop sync if wallet was closed.
-                if !wallet.is_open() {
+                if !wallet.is_open() || wallet.is_closing() {
                     on_thread_stop(wallet);
                     return;
                 }
@@ -1133,7 +1133,7 @@ fn start_sync(wallet: Wallet) -> Thread {
             let mut api_server_running = {
                 wallet.foreign_api_server.read().is_some()
             };
-            if !api_server_running && wallet.is_open() {
+            if !api_server_running && wallet.is_open() && !wallet.is_closing() {
                 match start_api_server(&wallet) {
                     Ok(api_server) => {
                         let mut api_server_w = wallet.foreign_api_server.write();
@@ -1145,8 +1145,8 @@ fn start_sync(wallet: Wallet) -> Thread {
             }
 
             // Start Tor service if API server is running and wallet is open.
-            if wallet.auto_start_tor_listener() && wallet.is_open() && api_server_running &&
-                !Tor::is_service_running(&wallet.identifier()) {
+            if wallet.auto_start_tor_listener() && wallet.is_open() && !wallet.is_closing() &&
+                api_server_running && !Tor::is_service_running(&wallet.identifier()) {
                 let r_foreign_api = wallet.foreign_api_server.read();
                 let api = r_foreign_api.as_ref().unwrap();
                 if let Ok(sec_key) = wallet.secret_key() {
@@ -1159,7 +1159,7 @@ fn start_sync(wallet: Wallet) -> Thread {
         }
 
         // Stop sync if wallet was closed.
-        if !wallet.is_open() {
+        if !wallet.is_open() || wallet.is_closing() {
             on_thread_stop(wallet);
             return;
         }
@@ -1214,7 +1214,8 @@ fn sync_wallet_data(wallet: &Wallet, from_node: bool) {
             config.min_confirmations
         ) {
             // Do not retrieve txs if wallet was closed or its first sync.
-            if !wallet.is_open() || !from_node && info.1.last_confirmed_height == 0 {
+            if !wallet.is_open() || wallet.is_closing() ||
+                (!from_node && info.1.last_confirmed_height == 0) {
                 return;
             }
 
