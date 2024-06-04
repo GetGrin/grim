@@ -165,12 +165,6 @@ impl ConnectionsContent {
                             .color(Colors::title(false)));
                     });
 
-                    // Setup node API address text.
-                    let api_address = NodeConfig::get_api_address();
-                    let address_text = format!("{} http://{}", COMPUTER_TOWER, api_address);
-                    ui.label(RichText::new(address_text).size(15.0).color(Colors::text(false)));
-                    ui.add_space(1.0);
-
                     // Setup node status text.
                     let status_icon = if !Node::is_running() {
                         X_CIRCLE
@@ -180,7 +174,13 @@ impl ConnectionsContent {
                         DOTS_THREE_CIRCLE
                     };
                     let status_text = format!("{} {}", status_icon, Node::get_sync_status_text());
-                    ui.label(RichText::new(status_text).size(15.0).color(Colors::gray()));
+                    ui.label(RichText::new(status_text).size(15.0).color(Colors::text(false)));
+                    ui.add_space(1.0);
+
+                    // Setup node API address text.
+                    let api_address = NodeConfig::get_api_address();
+                    let address_text = format!("{} http://{}", COMPUTER_TOWER, api_address);
+                    ui.label(RichText::new(address_text).size(15.0).color(Colors::gray()));
                 })
             });
         });
