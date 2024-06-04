@@ -25,6 +25,7 @@ share: Поделиться
 theme: 'Тема:'
 dark: Тёмная
 light: Светлая
+choose_file: Выбрать файл
 wallets:
   await_conf_amount: Ожидает подтверждения
   await_fin_amount: Ожидает завершения

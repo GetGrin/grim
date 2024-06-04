@@ -24,9 +24,9 @@ use grin_wallet_libwallet::{Error, Slate, SlateState, TxLogEntryType};
 use parking_lot::RwLock;
 
 use crate::gui::Colors;
-use crate::gui::icons::{ARROW_CIRCLE_DOWN, ARROW_CIRCLE_UP, ARROW_CLOCKWISE, BRIDGE, CALENDAR_CHECK, CHAT_CIRCLE_TEXT, CHECK, CHECK_CIRCLE, CLIPBOARD_TEXT, COPY, DOTS_THREE_CIRCLE, FILE_ARCHIVE, FILE_TEXT, GEAR_FINE, HASH_STRAIGHT, PROHIBIT, QR_CODE, SCAN, X_CIRCLE};
+use crate::gui::icons::{ARROW_CIRCLE_DOWN, ARROW_CIRCLE_UP, ARROW_CLOCKWISE, BRIDGE, BROOM, CALENDAR_CHECK, CHAT_CIRCLE_TEXT, CHECK, CHECK_CIRCLE, CLIPBOARD_TEXT, COPY, DOTS_THREE_CIRCLE, FILE_ARCHIVE, FILE_TEXT, GEAR_FINE, HASH_STRAIGHT, PROHIBIT, QR_CODE, SCAN, X_CIRCLE};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{CameraContent, Modal, QrCodeContent, Root, View};
+use crate::gui::views::{CameraContent, FilePickButton, Modal, QrCodeContent, Root, View};
 use crate::gui::views::types::ModalPosition;
 use crate::gui::views::wallets::types::WalletTab;
 use crate::gui::views::wallets::wallet::types::{GRIN, SLATEPACK_MESSAGE_HINT, WalletTabType};
@@ -60,6 +60,8 @@ pub struct WalletTransactions {
     tx_info_show_scanner: bool,
     /// QR code scanner [`Modal`] content.
     tx_info_scanner_content: CameraContent,
+    /// Button to parse picked file content at [`Modal`].
+    tx_info_file_pick_button: FilePickButton,
 
     /// Transaction identifier to use at confirmation [`Modal`].
     confirm_cancel_tx_id: Option<u32>,
@@ -83,6 +85,7 @@ impl Default for WalletTransactions {
             tx_info_qr_code_content: QrCodeContent::new("".to_string(), true),
             tx_info_show_scanner: false,
             tx_info_scanner_content: CameraContent::default(),
+            tx_info_file_pick_button: FilePickButton::default(),
             confirm_cancel_tx_id: None,
             manual_sync: None,
         }
@@ -146,8 +149,6 @@ impl WalletTransactions {
         let amount_conf = data.info.amount_awaiting_confirmation;
         let amount_fin = data.info.amount_awaiting_finalization;
         let amount_locked = data.info.amount_locked;
-
-        // Show transactions info.
         View::max_width_ui(ui, Root::SIDE_PANEL_WIDTH * 1.3, |ui| {
             // Show non-zero awaiting confirmation amount.
             if amount_conf != 0 {
@@ -228,10 +229,10 @@ impl WalletTransactions {
                         View::max_width_ui(ui, Root::SIDE_PANEL_WIDTH * 1.3, |ui| {
                             let padding = amount_conf != 0 || amount_fin != 0 || amount_locked != 0;
                             for index in row_range {
-                                // Show transaction item.
                                 let tx = txs.get(index).unwrap();
-                                let rounding = View::item_rounding(index, txs.len(), false);
-                                self.tx_item_ui(ui, tx, rounding, padding, true, &data, wallet);
+                                let r = View::item_rounding(index, txs.len(), false);
+                                let show_info = tx.data.tx_slate_id.is_some();
+                                self.tx_item_ui(ui, tx, r, padding, show_info, &data, wallet);
                             }
                         });
                     })
@@ -318,7 +319,7 @@ impl WalletTransactions {
 
         ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
             // Draw button to show transaction info.
-            if can_show_info && tx.data.tx_slate_id.is_some() {
+            if can_show_info && tx.from_node {
                 rounding.nw = 0.0;
                 rounding.sw = 0.0;
                 View::item_button(ui, rounding, FILE_TEXT, None, || {
@@ -357,7 +358,7 @@ impl WalletTransactions {
             }
 
             // Draw cancel button for tx that can be reposted and canceled.
-            let wallet_loaded = wallet.foreign_api_port().is_some();
+            let wallet_loaded = tx.from_node && wallet.foreign_api_port().is_some();
             if wallet_loaded && ((!can_show_info && !self.tx_info_finalizing) || can_show_info) &&
                 (tx.can_repost(data) || tx.can_cancel()) {
                 View::item_button(ui, Rounding::default(), PROHIBIT, Some(Colors::red()), || {
@@ -828,7 +829,7 @@ impl WalletTransactions {
 
         ui.add_space(2.0);
         View::horizontal_line(ui, Colors::item_stroke());
-        ui.add_space(8.0);
+        ui.add_space(10.0);
 
         // Do not show buttons on finalization.
         if self.tx_info_finalizing {
@@ -861,6 +862,28 @@ impl WalletTransactions {
                         self.on_finalization_input_change(tx, wallet, modal, cb);
                     }
                 });
+            });
+            ui.add_space(8.0);
+            ui.vertical_centered(|ui| {
+                if self.tx_info_finalize_error {
+                    // Draw button to clear message input.
+                    let clear_text = format!("{} {}", BROOM, t!("clear"));
+                    View::button(ui, clear_text, Colors::button(), || {
+                        self.tx_info_finalize_edit.clear();
+                        self.tx_info_finalize_error = false;
+                    });
+                } else {
+                    // Draw button to choose file.
+                    let mut parsed_text = "".to_string();
+                    self.tx_info_file_pick_button.ui(ui, cb, |text| {
+                        parsed_text = text;
+                    });
+                    if !parsed_text.is_empty() {
+                        // Parse Slatepack message from file content.
+                        self.tx_info_finalize_edit = parsed_text;
+                        self.on_finalization_input_change(tx, wallet, modal, cb);
+                    }
+                }
             });
         } else {
             ui.columns(2, |columns| {

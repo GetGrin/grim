@@ -43,7 +43,7 @@ pub struct Modal {
 
 impl Modal {
     /// Margin from [`Modal`] window at top/left/right.
-    const DEFAULT_MARGIN: f32 = 8.0;
+    const DEFAULT_MARGIN: f32 = 4.0;
     /// Maximum width of the content.
     const DEFAULT_WIDTH: f32 = Root::SIDE_PANEL_WIDTH - (2.0 * Self::DEFAULT_MARGIN);
 

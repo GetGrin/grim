@@ -33,6 +33,8 @@ const GREEN: Color32 = Color32::from_rgb(0, 0x64, 0);
 
 const RED: Color32 = Color32::from_rgb(0x8B, 0, 0);
 
+const BLUE: Color32 = Color32::from_rgb(0, 0x66, 0xE4);
+
 const FILL: Color32 = Color32::from_gray(244);
 const FILL_DARK: Color32 = Color32::from_gray(24);
 
@@ -129,6 +131,14 @@ impl Colors {
             RED.linear_multiply(1.3)
         } else {
             RED
+        }
+    }
+
+    pub fn blue() -> Color32 {
+        if use_dark() {
+            BLUE.linear_multiply(1.3)
+        } else {
+            BLUE
         }
     }
 

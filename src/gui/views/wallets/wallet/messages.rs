@@ -24,7 +24,7 @@ use parking_lot::RwLock;
 use crate::gui::Colors;
 use crate::gui::icons::{BROOM, CLIPBOARD_TEXT, COPY, DOWNLOAD_SIMPLE, PROHIBIT, QR_CODE, SCAN, UPLOAD_SIMPLE};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{CameraContent, Modal, QrCodeContent, Root, View};
+use crate::gui::views::{CameraContent, FilePickButton, Modal, QrCodeContent, Root, View};
 use crate::gui::views::types::{ModalPosition, QrScanResult, TextEditOptions};
 use crate::gui::views::wallets::wallet::types::{SLATEPACK_MESSAGE_HINT, WalletTab, WalletTabType};
 use crate::gui::views::wallets::wallet::WalletContent;
@@ -72,6 +72,8 @@ pub struct WalletMessages {
     response_edit: String,
     /// Flag to check if Dandelion is needed to finalize transaction.
     dandelion: bool,
+    /// Button to parse picked file content.
+    file_pick_button: FilePickButton,
 
     /// Flag to check if invoice or sending request was opened for [`Modal`].
     request_invoice: bool,
@@ -168,6 +170,7 @@ impl WalletMessages {
             message_error: None,
             response_edit: "".to_string(),
             dandelion,
+            file_pick_button: FilePickButton::default(),
             request_amount_edit: "".to_string(),
             request_edit: "".to_string(),
             request_error: None,
@@ -795,7 +798,9 @@ impl WalletMessages {
 
             ui.add_space(10.0);
 
-            // Draw clear button on message input or cancel and clear buttons on response.
+            // Draw clear button on message input,
+            // cancel and clear buttons on response
+            // or button to choose text or image file.
             if !self.message_loading {
                 if self.message_slate.is_none() && !self.message_edit.is_empty() {
                     // Draw button to clear message input.
@@ -808,8 +813,8 @@ impl WalletMessages {
                     });
                 } else if !self.response_edit.is_empty() && self.message_slate.is_some() {
                     // Draw cancel button.
-                    let cancel = format!("{} {}", PROHIBIT, t!("modal.cancel"));
-                    View::colored_text_button(ui, cancel, Colors::red(), Colors::button(), || {
+                    let cancel_text = format!("{} {}", PROHIBIT, t!("modal.cancel"));
+                    View::colored_text_button(ui, cancel_text, Colors::red(), Colors::button(), || {
                         let slate = self.message_slate.clone().unwrap();
                         if let Some(tx) = wallet.tx_by_slate(&slate) {
                             wallet.cancel(tx.data.id);
@@ -818,6 +823,17 @@ impl WalletMessages {
                             self.message_slate = None;
                         }
                     });
+                } else {
+                    // Draw button to choose file.
+                    let mut parsed_text = "".to_string();
+                    self.file_pick_button.ui(ui, cb, |text| {
+                        parsed_text = text;
+                    });
+                    if !parsed_text.is_empty() {
+                        // Parse Slatepack message from file content.
+                        self.message_edit = parsed_text;
+                        self.parse_message(wallet);
+                    }
                 }
             }
         });

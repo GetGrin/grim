@@ -37,3 +37,6 @@ pub use camera::*;
 
 mod qr;
 pub use qr::*;
+
+mod file;
+pub use file::*;

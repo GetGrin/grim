@@ -25,6 +25,7 @@ share: Paylasmak
 theme: 'Tema:'
 dark: Karanlik
 light: Isik
+choose_file: Dosya seçin
 wallets:
   await_conf_amount: Onay bekleniyor
   await_fin_amount: Tamamlanma bekleniyor

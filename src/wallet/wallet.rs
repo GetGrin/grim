@@ -584,9 +584,9 @@ impl Wallet {
     }
 
     /// Parse Slatepack message into [`Slate`].
-    pub fn parse_slatepack(&self, message: &String) -> Result<Slate, grin_wallet_controller::Error> {
+    pub fn parse_slatepack(&self, text: &String) -> Result<Slate, grin_wallet_controller::Error> {
         let mut api = Owner::new(self.instance.clone().unwrap(), None);
-        return match parse_slatepack(&mut api, None, None, Some(message.clone())) {
+        return match parse_slatepack(&mut api, None, None, Some(text.clone())) {
             Ok(s) => Ok(s.0),
             Err(e) => Err(e)
         }
@@ -1168,7 +1168,9 @@ fn start_sync(wallet: Wallet) -> Thread {
         let failed_sync = wallet.sync_error() || wallet.get_sync_attempts() != 0;
 
         // Clear syncing status.
-        wallet.syncing.store(false, Ordering::Relaxed);
+        if !failed_sync {
+            wallet.syncing.store(false, Ordering::Relaxed);
+        }
 
         // Repeat after default or attempt delay if synchronization was not successful.
         let delay = if failed_sync {
@@ -1288,12 +1290,12 @@ fn sync_wallet_data(wallet: &Wallet, from_node: bool) {
                             tx.amount_credited - tx.amount_debited
                         };
 
-                        let unconfirmed_sent_or_received = tx.tx_slate_id.is_some() &&
+                        let unc_sent_or_received = tx.tx_slate_id.is_some() &&
                             !tx.confirmed && (tx.tx_type == TxLogEntryType::TxSent ||
                             tx.tx_type == TxLogEntryType::TxReceived);
 
                         // Setup transaction posting status based on slate state.
-                        let posting = if unconfirmed_sent_or_received {
+                        let posting = if unc_sent_or_received {
                             // Create slate to check existing file.
                             let is_invoice = tx.tx_type == TxLogEntryType::TxReceived;
                             let mut slate = Slate::blank(0, is_invoice);
@@ -1322,8 +1324,8 @@ fn sync_wallet_data(wallet: &Wallet, from_node: bool) {
                         };
 
                         // Setup flag for ability to finalize transaction.
-                        let can_finalize = if !posting && unconfirmed_sent_or_received {
-                            // Create slate to check existing file.
+                        let can_finalize = if from_node && !posting && unc_sent_or_received {
+                            // Check existing file.
                             let mut slate = Slate::blank(1, false);
                             slate.id = tx.tx_slate_id.unwrap();
                             slate.state = match tx.tx_type {
@@ -1400,7 +1402,8 @@ fn sync_wallet_data(wallet: &Wallet, from_node: bool) {
                             posting,
                             can_finalize,
                             conf_height,
-                            repost_height
+                            repost_height,
+                            from_node
                         });
                     }
 

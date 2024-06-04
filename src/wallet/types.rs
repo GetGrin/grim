@@ -156,13 +156,15 @@ pub struct WalletTransaction {
     /// Block height when tx was confirmed.
     pub conf_height: Option<u64>,
     /// Block height when tx was reposted.
-    pub repost_height: Option<u64>
+    pub repost_height: Option<u64>,
+    /// Flag to check if tx was received after sync from node.
+    pub from_node: bool,
 }
 
 impl WalletTransaction {
     /// Check if transaction can be cancelled.
     pub fn can_cancel(&self) -> bool {
-        !self.cancelling && !self.posting && !self.data.confirmed &&
+        self.from_node && !self.cancelling && !self.posting && !self.data.confirmed &&
             self.data.tx_type != TxLogEntryType::TxReceivedCancelled
             && self.data.tx_type != TxLogEntryType::TxSentCancelled
     }
@@ -171,7 +173,7 @@ impl WalletTransaction {
     pub fn can_repost(&self, data: &WalletData) -> bool {
         let last_height = data.info.last_confirmed_height;
         let min_conf = data.info.minimum_confirmations;
-        self.posting && self.repost_height.is_some() &&
+        self.from_node && self.posting && self.repost_height.is_some() &&
             last_height - self.repost_height.unwrap() > min_conf
     }
 }

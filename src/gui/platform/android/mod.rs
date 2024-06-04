@@ -143,6 +143,10 @@ impl PlatformCallbacks for Android {
                               &[JValue::Object(&JObject::from(arg_value))]).unwrap();
         Ok(())
     }
+
+    fn pick_file(&self) -> Option<String> {
+        None
+    }
 }
 
 lazy_static! {

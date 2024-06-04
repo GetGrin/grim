@@ -131,6 +131,7 @@ impl PlatformCallbacks for Desktop {
 
     fn share_data(&self, name: String, data: Vec<u8>) -> Result<(), std::io::Error> {
         let folder = FileDialog::new()
+            .set_title(t!("share"))
             .set_directory(dirs::home_dir().unwrap())
             .set_file_name(name.clone())
             .save_file();
@@ -140,6 +141,17 @@ impl PlatformCallbacks for Desktop {
             image.sync_all()?;
         }
         Ok(())
+    }
+
+    fn pick_file(&self) -> Option<String> {
+        let file = FileDialog::new()
+            .set_title(t!("choose_file"))
+            .set_directory(dirs::home_dir().unwrap())
+            .pick_file();
+        if let Some(file) = file {
+            return Some(file.to_str().unwrap_or_default().to_string());
+        }
+        None
     }
 }
 

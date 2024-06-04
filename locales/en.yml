@@ -25,6 +25,7 @@ share: Share
 theme: 'Theme:'
 dark: Dark
 light: Light
+choose_file: Choose file
 wallets:
   await_conf_amount: Awaiting confirmation
   await_fin_amount: Awaiting finalization
