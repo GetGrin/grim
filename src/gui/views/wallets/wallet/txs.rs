@@ -38,8 +38,8 @@ use crate::wallet::Wallet;
 pub struct WalletTransactions {
     /// Transaction identifier to use at [`Modal`].
     tx_info_id: Option<u32>,
-    /// Transaction [`Slate`] to use at [`Modal`].
-    tx_info_slate: Option<Slate>,
+    /// Identifier for [`Slate`] to use at [`Modal`].
+    tx_info_slate_id: Option<String>,
     /// Response Slatepack message input value at [`Modal`].
     tx_info_response_edit: String,
     /// Finalization Slatepack message input value at [`Modal`].
@@ -74,7 +74,7 @@ impl Default for WalletTransactions {
     fn default() -> Self {
         Self {
             tx_info_id: None,
-            tx_info_slate: None,
+            tx_info_slate_id: None,
             tx_info_response_edit: "".to_string(),
             tx_info_finalize_edit: "".to_string(),
             tx_info_finalize_error: false,
@@ -125,7 +125,7 @@ impl WalletTab for WalletTransactions {
             .show_inside(ui, |ui| {
                 ui.vertical_centered(|ui| {
                     let data = wallet.get_data().unwrap();
-                    self.txs_ui(ui, wallet, &data);
+                    self.txs_ui(ui, wallet, &data, cb);
                 });
             });
     }
@@ -145,7 +145,8 @@ impl WalletTransactions {
     fn txs_ui(&mut self,
               ui: &mut egui::Ui,
               wallet: &mut Wallet,
-              data: &WalletData) {
+              data: &WalletData,
+              cb: &dyn PlatformCallbacks) {
         let amount_conf = data.info.amount_awaiting_confirmation;
         let amount_fin = data.info.amount_awaiting_finalization;
         let amount_locked = data.info.amount_locked;
@@ -231,7 +232,7 @@ impl WalletTransactions {
                             for index in row_range {
                                 let tx = txs.get(index).unwrap();
                                 let r = View::item_rounding(index, txs.len(), false);
-                                self.tx_item_ui(ui, tx, r, padding, true, &data, wallet);
+                                self.tx_item_ui(ui, tx, r, padding, true, &data, wallet, cb);
                             }
                         });
                     })
@@ -271,25 +272,6 @@ impl WalletTransactions {
         }
     }
 
-    /// Show transaction information [`Modal`].
-    fn show_tx_info_modal(&mut self, wallet: &Wallet, tx: &WalletTransaction) {
-        self.tx_info_response_edit = "".to_string();
-        self.tx_info_finalize_edit = "".to_string();
-        self.tx_info_finalize_error = false;
-        self.tx_info_id = Some(tx.data.id);
-        self.tx_info_show_qr = false;
-        // Setup slate and message from transaction.
-        if let Some((slate, message)) = wallet.read_slate_by_tx(tx) {
-            self.tx_info_response_edit = message;
-            self.tx_info_slate = Some(slate);
-        }
-        // Show transaction information modal.
-        Modal::new(TX_INFO_MODAL)
-            .position(ModalPosition::CenterTop)
-            .title(t!("wallets.tx"))
-            .show();
-    }
-
     /// Draw transaction item.
     fn tx_item_ui(&mut self,
                   ui: &mut egui::Ui,
@@ -298,7 +280,8 @@ impl WalletTransactions {
                   extra_padding: bool,
                   can_show_info: bool,
                   data: &WalletData,
-                  wallet: &mut Wallet) {
+                  wallet: &mut Wallet,
+                  cb: &dyn PlatformCallbacks) {
         // Setup layout size.
         let mut rect = ui.available_rect_before_wrap();
         if extra_padding {
@@ -319,7 +302,7 @@ impl WalletTransactions {
         ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Max), |ui| {
             ui.horizontal_centered(|ui| {
                 // Draw button to show transaction info.
-                if can_show_info && tx.from_node && tx.data.tx_slate_id.is_some() {
+                if can_show_info && tx.data.tx_slate_id.is_some() {
                     rounding.nw = 0.0;
                     rounding.sw = 0.0;
                     View::item_button(ui, rounding, FILE_TEXT, None, || {
@@ -329,9 +312,9 @@ impl WalletTransactions {
                 }
 
                 // Draw finalization button for tx that can be finalized.
-                let show_finalization = ((!can_show_info && !self.tx_info_finalizing) || can_show_info)
+                let finalize = ((!can_show_info && !self.tx_info_finalizing) || can_show_info)
                     && tx.can_finalize;
-                if show_finalization {
+                if finalize {
                     let (icon, color) = if !can_show_info && self.tx_info_finalize {
                         (FILE_TEXT, None)
                     } else {
@@ -345,6 +328,7 @@ impl WalletTransactions {
                         rounding
                     };
                     View::item_button(ui, final_rounding, icon, color, || {
+                        cb.hide_keyboard();
                         if !can_show_info && self.tx_info_finalize {
                             self.tx_info_finalize = false;
                             return;
@@ -358,7 +342,7 @@ impl WalletTransactions {
                 }
 
                 // Draw cancel button for tx that can be reposted and canceled.
-                let wallet_loaded = tx.from_node && wallet.foreign_api_port().is_some();
+                let wallet_loaded = wallet.foreign_api_port().is_some();
                 if wallet_loaded && ((!can_show_info && !self.tx_info_finalizing) || can_show_info) &&
                     (tx.can_repost(data) || tx.can_cancel()) {
                     View::item_button(ui, Rounding::default(), PROHIBIT, Some(Colors::red()), || {
@@ -370,6 +354,7 @@ impl WalletTransactions {
                                 .title(t!("modal.confirmation"))
                                 .show();
                         } else {
+                            cb.hide_keyboard();
                             wallet.cancel(tx.data.id);
                         }
                     });
@@ -378,14 +363,15 @@ impl WalletTransactions {
                 // Draw button to repost transaction.
                 if ((!can_show_info && !self.tx_info_finalizing) || can_show_info) &&
                     tx.can_repost(data) {
-                    let repost_rounding = if show_finalization || can_show_info {
+                    let r = if finalize || can_show_info {
                         Rounding::default()
                     } else {
                         rounding.nw = 0.0;
                         rounding.sw = 0.0;
                         rounding
                     };
-                    View::item_button(ui, repost_rounding, ARROW_CLOCKWISE, Some(Colors::green()), || {
+                    View::item_button(ui, r, ARROW_CLOCKWISE, Some(Colors::green()), || {
+                        cb.hide_keyboard();
                         // Post tx after getting slate from slatepack file.
                         if let Some((s, _)) = wallet.read_slate_by_tx(tx) {
                             let _ = wallet.post(&s, wallet.can_use_dandelion());
@@ -525,6 +511,43 @@ impl WalletTransactions {
         });
     }
 
+    /// Show transaction information [`Modal`].
+    fn show_tx_info_modal(&mut self, wallet: &Wallet, tx: &WalletTransaction) {
+        self.tx_info_response_edit = "".to_string();
+        self.tx_info_finalize_edit = "".to_string();
+        self.tx_info_finalize_error = false;
+        self.tx_info_id = Some(tx.data.id);
+        self.tx_info_show_qr = false;
+        self.tx_info_slate_id = if let Some(id) = tx.data.tx_slate_id {
+            Some(id.to_string())
+        } else {
+            None
+        };
+
+        // Setup slate and message from transaction.
+        self.tx_info_response_edit = if !tx.data.confirmed && tx.can_finalize &&
+            (tx.data.tx_type == TxLogEntryType::TxSent ||
+                tx.data.tx_type == TxLogEntryType::TxReceived) {
+            let invoice = tx.data.tx_type == TxLogEntryType::TxReceived;
+            let mut slate = Slate::blank(1, invoice);
+            slate.state = if invoice {
+                SlateState::Invoice1
+            } else {
+                SlateState::Standard1
+            };
+            slate.id = tx.data.tx_slate_id.unwrap();
+            wallet.read_slatepack(&slate).unwrap_or("".to_string())
+        } else {
+            "".to_string()
+        };
+
+        // Show transaction information modal.
+        Modal::new(TX_INFO_MODAL)
+            .position(ModalPosition::CenterTop)
+            .title(t!("wallets.tx"))
+            .show();
+    }
+
     /// Draw transaction info [`Modal`] content.
     fn tx_info_modal_ui(&mut self,
                        ui: &mut egui::Ui,
@@ -555,7 +578,7 @@ impl WalletTransactions {
 
             // Show transaction amount status and time.
             let rounding = View::item_rounding(0, 2, false);
-            self.tx_item_ui(ui, tx, rounding, false, false, &data, wallet);
+            self.tx_item_ui(ui, tx, rounding, false, false, &data, wallet, cb);
 
             // Show transaction ID info.
             if let Some(id) = tx.data.tx_slate_id {
@@ -578,7 +601,6 @@ impl WalletTransactions {
             self.tx_info_qr_code_content.clear_state();
             self.tx_info_show_qr = false;
         }
-        ui.add_space(8.0);
 
         if !self.tx_info_finalizing {
             // Setup spacing between buttons.
@@ -602,6 +624,7 @@ impl WalletTransactions {
                     });
                 });
             } else if self.tx_info_show_scanner {
+                ui.add_space(8.0);
                 // Show buttons to close modal or scanner.
                 ui.columns(2, |cols| {
                     cols[0].vertical_centered_justified(|ui| {
@@ -622,6 +645,10 @@ impl WalletTransactions {
                     });
                 });
             } else {
+                ui.add_space(8.0);
+                View::horizontal_line(ui, Colors::item_stroke());
+                ui.add_space(8.0);
+
                 // Show button to close modal.
                 ui.vertical_centered_justified(|ui| {
                     View::button(ui, t!("close"), Colors::white_or_black(false), || {
@@ -713,7 +740,7 @@ impl WalletTransactions {
                               wallet: &Wallet,
                               modal: &Modal,
                               cb: &dyn PlatformCallbacks) {
-        if self.tx_info_slate.is_none() {
+        if self.tx_info_slate_id.is_none() {
             cb.hide_keyboard();
             modal.close();
             return;
@@ -739,7 +766,6 @@ impl WalletTransactions {
             return;
         }
 
-        let slate = self.tx_info_slate.clone().unwrap();
         let amount = amount_to_hr_string(tx.amount, true);
 
         // Draw Slatepack message description text.
@@ -802,34 +828,44 @@ impl WalletTransactions {
 
         // Draw Slatepack message finalization input or request text.
         ui.vertical_centered(|ui| {
-            let input_id = if self.tx_info_finalize {
+            let scroll_id = if self.tx_info_finalize {
                 Id::from("tx_info_message_finalize")
             } else {
                 Id::from("tx_info_message_request")
-            }.with(slate.id).with(tx.data.id);
+            }.with(self.tx_info_slate_id.clone().unwrap()).with(tx.data.id);
             View::horizontal_line(ui, Colors::item_stroke());
             ui.add_space(3.0);
             ScrollArea::vertical()
-                .id_source(input_id)
+                .id_source(scroll_id)
                 .scroll_bar_visibility(ScrollBarVisibility::AlwaysHidden)
                 .max_height(128.0)
                 .auto_shrink([false; 2])
                 .show(ui, |ui| {
                     ui.add_space(7.0);
-                    egui::TextEdit::multiline(message_edit)
+                    let input_id = scroll_id.with("_input");
+                    let resp = egui::TextEdit::multiline(message_edit)
+                        .id(input_id)
                         .font(egui::TextStyle::Small)
                         .desired_rows(5)
-                        .interactive(self.tx_info_finalize)
+                        .interactive(self.tx_info_finalize && !self.tx_info_finalizing)
                         .hint_text(SLATEPACK_MESSAGE_HINT)
                         .desired_width(f32::INFINITY)
-                        .show(ui);
+                        .show(ui).response;
+                    // Show soft keyboard on click.
+                    if self.tx_info_finalize && resp.clicked() {
+                        cb.show_keyboard();
+                    }
+                    if self.tx_info_finalize && resp.has_focus() {
+                        // Apply text from input on Android as temporary fix for egui.
+                        View::on_soft_input(ui, input_id, message_edit);
+                    }
                     ui.add_space(6.0);
                 });
         });
 
         ui.add_space(2.0);
         View::horizontal_line(ui, Colors::item_stroke());
-        ui.add_space(10.0);
+        ui.add_space(8.0);
 
         // Do not show buttons on finalization.
         if self.tx_info_finalizing {
@@ -857,10 +893,6 @@ impl WalletTransactions {
                     View::button(ui, paste_text, Colors::button(), || {
                         self.tx_info_finalize_edit = cb.get_string_from_buffer();
                     });
-                    // Callback on finalization message input change.
-                    if message_before != self.tx_info_finalize_edit {
-                        self.on_finalization_input_change(tx, wallet, modal, cb);
-                    }
                 });
             });
             ui.add_space(8.0);
@@ -874,17 +906,16 @@ impl WalletTransactions {
                     });
                 } else {
                     // Draw button to choose file.
-                    let mut parsed_text = "".to_string();
                     self.tx_info_file_pick_button.ui(ui, cb, |text| {
-                        parsed_text = text;
+                        self.tx_info_finalize_edit = text;
                     });
-                    if !parsed_text.is_empty() {
-                        // Parse Slatepack message from file content.
-                        self.tx_info_finalize_edit = parsed_text;
-                        self.on_finalization_input_change(tx, wallet, modal, cb);
-                    }
                 }
             });
+
+            // Callback on finalization message input change.
+            if message_before != self.tx_info_finalize_edit {
+                self.on_finalization_input_change(tx, wallet, modal, cb);
+            }
         } else {
             ui.columns(2, |columns| {
                 columns[0].vertical_centered_justified(|ui| {

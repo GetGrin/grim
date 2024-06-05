@@ -592,7 +592,6 @@ impl WalletTransport {
         // Draw QR code content.
         let text = self.qr_address_content.text.clone();
         self.qr_address_content.ui(ui, text.clone(), cb);
-        ui.add_space(6.0);
 
         ui.vertical_centered_justified(|ui| {
             View::button(ui, t!("close"), Colors::white_or_black(false), || {

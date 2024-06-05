@@ -1184,8 +1184,6 @@ fn start_sync(wallet: Wallet) -> Thread {
 
 /// Retrieve [`WalletData`] from local base or node.
 fn sync_wallet_data(wallet: &Wallet, from_node: bool) {
-    let fresh_sync = wallet.get_data().is_none();
-
     // Update info sync progress at separate thread.
     let wallet_info = wallet.clone();
     let (info_tx, info_rx) = mpsc::channel::<StatusMessage>();
@@ -1326,8 +1324,7 @@ fn sync_wallet_data(wallet: &Wallet, from_node: bool) {
                         };
 
                         // Setup flag for ability to finalize transaction.
-                        let can_finalize = if (from_node || !fresh_sync) && !posting &&
-                            unconfirmed_sent_or_received {
+                        let can_finalize = if !posting && unconfirmed_sent_or_received {
                             // Check existing file.
                             let mut slate = Slate::blank(1, false);
                             slate.id = tx.tx_slate_id.unwrap();
@@ -1406,7 +1403,7 @@ fn sync_wallet_data(wallet: &Wallet, from_node: bool) {
                             can_finalize,
                             conf_height,
                             repost_height,
-                            from_node: from_node || !fresh_sync
+                            from_node
                         });
                     }
 
