@@ -525,15 +525,22 @@ impl WalletTransactions {
         };
 
         // Setup slate and message from transaction.
-        self.tx_info_response_edit = if !tx.data.confirmed && tx.can_finalize &&
+        self.tx_info_response_edit = if !tx.data.confirmed && tx.data.tx_slate_id.is_some() &&
             (tx.data.tx_type == TxLogEntryType::TxSent ||
                 tx.data.tx_type == TxLogEntryType::TxReceived) {
-            let invoice = tx.data.tx_type == TxLogEntryType::TxReceived;
-            let mut slate = Slate::blank(1, invoice);
-            slate.state = if invoice {
-                SlateState::Invoice1
+            let mut slate = Slate::blank(1, false);
+            slate.state = if tx.can_finalize {
+                if tx.data.tx_type == TxLogEntryType::TxSent {
+                    SlateState::Standard1
+                } else {
+                    SlateState::Invoice1
+                }
             } else {
-                SlateState::Standard1
+                if tx.data.tx_type == TxLogEntryType::TxReceived {
+                    SlateState::Standard2
+                } else {
+                    SlateState::Invoice2
+                }
             };
             slate.id = tx.data.tx_slate_id.unwrap();
             wallet.read_slatepack(&slate).unwrap_or("".to_string())
