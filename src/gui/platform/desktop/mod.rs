@@ -153,6 +153,10 @@ impl PlatformCallbacks for Desktop {
         }
         None
     }
+
+    fn picked_file(&self) -> Option<String> {
+        None
+    }
 }
 
 lazy_static! {

@@ -1,6 +1,8 @@
 package mw.gri.android;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.content.*;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
@@ -14,6 +16,8 @@ import android.util.Size;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.camera.core.*;
 import androidx.camera.lifecycle.ProcessCameraProvider;
@@ -26,7 +30,7 @@ import androidx.core.view.WindowInsetsCompat;
 import com.google.androidgamesdk.GameActivity;
 import com.google.common.util.concurrent.ListenableFuture;
 
-import java.io.File;
+import java.io.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -63,6 +67,9 @@ public class MainActivity extends GameActivity {
     private ExecutorService mCameraExecutor = null;
     private boolean mUseBackCamera = true;
 
+    private ActivityResultLauncher<Intent> mFilePickResultLauncher = null;
+
+    @SuppressLint("UnspecifiedRegisterReceiverFlag")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         // Clear cache on start.
@@ -83,6 +90,36 @@ public class MainActivity extends GameActivity {
 
         // Register receiver to finish activity from the BackgroundService.
         registerReceiver(mBroadcastReceiver, new IntentFilter(STOP_APP_ACTION));
+
+        // Register file pick result launcher.
+        mFilePickResultLauncher = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(),
+                result -> {
+                    int resultCode = result.getResultCode();
+                    Intent data = result.getData();
+                    if (resultCode == Activity.RESULT_OK) {
+                        String path = "";
+                        if (data != null) {
+                            Uri uri = data.getData();
+                            String name = "pick" + Utils.getFileExtension(uri, this);
+                            File file = new File(getExternalCacheDir(), name);
+                            try (InputStream is = getContentResolver().openInputStream(uri);
+                                 OutputStream os = new FileOutputStream(file)) {
+                                byte[] buffer = new byte[1024];
+                                int length;
+                                while ((length = is.read(buffer)) > 0) {
+                                    os.write(buffer, 0, length);
+                                }
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                            path = file.getPath();
+                        }
+                        onFilePick(path);
+                    } else {
+                        onFilePick("");
+                    }
+                });
 
         // Listener for display insets (cutouts) to pass values into native code.
         View content = getWindow().getDecorView().findViewById(android.R.id.content);
@@ -354,9 +391,23 @@ public class MainActivity extends GameActivity {
         startActivity(Intent.createChooser(intent, "Share image"));
     }
 
-    // Check if device is using dark theme.
+    // Called from native code to check if device is using dark theme.
     public boolean useDarkTheme() {
         int currentNightMode = getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK;
         return  currentNightMode == Configuration.UI_MODE_NIGHT_YES;
     }
+
+    // Called from native code to pick the file.
+    public void pickFile() {
+        Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+        intent.setType("*/*");
+        try {
+            mFilePickResultLauncher.launch(Intent.createChooser(intent, "Pick file"));
+        } catch (android.content.ActivityNotFoundException ex) {
+            onFilePick("");
+        }
+    }
+
+    // Pass picked file into native code.
+    public native void onFilePick(String path);
 }

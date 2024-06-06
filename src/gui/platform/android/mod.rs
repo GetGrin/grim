@@ -42,13 +42,13 @@ impl Android {
     }
 
     /// Call Android Activity method with JNI.
-    pub fn call_java_method(&self, name: &str, sig: &str, args: &[JValue]) -> Option<jni::sys::jvalue> {
+    pub fn call_java_method(&self, name: &str, s: &str, a: &[JValue]) -> Option<jni::sys::jvalue> {
         let vm = unsafe { jni::JavaVM::from_raw(self.android_app.vm_as_ptr() as _) }.unwrap();
         let mut env = vm.attach_current_thread().unwrap();
         let activity = unsafe {
             JObject::from_raw(self.android_app.activity_as_ptr() as jni::sys::jobject)
         };
-        if let Ok(result) = env.call_method(activity, name, sig, args) {
+        if let Ok(result) = env.call_method(activity, name, s, a) {
             return Some(result.as_jni().clone());
         }
         None
@@ -145,6 +145,26 @@ impl PlatformCallbacks for Android {
     }
 
     fn pick_file(&self) -> Option<String> {
+        // Clear previous result.
+        let mut w_path = PICKED_FILE_PATH.write();
+        *w_path = None;
+        // Launch file picker.
+        let _ = self.call_java_method("pickFile", "()V", &[]).unwrap();
+        // Return empty string to identify async pick.
+        Some("".to_string())
+    }
+
+    fn picked_file(&self) -> Option<String> {
+        let has_file = {
+            let r_path = PICKED_FILE_PATH.read();
+            r_path.is_some()
+        };
+        if has_file {
+            let mut w_path = PICKED_FILE_PATH.write();
+            let path = Some(w_path.clone().unwrap());
+            *w_path = None;
+            return path
+        }
         None
     }
 }
@@ -152,13 +172,13 @@ impl PlatformCallbacks for Android {
 lazy_static! {
     /// Last image data from camera.
     static ref LAST_CAMERA_IMAGE: Arc<RwLock<Option<(Vec<u8>, u32)>>> = Arc::new(RwLock::new(None));
+    /// Picked file path.
+    static ref PICKED_FILE_PATH: Arc<RwLock<Option<String>>> = Arc::new(RwLock::new(None));
 }
 
-#[allow(dead_code)]
-#[cfg(target_os = "android")]
+/// Callback from Java code with last entered character from soft keyboard.
 #[allow(non_snake_case)]
 #[no_mangle]
-/// Callback from Java code with last entered character from soft keyboard.
 pub extern "C" fn Java_mw_gri_android_MainActivity_onCameraImage(
     env: JNIEnv,
     _class: JObject,
@@ -169,4 +189,26 @@ pub extern "C" fn Java_mw_gri_android_MainActivity_onCameraImage(
     let image : Vec<u8> = env.convert_byte_array(arr).unwrap();
     let mut w_image = LAST_CAMERA_IMAGE.write();
     *w_image = Some((image, rotation as u32));
+}
+
+/// Callback from Java code with picked file path.
+#[allow(non_snake_case)]
+#[no_mangle]
+pub extern "C" fn Java_mw_gri_android_MainActivity_onFilePick(
+    _env: JNIEnv,
+    _class: JObject,
+    char: jni::sys::jstring
+) {
+    use std::ops::Add;
+    unsafe {
+        let j_obj = JString::from_raw(char);
+        let j_str = _env.get_string_unchecked(j_obj.as_ref()).unwrap();
+        match j_str.to_str() {
+            Ok(str) => {
+                let mut w_path = PICKED_FILE_PATH.write();
+                *w_path = Some(w_path.clone().unwrap_or("".to_string()).add(str));
+            }
+            Err(_) => {}
+        }
+    }
 }

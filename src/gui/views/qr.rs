@@ -73,50 +73,6 @@ impl QrCodeContent {
         }
     }
 
-    /// Draw QR code image content.
-    fn qr_image_ui(&mut self, svg: Vec<u8>, ui: &mut egui::Ui) {
-        let mut rect = ui.available_rect_before_wrap();
-        rect.min += egui::emath::vec2(10.0, 0.0);
-        rect.max -= egui::emath::vec2(10.0, 0.0);
-
-        // Create background shape.
-        let mut bg_shape = egui::epaint::RectShape {
-            rect,
-            rounding: egui::Rounding::default(),
-            fill: egui::Color32::WHITE,
-            stroke: egui::Stroke::NONE,
-            fill_texture_id: Default::default(),
-            uv: egui::Rect::ZERO
-        };
-        let bg_idx = ui.painter().add(bg_shape);
-
-        // Draw QR code image content.
-        let mut content_rect = ui.allocate_ui_at_rect(rect, |ui| {
-            ui.add_space(10.0);
-            let size = SizeHint::Size(ui.available_width() as u32, ui.available_width() as u32);
-            let color_img = load_svg_bytes_with_size(svg.as_slice(), Some(size)).unwrap();
-            // Create image texture.
-            let texture_handle = ui.ctx().load_texture("qr_code",
-                                                       color_img.clone(),
-                                                       TextureOptions::default());
-            self.texture_handle = Some(texture_handle.clone());
-            let img_size = egui::emath::vec2(color_img.width() as f32,
-                                             color_img.height() as f32);
-            let sized_img = SizedTexture::new(texture_handle.id(), img_size);
-            // Add image to content.
-            ui.add(egui::Image::from_texture(sized_img)
-                .max_height(ui.available_width())
-                .fit_to_original_size(1.0));
-            ui.add_space(10.0);
-        }).response.rect;
-
-        // Setup background shape to be painted behind content.
-        content_rect.min -= egui::emath::vec2(10.0, 0.0);
-        content_rect.max += egui::emath::vec2(10.0, 0.0);
-        bg_shape.rect = content_rect;
-        ui.painter().set(bg_idx, bg_shape);
-    }
-
     /// Draw animated QR code content.
     fn animated_ui(&mut self, ui: &mut egui::Ui, text: String, cb: &dyn PlatformCallbacks) {
         if !self.has_image() {
@@ -180,8 +136,9 @@ impl QrCodeContent {
                     });
                 } else {
                     ui.vertical_centered(|ui| {
-                        ui.add_space(8.0);
+                        ui.add_space(2.0);
                         View::small_loading_spinner(ui);
+                        ui.add_space(1.0);
                     });
                 }
 
@@ -269,6 +226,50 @@ impl QrCodeContent {
             View::horizontal_line(ui, Colors::item_stroke());
             ui.add_space(8.0);
         }
+    }
+
+    /// Draw QR code image content.
+    fn qr_image_ui(&mut self, svg: Vec<u8>, ui: &mut egui::Ui) {
+        let mut rect = ui.available_rect_before_wrap();
+        rect.min += egui::emath::vec2(10.0, 0.0);
+        rect.max -= egui::emath::vec2(10.0, 0.0);
+
+        // Create background shape.
+        let mut bg_shape = egui::epaint::RectShape {
+            rect,
+            rounding: egui::Rounding::default(),
+            fill: egui::Color32::WHITE,
+            stroke: egui::Stroke::NONE,
+            fill_texture_id: Default::default(),
+            uv: egui::Rect::ZERO
+        };
+        let bg_idx = ui.painter().add(bg_shape);
+
+        // Draw QR code image content.
+        let mut content_rect = ui.allocate_ui_at_rect(rect, |ui| {
+            ui.add_space(10.0);
+            let size = SizeHint::Size(ui.available_width() as u32, ui.available_width() as u32);
+            let color_img = load_svg_bytes_with_size(svg.as_slice(), Some(size)).unwrap();
+            // Create image texture.
+            let texture_handle = ui.ctx().load_texture("qr_code",
+                                                       color_img.clone(),
+                                                       TextureOptions::default());
+            self.texture_handle = Some(texture_handle.clone());
+            let img_size = egui::emath::vec2(color_img.width() as f32,
+                                             color_img.height() as f32);
+            let sized_img = SizedTexture::new(texture_handle.id(), img_size);
+            // Add image to content.
+            ui.add(egui::Image::from_texture(sized_img)
+                .max_height(ui.available_width())
+                .fit_to_original_size(1.0));
+            ui.add_space(10.0);
+        }).response.rect;
+
+        // Setup background shape to be painted behind content.
+        content_rect.min -= egui::emath::vec2(10.0, 0.0);
+        content_rect.max += egui::emath::vec2(10.0, 0.0);
+        bg_shape.rect = content_rect;
+        ui.painter().set(bg_idx, bg_shape);
     }
 
     /// Check if QR code is loading.

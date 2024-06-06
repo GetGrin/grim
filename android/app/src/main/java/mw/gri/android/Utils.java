@@ -5,6 +5,8 @@ import android.graphics.ImageFormat;
 import android.graphics.Rect;
 import android.graphics.YuvImage;
 import android.media.Image;
+import android.net.Uri;
+import android.webkit.MimeTypeMap;
 import androidx.camera.core.ImageProxy;
 
 import java.io.ByteArrayOutputStream;
@@ -145,5 +147,10 @@ public class Utils {
             }
         }
         return directoryToBeDeleted.delete();
+    }
+
+    public static String getFileExtension(Uri uri, Context context) {
+        String fileType = context.getContentResolver().getType(uri);
+        return MimeTypeMap.getSingleton().getExtensionFromMimeType(fileType);
     }
 }

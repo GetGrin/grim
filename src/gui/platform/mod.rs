@@ -33,4 +33,5 @@ pub trait PlatformCallbacks {
     fn switch_camera(&self);
     fn share_data(&self, name: String, data: Vec<u8>) -> Result<(), std::io::Error>;
     fn pick_file(&self) -> Option<String>;
+    fn picked_file(&self) -> Option<String>;
 }
