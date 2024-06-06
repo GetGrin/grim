@@ -171,8 +171,10 @@ impl QrCodeContent {
                                               share_text,
                                               Colors::blue(),
                                               Colors::white_or_black(false), || {
-                            let mut w_state = self.qr_image_state.write();
-                            w_state.exporting = true;
+                            {
+                                let mut w_state = self.qr_image_state.write();
+                                w_state.exporting = true;
+                            }
                             // Create GIF to export.
                             self.create_qr_gif(text, DEFAULT_QR_SIZE as usize);
                     });
