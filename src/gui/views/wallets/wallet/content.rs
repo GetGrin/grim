@@ -616,7 +616,7 @@ impl WalletContent {
         // Block navigation if wallet is repairing and integrated node is not launching
         // and if wallet is closing or syncing after opening when there is no data to show.
         (wallet.is_repairing() && (integrated_node_ready || !integrated_node) && !sync_error)
-            || wallet.is_closing() || sync_after_opening
+            || wallet.is_closing() || (sync_after_opening && !integrated_node)
     }
 
     /// Draw wallet sync progress content.
