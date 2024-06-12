@@ -203,12 +203,23 @@ impl WalletCreation {
                     });
                 });
                 ui.add_space(4.0);
-            } else {
+            } else if step == Step::ConfirmMnemonic {
+                ui.add_space(4.0);
+                // Show next step or paste button.
                 if step_available {
-                    ui.add_space(4.0);
                     self.next_step_button_ui(ui, step, on_create);
-                    ui.add_space(4.0);
+                } else {
+                    let paste_text = format!("{} {}", CLIPBOARD_TEXT, t!("paste").to_uppercase());
+                    View::button(ui, paste_text, Colors::white_or_black(false), || {
+                        let data = ZeroingString::from(cb.get_string_from_buffer().trim());
+                        self.mnemonic_setup.mnemonic.import_text(&data, true);
+                    });
                 }
+                ui.add_space(4.0);
+            } else if step_available {
+                ui.add_space(4.0);
+                self.next_step_button_ui(ui, step, on_create);
+                ui.add_space(4.0);
             }
             ui.add_space(4.0);
         }
@@ -229,7 +240,7 @@ impl WalletCreation {
                 let p_t = format!("{} {}", CLIPBOARD_TEXT, t!("paste").to_uppercase());
                 View::button(ui, p_t, Colors::white_or_black(false), || {
                     let data = ZeroingString::from(cb.get_string_from_buffer().trim());
-                    self.mnemonic_setup.mnemonic.import_text(&data);
+                    self.mnemonic_setup.mnemonic.import_text(&data, false);
                 });
             }
         }

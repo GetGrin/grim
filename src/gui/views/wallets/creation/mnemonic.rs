@@ -384,7 +384,7 @@ impl MnemonicSetup {
             self.camera_content.clear_state();
             match &result {
                 QrScanResult::Text(text) => {
-                    self.mnemonic.import_text(text);
+                    self.mnemonic.import_text(text, false);
                     if self.mnemonic.is_valid_phrase() {
                         modal.close();
                         return;

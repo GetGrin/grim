@@ -106,18 +106,28 @@ impl Mnemonic {
     }
 
     /// Set words from provided text if possible.
-    pub fn import_text(&mut self, text: &ZeroingString) {
-        if self.mode != PhraseMode::Import {
-            return;
-        }
+    pub fn import_text(&mut self, text: &ZeroingString, confirmation: bool) {
         let words_split = text.trim().split(" ");
         let count = words_split.clone().count();
-        if PhraseSize::is_correct_count(count) {
-            if self.size == PhraseSize::type_for_value(count).unwrap() {
-                let mut words = vec![];
-                words_split.enumerate().for_each(|(i, word)| {
-                    words.insert(i, word.to_string())
-                });
+        if let Some(size) = PhraseSize::type_for_value(count) {
+            if !confirmation {
+                self.size = size;
+            } else if self.size != size {
+                return;
+            }
+            let mut words = vec![];
+            words_split.enumerate().for_each(|(i, word)| {
+                if confirmation && !self.is_valid_word(&word.to_string(), i) {
+                    words = vec![];
+                    return;
+                }
+                words.insert(i, word.to_string())
+            });
+            if confirmation {
+                if !words.is_empty() {
+                    self.confirm_words = words;
+                }
+            } else {
                 self.words = words;
             }
         }
