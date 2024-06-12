@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use eframe::icon_data::from_png_bytes;
+
 pub fn main() {
     #[allow(dead_code)]
     #[cfg(not(target_os = "android"))]
@@ -32,7 +34,7 @@ fn real_main() {
     use grim::AppConfig;
 
     use std::sync::Arc;
-    use egui::{IconData, pos2};
+    use egui::pos2;
 
     let platform = Desktop::default();
 
@@ -54,14 +56,8 @@ fn real_main() {
         .with_inner_size([width, height]);
 
     // Setup an icon.
-    if let Ok(image) = image::open("img/icon.png") {
-        let icon = image.to_rgba8();
-        let (icon_width, icon_height) = icon.dimensions();
-        viewport = viewport.with_icon(Arc::new(IconData {
-            rgba: icon.into_raw(),
-            width: icon_width,
-            height: icon_height,
-        }));
+    if let Ok(icon) = from_png_bytes(include_bytes!("../img/icon.png")) {
+        viewport = viewport.with_icon(Arc::new(icon));
     }
 
     // Setup window position.
