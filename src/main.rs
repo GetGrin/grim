@@ -12,8 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use eframe::icon_data::from_png_bytes;
-
 pub fn main() {
     #[allow(dead_code)]
     #[cfg(not(target_os = "android"))]
@@ -35,6 +33,7 @@ fn real_main() {
 
     use std::sync::Arc;
     use egui::pos2;
+    use eframe::icon_data::from_png_bytes;
 
     let platform = Desktop::default();
 

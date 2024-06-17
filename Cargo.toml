@@ -25,7 +25,6 @@ deb_depends = ["libssl-dev", "pkg-config"]
 
 [lib]
 name="grim"
-crate_type=["cdylib", "rlib"]
 
 [dependencies]
 log = "0.4"
