@@ -9,6 +9,20 @@ keywords = [ "crypto", "grin", "mimblewimble" ]
 edition = "2021"
 build = "src/build/build.rs"
 
+[package.metadata.bundle]
+name = "Grim"
+identifier = "mw.gri"
+icon = ["img/icon.png", "img/128x128.png", "img/128x128@2x.png"]
+version = "0.1.0"
+resources = ["img"]
+copyright = "Copyright (c) Grim 2024. All rights reserved."
+category = "public.app-category.finance"
+short_description = "Cross-platform GUI for Grin."
+long_description = """
+Cross-platform GUI for Grin on Rust with focus on usability and availability to be used by anyone, anywhere.
+"""
+deb_depends = ["libssl-dev", "pkg-config"]
+
 [lib]
 name="grim"
 crate_type=["cdylib", "rlib"]
@@ -94,7 +108,13 @@ tokio-util = { version = "0.7.8", features = ["codec"] }
 [build-dependencies]
 built = { version = "0.7.0", features = ["git2"]}
 
-[target.'cfg(target_vendor = "apple")'.dependencies]
+[target.'cfg(all(not(target_os = "windows"), not(target_os = "android")))'.dependencies]
+eye = { version = "0.5.0", default-features = false }
+
+[target.'cfg(target_os = "windows")'.dependencies]
+nokhwa = { version = "0.10.4", default-features = false, features = ["input-msmf"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
 tls-api-openssl = "0.9.0"
 
 [target.'cfg(not(target_os = "android"))'.dependencies]
@@ -104,8 +124,6 @@ eframe = { version = "0.27.2", features = ["wgpu", "glow"] }
 arboard = "3.2.0"
 rfd = "0.14.1"
 dark-light = "1.1.1"
-# camera
-nokhwa = { git = "https://github.com/l1npengtul/nokhwa", branch = "0.10", features = ["input-native", "output-threaded"] }
 
 [target.'cfg(target_os = "android")'.dependencies]
 android_logger = "0.13.1"

@@ -19,9 +19,6 @@ use parking_lot::RwLock;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::thread;
-use nokhwa::Camera;
-use nokhwa::pixel_format::RgbFormat;
-use nokhwa::utils::{CameraIndex, RequestedFormat, RequestedFormatType};
 use rfd::FileDialog;
 
 use crate::gui::platform::PlatformCallbacks;
@@ -69,48 +66,13 @@ impl PlatformCallbacks for Desktop {
 
         // Capture images at separate thread.
         thread::spawn(move || {
-            tokio::runtime::Builder::new_multi_thread()
-                .enable_all()
-                .build()
-                .unwrap()
-                .block_on(async {
-                    let index = CameraIndex::Index(0);
-                    let requested = RequestedFormat::new::<RgbFormat>(
-                        RequestedFormatType::AbsoluteHighestFrameRate
-                    );
-                    // Create and open camera.
-                    let mut camera = Camera::new(index, requested).unwrap();
-                    if let Ok(_) = camera.open_stream() {
-                        loop {
-                            // Stop if camera was stopped.
-                            if stop_camera.load(Ordering::Relaxed) {
-                                stop_camera.store(false, Ordering::Relaxed);
-                                break;
-                            }
-                            // Get a frame.
-                            if let Ok(frame) = camera.frame() {
-                                // Save image.
-                                let mut w_image = LAST_CAMERA_IMAGE.write();
-                                *w_image = Some((frame.buffer().to_vec(), 0));
-                            } else {
-                                // Clear image.
-                                let mut w_image = LAST_CAMERA_IMAGE.write();
-                                *w_image = None;
-                                break;
-                            }
-                        }
-                        camera.stop_stream().unwrap();
-                    };
-                });
+            Self::start_camera_capture(stop_camera);
         });
     }
 
     fn stop_camera(&self) {
         // Stop camera.
         self.stop_camera.store(true, Ordering::Relaxed);
-        // Clear image.
-        let mut w_image = LAST_CAMERA_IMAGE.write();
-        *w_image = None;
     }
 
     fn camera_image(&self) -> Option<(Vec<u8>, u32)> {
@@ -156,6 +118,87 @@ impl PlatformCallbacks for Desktop {
 
     fn picked_file(&self) -> Option<String> {
         None
+    }
+}
+
+impl Desktop {
+    #[allow(dead_code)]
+    #[cfg(target_os = "windows")]
+    fn start_camera_capture(stop_camera: Arc<AtomicBool>) {
+        use nokhwa::Camera;
+        use nokhwa::pixel_format::RgbFormat;
+        use nokhwa::utils::{CameraIndex, RequestedFormat, RequestedFormatType};
+        let index = CameraIndex::Index(0);
+        let requested = RequestedFormat::new::<RgbFormat>(
+            RequestedFormatType::AbsoluteHighestFrameRate
+        );
+        // Create and open camera.
+        let mut camera = Camera::new(index, requested).unwrap();
+        if let Ok(_) = camera.open_stream() {
+            loop {
+                // Stop if camera was stopped.
+                if stop_camera.load(Ordering::Relaxed) {
+                    stop_camera.store(false, Ordering::Relaxed);
+                    // Clear image.
+                    let mut w_image = LAST_CAMERA_IMAGE.write();
+                    *w_image = None;
+                    break;
+                }
+                // Get a frame.
+                if let Ok(frame) = camera.frame() {
+                    // Save image.
+                    let mut w_image = LAST_CAMERA_IMAGE.write();
+                    *w_image = Some((frame.buffer().to_vec(), 0));
+                } else {
+                    // Clear image.
+                    let mut w_image = LAST_CAMERA_IMAGE.write();
+                    *w_image = None;
+                    break;
+                }
+            }
+            camera.stop_stream().unwrap();
+        };
+    }
+
+    #[allow(dead_code)]
+    #[cfg(not(target_os = "windows"))]
+    fn start_camera_capture(stop_camera: Arc<AtomicBool>) {
+        use eye::hal::{traits::{Context, Device, Stream}, PlatformContext};
+        use image::ImageEncoder;
+
+        let ctx = PlatformContext::default();
+        let devices = ctx.devices().unwrap();
+        let dev = ctx.open_device(&devices[0].uri).unwrap();
+
+        let streams = dev.streams().unwrap();
+        let stream_desc = streams[0].clone();
+        let w = stream_desc.width;
+        let h = stream_desc.height;
+
+        let mut stream = dev.start_stream(&stream_desc).unwrap();
+
+        loop {
+            // Stop if camera was stopped.
+            if stop_camera.load(Ordering::Relaxed) {
+                stop_camera.store(false, Ordering::Relaxed);
+                // Clear image.
+                let mut w_image = LAST_CAMERA_IMAGE.write();
+                *w_image = None;
+                break;
+            }
+            // Get a frame.
+            let frame = stream.next().expect("Stream is dead").expect("Failed to capture a frame");
+            let mut out = vec![];
+            if let Some(buf) = image::ImageBuffer::<image::Rgb<u8>, &[u8]>::from_raw(w, h, &frame) {
+                image::codecs::jpeg::JpegEncoder::new(&mut out)
+                    .write_image(buf.as_raw(), w, h, image::ExtendedColorType::Rgb8).unwrap();
+            } else {
+                out = frame.to_vec();
+            }
+            // Save image.
+            let mut w_image = LAST_CAMERA_IMAGE.write();
+            *w_image = Some((out, 0));
+        }
     }
 }
 
