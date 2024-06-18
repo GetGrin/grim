@@ -105,7 +105,7 @@ tokio-util = { version = "0.7.8", features = ["codec"] }
 #grin_store = { path = "../grin-store" }
 
 [build-dependencies]
-built = { version = "0.7.0", features = ["git2"]}
+built = "0.7.0"
 
 [target.'cfg(all(not(target_os = "windows"), not(target_os = "android")))'.dependencies]
 eye = { version = "0.5.0", default-features = false }
@@ -115,6 +115,11 @@ nokhwa = { version = "0.10.4", default-features = false, features = ["input-msmf
 
 [target.'cfg(target_os = "macos")'.dependencies]
 tls-api-openssl = "0.9.0"
+openpnp_capture_sys = "0.4.0"
+
+[patch.crates-io]
+### fix cross-compilation support for macos
+openpnp_capture_sys = { git = "https://github.com/ardocrat/openpnp-capture-rs", branch = "cross_compilation_support" }
 
 [target.'cfg(not(target_os = "android"))'.dependencies]
 env_logger = "0.11.3"
