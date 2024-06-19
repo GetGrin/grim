@@ -35,7 +35,7 @@ yes | cp -rf target/${arch}/release/grim scripts/macos/Grim.app/Contents/MacOS/g
 
 ### Sign .app before distribution:
 ### rcodesign generate-self-signed-certificate
-### rcodesign sign --pem-file test.pem scripts/macos/Grim.app
+### rcodesign sign --pem-file cert.pem scripts/macos/Grim.app
 
 # Create release package
 FILE_NAME=Grim-0.1.0-macos-$1.zip

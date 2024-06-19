@@ -12,11 +12,10 @@ build = "src/build/build.rs"
 [package.metadata.bundle]
 name = "Grim"
 identifier = "mw.gri"
-icon = ["img/icon.png", "img/128x128.png", "img/128x128@2x.png"]
+icon = ["img/icon.png"]
 version = "0.1.0"
 resources = ["img"]
-copyright = "Copyright (c) Grim 2024. All rights reserved."
-category = "public.app-category.finance"
+category = "Finance"
 short_description = "Cross-platform GUI for Grin."
 long_description = """
 Cross-platform GUI for Grin on Rust with focus on usability and availability to be used by anyone, anywhere.
