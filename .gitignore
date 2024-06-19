@@ -13,6 +13,6 @@ android/keystore.properties
 /target
 /.cargo/
 /app/src/main/jniLibs
-/macos/Grim.app/Contents/MacOS/grim-bin
-/macos/cert.pem
+/scripts/macos/Grim.app/Contents/MacOS/grim-bin
+/scripts/macos/cert.pem
 .intentionally-empty-file.o
