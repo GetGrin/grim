@@ -10,8 +10,9 @@ android/keystore.properties
 .externalNativeBuild
 .cxx
 *.so
-
-# Added by cargo
 /target
 /.cargo/
 /app/src/main/jniLibs
+/macos/Grim.app/Contents/MacOS/grim-bin
+/macos/cert.pem
+.intentionally-empty-file.o

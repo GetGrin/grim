@@ -28,7 +28,7 @@ Install Android SDK / NDK / Platform Tools for your OS according to this [FAQ](h
 
 #### Build the project
 Run Android emulator or connect a real device. Command `adb devices` should show at least one device.
-In the root of the repo run `./build_run_android.sh release arch`, where is `arch` is `v7` or `v8` based on device CPU architecture.
+In the root of the repo run `./scripts/build_run_android.sh debug|release v7|v8`, where is `v7`, `v8` - device CPU architecture.
 
 ## License
 

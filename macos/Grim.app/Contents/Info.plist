@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+    <dict>
+        <key>CFBundleDevelopmentRegion</key>
+        <string>en</string>
+
+        <key>CFBundleDisplayName</key>
+        <string>Grim</string>
+
+        <key>CFBundleExecutable</key>
+        <string>grim-bin</string>
+
+        <key>CFBundleIconFile</key>
+        <string>AppIcon</string>
+
+        <key>CFBundleIconName</key>
+        <string>AppIcon</string>
+
+        <key>CFBundleIdentifier</key>
+        <string>mw.grin.macos</string>
+
+        <key>CFBundleInfoDictionaryVersion</key>
+        <string>6.0</string>
+
+        <key>CFBundleName</key>
+        <string>Grim</string>
+
+        <key>CFBundlePackageType</key>
+        <string>APPL</string>
+
+        <key>CFBundleShortVersionString</key>
+        <string>0.1.0</string>
+
+        <key>CFBundleSupportedPlatforms</key>
+        <array>
+            <string>MacOSX</string>
+        </array>
+
+        <key>CFBundleVersion</key>
+        <string>1</string>
+
+        <key>LSApplicationCategoryType</key>
+        <string>public.app-category.finance</string>
+
+        <key>NSHumanReadableCopyright</key>
+        <string>2024</string>
+    </dict>
+</plist>
