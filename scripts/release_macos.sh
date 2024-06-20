@@ -31,15 +31,15 @@ cd ..
 cargo install cargo-zigbuild
 cargo zigbuild --release --target ${arch}
 rm .intentionally-empty-file.o
-yes | cp -rf target/${arch}/release/grim scripts/macos/Grim.app/Contents/MacOS/grim-bin
+yes | cp -rf target/${arch}/release/grim macos/Grim.app/Contents/MacOS/grim-bin
 
 ### Sign .app before distribution:
 ### rcodesign generate-self-signed-certificate
-### rcodesign sign --pem-file cert.pem scripts/macos/Grim.app
+### rcodesign sign --pem-file cert.pem macos/Grim.app
 
 # Create release package
 FILE_NAME=Grim-0.1.0-macos-$1.zip
 rm target/${arch}/release/${FILE_NAME}
-cd scripts/macos
+cd macos
 zip -r ${FILE_NAME} Grim.app
-mv ${FILE_NAME} ../../target/${arch}/release
+mv ${FILE_NAME} ../target/${arch}/release

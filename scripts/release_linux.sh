@@ -22,7 +22,7 @@ cargo install cargo-zigbuild
 cargo zigbuild --release --target ${arch}
 
 # Create AppImage with https://github.com/AppImage/appimagetool
-cp target/${arch}/release/grim scripts/linux/Grim.AppDir/AppRun
+cp target/${arch}/release/grim linux/Grim.AppDir/AppRun
 rm target/${arch}/release/*.AppImage
-appimagetool scripts/linux/Grim.AppDir
+appimagetool linux/Grim.AppDir
 mv *.AppImage target/${arch}/release/Grim-0.1.0-linux-$1.AppImage

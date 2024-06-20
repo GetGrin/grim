@@ -9,19 +9,6 @@ keywords = [ "crypto", "grin", "mimblewimble" ]
 edition = "2021"
 build = "src/build/build.rs"
 
-[package.metadata.bundle]
-name = "Grim"
-identifier = "mw.gri"
-icon = ["img/icon.png"]
-version = "0.1.0"
-resources = ["img"]
-category = "Finance"
-short_description = "Cross-platform GUI for Grin."
-long_description = """
-Cross-platform GUI for Grin on Rust with focus on usability and availability to be used by anyone, anywhere.
-"""
-deb_depends = ["libssl-dev", "pkg-config"]
-
 [lib]
 name="grim"
 
