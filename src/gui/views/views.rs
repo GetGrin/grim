@@ -77,18 +77,14 @@ impl View {
 
     /// Get width and height of app window.
     pub fn window_size(ui: &mut egui::Ui) -> (f32, f32) {
+
         ui.ctx().input(|i| {
             return match i.viewport().inner_rect {
                 None => {
-                    if let Some(size) = i.viewport().monitor_size {
-                        (size.x, size.y)
-                    } else {
-                        (AppConfig::DEFAULT_WIDTH, AppConfig::DEFAULT_HEIGHT)
-                    }
-                }
-                Some(rect) => {
+                    let rect = i.screen_rect;
                     (rect.width(), rect.height())
-                }
+                },
+                Some(rect) => (rect.width(), rect.height())
             };
         })
     }
