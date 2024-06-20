@@ -66,7 +66,6 @@ impl ModalContainer for NetworkSettings {
 
     fn modal_ui(&mut self,
                 ui: &mut egui::Ui,
-                _: &mut eframe::Frame,
                 modal: &Modal,
                 _: &dyn PlatformCallbacks) {
         match modal.id {
@@ -81,9 +80,9 @@ impl NetworkTab for NetworkSettings {
         NetworkTabType::Settings
     }
 
-    fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame, cb: &dyn PlatformCallbacks) {
+    fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         // Draw modal content for current ui container.
-        self.current_modal_ui(ui, frame, cb);
+        self.current_modal_ui(ui, cb);
 
         ScrollArea::vertical()
             .id_source("network_settings")
@@ -94,35 +93,35 @@ impl NetworkTab for NetworkSettings {
                 ui.vertical_centered(|ui| {
                     View::max_width_ui(ui, Root::SIDE_PANEL_WIDTH * 1.3, |ui| {
                         // Draw node setup section.
-                        self.node.ui(ui, frame, cb);
+                        self.node.ui(ui, cb);
 
                         ui.add_space(6.0);
                         View::horizontal_line(ui, Colors::stroke());
                         ui.add_space(4.0);
 
                         // Draw P2P server setup section.
-                        self.p2p.ui(ui, frame, cb);
+                        self.p2p.ui(ui, cb);
 
                         ui.add_space(6.0);
                         View::horizontal_line(ui, Colors::stroke());
                         ui.add_space(4.0);
 
                         // Draw Stratum server setup section.
-                        self.stratum.ui(ui, frame, cb);
+                        self.stratum.ui(ui, cb);
 
                         ui.add_space(6.0);
                         View::horizontal_line(ui, Colors::stroke());
                         ui.add_space(4.0);
 
                         // Draw pool setup section.
-                        self.pool.ui(ui, frame, cb);
+                        self.pool.ui(ui, cb);
 
                         ui.add_space(6.0);
                         View::horizontal_line(ui, Colors::stroke());
                         ui.add_space(4.0);
 
                         // Draw Dandelion server setup section.
-                        self.dandelion.ui(ui, frame, cb);
+                        self.dandelion.ui(ui, cb);
 
                         ui.add_space(6.0);
                         View::horizontal_line(ui, Colors::stroke());

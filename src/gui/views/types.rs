@@ -54,20 +54,18 @@ pub trait ModalContainer {
     /// Draw modal ui content.
     fn modal_ui(&mut self,
                 ui: &mut egui::Ui,
-                frame: &mut eframe::Frame,
                 modal: &Modal,
                 cb: &dyn PlatformCallbacks);
 
     /// Draw [`Modal`] for current ui container if it's possible.
     fn current_modal_ui(&mut self,
                         ui: &mut egui::Ui,
-                        frame: &mut eframe::Frame,
                         cb: &dyn PlatformCallbacks) {
         let modal_id = Modal::opened();
         let draw = modal_id.is_some() && self.modal_ids().contains(&modal_id.unwrap());
         if draw {
             Modal::ui(ui.ctx(), |ui, modal| {
-                self.modal_ui(ui, frame, modal, cb);
+                self.modal_ui(ui, modal, cb);
             });
         }
     }

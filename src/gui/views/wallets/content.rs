@@ -76,7 +76,6 @@ impl ModalContainer for WalletsContent {
 
     fn modal_ui(&mut self,
                 ui: &mut egui::Ui,
-                _: &mut eframe::Frame,
                 modal: &Modal,
                 cb: &dyn PlatformCallbacks) {
         match modal.id {
@@ -90,9 +89,9 @@ impl ModalContainer for WalletsContent {
 }
 
 impl WalletsContent {
-    pub fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame, cb: &dyn PlatformCallbacks) {
+    pub fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         // Draw modal content for current ui container.
-        self.current_modal_ui(ui, frame, cb);
+        self.current_modal_ui(ui, cb);
 
         // Setup wallet content flags.
         let empty_list = self.wallets.is_current_list_empty();
@@ -106,7 +105,7 @@ impl WalletsContent {
         let content_width = ui.available_width();
 
         // Show title panel.
-        self.title_ui(ui, frame, dual_panel, create_wallet, show_wallet);
+        self.title_ui(ui, dual_panel, create_wallet, show_wallet);
 
         // Show wallet panel content.
         egui::SidePanel::right("wallet_panel")
@@ -132,7 +131,7 @@ impl WalletsContent {
                 }
                 if create_wallet || !show_wallet {
                     // Show wallet creation content.
-                    self.creation_content.ui(ui, frame, cb, |wallet| {
+                    self.creation_content.ui(ui, cb, |wallet| {
                         // Add created wallet to list.
                         self.wallets.add(wallet);
                         // Reset wallet content.
@@ -153,7 +152,7 @@ impl WalletsContent {
                             rect.set_width(width);
                             // Show wallet content.
                             ui.allocate_ui_at_rect(rect, |ui| {
-                                self.wallet_content.ui(ui, frame, wallet, cb);
+                                self.wallet_content.ui(ui, wallet, cb);
                             });
                             break;
                         }
@@ -224,7 +223,6 @@ impl WalletsContent {
     /// Draw [`TitlePanel`] content.
     fn title_ui(&mut self,
                 ui: &mut egui::Ui,
-                frame: &mut eframe::Frame,
                 dual_panel: bool,
                 create_wallet: bool,
                 show_wallet: bool) {
@@ -263,7 +261,7 @@ impl WalletsContent {
         };
 
         // Draw title panel.
-        TitlePanel::ui(title_content, |ui, _| {
+        TitlePanel::ui(title_content, |ui| {
             if show_wallet && !dual_panel {
                 View::title_button(ui, ARROW_LEFT, || {
                     self.wallets.select(None);
@@ -287,7 +285,7 @@ impl WalletsContent {
                     Root::toggle_network_panel();
                 });
             };
-        }, |ui, _| {
+        }, |ui| {
             View::title_button(ui, GEAR, || {
                 // Show settings modal.
                 Modal::new(Root::SETTINGS_MODAL)
@@ -295,7 +293,7 @@ impl WalletsContent {
                     .title(t!("settings"))
                     .show();
             });
-        }, ui, frame);
+        }, ui);
     }
 
     /// Calculate [`WalletContent`] panel width.

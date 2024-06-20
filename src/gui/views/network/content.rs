@@ -43,12 +43,12 @@ impl Default for NetworkContent {
 }
 
 impl NetworkContent {
-    pub fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame, cb: &dyn PlatformCallbacks) {
+    pub fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         // Flag to show connections or integrated node content.
         let show_connections = AppConfig::show_connections_network_panel();
 
         // Show title panel.
-        self.title_ui(ui, frame, show_connections, cb);
+        self.title_ui(ui, show_connections);
 
         // Show integrated node tabs content.
         egui::TopBottomPanel::bottom("node_tabs_panel")
@@ -94,7 +94,7 @@ impl NetworkContent {
                     })
                     .show_inside(ui, |ui| {
                         // Draw node tab content.
-                        self.node_tab_content.ui(ui, frame, cb);
+                        self.node_tab_content.ui(ui, cb);
                     });
             });
 
@@ -140,7 +140,7 @@ impl NetworkContent {
                                 ui.available_width()
                             };
                             View::max_width_ui(ui, max_width, |ui| {
-                                self.connections.ui(ui, frame, cb);
+                                self.connections.ui(ui, cb);
                             });
                         });
                     });
@@ -188,11 +188,7 @@ impl NetworkContent {
     }
 
     /// Draw title content.
-    fn title_ui(&mut self,
-                ui: &mut egui::Ui,
-                frame: &mut eframe::Frame,
-                show_connections: bool,
-                _: &dyn PlatformCallbacks) {
+    fn title_ui(&mut self, ui: &mut egui::Ui, show_connections: bool) {
         // Setup values for title panel.
         let title_text = self.node_tab_content.get_type().title().to_uppercase();
         let subtitle_text = Node::get_sync_status_text();
@@ -204,7 +200,7 @@ impl NetworkContent {
         };
 
         // Draw title panel.
-        TitlePanel::ui(TitleType::Single(title_content), |ui, _| {
+        TitlePanel::ui(TitleType::Single(title_content), |ui| {
             if !show_connections {
                 View::title_button(ui, DOTS_THREE_OUTLINE_VERTICAL, || {
                     AppConfig::toggle_show_connections_network_panel();
@@ -213,13 +209,13 @@ impl NetworkContent {
                     }
                 });
             }
-        }, |ui, _| {
+        }, |ui| {
             if !Root::is_dual_panel_mode(ui) {
                 View::title_button(ui, BRIEFCASE, || {
                     Root::toggle_network_panel();
                 });
             }
-        }, ui, frame);
+        }, ui);
     }
 
     /// Content to draw when node is disabled.

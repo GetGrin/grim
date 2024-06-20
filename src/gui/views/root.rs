@@ -76,7 +76,6 @@ impl ModalContainer for Root {
 
     fn modal_ui(&mut self,
                 ui: &mut egui::Ui,
-                _: &mut eframe::Frame,
                 modal: &Modal,
                 _: &dyn PlatformCallbacks) {
         match modal.id {
@@ -100,9 +99,9 @@ impl Root {
     /// Default width of side panel at application UI.
     pub const SIDE_PANEL_WIDTH: f32 = 400.0;
 
-    pub fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame, cb: &dyn PlatformCallbacks) {
+    pub fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         // Draw modal content for current ui container.
-        self.current_modal_ui(ui, frame, cb);
+        self.current_modal_ui(ui, cb);
 
         let (is_panel_open, panel_width) = Self::network_panel_state_width(ui);
         // Show network content.
@@ -119,7 +118,7 @@ impl Root {
                 let window_size = View::window_size(ui);
                 rect.set_height(window_size.1);
                 ui.allocate_ui_at_rect(rect, |ui| {
-                    self.network.ui(ui, frame, cb);
+                    self.network.ui(ui, cb);
                 });
             });
 
@@ -135,7 +134,7 @@ impl Root {
                 let window_size = View::window_size(ui);
                 rect.set_height(window_size.1);
                 ui.allocate_ui_at_rect(rect, |ui| {
-                    self.wallets.ui(ui, frame, cb);
+                    self.wallets.ui(ui, cb);
                 });
             });
 

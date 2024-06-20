@@ -132,7 +132,6 @@ impl ModalContainer for P2PSetup {
 
     fn modal_ui(&mut self,
                 ui: &mut egui::Ui,
-                _: &mut eframe::Frame,
                 modal: &Modal,
                 cb: &dyn PlatformCallbacks) {
         match modal.id {
@@ -153,9 +152,9 @@ impl P2PSetup {
     /// Title for custom DNS Seeds setup section.
     const DNS_SEEDS_TITLE: &'static str = "DNS Seeds";
 
-    pub fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame, cb: &dyn PlatformCallbacks) {
+    pub fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         // Draw modal content for current ui container.
-        self.current_modal_ui(ui, frame, cb);
+        self.current_modal_ui(ui, cb);
 
         View::sub_title(ui, format!("{} {}", HANDSHAKE, t!("network_settings.p2p_server")));
         View::horizontal_line(ui, Colors::stroke());

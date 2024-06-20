@@ -14,7 +14,7 @@
 
 
 mod app;
-pub use app::PlatformApp;
+pub use app::App;
 
 mod colors;
 pub use colors::Colors;

@@ -27,31 +27,29 @@ lazy_static! {
 }
 
 /// Implements ui entry point and contains platform-specific callbacks.
-pub struct PlatformApp<Platform> {
+pub struct App<Platform> {
     /// Platform specific callbacks handler.
     pub(crate) platform: Platform,
     /// Main ui content.
     root: Root
 }
 
-impl<Platform> PlatformApp<Platform> {
+impl<Platform: PlatformCallbacks> App<Platform> {
     pub fn new(platform: Platform) -> Self {
         Self { platform, root: Root::default() }
     }
-}
 
-impl<Platform: PlatformCallbacks> eframe::App for PlatformApp<Platform> {
-    fn update(&mut self, ctx: &Context, frame: &mut eframe::Frame) {
+    /// Draw application content.
+    pub fn ui(&mut self, ctx: &Context) {
         // Handle Esc keyboard key event and platform Back button key event.
         let back_button_pressed = BACK_BUTTON_PRESSED.load(Ordering::Relaxed);
         if ctx.input_mut(|i| i.consume_key(Modifiers::NONE, egui::Key::Escape)) || back_button_pressed {
             self.root.on_back();
-            // Request repaint to update previous content.
-            ctx.request_repaint();
-
             if back_button_pressed {
                 BACK_BUTTON_PRESSED.store(false, Ordering::Relaxed);
             }
+            // Request repaint to update previous content.
+            ctx.request_repaint();
         }
 
         // Handle Close event (on desktop).
@@ -77,8 +75,15 @@ impl<Platform: PlatformCallbacks> eframe::App for PlatformApp<Platform> {
                 ..Default::default()
             })
             .show(ctx, |ui| {
-                self.root.ui(ui, frame, &self.platform);
+                self.root.ui(ui, &self.platform);
             });
+    }
+}
+
+/// To draw with egui`s eframe (for wgpu, glow backends and wasm target).
+impl<Platform: PlatformCallbacks> eframe::App for App<Platform> {
+    fn update(&mut self, ctx: &Context, _: &mut eframe::Frame) {
+        self.ui(ctx);
     }
 }
 

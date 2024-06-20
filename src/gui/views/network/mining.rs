@@ -44,7 +44,7 @@ impl NetworkTab for NetworkMining {
         NetworkTabType::Mining
     }
 
-    fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame, cb: &dyn PlatformCallbacks) {
+    fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         // Show an error content when available.
         let node_err = Node::get_error();
         if node_err.is_some() {
@@ -83,7 +83,7 @@ impl NetworkTab for NetworkMining {
                     ui.add_space(1.0);
                     ui.vertical_centered(|ui| {
                         View::max_width_ui(ui, Root::SIDE_PANEL_WIDTH * 1.3, |ui| {
-                            self.stratum_server_setup.ui(ui, frame, cb);
+                            self.stratum_server_setup.ui(ui, cb);
                         });
                     });
                 });

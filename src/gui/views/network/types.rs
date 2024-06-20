@@ -17,7 +17,7 @@ use crate::gui::platform::PlatformCallbacks;
 /// Network tab content interface.
 pub trait NetworkTab {
     fn get_type(&self) -> NetworkTabType;
-    fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame, cb: &dyn PlatformCallbacks);
+    fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks);
 }
 
 /// Type of [`NetworkTab`] content.

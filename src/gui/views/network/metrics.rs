@@ -36,7 +36,7 @@ impl NetworkTab for NetworkMetrics {
         NetworkTabType::Metrics
     }
 
-    fn ui(&mut self, ui: &mut egui::Ui, _: &mut eframe::Frame, _: &dyn PlatformCallbacks) {
+    fn ui(&mut self, ui: &mut egui::Ui, _: &dyn PlatformCallbacks) {
         // Show an error content when available.
         let node_err = Node::get_error();
         if node_err.is_some() {

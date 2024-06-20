@@ -97,11 +97,7 @@ impl WalletTab for WalletTransactions {
         WalletTabType::Txs
     }
 
-    fn ui(&mut self,
-          ui: &mut egui::Ui,
-          _: &mut eframe::Frame,
-          wallet: &mut Wallet,
-          cb: &dyn PlatformCallbacks) {
+    fn ui(&mut self, ui: &mut egui::Ui, wallet: &mut Wallet, cb: &dyn PlatformCallbacks) {
         if WalletContent::sync_ui(ui, wallet) {
             return;
         }

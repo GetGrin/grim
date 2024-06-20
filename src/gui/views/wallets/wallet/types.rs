@@ -25,7 +25,6 @@ pub trait WalletTab {
     fn get_type(&self) -> WalletTabType;
     fn ui(&mut self,
           ui: &mut egui::Ui,
-          frame: &mut eframe::Frame,
           wallet: &mut Wallet,
           cb: &dyn PlatformCallbacks);
 }

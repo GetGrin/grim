@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use grim::gui::App;
+use grim::gui::platform::Desktop;
+
 pub fn main() {
     #[allow(dead_code)]
     #[cfg(not(target_os = "android"))]
@@ -28,7 +31,7 @@ fn real_main() {
         .init();
 
     use grim::gui::platform::Desktop;
-    use grim::gui::PlatformApp;
+    use grim::gui::App;
     use grim::AppConfig;
 
     use std::sync::Arc;
@@ -69,12 +72,18 @@ fn real_main() {
         ..Default::default()
     };
     options.renderer = eframe::Renderer::Wgpu;
-    match grim::start(options.clone(), grim::app_creator(PlatformApp::new(platform.clone()))) {
+
+    match grim::start(options.clone(), grim::app_creator(App::new(platform.clone()))) {
         Ok(_) => {}
         Err(_) => {
             // Start with Glow renderer on error.
             options.renderer = eframe::Renderer::Glow;
-            grim::start(options, grim::app_creator(PlatformApp::new(platform))).unwrap();
+            match grim::start(options, grim::app_creator(App::new(platform))) {
+                Ok(_) => {}
+                Err(_) => {
+                    panic!("Impossible to render");
+                }
+            }
         }
     }
 }

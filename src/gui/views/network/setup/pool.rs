@@ -80,7 +80,6 @@ impl ModalContainer for PoolSetup {
 
     fn modal_ui(&mut self,
                 ui: &mut egui::Ui,
-                _: &mut eframe::Frame,
                 modal: &Modal,
                 cb: &dyn PlatformCallbacks) {
         match modal.id {
@@ -95,9 +94,9 @@ impl ModalContainer for PoolSetup {
 }
 
 impl PoolSetup {
-    pub fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame, cb: &dyn PlatformCallbacks) {
+    pub fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         // Draw modal content for current ui container.
-        self.current_modal_ui(ui, frame, cb);
+        self.current_modal_ui(ui, cb);
 
         View::sub_title(ui, format!("{} {}", CHART_SCATTER, t!("network_settings.tx_pool")));
         View::horizontal_line(ui, Colors::stroke());

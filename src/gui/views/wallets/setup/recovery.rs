@@ -51,11 +51,7 @@ impl Default for RecoverySetup {
 }
 
 impl RecoverySetup {
-    pub fn ui(&mut self,
-              ui: &mut egui::Ui,
-              _: &mut eframe::Frame,
-              wallet: &mut Wallet,
-              cb: &dyn PlatformCallbacks) {
+    pub fn ui(&mut self, ui: &mut egui::Ui, wallet: &mut Wallet, cb: &dyn PlatformCallbacks) {
         // Show modal content for this ui container.
         self.modal_content_ui(ui, wallet, cb);
 

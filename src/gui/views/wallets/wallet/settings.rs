@@ -52,7 +52,6 @@ impl WalletTab for WalletSettings {
 
     fn ui(&mut self,
           ui: &mut egui::Ui,
-          frame: &mut eframe::Frame,
           wallet: &mut Wallet,
           cb: &dyn PlatformCallbacks) {
         // Show loading progress if navigation is blocked.
@@ -83,11 +82,11 @@ impl WalletTab for WalletSettings {
                         ui.vertical_centered(|ui| {
                             View::max_width_ui(ui, Root::SIDE_PANEL_WIDTH * 1.3, |ui| {
                                 // Show common wallet setup.
-                                self.common_setup.ui(ui, frame, wallet, cb);
+                                self.common_setup.ui(ui, wallet, cb);
                                 // Show wallet connections setup.
-                                self.conn_setup.wallet_ui(ui, frame, wallet, cb);
+                                self.conn_setup.wallet_ui(ui, wallet, cb);
                                 // Show wallet recovery setup.
-                                self.recovery_setup.ui(ui, frame, wallet, cb);
+                                self.recovery_setup.ui(ui, wallet, cb);
                             });
                         });
                     });

@@ -70,7 +70,6 @@ impl ModalContainer for ConnectionSetup {
 
     fn modal_ui(&mut self,
                 ui: &mut egui::Ui,
-                _: &mut eframe::Frame,
                 modal: &Modal,
                 cb: &dyn PlatformCallbacks) {
         match modal.id {
@@ -82,41 +81,34 @@ impl ModalContainer for ConnectionSetup {
 
 impl ConnectionSetup {
     /// Draw wallet creation setup content.
-    pub fn create_ui(&mut self,
-                     ui: &mut egui::Ui,
-                     frame: &mut eframe::Frame,
-                     cb: &dyn PlatformCallbacks) {
-        self.ui(ui, frame, None, cb);
+    pub fn create_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
+        self.ui(ui, None, cb);
     }
 
     /// Draw existing wallet connection setup content.
-    pub fn wallet_ui(&mut self,
-              ui: &mut egui::Ui,
-              frame: &mut eframe::Frame,
-              wallet: &mut Wallet,
-              cb: &dyn PlatformCallbacks) {
+    pub fn wallet_ui(&mut self, ui: &mut egui::Ui, w: &mut Wallet, cb: &dyn PlatformCallbacks) {
         // Setup connection value from provided wallet.
-        match wallet.get_config().ext_conn_id {
+        match w.get_config().ext_conn_id {
             None => self.method = ConnectionMethod::Integrated,
             Some(id) => self.method = ConnectionMethod::External(id)
         }
 
         // Draw setup content.
-        self.ui(ui, frame, Some(wallet), cb);
+        self.ui(ui, Some(w), cb);
 
         // Setup wallet connection value after change.
         let changed = match self.method {
             ConnectionMethod::Integrated => {
-                let changed = wallet.get_current_ext_conn().is_some();
+                let changed = w.get_current_ext_conn().is_some();
                 if changed {
-                    wallet.update_ext_conn_id(None);
+                    w.update_ext_conn_id(None);
                 }
                 changed
             }
             ConnectionMethod::External(id) => {
-                let changed = wallet.get_config().ext_conn_id != Some(id);
+                let changed = w.get_config().ext_conn_id != Some(id);
                 if changed {
-                    wallet.update_ext_conn_id(Some(id));
+                    w.update_ext_conn_id(Some(id));
                 }
                 changed
             }
@@ -124,9 +116,9 @@ impl ConnectionSetup {
 
         // Reopen wallet if connection changed.
         if changed {
-            if !wallet.reopen_needed() {
-                wallet.set_reopen(true);
-                wallet.close();
+            if !w.reopen_needed() {
+                w.set_reopen(true);
+                w.close();
             }
         }
     }
@@ -134,11 +126,10 @@ impl ConnectionSetup {
     /// Draw connection setup content.
     fn ui(&mut self,
           ui: &mut egui::Ui,
-          frame: &mut eframe::Frame,
           wallet: Option<&Wallet>,
           cb: &dyn PlatformCallbacks) {
         // Draw modal content for current ui container.
-        self.current_modal_ui(ui, frame, cb);
+        self.current_modal_ui(ui, cb);
 
         ui.add_space(2.0);
         View::sub_title(ui, format!("{} {}", GLOBE, t!("wallets.conn_method")));

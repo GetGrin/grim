@@ -24,7 +24,7 @@ use winit::platform::android::activity::AndroidApp;
 pub use settings::AppConfig;
 pub use settings::Settings;
 
-use crate::gui::{Colors, PlatformApp};
+use crate::gui::{Colors, App};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::View;
 use crate::node::Node;
@@ -62,7 +62,7 @@ fn android_main(app: AndroidApp) {
 
     // Setup system theme if not set.
     if let None = AppConfig::dark_theme() {
-        let use_dark = system_dark_theme(&platform);
+        let use_dark = use_dark_theme(&platform);
         AppConfig::set_dark_theme(use_dark);
     }
 
@@ -89,21 +89,21 @@ fn android_main(app: AndroidApp) {
         builder.with_android_app(app);
     }));
 
-    let app = PlatformApp::new(platform);
+    let app = App::new(platform);
     start(options, app_creator(app)).unwrap();
 }
 
 /// Check if system is using dark theme.
 #[allow(dead_code)]
 #[cfg(target_os = "android")]
-fn system_dark_theme(platform: &gui::platform::Android) -> bool {
+fn use_dark_theme(platform: &gui::platform::Android) -> bool {
     let res = platform.call_java_method("useDarkTheme", "()Z", &[]).unwrap();
     unsafe { res.z != 0 }
 }
 
-/// [`PlatformApp`] setup for [`eframe`].
-pub fn app_creator<T: 'static>(app: PlatformApp<T>) -> eframe::AppCreator
-    where PlatformApp<T>: eframe::App, T: PlatformCallbacks {
+/// [`App`] setup for [`eframe`].
+pub fn app_creator<T: 'static>(app: App<T>) -> eframe::AppCreator
+    where App<T>: eframe::App, T: PlatformCallbacks {
     Box::new(|cc| {
         // Setup images support.
         egui_extras::install_image_loaders(&cc.egui_ctx);

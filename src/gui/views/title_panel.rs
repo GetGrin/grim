@@ -27,10 +27,9 @@ impl TitlePanel {
     pub const DEFAULT_HEIGHT: f32 = 54.0;
 
     pub fn ui(title: TitleType,
-              mut left_content: impl FnMut(&mut egui::Ui, &mut eframe::Frame),
-              mut right_content: impl FnMut(&mut egui::Ui, &mut eframe::Frame),
-              ui: &mut egui::Ui,
-              frame: &mut eframe::Frame) {
+              mut left_content: impl FnMut(&mut egui::Ui),
+              mut right_content: impl FnMut(&mut egui::Ui),
+              ui: &mut egui::Ui) {
         // Setup identifier and title type.
         let (id, dual_title) = match &title {
             TitleType::Single(content) => {
@@ -85,7 +84,7 @@ impl TitlePanel {
                         strip.cell(|ui| {
                             // Draw left panel action content.
                             ui.centered_and_justified(|ui| {
-                                (left_content)(ui, frame);
+                                (left_content)(ui);
                             });
                         });
                         // Draw title text content.
@@ -104,7 +103,7 @@ impl TitlePanel {
                         strip.cell(|ui| {
                             // Draw right panel action content.
                             ui.centered_and_justified(|ui| {
-                                (right_content)(ui, frame);
+                                (right_content)(ui);
                             });
                         });
                     });

@@ -66,7 +66,6 @@ impl WalletCreation {
     /// Draw wallet creation content.
     pub fn ui(&mut self,
               ui: &mut egui::Ui,
-              frame: &mut eframe::Frame,
               cb: &dyn PlatformCallbacks,
               on_create: impl FnOnce(Wallet)) {
         // Show wallet creation step description and confirmation panel.
@@ -125,7 +124,7 @@ impl WalletCreation {
                                 Root::SIDE_PANEL_WIDTH * 2.0
                             };
                             View::max_width_ui(ui, max_width, |ui| {
-                                self.step_content_ui(ui, frame, cb);
+                                self.step_content_ui(ui, cb);
                             });
                         });
                     });
@@ -312,10 +311,7 @@ impl WalletCreation {
     }
 
     /// Draw wallet creation [`Step`] content.
-    fn step_content_ui(&mut self,
-                       ui: &mut egui::Ui,
-                       frame: &mut eframe::Frame,
-                       cb: &dyn PlatformCallbacks) {
+    fn step_content_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         match &self.step {
             None => {
                 // Show wallet creation message if step is empty.
@@ -339,14 +335,14 @@ impl WalletCreation {
             }
             Some(step) => {
                 match step {
-                    Step::EnterMnemonic => self.mnemonic_setup.ui(ui, frame, cb),
-                    Step::ConfirmMnemonic => self.mnemonic_setup.confirm_ui(ui, frame, cb),
+                    Step::EnterMnemonic => self.mnemonic_setup.ui(ui, cb),
+                    Step::ConfirmMnemonic => self.mnemonic_setup.confirm_ui(ui, cb),
                     Step::SetupConnection => {
                         // Redraw if node is running.
                         if Node::is_running() {
                             ui.ctx().request_repaint_after(Node::STATS_UPDATE_DELAY);
                         }
-                        self.network_setup.create_ui(ui, frame, cb)
+                        self.network_setup.create_ui(ui, cb)
                     }
                 }
             }

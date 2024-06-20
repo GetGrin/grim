@@ -75,7 +75,6 @@ impl WalletContent {
     /// Draw wallet content.
     pub fn ui(&mut self,
               ui: &mut egui::Ui,
-              frame: &mut eframe::Frame,
               wallet: &mut Wallet,
               cb: &dyn PlatformCallbacks) {
         // Show modal content for this ui container.
@@ -153,7 +152,7 @@ impl WalletContent {
                 ..Default::default()
             })
             .show_inside(ui, |ui| {
-                self.current_tab.ui(ui, frame, wallet, cb);
+                self.current_tab.ui(ui, wallet, cb);
             });
 
         // Refresh content after 1 second for synced wallet.

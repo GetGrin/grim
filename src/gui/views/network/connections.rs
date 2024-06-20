@@ -66,7 +66,6 @@ impl ModalContainer for ConnectionsContent {
 
     fn modal_ui(&mut self,
                 ui: &mut egui::Ui,
-                _: &mut eframe::Frame,
                 modal: &Modal,
                 cb: &dyn PlatformCallbacks) {
         match modal.id {
@@ -80,9 +79,9 @@ impl ConnectionsContent {
     /// External connection [`Modal`] identifier.
     pub const NETWORK_EXT_CONNECTION_MODAL: &'static str = "network_ext_connection_modal";
 
-    pub fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame, cb: &dyn PlatformCallbacks) {
+    pub fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         // Draw modal content for current ui container.
-        self.current_modal_ui(ui, frame, cb);
+        self.current_modal_ui(ui, cb);
 
         ui.add_space(2.0);
 
