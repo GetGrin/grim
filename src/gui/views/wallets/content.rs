@@ -263,11 +263,11 @@ impl WalletsContent {
         // Draw title panel.
         TitlePanel::ui(title_content, |ui| {
             if show_wallet && !dual_panel {
-                View::title_button(ui, ARROW_LEFT, || {
+                View::title_button_big(ui, ARROW_LEFT, |_| {
                     self.wallets.select(None);
                 });
             } else if create_wallet {
-                View::title_button(ui, ARROW_LEFT, || {
+                View::title_button_big(ui, ARROW_LEFT, |_| {
                     self.creation_content.back();
                 });
             } else if show_wallet && dual_panel {
@@ -276,17 +276,17 @@ impl WalletsContent {
                 } else {
                     SUITCASE
                 };
-                View::title_button(ui, list_icon, || {
+                View::title_button_big(ui, list_icon, |_| {
                     self.show_wallets_at_dual_panel = !show_list;
                     AppConfig::toggle_show_wallets_at_dual_panel();
                 });
             } else if !Root::is_dual_panel_mode(ui) {
-                View::title_button(ui, GLOBE, || {
+                View::title_button_big(ui, GLOBE, |_| {
                     Root::toggle_network_panel();
                 });
             };
         }, |ui| {
-            View::title_button(ui, GEAR, || {
+            View::title_button_big(ui, GEAR, |_| {
                 // Show settings modal.
                 Modal::new(Root::SETTINGS_MODAL)
                     .position(ModalPosition::CenterTop)

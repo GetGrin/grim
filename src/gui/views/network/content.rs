@@ -202,7 +202,7 @@ impl NetworkContent {
         // Draw title panel.
         TitlePanel::ui(TitleType::Single(title_content), |ui| {
             if !show_connections {
-                View::title_button(ui, DOTS_THREE_OUTLINE_VERTICAL, || {
+                View::title_button_big(ui, DOTS_THREE_OUTLINE_VERTICAL, |_| {
                     AppConfig::toggle_show_connections_network_panel();
                     if AppConfig::show_connections_network_panel() {
                         ExternalConnection::start_ext_conn_availability_check();
@@ -211,7 +211,7 @@ impl NetworkContent {
             }
         }, |ui| {
             if !Root::is_dual_panel_mode(ui) {
-                View::title_button(ui, BRIEFCASE, || {
+                View::title_button_big(ui, BRIEFCASE, |_| {
                     Root::toggle_network_panel();
                 });
             }

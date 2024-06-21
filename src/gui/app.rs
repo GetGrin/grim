@@ -14,12 +14,15 @@
 
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use egui::{Context, Modifiers};
+use egui::{Align, Context, Layout, Modifiers};
+use egui::os::OperatingSystem;
 use lazy_static::lazy_static;
 
 use crate::AppConfig;
+use crate::gui::Colors;
+use crate::gui::icons::{ARROWS_IN, ARROWS_OUT, CARET_DOWN, MOON, SUN, X};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::Root;
+use crate::gui::views::{Root, View};
 
 lazy_static! {
     /// State to check if platform Back button was pressed.
@@ -69,14 +72,22 @@ impl<Platform: PlatformCallbacks> App<Platform> {
             }
         }
 
-        // Show main content.
-        egui::CentralPanel::default()
-            .frame(egui::Frame {
-                ..Default::default()
-            })
-            .show(ctx, |ui| {
+        // Show main content with custom frame on desktop.
+        let os = OperatingSystem::from_target_os();
+        let custom_window = os != OperatingSystem::Android;
+        if custom_window {
+            custom_window_frame(ctx, |ui| {
                 self.root.ui(ui, &self.platform);
             });
+        } else {
+            egui::CentralPanel::default()
+                .frame(egui::Frame {
+                    ..Default::default()
+                })
+                .show(ctx, |ui| {
+                    self.root.ui(ui, &self.platform);
+                });
+        }
     }
 }
 
@@ -85,6 +96,117 @@ impl<Platform: PlatformCallbacks> eframe::App for App<Platform> {
     fn update(&mut self, ctx: &Context, _: &mut eframe::Frame) {
         self.ui(ctx);
     }
+
+    fn clear_color(&self, _visuals: &egui::Visuals) -> [f32; 4] {
+        egui::Rgba::TRANSPARENT.to_array()
+    }
+}
+
+/// Draw custom window frame for desktop.
+fn custom_window_frame(ctx: &Context, add_contents: impl FnOnce(&mut egui::Ui)) {
+    let panel_frame = egui::Frame {
+        fill: Colors::yellow_dark(),
+        rounding: egui::Rounding {
+            nw: 8.0,
+            ne: 8.0,
+            sw: 0.0,
+            se: 0.0,
+        },
+        ..Default::default()
+    };
+
+    egui::CentralPanel::default().frame(panel_frame).show(ctx, |ui| {
+        let app_rect = ui.max_rect();
+
+        let title_bar_height = 38.0;
+        let title_bar_rect = {
+            let mut rect = app_rect;
+            rect.max.y = rect.min.y + title_bar_height;
+            rect
+        };
+        window_title_ui(ui, title_bar_rect);
+        let content_rect = {
+            let mut rect = app_rect;
+            rect.min.y = title_bar_rect.max.y;
+            rect
+        };
+        let mut content_ui = ui.child_ui(content_rect, *ui.layout());
+        add_contents(&mut content_ui);
+    });
+}
+
+/// Draw custom window title content.
+fn window_title_ui(ui: &mut egui::Ui, title_bar_rect: egui::epaint::Rect) {
+    let painter = ui.painter();
+
+    let title_bar_response = ui.interact(
+        title_bar_rect,
+        egui::Id::new("title_bar"),
+        egui::Sense::click_and_drag(),
+    );
+
+    // Paint the title.
+    painter.text(
+        title_bar_rect.center(),
+        egui::Align2::CENTER_CENTER,
+        "Grim 0.1.0",
+        egui::FontId::proportional(15.0),
+        egui::Color32::from_gray(60),
+    );
+
+    // Interact with the title bar (drag to move window):
+    if title_bar_response.double_clicked() {
+        let is_maximized = ui.input(|i| i.viewport().maximized.unwrap_or(false));
+        ui.ctx()
+            .send_viewport_cmd(egui::ViewportCommand::Maximized(!is_maximized));
+    }
+
+    if title_bar_response.drag_started_by(egui::PointerButton::Primary) {
+        ui.ctx().send_viewport_cmd(egui::ViewportCommand::StartDrag);
+    }
+
+    ui.allocate_ui_at_rect(title_bar_rect, |ui| {
+        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+            // Draw button to close window.
+            View::title_button_small(ui, X, |_| {
+                Root::show_exit_modal();
+            });
+
+            // Draw fullscreen button.
+            let is_fullscreen = ui.ctx().input(|i| {
+                i.viewport().fullscreen.unwrap_or(false)
+            });
+            let fullscreen_icon = if is_fullscreen {
+                ARROWS_IN
+            } else {
+                ARROWS_OUT
+            };
+            View::title_button_small(ui, fullscreen_icon, |ui| {
+                ui.ctx().send_viewport_cmd(egui::ViewportCommand::Fullscreen(!is_fullscreen));
+            });
+
+            // Draw button to minimize window.
+            View::title_button_small(ui, CARET_DOWN, |ui| {
+                ui.ctx().send_viewport_cmd(egui::ViewportCommand::Minimized(true));
+            });
+
+            // Draw application icon.
+            let layout_size = ui.available_size();
+            ui.allocate_ui_with_layout(layout_size, Layout::left_to_right(Align::Center), |ui| {
+                // Draw button to minimize window.
+                let use_dark = AppConfig::dark_theme().unwrap_or(false);
+                let theme_icon = if use_dark {
+                    SUN
+                } else {
+                    MOON
+                };
+                View::title_button_small(ui, theme_icon, |ui| {
+                    AppConfig::set_dark_theme(!use_dark);
+                    crate::setup_visuals(ui.ctx());
+                });
+            });
+        });
+    });
 }
 
 #[allow(dead_code)]

@@ -12,9 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use grim::gui::App;
-use grim::gui::platform::Desktop;
-
 pub fn main() {
     #[allow(dead_code)]
     #[cfg(not(target_os = "android"))]
@@ -54,8 +51,7 @@ fn real_main() {
     // Setup window size.
     let (width, height) = AppConfig::window_size();
 
-    let mut viewport = egui::ViewportBuilder::default()
-        .with_inner_size([width, height]);
+    let mut viewport = egui::ViewportBuilder::default().with_inner_size([width, height]);
 
     // Setup an icon.
     if let Ok(icon) = from_png_bytes(include_bytes!("../img/icon.png")) {
@@ -66,6 +62,11 @@ fn real_main() {
     if let Some((x, y)) = AppConfig::window_pos() {
         viewport = viewport.with_position(pos2(x, y));
     }
+
+    // Setup window decorations.
+    viewport = viewport
+        .with_transparent(true)
+        .with_decorations(false);
 
     let mut options = eframe::NativeOptions {
         viewport,

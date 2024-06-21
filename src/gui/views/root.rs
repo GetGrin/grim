@@ -113,13 +113,7 @@ impl Root {
                 ..Default::default()
             })
             .show_animated_inside(ui, is_panel_open, |ui| {
-                // Set content height as window height.
-                let mut rect = ui.available_rect_before_wrap();
-                let window_size = View::window_size(ui);
-                rect.set_height(window_size.1);
-                ui.allocate_ui_at_rect(rect, |ui| {
-                    self.network.ui(ui, cb);
-                });
+                self.network.ui(ui, cb);
             });
 
         // Show wallets content.
@@ -129,13 +123,7 @@ impl Root {
                 ..Default::default()
             })
             .show_inside(ui, |ui| {
-                // Set content height as window height.
-                let mut rect = ui.available_rect_before_wrap();
-                let window_size = View::window_size(ui);
-                rect.set_height(window_size.1);
-                ui.allocate_ui_at_rect(rect, |ui| {
-                    self.wallets.ui(ui, cb);
-                });
+                self.wallets.ui(ui, cb);
             });
 
         // Show integrated node warning on Android if needed.

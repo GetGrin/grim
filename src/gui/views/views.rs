@@ -77,7 +77,6 @@ impl View {
 
     /// Get width and height of app window.
     pub fn window_size(ui: &mut egui::Ui) -> (f32, f32) {
-
         ui.ctx().input(|i| {
             return match i.viewport().inner_rect {
                 None => {
@@ -179,8 +178,18 @@ impl View {
         false
     }
 
-    /// Title button with transparent background fill color, contains only icon.
-    pub fn title_button(ui: &mut egui::Ui, icon: &str, action: impl FnOnce()) {
+    /// Draw big size title button.
+    pub fn title_button_big(ui: &mut egui::Ui, icon: &str, action: impl FnOnce(&mut egui::Ui)) {
+        Self::title_button(ui, 22.0, icon, action);
+    }
+
+    /// Draw small size title button.
+    pub fn title_button_small(ui: &mut egui::Ui, icon: &str, action: impl FnOnce(&mut egui::Ui)) {
+        Self::title_button(ui, 17.0, icon, action);
+    }
+
+    /// Draw title button with transparent background color, contains only icon.
+    fn title_button(ui: &mut egui::Ui, size: f32, icon: &str, action: impl FnOnce(&mut egui::Ui)) {
         ui.scope(|ui| {
             // Disable strokes.
             ui.style_mut().visuals.widgets.inactive.bg_stroke = Stroke::NONE;
@@ -190,7 +199,7 @@ impl View {
             ui.style_mut().visuals.widgets.active.expansion = 0.0;
 
             // Setup text.
-            let wt = RichText::new(icon.to_string()).size(22.0).color(Colors::title(true));
+            let wt = RichText::new(icon.to_string()).size(size).color(Colors::title(true));
             // Draw button.
             let br = Button::new(wt)
                 .fill(Colors::TRANSPARENT)
@@ -198,7 +207,7 @@ impl View {
                 .on_hover_cursor(CursorIcon::PointingHand);
             br.surrender_focus();
             if Self::touched(ui, br) {
-                (action)();
+                (action)(ui);
             }
         });
     }
