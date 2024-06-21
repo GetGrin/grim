@@ -106,13 +106,20 @@ impl<Platform: PlatformCallbacks> eframe::App for App<Platform> {
 
 /// Draw custom window frame for desktop.
 fn custom_window_frame(ctx: &Context, add_contents: impl FnOnce(&mut egui::Ui)) {
+    let is_fullscreen = ctx.input(|i| {
+        i.viewport().fullscreen.unwrap_or(false)
+    });
     let panel_frame = egui::Frame {
         fill: Colors::fill(),
-        rounding: Rounding {
-            nw: 8.0,
-            ne: 8.0,
-            sw: 8.0,
-            se: 8.0,
+        rounding: if is_fullscreen {
+            Rounding::ZERO
+        } else {
+            Rounding {
+                nw: 8.0,
+                ne: 8.0,
+                sw: 8.0,
+                se: 8.0,
+            }
         },
         ..Default::default()
     };
@@ -129,11 +136,15 @@ fn custom_window_frame(ctx: &Context, add_contents: impl FnOnce(&mut egui::Ui)) 
 
         let window_title_bg = RectShape {
             rect: window_title_rect,
-            rounding: Rounding {
-                nw: 8.0,
-                ne: 8.0,
-                sw: 0.0,
-                se: 0.0,
+            rounding: if is_fullscreen {
+                Rounding::ZERO
+            } else {
+                Rounding {
+                    nw: 8.0,
+                    ne: 8.0,
+                    sw: 0.0,
+                    se: 0.0,
+                }
             },
             fill: Colors::yellow_dark(),
             stroke: Stroke::NONE,
@@ -188,6 +199,10 @@ fn custom_window_frame(ctx: &Context, add_contents: impl FnOnce(&mut egui::Ui)) 
 
 /// Draw custom window title content.
 fn window_title_ui(ui: &mut egui::Ui, title_bar_rect: Rect) {
+    let is_fullscreen = ui.ctx().input(|i| {
+        i.viewport().fullscreen.unwrap_or(false)
+    });
+
     let painter = ui.painter();
 
     let title_bar_response = ui.interact(
@@ -207,9 +222,7 @@ fn window_title_ui(ui: &mut egui::Ui, title_bar_rect: Rect) {
 
     // Interact with the window title (drag to move window):
     if title_bar_response.double_clicked() {
-        let is_maximized = ui.input(|i| i.viewport().maximized.unwrap_or(false));
-        ui.ctx()
-            .send_viewport_cmd(egui::ViewportCommand::Maximized(!is_maximized));
+        ui.ctx().send_viewport_cmd(egui::ViewportCommand::Fullscreen(!is_fullscreen));
     }
 
     if title_bar_response.drag_started_by(egui::PointerButton::Primary) {
@@ -224,9 +237,6 @@ fn window_title_ui(ui: &mut egui::Ui, title_bar_rect: Rect) {
             });
 
             // Draw fullscreen button.
-            let is_fullscreen = ui.ctx().input(|i| {
-                i.viewport().fullscreen.unwrap_or(false)
-            });
             let fullscreen_icon = if is_fullscreen {
                 ARROWS_IN
             } else {
