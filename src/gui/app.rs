@@ -14,7 +14,8 @@
 
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use egui::{Align, Context, Layout, Modifiers};
+use egui::{Align, Context, Layout, Modifiers, Rect, Rounding, Stroke};
+use egui::epaint::RectShape;
 use egui::os::OperatingSystem;
 use lazy_static::lazy_static;
 
@@ -22,7 +23,7 @@ use crate::AppConfig;
 use crate::gui::Colors;
 use crate::gui::icons::{ARROWS_IN, ARROWS_OUT, CARET_DOWN, MOON, SUN, X};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Root, View};
+use crate::gui::views::{Root, TitlePanel, View};
 
 lazy_static! {
     /// State to check if platform Back button was pressed.
@@ -105,33 +106,70 @@ impl<Platform: PlatformCallbacks> eframe::App for App<Platform> {
 /// Draw custom window frame for desktop.
 fn custom_window_frame(ctx: &Context, add_contents: impl FnOnce(&mut egui::Ui)) {
     let panel_frame = egui::Frame {
-        fill: Colors::yellow_dark(),
-        rounding: egui::Rounding {
+        fill: Colors::fill(),
+        rounding: Rounding {
             nw: 8.0,
             ne: 8.0,
             sw: 0.0,
             se: 0.0,
         },
+        // stroke: ctx.style().visuals.widgets.noninteractive.fg_stroke,
+        // outer_margin: 0.5.into(), // so the stroke is within the bounds
         ..Default::default()
     };
 
     egui::CentralPanel::default().frame(panel_frame).show(ctx, |ui| {
         let app_rect = ui.max_rect();
 
-        let title_bar_height = 38.0;
-        let title_bar_rect = {
+        let window_title_height = 38.0;
+        let window_title_rect = {
             let mut rect = app_rect;
-            rect.max.y = rect.min.y + title_bar_height;
+            rect.max.y = rect.min.y + window_title_height;
             rect
         };
-        window_title_ui(ui, title_bar_rect);
-        let content_rect = {
+
+        let window_title_bg = RectShape {
+            rect: window_title_rect,
+            rounding: panel_frame.rounding,
+            fill: Colors::yellow_dark(),
+            stroke: Stroke::NONE,
+            fill_texture_id: Default::default(),
+            uv: Rect::ZERO
+        };
+        let bg_idx = ui.painter().add(window_title_bg);
+
+        // Draw window title.
+        window_title_ui(ui, window_title_rect);
+
+        // Setup window title background.
+        ui.painter().set(bg_idx, window_title_bg);
+
+        let mut title_bar_rect = window_title_rect.clone();
+        title_bar_rect.min += egui::emath::vec2(0.0, window_title_height);
+        title_bar_rect.max += egui::emath::vec2(0.0, TitlePanel::DEFAULT_HEIGHT - 0.5);
+        let title_bar_bg = RectShape {
+            rect: title_bar_rect,
+            rounding: Rounding::ZERO,
+            fill: Colors::yellow(),
+            stroke: Stroke::NONE,
+            fill_texture_id: Default::default(),
+            uv: Rect::ZERO
+        };
+        let bg_idx = ui.painter().add(title_bar_bg);
+
+        // Draw main content.
+        let mut content_rect = {
             let mut rect = app_rect;
-            rect.min.y = title_bar_rect.max.y;
+            rect.min.y = window_title_rect.max.y;
             rect
         };
+        content_rect.min += egui::emath::vec2(4.0, 0.0);
+        content_rect.max -= egui::emath::vec2(4.0, 4.0);
         let mut content_ui = ui.child_ui(content_rect, *ui.layout());
         add_contents(&mut content_ui);
+
+        // Setup title bar background.
+        ui.painter().set(bg_idx, title_bar_bg);
     });
 }
 

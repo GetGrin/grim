@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use egui::{Margin, RichText, ScrollArea, Stroke};
+use egui::os::OperatingSystem;
 use egui::scroll_area::ScrollBarVisibility;
 
 use crate::AppConfig;
@@ -58,7 +59,11 @@ impl NetworkContent {
                 inner_margin: Margin {
                     left: View::get_left_inset() + 4.0,
                     right: View::far_right_inset_margin(ui) + 4.0,
-                    top: 4.0,
+                    top: if OperatingSystem::Android == OperatingSystem::from_target_os() {
+                        4.0
+                    } else {
+                        6.0
+                    },
                     bottom: View::get_bottom_inset() + 4.0,
                 },
                 ..Default::default()
@@ -156,7 +161,12 @@ impl NetworkContent {
     fn tabs_ui(&mut self, ui: &mut egui::Ui) {
         ui.vertical_centered(|ui| {
             // Setup spacing between tabs.
-            ui.style_mut().spacing.item_spacing = egui::vec2(4.0, 0.0);
+            let between = if OperatingSystem::Android == OperatingSystem::from_target_os() {
+                4.0
+            } else {
+                6.0
+            };
+            ui.style_mut().spacing.item_spacing = egui::vec2(between, 0.0);
             // Setup vertical padding inside tab button.
             ui.style_mut().spacing.button_padding = egui::vec2(0.0, 4.0);
 

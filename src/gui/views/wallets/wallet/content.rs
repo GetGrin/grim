@@ -14,6 +14,7 @@
 
 use std::time::Duration;
 use egui::{Align, Id, Layout, Margin, RichText, ScrollArea};
+use egui::os::OperatingSystem;
 use egui::scroll_area::ScrollBarVisibility;
 use grin_chain::SyncStatus;
 use grin_core::core::amount_to_hr_string;
@@ -130,7 +131,11 @@ impl WalletContent {
                 inner_margin: Margin {
                     left: View::far_left_inset_margin(ui) + 4.0,
                     right: View::get_right_inset() + 4.0,
-                    top: 4.0,
+                    top: if OperatingSystem::Android == OperatingSystem::from_target_os() {
+                        4.0
+                    } else {
+                        6.0
+                    },
                     bottom: View::get_bottom_inset() + 4.0,
                 },
                 ..Default::default()
@@ -512,7 +517,12 @@ impl WalletContent {
     fn tabs_ui(&mut self, ui: &mut egui::Ui, wallet: &Wallet) {
         ui.scope(|ui| {
             // Setup spacing between tabs.
-            ui.style_mut().spacing.item_spacing = egui::vec2(4.0, 0.0);
+            let between = if OperatingSystem::Android == OperatingSystem::from_target_os() {
+                4.0
+            } else {
+                6.0
+            };
+            ui.style_mut().spacing.item_spacing = egui::vec2(between, 0.0);
             // Setup vertical padding inside tab button.
             ui.style_mut().spacing.button_padding = egui::vec2(0.0, 4.0);
 

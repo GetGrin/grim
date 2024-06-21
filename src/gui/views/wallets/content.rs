@@ -14,6 +14,7 @@
 
 use std::time::Duration;
 use egui::{Align, Id, Layout, Margin, RichText, Rounding, ScrollArea};
+use egui::os::OperatingSystem;
 use egui::scroll_area::ScrollBarVisibility;
 
 use crate::AppConfig;
@@ -177,12 +178,23 @@ impl WalletsContent {
                 inner_margin: Margin {
                     left: View::get_left_inset() + 4.0,
                     right: View::far_right_inset_margin(ui) + 4.0,
-                    top: 4.0,
+                    top: if OperatingSystem::Android == OperatingSystem::from_target_os() {
+                        4.0
+                    } else {
+                        6.0
+                    },
                     bottom: View::get_bottom_inset() + 4.0,
                 },
                 ..Default::default()
             })
             .show_animated_inside(ui, show_bottom_panel, |ui| {
+                // Setup spacing between tabs.
+                let between = if OperatingSystem::Android == OperatingSystem::from_target_os() {
+                    4.0
+                } else {
+                    6.0
+                };
+                ui.style_mut().spacing.item_spacing = egui::vec2(between, 0.0);
                 // Setup vertical padding inside buttons.
                 ui.style_mut().spacing.button_padding = egui::vec2(10.0, 4.0);
 
