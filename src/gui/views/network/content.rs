@@ -55,6 +55,7 @@ impl NetworkContent {
         egui::TopBottomPanel::bottom("node_tabs_panel")
             .resizable(false)
             .frame(egui::Frame {
+                stroke: Stroke::NONE,
                 fill: Colors::fill(),
                 inner_margin: Margin {
                     left: View::get_left_inset() + 4.0,
@@ -82,6 +83,7 @@ impl NetworkContent {
             .resizable(false)
             .exact_width(ui.available_width())
             .frame(egui::Frame {
+                stroke: Stroke::NONE,
                 ..Default::default()
             })
             .show_animated_inside(ui, !show_connections, |ui| {

@@ -83,6 +83,7 @@ impl<Platform: PlatformCallbacks> App<Platform> {
         } else {
             egui::CentralPanel::default()
                 .frame(egui::Frame {
+                    stroke: Stroke::NONE,
                     ..Default::default()
                 })
                 .show(ctx, |ui| {
@@ -110,11 +111,9 @@ fn custom_window_frame(ctx: &Context, add_contents: impl FnOnce(&mut egui::Ui)) 
         rounding: Rounding {
             nw: 8.0,
             ne: 8.0,
-            sw: 0.0,
-            se: 0.0,
+            sw: 8.0,
+            se: 8.0,
         },
-        // stroke: ctx.style().visuals.widgets.noninteractive.fg_stroke,
-        // outer_margin: 0.5.into(), // so the stroke is within the bounds
         ..Default::default()
     };
 
@@ -130,7 +129,12 @@ fn custom_window_frame(ctx: &Context, add_contents: impl FnOnce(&mut egui::Ui)) 
 
         let window_title_bg = RectShape {
             rect: window_title_rect,
-            rounding: panel_frame.rounding,
+            rounding: Rounding {
+                nw: 8.0,
+                ne: 8.0,
+                sw: 0.0,
+                se: 0.0,
+            },
             fill: Colors::yellow_dark(),
             stroke: Stroke::NONE,
             fill_texture_id: Default::default(),
@@ -157,6 +161,15 @@ fn custom_window_frame(ctx: &Context, add_contents: impl FnOnce(&mut egui::Ui)) 
         };
         let bg_idx = ui.painter().add(title_bar_bg);
 
+        // Draw line to support title panel.
+        ui.painter().line_segment(
+            [
+                title_bar_rect.left_bottom() + egui::vec2(0.0, 0.5),
+                title_bar_rect.right_bottom() + egui::vec2(0.0, 0.5),
+            ],
+            View::item_stroke(),
+        );
+
         // Draw main content.
         let mut content_rect = {
             let mut rect = app_rect;
@@ -164,17 +177,17 @@ fn custom_window_frame(ctx: &Context, add_contents: impl FnOnce(&mut egui::Ui)) 
             rect
         };
         content_rect.min += egui::emath::vec2(4.0, 0.0);
-        content_rect.max -= egui::emath::vec2(4.0, 4.0);
+        content_rect.max -= egui::emath::vec2(4.0, 2.0);
         let mut content_ui = ui.child_ui(content_rect, *ui.layout());
         add_contents(&mut content_ui);
 
-        // Setup title bar background.
+        // Setup title panel background.
         ui.painter().set(bg_idx, title_bar_bg);
     });
 }
 
 /// Draw custom window title content.
-fn window_title_ui(ui: &mut egui::Ui, title_bar_rect: egui::epaint::Rect) {
+fn window_title_ui(ui: &mut egui::Ui, title_bar_rect: Rect) {
     let painter = ui.painter();
 
     let title_bar_response = ui.interact(
@@ -192,7 +205,7 @@ fn window_title_ui(ui: &mut egui::Ui, title_bar_rect: egui::epaint::Rect) {
         egui::Color32::from_gray(60),
     );
 
-    // Interact with the title bar (drag to move window):
+    // Interact with the window title (drag to move window):
     if title_bar_response.double_clicked() {
         let is_maximized = ui.input(|i| i.viewport().maximized.unwrap_or(false));
         ui.ctx()

@@ -109,6 +109,7 @@ impl Root {
             .resizable(false)
             .exact_width(panel_width)
             .frame(egui::Frame {
+                stroke: egui::Stroke::NONE,
                 fill: Colors::white_or_black(false),
                 ..Default::default()
             })
@@ -119,6 +120,7 @@ impl Root {
         // Show wallets content.
         egui::CentralPanel::default()
             .frame(egui::Frame {
+                stroke: egui::Stroke::NONE,
                 fill: Colors::fill_deep(),
                 ..Default::default()
             })
