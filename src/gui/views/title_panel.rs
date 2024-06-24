@@ -27,6 +27,7 @@ impl TitlePanel {
     pub const DEFAULT_HEIGHT: f32 = 54.0;
 
     pub fn ui(title: TitleType,
+              show: bool,
               mut left_content: impl FnMut(&mut egui::Ui),
               mut right_content: impl FnMut(&mut egui::Ui),
               ui: &mut egui::Ui) {
@@ -57,7 +58,7 @@ impl TitlePanel {
                 fill: Colors::yellow(),
                 ..Default::default()
             })
-            .show_inside(ui, |ui| {
+            .show_animated_inside(ui, show, |ui| {
                 StripBuilder::new(ui)
                     .size(Size::exact(Self::DEFAULT_HEIGHT))
                     .size(if dual_title {

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::{Margin, RichText, ScrollArea, Stroke};
+use egui::{Margin, RichText, ScrollArea};
 use egui::scroll_area::ScrollBarVisibility;
 
 use crate::AppConfig;
@@ -48,7 +48,7 @@ impl NetworkContent {
         let dual_panel = Root::is_dual_panel_mode(ui);
 
         // Show title panel.
-        self.title_ui(ui, show_connections);
+        self.title_ui(ui, dual_panel || Root::is_network_panel_open(), show_connections);
 
         // Show integrated node tabs content.
         if !show_connections {
@@ -57,10 +57,10 @@ impl NetworkContent {
                 .frame(egui::Frame {
                     fill: Colors::fill(),
                     inner_margin: Margin {
-                        left: View::get_left_inset() + 4.0,
-                        right: View::far_right_inset_margin(ui) + 4.0,
-                        top: 6.0,
-                        bottom: View::get_bottom_inset() + 5.0,
+                        left: View::get_left_inset() + View::TAB_ITEMS_PADDING,
+                        right: View::far_right_inset_margin(ui) + View::TAB_ITEMS_PADDING,
+                        top: View::TAB_ITEMS_PADDING,
+                        bottom: View::get_bottom_inset() + View::TAB_ITEMS_PADDING,
                     },
                     outer_margin: if View::is_desktop() {
                         Margin {
@@ -115,11 +115,7 @@ impl NetworkContent {
         // Show connections content.
         egui::CentralPanel::default()
             .frame(egui::Frame {
-                stroke: if show_connections {
-                    View::item_stroke()
-                } else {
-                    Stroke::NONE
-                },
+                stroke: View::item_stroke(),
                 inner_margin: Margin {
                     left: if show_connections {
                         View::get_left_inset() + 4.0
@@ -171,7 +167,7 @@ impl NetworkContent {
     fn tabs_ui(&mut self, ui: &mut egui::Ui) {
         ui.vertical_centered(|ui| {
             // Setup spacing between tabs.
-            ui.style_mut().spacing.item_spacing = egui::vec2(6.0, 0.0);
+            ui.style_mut().spacing.item_spacing = egui::vec2(View::TAB_ITEMS_PADDING, 0.0);
             // Setup vertical padding inside tab button.
             ui.style_mut().spacing.button_padding = egui::vec2(0.0, 4.0);
 
@@ -203,7 +199,7 @@ impl NetworkContent {
     }
 
     /// Draw title content.
-    fn title_ui(&mut self, ui: &mut egui::Ui, show_connections: bool) {
+    fn title_ui(&mut self, ui: &mut egui::Ui, show_panel: bool, show_connections: bool) {
         // Setup values for title panel.
         let title_text = self.node_tab_content.get_type().title().to_uppercase();
         let subtitle_text = Node::get_sync_status_text();
@@ -215,7 +211,7 @@ impl NetworkContent {
         };
 
         // Draw title panel.
-        TitlePanel::ui(TitleType::Single(title_content), |ui| {
+        TitlePanel::ui(TitleType::Single(title_content), show_panel, |ui| {
             if !show_connections {
                 View::title_button_big(ui, DOTS_THREE_OUTLINE_VERTICAL, |_| {
                     AppConfig::toggle_show_connections_network_panel();

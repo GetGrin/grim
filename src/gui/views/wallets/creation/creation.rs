@@ -73,12 +73,25 @@ impl WalletCreation {
             egui::TopBottomPanel::bottom("wallet_creation_step_panel")
                 .frame(egui::Frame {
                     fill: Colors::fill(),
-                    stroke: View::default_stroke(),
                     inner_margin: Margin {
                         left: View::far_left_inset_margin(ui) + 8.0,
                         right: View::get_right_inset() + 8.0,
                         top: 4.0,
                         bottom: View::get_bottom_inset(),
+                    },
+                    outer_margin: if View::is_desktop() {
+                        Margin {
+                            left: if !Root::is_dual_panel_mode(ui) {
+                                -0.5
+                            } else {
+                                0.0
+                            },
+                            right: -0.5,
+                            top: 0.0,
+                            bottom: -0.5,
+                        }
+                    } else {
+                        Margin::ZERO
                     },
                     ..Default::default()
                 })

@@ -14,7 +14,7 @@
 
 use std::sync::atomic::{AtomicBool, Ordering};
 use lazy_static::lazy_static;
-use egui::{Align, Context, Layout, Margin, Modifiers, Rect, Rounding, Stroke};
+use egui::{Align, Context, CursorIcon, Layout, Margin, Modifiers, Rect, ResizeDirection, Rounding, Stroke, ViewportCommand};
 use egui::epaint::{RectShape, Shadow};
 
 use crate::{AppConfig, built_info};
@@ -57,7 +57,7 @@ impl<Platform: PlatformCallbacks> App<Platform> {
         // Handle Close event (on desktop).
         if ctx.input(|i| i.viewport().close_requested()) {
             if !self.root.exit_allowed {
-                ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
+                ctx.send_viewport_cmd(ViewportCommand::CancelClose);
                 Root::show_exit_modal();
             } else {
                 ctx.input(|i| {
@@ -93,8 +93,91 @@ impl<Platform: PlatformCallbacks> App<Platform> {
             inner_margin: Margin::same(Root::WINDOW_FRAME_MARGIN),
             ..Default::default()
         }).show(ctx, |ui| {
+            // Draw resize areas.
+            Self::resize_area_ui(ui, ResizeDirection::North);
+            Self::resize_area_ui(ui, ResizeDirection::East);
+            Self::resize_area_ui(ui, ResizeDirection::South);
+            Self::resize_area_ui(ui, ResizeDirection::West);
+            Self::resize_area_ui(ui, ResizeDirection::NorthWest);
+            Self::resize_area_ui(ui, ResizeDirection::NorthEast);
+            Self::resize_area_ui(ui, ResizeDirection::SouthEast);
+            Self::resize_area_ui(ui, ResizeDirection::SouthWest);
+            // Draw window content.
             self.custom_window_frame(ui);
         });
+    }
+
+    /// Draw window resize area.
+    fn resize_area_ui(ui: &egui::Ui, direction: ResizeDirection) {
+        let mut rect = ui.max_rect();
+        rect.min.y -= Root::WINDOW_FRAME_MARGIN;
+        rect.min.x -= Root::WINDOW_FRAME_MARGIN;
+        rect.max.y += Root::WINDOW_FRAME_MARGIN;
+        rect.max.x += Root::WINDOW_FRAME_MARGIN;
+
+        // Setup area id, cursor and area rect based on direction.
+        let (id, cursor, rect) = match direction {
+            ResizeDirection::North => ("n", CursorIcon::ResizeNorth, {
+                rect.min.x += Root::WINDOW_FRAME_MARGIN;
+                rect.max.y = rect.min.y + Root::WINDOW_FRAME_MARGIN;
+                rect.max.x -= Root::WINDOW_FRAME_MARGIN;
+                rect
+            }),
+            ResizeDirection::East => ("e", CursorIcon::ResizeEast, {
+                rect.min.y += Root::WINDOW_FRAME_MARGIN;
+                rect.min.x = rect.max.x - Root::WINDOW_FRAME_MARGIN;
+                rect.max.y -= Root::WINDOW_FRAME_MARGIN;
+                rect
+            }),
+            ResizeDirection::South => ("s", CursorIcon::ResizeSouth, {
+                rect.min.x += Root::WINDOW_FRAME_MARGIN;
+                rect.min.y = rect.max.y - Root::WINDOW_FRAME_MARGIN;
+                rect.max.x -= Root::WINDOW_FRAME_MARGIN;
+                rect
+            }),
+            ResizeDirection::West => ("w", CursorIcon::ResizeWest, {
+                rect.min.y += Root::WINDOW_FRAME_MARGIN;
+                rect.max.x = rect.min.x + Root::WINDOW_FRAME_MARGIN;
+                rect.max.y -= Root::WINDOW_FRAME_MARGIN;
+                rect
+            }),
+            ResizeDirection::NorthWest => ("nw", CursorIcon::ResizeNorthWest, {
+                rect.max.y = rect.min.y + Root::WINDOW_FRAME_MARGIN;
+                rect.max.x = rect.max.y + Root::WINDOW_FRAME_MARGIN;
+                rect
+            }),
+            ResizeDirection::NorthEast => ("ne", CursorIcon::ResizeNorthEast, {
+                rect.min.y += Root::WINDOW_FRAME_MARGIN;
+                rect.min.x = rect.max.x - Root::WINDOW_FRAME_MARGIN;
+                rect.max.y = rect.min.y;
+                rect
+            }),
+            ResizeDirection::SouthEast => ("se", CursorIcon::ResizeSouthEast, {
+                rect.min.y = rect.max.y - Root::WINDOW_FRAME_MARGIN;
+                rect.min.x = rect.max.x - Root::WINDOW_FRAME_MARGIN;
+                rect
+            }),
+            ResizeDirection::SouthWest => ("sw", CursorIcon::ResizeSouthWest, {
+                rect.min.y = rect.max.y - Root::WINDOW_FRAME_MARGIN;
+                rect.max.y = rect.min.y;
+                rect.max.x = rect.min.x + Root::WINDOW_FRAME_MARGIN;
+                rect
+            }),
+        };
+
+        // Draw resize area.
+        let id = egui::Id::new("window_resize").with(id);
+        let sense = egui::Sense::drag();
+        let area_resp = ui.interact(rect, id, sense).on_hover_cursor(cursor);
+        if area_resp.dragged() {
+            let current_pos = area_resp.interact_pointer_pos();
+            if let Some(pos) = current_pos {
+                ui.ctx().send_viewport_cmd(ViewportCommand::BeginResize(direction));
+                ui.ctx().send_viewport_cmd(ViewportCommand::InnerSize(
+                    pos.to_vec2()
+                ));
+            }
+        }
     }
 
     /// Draw custom window frame for desktop.
@@ -107,7 +190,7 @@ impl<Platform: PlatformCallbacks> App<Platform> {
         } else {
             egui::Frame {
                 fill: Colors::fill(),
-                stroke: Stroke { width: 1.0, color: egui::Color32::from_gray(220) },
+                stroke: Stroke { width: 1.0, color: egui::Color32::from_gray(210) },
                 shadow: Shadow {
                     offset: Default::default(),
                     blur: Root::WINDOW_FRAME_MARGIN,
@@ -126,10 +209,9 @@ impl<Platform: PlatformCallbacks> App<Platform> {
         egui::CentralPanel::default().frame(panel_frame).show_inside(ui, |ui| {
             let app_rect = ui.max_rect();
 
-            let window_title_height = Root::WINDOW_TITLE_HEIGHT;
             let window_title_rect = {
                 let mut rect = app_rect;
-                rect.max.y = rect.min.y + window_title_height;
+                rect.max.y = rect.min.y + Root::WINDOW_TITLE_HEIGHT;
                 rect
             };
 
@@ -167,16 +249,21 @@ impl<Platform: PlatformCallbacks> App<Platform> {
     }
 
     /// Draw custom window title content.
-    fn window_title_ui(&self, ui: &mut egui::Ui, title_bar_rect: Rect) {
+    fn window_title_ui(&self, ui: &mut egui::Ui, title_rect: Rect) {
         let is_fullscreen = ui.ctx().input(|i| {
             i.viewport().fullscreen.unwrap_or(false)
         });
 
         let painter = ui.painter();
 
-        let title_bar_response = ui.interact(
-            title_bar_rect,
-            egui::Id::new("title_bar"),
+        let interact_rect = {
+            let mut rect = title_rect;
+            rect.min.y += Root::WINDOW_FRAME_MARGIN;
+            rect
+        };
+        let title_resp = ui.interact(
+            interact_rect,
+            egui::Id::new("window_title"),
             egui::Sense::click_and_drag(),
         );
 
@@ -198,7 +285,7 @@ impl<Platform: PlatformCallbacks> App<Platform> {
             format!("Grim {}", built_info::PKG_VERSION)
         };
         painter.text(
-            title_bar_rect.center(),
+            title_rect.center(),
             egui::Align2::CENTER_CENTER,
             title_text,
             egui::FontId::proportional(15.0),
@@ -206,15 +293,15 @@ impl<Platform: PlatformCallbacks> App<Platform> {
         );
 
         // Interact with the window title (drag to move window):
-        if title_bar_response.double_clicked() {
-            ui.ctx().send_viewport_cmd(egui::ViewportCommand::Fullscreen(!is_fullscreen));
+        if title_resp.double_clicked() {
+            ui.ctx().send_viewport_cmd(ViewportCommand::Fullscreen(!is_fullscreen));
         }
 
-        if title_bar_response.drag_started_by(egui::PointerButton::Primary) {
-            ui.ctx().send_viewport_cmd(egui::ViewportCommand::StartDrag);
+        if title_resp.drag_started_by(egui::PointerButton::Primary) {
+            ui.ctx().send_viewport_cmd(ViewportCommand::StartDrag);
         }
 
-        ui.allocate_ui_at_rect(title_bar_rect, |ui| {
+        ui.allocate_ui_at_rect(title_rect, |ui| {
             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                 // Draw button to close window.
                 View::title_button_small(ui, X, |_| {
@@ -228,12 +315,12 @@ impl<Platform: PlatformCallbacks> App<Platform> {
                     ARROWS_OUT
                 };
                 View::title_button_small(ui, fullscreen_icon, |ui| {
-                    ui.ctx().send_viewport_cmd(egui::ViewportCommand::Fullscreen(!is_fullscreen));
+                    ui.ctx().send_viewport_cmd(ViewportCommand::Fullscreen(!is_fullscreen));
                 });
 
                 // Draw button to minimize window.
                 View::title_button_small(ui, CARET_DOWN, |ui| {
-                    ui.ctx().send_viewport_cmd(egui::ViewportCommand::Minimized(true));
+                    ui.ctx().send_viewport_cmd(ViewportCommand::Minimized(true));
                 });
 
                 // Draw application icon.

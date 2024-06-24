@@ -128,10 +128,10 @@ impl WalletContent {
             .frame(egui::Frame {
                 fill: Colors::fill(),
                 inner_margin: Margin {
-                    left: View::far_left_inset_margin(ui) + 4.0,
-                    right: View::get_right_inset() + 4.0,
-                    top: 6.0,
-                    bottom: View::get_bottom_inset() + 5.0,
+                    left: View::far_left_inset_margin(ui) + View::TAB_ITEMS_PADDING,
+                    right: View::get_right_inset() + View::TAB_ITEMS_PADDING,
+                    top: View::TAB_ITEMS_PADDING,
+                    bottom: View::get_bottom_inset() + View::TAB_ITEMS_PADDING,
                 },
                 outer_margin: if View::is_desktop() {
                     Margin {
@@ -526,7 +526,7 @@ impl WalletContent {
     fn tabs_ui(&mut self, ui: &mut egui::Ui, wallet: &Wallet) {
         ui.scope(|ui| {
             // Setup spacing between tabs.
-            ui.style_mut().spacing.item_spacing = egui::vec2(6.0, 0.0);
+            ui.style_mut().spacing.item_spacing = egui::vec2(View::TAB_ITEMS_PADDING, 0.0);
             // Setup vertical padding inside tab button.
             ui.style_mut().spacing.button_padding = egui::vec2(0.0, 4.0);
 

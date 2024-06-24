@@ -218,6 +218,9 @@ impl View {
         });
     }
 
+    /// Padding for tab items.
+    pub const TAB_ITEMS_PADDING: f32 = 5.0;
+
     /// Tab button with white background fill color, contains only icon.
     pub fn tab_button(ui: &mut egui::Ui, icon: &str, active: bool, action: impl FnOnce()) {
         ui.scope(|ui| {
