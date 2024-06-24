@@ -77,6 +77,7 @@ impl<Platform: PlatformCallbacks> App<Platform> {
         } else {
             egui::CentralPanel::default()
                 .frame(egui::Frame {
+                    fill: Colors::fill(),
                     stroke: Stroke::NONE,
                     ..Default::default()
                 })
@@ -105,11 +106,13 @@ impl<Platform: PlatformCallbacks> App<Platform> {
             egui::Frame::default()
         } else {
             egui::Frame {
+                fill: Colors::fill(),
+                stroke: Stroke { width: 1.0, color: egui::Color32::from_gray(220) },
                 shadow: Shadow {
                     offset: Default::default(),
                     blur: Root::WINDOW_FRAME_MARGIN,
                     spread: 0.5,
-                    color: egui::Color32::from_black_alpha(25),
+                    color: egui::Color32::from_black_alpha(35),
                 },
                 rounding: Rounding {
                     nw: 8.0,
