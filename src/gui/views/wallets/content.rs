@@ -106,7 +106,8 @@ impl WalletsContent {
         // Flag to check if wallet list is hidden on the screen.
         let list_hidden = content_width == 0.0 || empty_list || create_wallet
             || (dual_panel && show_wallet && !self.show_wallets_at_dual_panel)
-            || (!dual_panel && show_wallet) || (!dual_panel && Root::is_network_panel_open());
+            || (!dual_panel && show_wallet) ||
+            (!Root::is_dual_panel_mode(ui) && Root::is_network_panel_open());
 
         // Show title panel.
         self.title_ui(ui, dual_panel, create_wallet, show_wallet);
@@ -300,7 +301,8 @@ impl WalletsContent {
         };
 
         // Draw title panel.
-        TitlePanel::ui(title_content, dual_panel || !Root::is_network_panel_open(), |ui| {
+        let show_title = Root::is_dual_panel_mode(ui) || !Root::is_network_panel_open();
+        TitlePanel::ui(title_content, show_title, |ui| {
             if show_wallet && !dual_panel {
                 View::title_button_big(ui, ARROW_LEFT, |_| {
                     self.wallets.select(None);
