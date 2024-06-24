@@ -43,7 +43,7 @@ pub struct Modal {
 
 impl Modal {
     /// Margin from [`Modal`] window at top/left/right.
-    const DEFAULT_MARGIN: f32 = 6.0;
+    const DEFAULT_MARGIN: f32 = 8.0;
     /// Maximum width of the content.
     const DEFAULT_WIDTH: f32 = Root::SIDE_PANEL_WIDTH - (2.0 * Self::DEFAULT_MARGIN);
 
@@ -223,7 +223,7 @@ impl Modal {
         };
         let x_align = View::get_left_inset() - View::get_right_inset();
         let y_align = View::get_top_inset() + Self::DEFAULT_MARGIN + if View::is_desktop() {
-            Root::WINDOW_TITLE_HEIGHT + 8.0
+            Root::WINDOW_TITLE_HEIGHT + Root::WINDOW_FRAME_MARGIN
         } else {
             0.0
         };
@@ -296,12 +296,12 @@ impl Modal {
         // Draw title content.
         let title_resp = ui.allocate_ui_at_rect(rect, |ui| {
             ui.vertical_centered_justified(|ui| {
-                ui.add_space(9.0);
+                ui.add_space(Self::DEFAULT_MARGIN);
                 ui.label(RichText::new(self.title.as_ref().unwrap())
                     .size(19.0)
                     .color(Colors::title(true))
                 );
-                ui.add_space(8.0);
+                ui.add_space(Self::DEFAULT_MARGIN);
             });
         }).response;
 

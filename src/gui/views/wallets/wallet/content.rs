@@ -133,6 +133,20 @@ impl WalletContent {
                     top: 6.0,
                     bottom: View::get_bottom_inset() + 5.0,
                 },
+                outer_margin: if View::is_desktop() {
+                    Margin {
+                        left: if dual_panel {
+                            0.0
+                        } else {
+                            -0.5
+                        },
+                        right: -0.5,
+                        top: 0.0,
+                        bottom: -0.5,
+                    }
+                } else {
+                    Margin::ZERO
+                },
                 ..Default::default()
             })
             .show_animated_inside(ui, !Self::block_navigation_on_sync(wallet), |ui| {

@@ -182,6 +182,24 @@ impl WalletsContent {
                         top: 6.0,
                         bottom: View::get_bottom_inset() + 5.0,
                     },
+                    outer_margin: if View::is_desktop() {
+                        Margin {
+                            left: if !dual_panel {
+                                -0.5
+                            } else {
+                                0.0
+                            },
+                            right: if !self.wallet_panel_opened() {
+                                -0.5
+                            } else {
+                                0.0
+                            },
+                            top: 0.0,
+                            bottom: -0.5,
+                        }
+                    } else {
+                        Margin::ZERO
+                    },
                     ..Default::default()
                 })
                 .show_inside(ui, |ui| {

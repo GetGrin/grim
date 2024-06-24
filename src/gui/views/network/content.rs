@@ -45,6 +45,7 @@ impl Default for NetworkContent {
 impl NetworkContent {
     pub fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         let show_connections = AppConfig::show_connections_network_panel();
+        let dual_panel = Root::is_dual_panel_mode(ui);
 
         // Show title panel.
         self.title_ui(ui, show_connections);
@@ -60,6 +61,20 @@ impl NetworkContent {
                         right: View::far_right_inset_margin(ui) + 4.0,
                         top: 6.0,
                         bottom: View::get_bottom_inset() + 5.0,
+                    },
+                    outer_margin: if View::is_desktop() {
+                        Margin {
+                            left: -0.5,
+                            right: if dual_panel {
+                                0.0
+                            } else {
+                                -0.5
+                            },
+                            top: 0.0,
+                            bottom: -0.5,
+                        }
+                    } else {
+                        Margin::ZERO
                     },
                     ..Default::default()
                 })
@@ -134,7 +149,7 @@ impl NetworkContent {
                     .show(ui, |ui| {
                         ui.add_space(1.0);
                         ui.vertical_centered(|ui| {
-                            let max_width = if !Root::is_dual_panel_mode(ui) {
+                            let max_width = if !dual_panel {
                                 Root::SIDE_PANEL_WIDTH * 1.3
                             } else {
                                 ui.available_width()
