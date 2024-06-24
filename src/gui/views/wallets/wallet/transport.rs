@@ -260,21 +260,6 @@ impl WalletTransport {
                                 .size(18.0)
                                 .color(Colors::title(false)));
                         });
-                        // Setup bridges status text.
-                        let bridge = TorConfig::get_bridge();
-                        let bridges_text = match &bridge {
-                            None => {
-                                format!("{} {}", SHIELD_SLASH, t!("transport.bridges_disabled"))
-                            }
-                            Some(b) => {
-                                let name = b.protocol_name().to_uppercase();
-                                format!("{} {}",
-                                        SHIELD_CHECKERED,
-                                        t!("transport.bridge_name", "b" = name))
-                            }
-                        };
-                        ui.label(RichText::new(bridges_text).size(15.0).color(Colors::text(false)));
-                        ui.add_space(1.0);
 
                         // Setup Tor status text.
                         let is_running = Tor::is_service_running(service_id);
@@ -292,7 +277,24 @@ impl WalletTransport {
                             (X_CIRCLE, t!("transport.disconnected"))
                         };
                         let status_text = format!("{} {}", icon, text);
-                        ui.label(RichText::new(status_text).size(15.0).color(Colors::gray()));
+                        ui.label(RichText::new(status_text).size(15.0).color(Colors::text(false)));
+                        ui.add_space(1.0);
+
+                        // Setup bridges status text.
+                        let bridge = TorConfig::get_bridge();
+                        let bridges_text = match &bridge {
+                            None => {
+                                format!("{} {}", SHIELD_SLASH, t!("transport.bridges_disabled"))
+                            }
+                            Some(b) => {
+                                let name = b.protocol_name().to_uppercase();
+                                format!("{} {}",
+                                        SHIELD_CHECKERED,
+                                        t!("transport.bridge_name", "b" = name))
+                            }
+                        };
+
+                        ui.label(RichText::new(bridges_text).size(15.0).color(Colors::gray()));
                     });
                 });
             });

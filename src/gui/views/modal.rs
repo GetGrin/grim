@@ -160,7 +160,11 @@ impl Modal {
 
     /// Draw [`egui::Window`] with provided content.
     fn window_ui(&self, ctx: &egui::Context, add_content: impl FnOnce(&mut egui::Ui, &Modal)) {
-        let rect = ctx.screen_rect();
+        let mut rect = ctx.screen_rect();
+        if View::is_desktop() {
+            rect = rect.shrink(7.5);
+            rect.min += egui::vec2(0.0, Root::WINDOW_TITLE_HEIGHT + 0.5);
+        }
         egui::Window::new("modal_bg_window")
             .title_bar(false)
             .resizable(false)
@@ -218,7 +222,11 @@ impl Modal {
             ModalPosition::Center => Align2::CENTER_CENTER
         };
         let x_align = View::get_left_inset() - View::get_right_inset();
-        let y_align = View::get_top_inset() + Self::DEFAULT_MARGIN;
+        let y_align = View::get_top_inset() + Self::DEFAULT_MARGIN + if View::is_desktop() {
+            Root::WINDOW_TITLE_HEIGHT + 8.0
+        } else {
+            0.0
+        };
         let offset = match self.position {
             ModalPosition::CenterTop => Vec2::new(x_align, y_align),
             ModalPosition::Center => Vec2::new(x_align, 0.0)

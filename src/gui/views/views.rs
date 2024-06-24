@@ -33,6 +33,12 @@ use crate::gui::views::types::TextEditOptions;
 pub struct View;
 
 impl View {
+    /// Check if current platform is desktop
+    pub fn is_desktop() -> bool {
+        let os = OperatingSystem::from_target_os();
+        os != OperatingSystem::Android && os != OperatingSystem::IOS
+    }
+
     /// Format timestamp in seconds with local UTC offset.
     pub fn format_time(ts: i64) -> String {
         let utc_offset = chrono::Local::now().offset().local_minus_utc();
@@ -76,7 +82,7 @@ impl View {
     }
 
     /// Get width and height of app window.
-    pub fn window_size(ui: &mut egui::Ui) -> (f32, f32) {
+    pub fn window_size(ui: &egui::Ui) -> (f32, f32) {
         ui.ctx().input(|i| {
             return match i.viewport().inner_rect {
                 None => {
@@ -185,7 +191,7 @@ impl View {
 
     /// Draw small size title button.
     pub fn title_button_small(ui: &mut egui::Ui, icon: &str, action: impl FnOnce(&mut egui::Ui)) {
-        Self::title_button(ui, 17.0, icon, action);
+        Self::title_button(ui, 16.0, icon, action);
     }
 
     /// Draw title button with transparent background color, contains only icon.

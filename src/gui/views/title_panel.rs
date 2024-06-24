@@ -44,11 +44,7 @@ impl TitlePanel {
                     TitleContentType::Title(text) => text,
                     TitleContentType::WithSubTitle(text, _, _) => text
                 };
-                let second_text = match first {
-                    TitleContentType::Title(text) => text,
-                    TitleContentType::WithSubTitle(text, _, _) => text
-                };
-                let id = Id::from(first_text.to_owned()).with(second_text);
+                let id = Id::from(first_text.to_owned()).with("_dual");
                 (id, true)
             },
         };

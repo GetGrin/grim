@@ -70,9 +70,9 @@ impl Default for AppConfig {
 
 impl AppConfig {
     /// Default window width.
-    pub const DEFAULT_WIDTH: f32 = 1280.0;
+    pub const DEFAULT_WIDTH: f32 = 1269.0;
     /// Default window height.
-    pub const DEFAULT_HEIGHT: f32 = 745.0;
+    pub const DEFAULT_HEIGHT: f32 = 789.0;
 
     /// Application configuration file name.
     pub const FILE_NAME: &'static str = "app.toml";

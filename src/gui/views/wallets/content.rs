@@ -14,7 +14,6 @@
 
 use std::time::Duration;
 use egui::{Align, Id, Layout, Margin, RichText, Rounding, ScrollArea};
-use egui::os::OperatingSystem;
 use egui::scroll_area::ScrollBarVisibility;
 
 use crate::AppConfig;
@@ -101,12 +100,13 @@ impl WalletsContent {
 
         // Setup panels parameters.
         let dual_panel = is_dual_panel_mode(ui);
-        let open_wallet_panel = show_wallet || create_wallet || empty_list;
         let wallet_panel_width = self.wallet_panel_width(ui, empty_list, dual_panel, show_wallet);
         let content_width = ui.available_width();
 
         // Show title panel.
-        self.title_ui(ui, dual_panel, create_wallet, show_wallet);
+        View::max_width_ui(ui, ui.available_width(), |ui| {
+            self.title_ui(ui, dual_panel, create_wallet, show_wallet);
+        });
 
         // Show wallet panel content.
         egui::SidePanel::right("wallet_panel")
@@ -125,7 +125,7 @@ impl WalletsContent {
                 },
                 ..Default::default()
             })
-            .show_animated_inside(ui, open_wallet_panel, |ui| {
+            .show_animated_inside(ui, self.wallet_panel_opened(), |ui| {
                 // Do not draw content on zero width.
                 if content_width == 0.0 {
                     return;
@@ -172,40 +172,34 @@ impl WalletsContent {
             ((!show_wallet && !dual_panel && !Root::is_network_panel_open()) || dual_panel);
 
         // Show wallets bottom panel.
-        egui::TopBottomPanel::bottom("wallets_bottom_panel")
-            .frame(egui::Frame {
-                fill: Colors::fill(),
-                inner_margin: Margin {
-                    left: View::get_left_inset() + 4.0,
-                    right: View::far_right_inset_margin(ui) + 4.0,
-                    top: if OperatingSystem::Android == OperatingSystem::from_target_os() {
-                        4.0
-                    } else {
-                        6.0
+        if show_bottom_panel {
+            egui::TopBottomPanel::bottom("wallets_bottom_panel")
+                .frame(egui::Frame {
+                    fill: Colors::fill(),
+                    inner_margin: Margin {
+                        left: View::get_left_inset() + 4.0,
+                        right: View::far_right_inset_margin(ui) + 4.0,
+                        top: 6.0,
+                        bottom: View::get_bottom_inset() + 5.0,
                     },
-                    bottom: View::get_bottom_inset() + 4.0,
-                },
-                ..Default::default()
-            })
-            .show_animated_inside(ui, show_bottom_panel, |ui| {
-                // Setup spacing between tabs.
-                let between = if OperatingSystem::Android == OperatingSystem::from_target_os() {
-                    4.0
-                } else {
-                    6.0
-                };
-                ui.style_mut().spacing.item_spacing = egui::vec2(between, 0.0);
-                // Setup vertical padding inside buttons.
-                ui.style_mut().spacing.button_padding = egui::vec2(10.0, 4.0);
+                    ..Default::default()
+                })
+                .show_inside(ui, |ui| {
+                    // Setup spacing between tabs.
+                    ui.style_mut().spacing.item_spacing = egui::vec2(6.0, 0.0);
+                    // Setup vertical padding inside buttons.
+                    ui.style_mut().spacing.button_padding = egui::vec2(10.0, 4.0);
 
-                ui.vertical_centered(|ui| {
-                    let pressed = Modal::opened() == Some(WalletCreation::NAME_PASS_MODAL);
-                    View::tab_button(ui, PLUS, pressed, || {
-                        self.creation_content.show_name_pass_modal(cb);
+                    ui.vertical_centered(|ui| {
+                        let pressed = Modal::opened() == Some(WalletCreation::NAME_PASS_MODAL);
+                        View::tab_button(ui, PLUS, pressed, || {
+                            self.creation_content.show_name_pass_modal(cb);
+                        });
                     });
                 });
-            });
+        }
 
+        // Show wallet list.
         egui::CentralPanel::default()
             .frame(if list_hidden {
                 egui::Frame::default()
@@ -227,9 +221,24 @@ impl WalletsContent {
                 if !dual_panel {
                     ui.ctx().request_repaint_after(Duration::from_millis(1000));
                 }
-                // Show list of wallets.
                 self.wallet_list_ui(ui, cb);
             });
+    }
+
+    /// Check if wallet panel is showing.
+    pub fn wallet_panel_opened(&self) -> bool {
+        let empty_list = self.wallets.is_current_list_empty();
+        empty_list || self.creating_wallet() || self.showing_wallet()
+    }
+
+    /// Check if opened wallet is showing.
+    pub fn showing_wallet(&self) -> bool {
+        self.wallets.is_selected_open()
+    }
+
+    /// Check if wallet is creating.
+    pub fn creating_wallet(&self) -> bool {
+        self.creation_content.can_go_back()
     }
 
     /// Draw [`TitlePanel`] content.

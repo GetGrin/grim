@@ -13,7 +13,6 @@
 // limitations under the License.
 
 use egui::{Margin, RichText, ScrollArea, Stroke};
-use egui::os::OperatingSystem;
 use egui::scroll_area::ScrollBarVisibility;
 
 use crate::AppConfig;
@@ -45,45 +44,39 @@ impl Default for NetworkContent {
 
 impl NetworkContent {
     pub fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
-        // Flag to show connections or integrated node content.
         let show_connections = AppConfig::show_connections_network_panel();
 
         // Show title panel.
         self.title_ui(ui, show_connections);
 
         // Show integrated node tabs content.
-        egui::TopBottomPanel::bottom("node_tabs_panel")
-            .resizable(false)
-            .frame(egui::Frame {
-                stroke: Stroke::NONE,
-                fill: Colors::fill(),
-                inner_margin: Margin {
-                    left: View::get_left_inset() + 4.0,
-                    right: View::far_right_inset_margin(ui) + 4.0,
-                    top: if OperatingSystem::Android == OperatingSystem::from_target_os() {
-                        4.0
-                    } else {
-                        6.0
+        if !show_connections {
+            egui::TopBottomPanel::bottom("node_tabs_panel")
+                .resizable(false)
+                .frame(egui::Frame {
+                    fill: Colors::fill(),
+                    inner_margin: Margin {
+                        left: View::get_left_inset() + 4.0,
+                        right: View::far_right_inset_margin(ui) + 4.0,
+                        top: 6.0,
+                        bottom: View::get_bottom_inset() + 5.0,
                     },
-                    bottom: View::get_bottom_inset() + 4.0,
-                },
-                ..Default::default()
-            })
-            .show_animated_inside(ui, !show_connections, |ui| {
-                ui.vertical_centered(|ui| {
-                    View::max_width_ui(ui, Root::SIDE_PANEL_WIDTH * 1.3, |ui| {
-                        // Show tabs content.
-                        self.tabs_ui(ui);
+                    ..Default::default()
+                })
+                .show_inside(ui, |ui| {
+                    ui.vertical_centered(|ui| {
+                        View::max_width_ui(ui, Root::SIDE_PANEL_WIDTH * 1.3, |ui| {
+                            self.tabs_ui(ui);
+                        });
                     });
                 });
-            });
+        }
 
         // Show current node tab content.
         egui::SidePanel::right("node_tab_content_panel")
             .resizable(false)
             .exact_width(ui.available_width())
             .frame(egui::Frame {
-                stroke: Stroke::NONE,
                 ..Default::default()
             })
             .show_animated_inside(ui, !show_connections, |ui| {
@@ -100,7 +93,6 @@ impl NetworkContent {
                         ..Default::default()
                     })
                     .show_inside(ui, |ui| {
-                        // Draw node tab content.
                         self.node_tab_content.ui(ui, cb);
                     });
             });
@@ -125,15 +117,16 @@ impl NetworkContent {
                         0.0
                     },
                     top: 3.0,
-                    bottom: View::get_bottom_inset() + 4.0,
+                    bottom: if View::is_desktop() && show_connections {
+                        6.0
+                    } else {
+                        4.0
+                    },
                 },
                 fill: Colors::button(),
                 ..Default::default()
             })
             .show_inside(ui, |ui| {
-                if !show_connections {
-                    return;
-                }
                 ScrollArea::vertical()
                     .id_source("connections_content")
                     .scroll_bar_visibility(ScrollBarVisibility::AlwaysHidden)
@@ -163,12 +156,7 @@ impl NetworkContent {
     fn tabs_ui(&mut self, ui: &mut egui::Ui) {
         ui.vertical_centered(|ui| {
             // Setup spacing between tabs.
-            let between = if OperatingSystem::Android == OperatingSystem::from_target_os() {
-                4.0
-            } else {
-                6.0
-            };
-            ui.style_mut().spacing.item_spacing = egui::vec2(between, 0.0);
+            ui.style_mut().spacing.item_spacing = egui::vec2(6.0, 0.0);
             // Setup vertical padding inside tab button.
             ui.style_mut().spacing.button_padding = egui::vec2(0.0, 4.0);
 
