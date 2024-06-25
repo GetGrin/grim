@@ -304,6 +304,8 @@ impl MnemonicSetup {
                 columns[1].vertical_centered_justified(|ui| {
                     // Callback to save the word.
                     let mut save = || {
+                        self.word_edit = self.word_edit.trim().to_string();
+
                         // Check if word is valid.
                         let word_index = self.word_num_edit - 1;
                         if !self.mnemonic.is_valid_word(&self.word_edit, word_index) {
