@@ -164,6 +164,7 @@ impl Modal {
         if View::is_desktop() {
             rect = rect.shrink(Root::WINDOW_FRAME_MARGIN - 0.5);
             rect.min += egui::vec2(0.0, Root::WINDOW_TITLE_HEIGHT + 0.5);
+            rect.max.x += 0.5;
         }
         egui::Window::new("modal_bg_window")
             .title_bar(false)
