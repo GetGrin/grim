@@ -855,6 +855,7 @@ impl WalletTransactions {
                         .show(ui).response;
                     // Show soft keyboard on click.
                     if self.tx_info_finalize && resp.clicked() {
+                        resp.request_focus();
                         cb.show_keyboard();
                     }
                     if self.tx_info_finalize && resp.has_focus() {

@@ -665,6 +665,7 @@ impl WalletMessages {
                     .response;
                 // Show soft keyboard on click.
                 if response_empty && resp.clicked() {
+                    resp.request_focus();
                     cb.show_keyboard();
                 }
                 if response_empty && resp.has_focus() {

@@ -431,6 +431,7 @@ impl View {
                     .ui(ui);
                 // Show keyboard on click.
                 if text_edit_resp.clicked() {
+                    text_edit_resp.request_focus();
                     cb.show_keyboard();
                 }
                 // Setup focus on input field.
