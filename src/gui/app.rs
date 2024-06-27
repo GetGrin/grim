@@ -332,9 +332,8 @@ impl<Platform: PlatformCallbacks> App<Platform> {
                 rect
             }),
             ResizeDirection::NorthEast => ("ne", CursorIcon::ResizeNorthEast, {
-                rect.min.y += Root::WINDOW_FRAME_MARGIN * 2.0;
                 rect.min.x = rect.max.x - Root::WINDOW_FRAME_MARGIN * 2.0;
-                rect.max.y = rect.min.y;
+                rect.max.y = Root::WINDOW_FRAME_MARGIN * 2.0;
                 rect
             }),
             ResizeDirection::SouthEast => ("se", CursorIcon::ResizeSouthEast, {
@@ -344,7 +343,6 @@ impl<Platform: PlatformCallbacks> App<Platform> {
             }),
             ResizeDirection::SouthWest => ("sw", CursorIcon::ResizeSouthWest, {
                 rect.min.y = rect.max.y - Root::WINDOW_FRAME_MARGIN * 2.0;
-                rect.max.y = rect.min.y;
                 rect.max.x = rect.min.x + Root::WINDOW_FRAME_MARGIN * 2.0;
                 rect
             }),
