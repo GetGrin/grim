@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::time::Duration;
 use egui::{Margin, RichText, ScrollArea};
 use egui::scroll_area::ScrollBarVisibility;
 
@@ -30,7 +31,7 @@ pub struct NetworkContent {
     /// Current integrated node tab content.
     node_tab_content: Box<dyn NetworkTab>,
     /// Connections content.
-    connections: ConnectionsContent
+    connections: ConnectionsContent,
 }
 
 impl Default for NetworkContent {
@@ -48,34 +49,20 @@ impl NetworkContent {
         let dual_panel = Root::is_dual_panel_mode(ui);
 
         // Show title panel.
-        self.title_ui(ui, dual_panel || Root::is_network_panel_open(), show_connections);
+        self.title_ui(ui, show_connections);
 
         // Show integrated node tabs content.
         if !show_connections {
             egui::TopBottomPanel::bottom("node_tabs_panel")
                 .resizable(false)
                 .frame(egui::Frame {
-                    fill: Colors::fill(),
                     inner_margin: Margin {
                         left: View::get_left_inset() + View::TAB_ITEMS_PADDING,
                         right: View::far_right_inset_margin(ui) + View::TAB_ITEMS_PADDING,
                         top: View::TAB_ITEMS_PADDING,
                         bottom: View::get_bottom_inset() + View::TAB_ITEMS_PADDING,
                     },
-                    outer_margin: if View::is_desktop() {
-                        Margin {
-                            left: -0.5,
-                            right: if dual_panel {
-                                0.0
-                            } else {
-                                -0.5
-                            },
-                            top: 0.0,
-                            bottom: -0.5,
-                        }
-                    } else {
-                        Margin::ZERO
-                    },
+                    fill: Colors::fill(),
                     ..Default::default()
                 })
                 .show_inside(ui, |ui| {
@@ -92,6 +79,20 @@ impl NetworkContent {
             .resizable(false)
             .exact_width(ui.available_width())
             .frame(egui::Frame {
+                outer_margin: if !show_connections {
+                    Margin {
+                        left: -0.5,
+                        right: if !dual_panel {
+                            -0.5
+                        } else {
+                            0.0
+                        },
+                        top: 0.0,
+                        bottom: 0.0,
+                    }
+                } else {
+                    Margin::ZERO
+                },
                 ..Default::default()
             })
             .show_animated_inside(ui, !show_connections, |ui| {
@@ -116,6 +117,20 @@ impl NetworkContent {
         egui::CentralPanel::default()
             .frame(egui::Frame {
                 stroke: View::item_stroke(),
+                outer_margin: if show_connections {
+                    Margin {
+                        left: -0.5,
+                        right: if !dual_panel {
+                            -0.5
+                        } else {
+                            0.0
+                        },
+                        top: 0.0,
+                        bottom: -0.5,
+                    }
+                } else {
+                    Margin::ZERO
+                },
                 inner_margin: Margin {
                     left: if show_connections {
                         View::get_left_inset() + 4.0
@@ -157,9 +172,11 @@ impl NetworkContent {
                     });
             });
 
-        // Redraw after delay if node is syncing to update stats.
+        // Redraw after delay.
         if Node::is_running() {
             ui.ctx().request_repaint_after(Node::STATS_UPDATE_DELAY);
+        } else if show_connections {
+            ui.ctx().request_repaint_after(Duration::from_millis(1000));
         }
     }
 
@@ -199,7 +216,7 @@ impl NetworkContent {
     }
 
     /// Draw title content.
-    fn title_ui(&mut self, ui: &mut egui::Ui, show_panel: bool, show_connections: bool) {
+    fn title_ui(&mut self, ui: &mut egui::Ui, show_connections: bool) {
         // Setup values for title panel.
         let title_text = self.node_tab_content.get_type().title().to_uppercase();
         let subtitle_text = Node::get_sync_status_text();
@@ -211,7 +228,7 @@ impl NetworkContent {
         };
 
         // Draw title panel.
-        TitlePanel::ui(TitleType::Single(title_content), show_panel, |ui| {
+        TitlePanel::ui(TitleType::Single(title_content), |ui| {
             if !show_connections {
                 View::title_button_big(ui, DOTS_THREE_OUTLINE_VERTICAL, |_| {
                     AppConfig::toggle_show_connections_network_panel();

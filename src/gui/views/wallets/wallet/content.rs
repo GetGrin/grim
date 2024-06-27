@@ -87,8 +87,11 @@ impl WalletContent {
 
         // Show wallet balance panel not on Settings tab with selected non-repairing
         // wallet, when there is no error and data is not empty.
-        let show_balance = self.current_tab.get_type() != WalletTabType::Settings && !data_empty
+        let mut show_balance = self.current_tab.get_type() != WalletTabType::Settings && !data_empty
             && !wallet.sync_error() && !wallet.is_repairing() && !wallet.is_closing();
+        if wallet.get_current_ext_conn().is_none() && !Node::is_running() {
+            show_balance = false;
+        }
         egui::TopBottomPanel::top(Id::from("wallet_balance").with(wallet.identifier()))
             .frame(egui::Frame {
                 fill: Colors::fill(),
@@ -100,13 +103,17 @@ impl WalletContent {
                     bottom: 0.0,
                 },
                 outer_margin: Margin {
-                    left: 0.0,
-                    right: 0.0,
-                    top: 0.0,
-                    bottom: if !dual_panel {
-                        0.0
+                    left: if !dual_panel {
+                        -0.5
                     } else {
+                        0.0
+                    },
+                    right: -0.5,
+                    top: 0.0,
+                    bottom: if dual_panel {
                         -1.0
+                    } else {
+                        -0.5
                     },
                 },
                 ..Default::default()
@@ -124,6 +131,7 @@ impl WalletContent {
             });
 
         // Show wallet tabs panel.
+        let show_tabs = !Self::block_navigation_on_sync(wallet);
         egui::TopBottomPanel::bottom("wallet_tabs")
             .frame(egui::Frame {
                 fill: Colors::fill(),
@@ -133,23 +141,9 @@ impl WalletContent {
                     top: View::TAB_ITEMS_PADDING,
                     bottom: View::get_bottom_inset() + View::TAB_ITEMS_PADDING,
                 },
-                outer_margin: if View::is_desktop() {
-                    Margin {
-                        left: if dual_panel {
-                            0.0
-                        } else {
-                            -0.5
-                        },
-                        right: -0.5,
-                        top: 0.0,
-                        bottom: -0.5,
-                    }
-                } else {
-                    Margin::ZERO
-                },
                 ..Default::default()
             })
-            .show_animated_inside(ui, !Self::block_navigation_on_sync(wallet), |ui| {
+            .show_animated_inside(ui, show_tabs, |ui| {
                 ui.vertical_centered(|ui| {
                     // Draw wallet tabs.
                     View::max_width_ui(ui, Root::SIDE_PANEL_WIDTH * 1.3, |ui| {
@@ -161,6 +155,16 @@ impl WalletContent {
         // Show tab content panel.
         egui::CentralPanel::default()
             .frame(egui::Frame {
+                outer_margin: Margin {
+                    left: if !dual_panel {
+                      -0.5
+                    } else {
+                        0.0
+                    },
+                    right: -0.5,
+                    top: 0.0,
+                    bottom: 0.0,
+                },
                 stroke: View::item_stroke(),
                 fill: Colors::white_or_black(false),
                 ..Default::default()

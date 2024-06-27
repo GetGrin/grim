@@ -162,7 +162,7 @@ impl Modal {
     fn window_ui(&self, ctx: &egui::Context, add_content: impl FnOnce(&mut egui::Ui, &Modal)) {
         let mut rect = ctx.screen_rect();
         if View::is_desktop() {
-            rect = rect.shrink(7.5);
+            rect = rect.shrink(Root::WINDOW_FRAME_MARGIN - 0.5);
             rect.min += egui::vec2(0.0, Root::WINDOW_TITLE_HEIGHT + 0.5);
         }
         egui::Window::new("modal_bg_window")
@@ -256,6 +256,7 @@ impl Modal {
             rounding,
             fill: Colors::fill(),
             stroke: Stroke::NONE,
+            blur_width: 0.0,
             fill_texture_id: Default::default(),
             uv: Rect::ZERO
         };
@@ -288,6 +289,7 @@ impl Modal {
             },
             fill: Colors::yellow(),
             stroke: Stroke::NONE,
+            blur_width: 0.0,
             fill_texture_id: Default::default(),
             uv: Rect::ZERO
         };

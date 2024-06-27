@@ -532,6 +532,7 @@ impl View {
             },
             fill: Colors::TRANSPARENT,
             stroke: Self::item_stroke(),
+            blur_width: 0.0,
             fill_texture_id: Default::default(),
             uv: Rect::ZERO
         };

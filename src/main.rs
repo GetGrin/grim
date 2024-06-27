@@ -51,7 +51,9 @@ fn real_main() {
     // Setup window size.
     let (width, height) = AppConfig::window_size();
 
-    let mut viewport = egui::ViewportBuilder::default().with_inner_size([width, height]);
+    let mut viewport = egui::ViewportBuilder::default()
+        .with_min_inner_size([AppConfig::MIN_WIDTH, AppConfig::MIN_HEIGHT])
+        .with_inner_size([width, height]);
 
     // Setup an icon.
     if let Ok(icon) = from_png_bytes(include_bytes!("../img/icon.png")) {

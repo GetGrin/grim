@@ -109,7 +109,7 @@ impl Colors {
 
     pub fn gold() -> Color32 {
         if use_dark() {
-            GOLD.linear_multiply(0.9)
+            GOLD.gamma_multiply(0.9)
         } else {
             GOLD
         }
@@ -125,7 +125,7 @@ impl Colors {
 
     pub fn green() -> Color32 {
         if use_dark() {
-            GREEN.linear_multiply(1.3)
+            GREEN.gamma_multiply(1.3)
         } else {
             GREEN
         }
@@ -133,7 +133,7 @@ impl Colors {
 
     pub fn red() -> Color32 {
         if use_dark() {
-            RED.linear_multiply(1.3)
+            RED.gamma_multiply(1.3)
         } else {
             RED
         }
@@ -141,7 +141,7 @@ impl Colors {
 
     pub fn blue() -> Color32 {
         if use_dark() {
-            BLUE.linear_multiply(1.3)
+            BLUE.gamma_multiply(1.3)
         } else {
             BLUE
         }

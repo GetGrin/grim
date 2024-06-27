@@ -103,16 +103,19 @@ impl WalletsContent {
         let wallet_panel_width = self.wallet_panel_width(ui, empty_list, dual_panel, show_wallet);
         let content_width = ui.available_width();
 
+        let root_dual_panel = Root::is_dual_panel_mode(ui);
+
         // Flag to check if wallet list is hidden on the screen.
         let list_hidden = content_width == 0.0 || empty_list || create_wallet
             || (dual_panel && show_wallet && !self.show_wallets_at_dual_panel)
             || (!dual_panel && show_wallet) ||
-            (!Root::is_dual_panel_mode(ui) && Root::is_network_panel_open());
+            (!root_dual_panel && Root::is_network_panel_open());
 
         // Show title panel.
         self.title_ui(ui, dual_panel, create_wallet, show_wallet);
 
         // Show wallet panel content.
+        let wallet_panel_opened = self.wallet_panel_opened();
         egui::SidePanel::right("wallet_panel")
             .resizable(false)
             .exact_width(wallet_panel_width)
@@ -129,11 +132,11 @@ impl WalletsContent {
                 },
                 ..Default::default()
             })
-            .show_animated_inside(ui, self.wallet_panel_opened(), |ui| {
-                // Do not draw content on zero width.
-                if content_width == 0.0 {
-                    return;
-                }
+            .show_animated_inside(ui, wallet_panel_opened, |ui| {
+                // // Do not draw content on zero width.
+                // if content_width == 0.0 {
+                //     return;
+                // }
                 if create_wallet || !show_wallet {
                     // Show wallet creation content.
                     self.creation_content.ui(ui, cb, |wallet| {
@@ -180,24 +183,6 @@ impl WalletsContent {
                         top: View::TAB_ITEMS_PADDING,
                         bottom: View::get_bottom_inset() + View::TAB_ITEMS_PADDING,
                     },
-                    outer_margin: if View::is_desktop() {
-                        Margin {
-                            left: if !dual_panel {
-                                -0.5
-                            } else {
-                                0.0
-                            },
-                            right: if !self.wallet_panel_opened() {
-                                -0.5
-                            } else {
-                                0.0
-                            },
-                            top: 0.0,
-                            bottom: -0.5,
-                        }
-                    } else {
-                        Margin::ZERO
-                    },
                     ..Default::default()
                 })
                 .show_inside(ui, |ui| {
@@ -221,6 +206,20 @@ impl WalletsContent {
                 egui::Frame::default()
             } else {
                 egui::Frame {
+                    outer_margin: Margin {
+                        left: if !root_dual_panel {
+                            -0.5
+                        } else {
+                            0.0
+                        },
+                        right: if !wallet_panel_opened {
+                            -0.5
+                        } else {
+                            0.0
+                        },
+                        top: 0.0,
+                        bottom: 0.0,
+                    },
                     stroke: View::item_stroke(),
                     fill: Colors::fill_deep(),
                     inner_margin: Margin {
@@ -301,8 +300,7 @@ impl WalletsContent {
         };
 
         // Draw title panel.
-        let show_title = Root::is_dual_panel_mode(ui) || !Root::is_network_panel_open();
-        TitlePanel::ui(title_content, show_title, |ui| {
+        TitlePanel::ui(title_content, |ui| {
             if show_wallet && !dual_panel {
                 View::title_button_big(ui, ARROW_LEFT, |_| {
                     self.wallets.select(None);

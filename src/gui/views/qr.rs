@@ -17,6 +17,7 @@ use std::sync::Arc;
 use parking_lot::RwLock;
 use std::thread;
 use egui::{SizeHint, TextureHandle, TextureOptions};
+use egui::epaint::RectShape;
 use egui::load::SizedTexture;
 use egui_extras::image::load_svg_bytes_with_size;
 use image::{ExtendedColorType, ImageEncoder};
@@ -235,11 +236,12 @@ impl QrCodeContent {
         rect.max -= egui::emath::vec2(10.0, 0.0);
 
         // Create background shape.
-        let mut bg_shape = egui::epaint::RectShape {
+        let mut bg_shape = RectShape {
             rect,
             rounding: egui::Rounding::default(),
             fill: egui::Color32::WHITE,
             stroke: egui::Stroke::NONE,
+            blur_width: 0.0,
             fill_texture_id: Default::default(),
             uv: egui::Rect::ZERO
         };

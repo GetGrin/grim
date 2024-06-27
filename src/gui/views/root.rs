@@ -111,19 +111,23 @@ impl Root {
         let (is_panel_open, panel_width) = Self::network_panel_state_width(ui, dual_panel);
 
         // Show network content.
-        egui::SidePanel::left("network_panel")
-            .resizable(false)
-            .exact_width(panel_width)
-            .frame(egui::Frame {
-                ..Default::default()
-            })
-            .show_animated_inside(ui, is_panel_open, |ui| {
-                self.network.ui(ui, cb);
-            });
+        if is_panel_open {
+            egui::SidePanel::left("network_panel")
+                .resizable(false)
+                .exact_width(panel_width)
+                .frame(egui::Frame {
+                    fill: Colors::fill(),
+                    ..Default::default()
+                })
+                .show_inside(ui, |ui| {
+                    self.network.ui(ui, cb);
+                });
+        }
 
         // Show wallets content.
         egui::CentralPanel::default()
             .frame(egui::Frame {
+                fill: Colors::fill(),
                 ..Default::default()
             })
             .show_inside(ui, |ui| {
@@ -151,7 +155,7 @@ impl Root {
             Self::SIDE_PANEL_WIDTH + View::get_left_inset()
         } else {
             View::window_size(ui).0 - if View::is_desktop() {
-                Root::WINDOW_FRAME_MARGIN * 2.0
+                Self::WINDOW_FRAME_MARGIN * 2.0
             } else {
                 0.0
             }

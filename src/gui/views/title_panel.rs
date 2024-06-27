@@ -27,7 +27,6 @@ impl TitlePanel {
     pub const DEFAULT_HEIGHT: f32 = 54.0;
 
     pub fn ui(title: TitleType,
-              show: bool,
               mut left_content: impl FnMut(&mut egui::Ui),
               mut right_content: impl FnMut(&mut egui::Ui),
               ui: &mut egui::Ui) {
@@ -52,13 +51,18 @@ impl TitlePanel {
         // Draw title panel.
         egui::TopBottomPanel::top(id)
             .resizable(false)
-            .exact_height(Self::DEFAULT_HEIGHT)
+            .exact_height(Self::DEFAULT_HEIGHT + View::get_top_inset())
             .frame(egui::Frame {
-                inner_margin: Self::inner_margin(ui),
+                inner_margin:  Margin {
+                    left: View::far_left_inset_margin(ui),
+                    right: View::far_right_inset_margin(ui),
+                    top: View::get_top_inset(),
+                    bottom: 0.0,
+                },
                 fill: Colors::yellow(),
                 ..Default::default()
             })
-            .show_animated_inside(ui, show, |ui| {
+            .show_inside(ui, |ui| {
                 StripBuilder::new(ui)
                     .size(Size::exact(Self::DEFAULT_HEIGHT))
                     .size(if dual_title {
@@ -123,16 +127,6 @@ impl TitlePanel {
                     Self::with_sub_title(builder, text, subtitle, animate);
                 });
             }
-        }
-    }
-
-    /// Calculate inner margin based on display insets (cutouts).
-    fn inner_margin(ui: &mut egui::Ui) -> Margin {
-        Margin {
-            left: View::far_left_inset_margin(ui),
-            right: View::far_right_inset_margin(ui),
-            top: View::get_top_inset(),
-            bottom: 0.0,
         }
     }
 
