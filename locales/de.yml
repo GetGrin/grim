@@ -1,4 +1,4 @@
-lang_name:
+lang_name: Deutsch
 copy: Kopieren
 paste: Einfügen
 continue: Weiter
@@ -11,13 +11,21 @@ show: Zeigen
 delete: Löschen
 clear: Clear
 create: Erstellen
-id:
-kernel:
-settings:
-language:
-scan:
-qr_code:
-repeat:
+id: ID
+kernel: Kernel
+settings: Einstellungen
+language: Sprache
+scan: Scannen
+qr_code: QR-Code
+scan_qr: QR-Code scannen
+repeat: wiederholen
+scan_result: Scan Ergebnis
+back: zurück
+share: teilen
+theme: 'Theme:'
+dark: dunkel
+light: hell
+choose_file: Datei auswählen
 wallets:
   await_conf_amount: Erwarte Bestätigung
   await_fin_amount: Warten auf die Fertigstellung
@@ -57,7 +65,7 @@ wallets:
   closing: Schließen
   checking: Überprüfung
   default_wallet: Standard-Wallet
-  new_account_desc:
+  new_account_desc: 'Namen des neuen Accounts eingeben:'
   wallet_loading: Wallet wird geladen
   wallet_closing: Wallet schließen
   wallet_checking: Wallet prüfen
@@ -69,26 +77,26 @@ wallets:
   tx_sending: Senden
   tx_receiving: Erhalten
   tx_confirming: Erwarte Bestätigung
-  tx_cancelling: Abbrechen
   tx_canceled: Abgebrochen
+  tx_cancelling: Abbrechen
+  tx_finalizing: Finalisierung
   tx_confirmed: Bestätigt
   txs: Transaktionen
-  tx:
+  tx: Transaktion
   messages: Nachrichten
   transport: Transport
-  input_finalize_desc:
   input_slatepack_desc: 'Geben Sie eine Nachricht ein, um eine Antwort zu erstellen oder die Transaktion abzuschließen:'
   parse_slatepack_err: 'Bei der Verarbeitung der Nachricht ist ein Fehler aufgetreten. Überprüfen Sie die Eingabedaten:'
   pay_balance_error: 'Der Kontostand reicht nicht aus, um %{amount} ツ und die Netzwerkgebühr zu bezahlen.'
   parse_i1_slatepack_desc: 'Um %{amount} zu zahlen, senden Sie diese Nachricht an den Empfänger:'
-  parse_i2_slatepack_desc: 'Schließen Sie die Transaktion ab, um %{amount} ツ zu erhalten'
-  parse_i3_slatepack_desc:
+  parse_i2_slatepack_desc: 'Schließen Sie die Transaktion ab, um %{amount} ツ zu erhalten:'
+  parse_i3_slatepack_desc: 'Transaktion posten, um den Erhalt von %{amount} abzuschließen ツ:'
   parse_s1_slatepack_desc: 'Um %{amount} zu erhalten, senden Sie diese Nachricht an den Absender:'
-  parse_s2_slatepack_desc: 'Schließen Sie die Transaktion ab, um %{amount} ツ zu senden'
-  parse_s3_slatepack_desc:
+  parse_s2_slatepack_desc: 'Schließen Sie die Transaktion ab, um %{amount} ツ zu senden:'
+  parse_s3_slatepack_desc: 'Transaktion posten, um das Senden von %{amount} abzuschließen ツ:'
   resp_slatepack_err: 'Beim Erstellen der Antwort ist ein Fehler aufgetreten. Überprüfen Sie die Eingabedaten:'
-  resp_exists_err: 'Eine solche Transaktion existiert bereits:'
-  resp_canceled_err:
+  resp_exists_err: 'Eine solche Transaktion existiert bereits.'
+  resp_canceled_err: 'Eine solche Transaktion wurde schon abgebrochen.
   create_request_desc: 'Erstellen Sie eine Anfrage zum Senden oder Empfangen der Gelder:'
   send_request_desc: 'Sie haben eine Anfrage zum Senden von %{amount} ツ erstellt. Senden Sie diese Nachricht an den Empfänger:'
   send_slatepack_err: Beim Erstellen der Anfrage zum Senden von Geldern ist ein Fehler aufgetreten. Überprüfen Sie die Eingabedaten.
@@ -111,26 +119,35 @@ wallets:
   send: Senden
   receive: Empfangen
   settings: Wallet Einstellungen
-  change_server_confirmation: Um die Änderung der Verbindungseinstellungen zu übernehmen, müssen Sie Ihr Wallet erneut öffnen. Jetzt wieder öffnen?
+  tx_send_cancel_conf: 'Sind Sie sicher, dass Sie das Senden von %{amount} ツ abbrechen wollen?'
+  tx_receive_cancel_conf: 'Sind Sie sicher, dass Sie das Empfangen von %{amount} ツ abbrechen wollen?'
+  rec_phrase_not_found: Wiederhestellungsphrase nicht gefunden.
+  restore_wallet_desc: Stellen Sie das Wallet wieder her, indem Sie alle Dateien löschen. Wenn die normale Reparatur nicht geholfen hat, müssen Sie Ihr Wallet erneut öffnen.
 transport:
-  desc:
-  tor_network:
-  connected:
-  connecting:
-  disconnecting:
-  conn_error:
-  disconnected:
-  receiver_address:
-  incorrect_addr_err:
-  tor_send_error:
-  tor_autorun_desc:
-  tor_sending:
-  tor_settings:
+  desc: 'Transport verwenden, um Nachrichten synchron zu empfangen oder zu senden:'
+  tor_network: Tor Netzwek
+  connected: verbunden
+  connecting: verbinden
+  disconnecting: Verbindung trennen
+  conn_error: Verbindungsproblem
+  disconnected: Verbindung getrennt
+  receiver_address: 'Empfängeraddresse:'
+  incorrect_addr_err: 'Eingegebene Addresse ist inkorrekt:'
+  tor_send_error: Beim Senden über Tor ist ein Fehler aufgetreten. Stellen Sie sicher, dass der Empfänger online ist. Die Transaktion wurde abgebrochen.
+  tor_autorun_desc: Gibt an, ob beim Öffnen des Wallets der Tor-Dienst gestartet werden soll, um Transaktionen synchron zu empfangen.
+  tor_sending: 'Sende %{amount} ツ über Tor'
+  tor_settings: Tor Einstellungen
+  bridges: Brücken
+  bridges_desc: Richten Sie Brücken ein, um die Zensur des Tor-Netzwerks zu umgehen, wenn die normale Verbindung nicht funktioniert.
+  bin_file: 'Binärdatei:'
+  conn_line: 'Verbindungsleitung:'
+  bridges_disabled: Brücken deaktiviert
+  bridge_name: 'Brücke %{b}
 network:
   self: Netzwerk
   type: 'Netzwerk Typ:'
-  mainnet:
-  testnet:
+  mainnet: Haupt
+  testnet: Test
   connections: Verbindungen
   node: Integrierte Node
   metrics: Metriken
@@ -143,7 +160,7 @@ network:
   available: Verfügbar
   not_available: Nicht verfügbar
   availability_check: Verfügbarkeitsprüfung
-  android_warning:
+  android_warning: Achtung an Android-Benutzer. Um integrierte Nodes erfolgreich zu synchronisieren, müssen Sie in den Systemeinstellungen Ihres Telefons den Zugriff auf Benachrichtigungen zulassen und die Beschränkungen für die Akkunutzung für die Grim-Anwendung entfernen. Dies ist ein notwendiger Vorgang, damit die Anwendung im Hintergrund korrekt funktioniert.
 sync_status:
   node_restarting: Node wird neu gestartet
   node_down: Node ist ausgefallen
@@ -177,6 +194,11 @@ network_node:
   data: Daten
   size: Größe (GB)
   peers: Peers
+  error_clean:
+  resync: Neu synchronisieren
+  error_p2p_api: 'Während der Initialisierung des %{p2p_api}-Servers ist ein Fehler aufgetreten. Überprüfen Sie die %{p2p_api}-Einstellungen, indem Sie unten auf dem Bildschirm %{settings} auswählen.'
+  error_config: 'Während der Initialisierung der Konfiguration ist ein Fehler aufgetreten. Überprüfen Sie die Einstellungen, indem Sie unten auf dem Bildschirm %{settings} auswählen.'
+  error_unknown: 'Während der Initialisierung ist ein Fehler aufgetreten. Überprüfen Sie die integrierten Knoteneinstellungen, indem Sie unten auf dem Bildschirm %{settings} auswählen oder erneut synchronisieren.'
 network_metrics:
   loading: Metriken werden nach der Synchronisierung verfügbar sein
   emission: Emission
@@ -256,8 +278,8 @@ network_settings:
   ban_window_desc: Die Entscheidung über das Verbot trifft der Knoten auf der Grundlage der Korrektheit der von der Gegenstelle erhaltenen Daten.
   max_inbound_count: 'Maximale Anzahl der eingehenden Peer-Verbindungen:'
   max_outbound_count: 'Maximale Anzahl von ausgehenden Peer-Verbindungen:'
-  min_outbound_count: 'Mindestanzahl von ausgehenden Peer-Verbindungen:'
-  min_outbound_desc: Der Node-Server wird aktiv versuchen, weitere Peers hinzuzufügen, bis er mindestens diese Anzahl erreicht hat.
+  reset_peers_desc:
+  reset_peers:
 modal:
   cancel: Abbrechen
   save: Speichern
