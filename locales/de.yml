@@ -278,8 +278,8 @@ network_settings:
   ban_window_desc: Die Entscheidung über das Verbot trifft der Knoten auf der Grundlage der Korrektheit der von der Gegenstelle erhaltenen Daten.
   max_inbound_count: 'Maximale Anzahl der eingehenden Peer-Verbindungen:'
   max_outbound_count: 'Maximale Anzahl von ausgehenden Peer-Verbindungen:'
-  reset_peers_desc:
-  reset_peers:
+  reset_peers_desc: Peer-Daten zurücksetzen. Verwenden Sie diese Funktion nur, wenn es Probleme beim finden von Peers gibt.
+  reset_peers: Peers zurücksetzten
 modal:
   cancel: Abbrechen
   save: Speichern
