@@ -353,15 +353,9 @@ impl<Platform: PlatformCallbacks> App<Platform> {
         let sense = egui::Sense::drag();
         let area_resp = ui.interact(rect, id, sense).on_hover_cursor(cursor);
         if area_resp.dragged() {
-            let current_pos = area_resp.interact_pointer_pos();
-            if let Some(pos) = current_pos {
-                if self.resize_direction.is_none() {
-                    self.resize_direction = Some(direction.clone());
-                    ui.ctx().send_viewport_cmd(ViewportCommand::BeginResize(direction));
-                }
-                ui.ctx().send_viewport_cmd(ViewportCommand::InnerSize(
-                    pos.to_vec2() + egui::vec2(Root::WINDOW_FRAME_MARGIN, Root::WINDOW_FRAME_MARGIN)
-                ));
+            if self.resize_direction.is_none() {
+                self.resize_direction = Some(direction.clone());
+                ui.ctx().send_viewport_cmd(ViewportCommand::BeginResize(direction));
             }
         }
         if area_resp.drag_stopped() {

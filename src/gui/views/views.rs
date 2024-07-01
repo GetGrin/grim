@@ -83,15 +83,8 @@ impl View {
 
     /// Get width and height of app window.
     pub fn window_size(ui: &egui::Ui) -> (f32, f32) {
-        ui.ctx().input(|i| {
-            return match i.viewport().inner_rect {
-                None => {
-                    let rect = i.screen_rect;
-                    (rect.width(), rect.height())
-                },
-                Some(rect) => (rect.width(), rect.height())
-            };
-        })
+        let rect = ui.ctx().screen_rect();
+        (rect.width(), rect.height())
     }
 
     /// Callback on Enter key press event.
