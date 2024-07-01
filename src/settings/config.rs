@@ -75,7 +75,7 @@ impl AppConfig {
     /// Default desktop window width.
     pub const DEFAULT_WIDTH: f32 = Root::SIDE_PANEL_WIDTH * 3.0 + Self::FRAME_MARGIN;
     /// Default desktop window height.
-    pub const DEFAULT_HEIGHT: f32 = 698.0 + Root::WINDOW_TITLE_HEIGHT + Self::FRAME_MARGIN;
+    pub const DEFAULT_HEIGHT: f32 = 706.0;
     /// Minimal desktop window width.
     pub const MIN_WIDTH: f32 = Root::SIDE_PANEL_WIDTH + Self::FRAME_MARGIN;
     /// Minimal desktop window height.

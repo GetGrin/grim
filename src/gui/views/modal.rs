@@ -160,9 +160,18 @@ impl Modal {
 
     /// Draw [`egui::Window`] with provided content.
     fn window_ui(&self, ctx: &egui::Context, add_content: impl FnOnce(&mut egui::Ui, &Modal)) {
+        let is_fullscreen = ctx.input(|i| {
+            i.viewport().fullscreen.unwrap_or(false)
+        });
+
         let mut rect = ctx.screen_rect();
         if View::is_desktop() {
-            rect = rect.shrink(Root::WINDOW_FRAME_MARGIN - 0.5);
+            let margin = if !is_fullscreen {
+                Root::WINDOW_FRAME_MARGIN
+            } else {
+                0.0
+            };
+            rect = rect.shrink(margin - 0.5);
             rect.min += egui::vec2(0.0, Root::WINDOW_TITLE_HEIGHT + 0.5);
             rect.max.x += 0.5;
         }
@@ -185,7 +194,7 @@ impl Modal {
         let width = f32::min(available_width, Self::DEFAULT_WIDTH);
 
         // Show main content Window at given position.
-        let (content_align, content_offset) = self.modal_position();
+        let (content_align, content_offset) = self.modal_position(is_fullscreen);
         let layer_id = egui::Window::new(format!("modal_window_{}", self.id))
             .title_bar(false)
             .resizable(false)
@@ -217,14 +226,18 @@ impl Modal {
     }
 
     /// Get [`egui::Window`] position based on [`ModalPosition`].
-    fn modal_position(&self) -> (Align2, Vec2) {
+    fn modal_position(&self, is_fullscreen: bool) -> (Align2, Vec2) {
         let align = match self.position {
             ModalPosition::CenterTop => Align2::CENTER_TOP,
             ModalPosition::Center => Align2::CENTER_CENTER
         };
         let x_align = View::get_left_inset() - View::get_right_inset();
         let y_align = View::get_top_inset() + Self::DEFAULT_MARGIN + if View::is_desktop() {
-            Root::WINDOW_TITLE_HEIGHT + Root::WINDOW_FRAME_MARGIN
+            Root::WINDOW_TITLE_HEIGHT + if !is_fullscreen {
+                Root::WINDOW_FRAME_MARGIN
+            } else {
+                0.0
+            }
         } else {
             0.0
         };

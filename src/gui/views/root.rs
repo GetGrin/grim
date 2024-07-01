@@ -150,7 +150,10 @@ impl Root {
         let panel_width = if dual_panel {
             Self::SIDE_PANEL_WIDTH + View::get_left_inset()
         } else {
-            View::window_size(ui).0 - if View::is_desktop() {
+            let is_fullscreen = ui.ctx().input(|i| {
+                i.viewport().fullscreen.unwrap_or(false)
+            });
+            View::window_size(ui).0 - if View::is_desktop() && !is_fullscreen {
                 Self::WINDOW_FRAME_MARGIN * 2.0
             } else {
                 0.0

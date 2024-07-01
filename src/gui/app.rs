@@ -91,10 +91,20 @@ impl<Platform: PlatformCallbacks> App<Platform> {
 
     /// Draw custom resizeable window content.
     fn desktop_window_ui(&mut self, ui: &mut egui::Ui) {
+        let is_fullscreen = ui.ctx().input(|i| {
+            i.viewport().fullscreen.unwrap_or(false)
+        });
+
         let title_stroke_rect = {
-            let mut rect = ui.max_rect().shrink(Root::WINDOW_FRAME_MARGIN);
-            rect.max.y = Root::WINDOW_FRAME_MARGIN + Root::WINDOW_TITLE_HEIGHT +
-                TitlePanel::DEFAULT_HEIGHT + 0.5;
+            let mut rect = ui.max_rect();
+            if !is_fullscreen {
+                rect = rect.shrink(Root::WINDOW_FRAME_MARGIN);
+            }
+            rect.max.y = if !is_fullscreen {
+                Root::WINDOW_FRAME_MARGIN
+            } else {
+                0.0
+            } + Root::WINDOW_TITLE_HEIGHT + TitlePanel::DEFAULT_HEIGHT + 0.5;
             rect
         };
         let title_stroke = RectShape {
@@ -118,7 +128,10 @@ impl<Platform: PlatformCallbacks> App<Platform> {
         ui.painter().add(title_stroke);
 
         let content_stroke_rect = {
-            let mut rect = ui.max_rect().shrink(Root::WINDOW_FRAME_MARGIN);
+            let mut rect = ui.max_rect();
+            if !is_fullscreen {
+                rect = rect.shrink(Root::WINDOW_FRAME_MARGIN);
+            }
             let top = Root::WINDOW_TITLE_HEIGHT + TitlePanel::DEFAULT_HEIGHT + 0.5;
             rect.min += egui::vec2(0.0, top);
             rect
@@ -139,20 +152,25 @@ impl<Platform: PlatformCallbacks> App<Platform> {
         ui.painter().add(content_stroke);
 
         // Draw window content.
-        let content_rect = ui.max_rect().shrink(Root::WINDOW_FRAME_MARGIN);
+        let mut content_rect = ui.max_rect();
+        if !is_fullscreen {
+            content_rect = content_rect.shrink(Root::WINDOW_FRAME_MARGIN);
+        }
         ui.allocate_ui_at_rect(content_rect, |ui| {
             self.window_content(ui);
         });
 
         // Setup resize areas.
-        self.resize_area_ui(ui, ResizeDirection::North);
-        self.resize_area_ui(ui, ResizeDirection::East);
-        self.resize_area_ui(ui, ResizeDirection::South);
-        self.resize_area_ui(ui, ResizeDirection::West);
-        self.resize_area_ui(ui, ResizeDirection::NorthWest);
-        self.resize_area_ui(ui, ResizeDirection::NorthEast);
-        self.resize_area_ui(ui, ResizeDirection::SouthEast);
-        self.resize_area_ui(ui, ResizeDirection::SouthWest);
+        if !is_fullscreen {
+            self.resize_area_ui(ui, ResizeDirection::North);
+            self.resize_area_ui(ui, ResizeDirection::East);
+            self.resize_area_ui(ui, ResizeDirection::South);
+            self.resize_area_ui(ui, ResizeDirection::West);
+            self.resize_area_ui(ui, ResizeDirection::NorthWest);
+            self.resize_area_ui(ui, ResizeDirection::NorthEast);
+            self.resize_area_ui(ui, ResizeDirection::SouthEast);
+            self.resize_area_ui(ui, ResizeDirection::SouthWest);
+        }
     }
 
     /// Draw window content for desktop.
@@ -212,7 +230,9 @@ impl<Platform: PlatformCallbacks> App<Platform> {
 
         let interact_rect = {
             let mut rect = title_rect;
-            rect.min.y += Root::WINDOW_FRAME_MARGIN;
+            if !is_fullscreen {
+                rect.min.y += Root::WINDOW_FRAME_MARGIN;
+            }
             rect
         };
         let title_resp = ui.interact(
@@ -247,11 +267,11 @@ impl<Platform: PlatformCallbacks> App<Platform> {
         );
 
         // Interact with the window title (drag to move window):
-        if title_resp.double_clicked() {
+        if !is_fullscreen && title_resp.double_clicked() {
             ui.ctx().send_viewport_cmd(ViewportCommand::Fullscreen(!is_fullscreen));
         }
 
-        if title_resp.drag_started_by(egui::PointerButton::Primary) {
+        if !is_fullscreen && title_resp.drag_started_by(egui::PointerButton::Primary) {
             ui.ctx().send_viewport_cmd(ViewportCommand::StartDrag);
         }
 
