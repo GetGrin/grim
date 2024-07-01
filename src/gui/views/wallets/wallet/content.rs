@@ -103,11 +103,7 @@ impl WalletContent {
                     bottom: 0.0,
                 },
                 outer_margin: Margin {
-                    left: if !dual_panel {
-                        -0.5
-                    } else {
-                        0.0
-                    },
+                    left: -0.5,
                     right: -0.5,
                     top: 0.0,
                     bottom: if dual_panel {
@@ -156,11 +152,7 @@ impl WalletContent {
         egui::CentralPanel::default()
             .frame(egui::Frame {
                 outer_margin: Margin {
-                    left: if !dual_panel {
-                      -0.5
-                    } else {
-                        0.0
-                    },
+                    left: -0.5,
                     right: -0.5,
                     top: 0.0,
                     bottom: 0.0,

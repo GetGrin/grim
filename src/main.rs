@@ -12,6 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#![windows_subsystem = "windows"]
+
+use egui::os::OperatingSystem;
+
 pub fn main() {
     #[allow(dead_code)]
     #[cfg(not(target_os = "android"))]
@@ -74,17 +78,27 @@ fn real_main() {
         viewport,
         ..Default::default()
     };
-    options.renderer = eframe::Renderer::Wgpu;
+
+    // Use Glow renderer for Windows.
+    let is_windows = OperatingSystem::from_target_os() == OperatingSystem::Windows;
+    options.renderer = if is_windows {
+        eframe::Renderer::Glow
+    } else {
+        eframe::Renderer::Wgpu
+    };
 
     match grim::start(options.clone(), grim::app_creator(App::new(platform.clone()))) {
         Ok(_) => {}
-        Err(_) => {
-            // Start with Glow renderer on error.
+        Err(e) => {
+            if is_windows {
+                panic!("{}", e);
+            }
+            // Start with another renderer on error.
             options.renderer = eframe::Renderer::Glow;
             match grim::start(options, grim::app_creator(App::new(platform))) {
                 Ok(_) => {}
-                Err(_) => {
-                    panic!("Impossible to render");
+                Err(e) => {
+                    panic!("{}", e);
                 }
             }
         }

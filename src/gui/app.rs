@@ -105,7 +105,7 @@ impl<Platform: PlatformCallbacks> App<Platform> {
                 sw: 0.0,
                 se: 0.0,
             },
-            fill: Colors::TRANSPARENT,
+            fill: Colors::yellow(),
             stroke: Stroke {
                 width: 1.0,
                 color: egui::Color32::from_gray(200)
@@ -126,7 +126,7 @@ impl<Platform: PlatformCallbacks> App<Platform> {
         let content_stroke = RectShape {
             rect: content_stroke_rect,
             rounding: Rounding::ZERO,
-            fill: Colors::TRANSPARENT,
+            fill: Colors::fill(),
             stroke: Stroke {
                 width: 1.0,
                 color: Colors::stroke()

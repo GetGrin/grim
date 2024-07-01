@@ -79,20 +79,6 @@ impl WalletCreation {
                         top: 4.0,
                         bottom: View::get_bottom_inset(),
                     },
-                    outer_margin: if View::is_desktop() {
-                        Margin {
-                            left: if !Root::is_dual_panel_mode(ui) {
-                                -0.5
-                            } else {
-                                0.0
-                            },
-                            right: -0.5,
-                            top: 0.0,
-                            bottom: -0.5,
-                        }
-                    } else {
-                        Margin::ZERO
-                    },
                     ..Default::default()
                 })
                 .show_inside(ui, |ui| {

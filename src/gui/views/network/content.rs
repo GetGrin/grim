@@ -79,19 +79,11 @@ impl NetworkContent {
             .resizable(false)
             .exact_width(ui.available_width())
             .frame(egui::Frame {
-                outer_margin: if !show_connections {
-                    Margin {
-                        left: -0.5,
-                        right: if !dual_panel {
-                            -0.5
-                        } else {
-                            0.0
-                        },
-                        top: 0.0,
-                        bottom: 0.0,
-                    }
-                } else {
-                    Margin::ZERO
+                outer_margin: Margin {
+                    left: -0.5,
+                    right: -0.5,
+                    top: 0.0,
+                    bottom: 0.0,
                 },
                 ..Default::default()
             })
@@ -116,59 +108,61 @@ impl NetworkContent {
         // Show connections content.
         egui::CentralPanel::default()
             .frame(egui::Frame {
-                stroke: View::item_stroke(),
                 outer_margin: if show_connections {
                     Margin {
                         left: -0.5,
-                        right: if !dual_panel {
-                            -0.5
-                        } else {
-                            0.0
-                        },
+                        right: -0.5,
                         top: 0.0,
                         bottom: -0.5,
                     }
                 } else {
                     Margin::ZERO
                 },
-                inner_margin: Margin {
-                    left: if show_connections {
-                        View::get_left_inset() + 4.0
-                    } else {
-                        0.0
-                    },
-                    right: if show_connections {
-                        View::far_right_inset_margin(ui) + 4.0
-                    } else {
-                        0.0
-                    },
-                    top: 3.0,
-                    bottom: if View::is_desktop() && show_connections {
-                        6.0
-                    } else {
-                        4.0
-                    },
-                },
-                fill: Colors::button(),
                 ..Default::default()
             })
             .show_inside(ui, |ui| {
-                ScrollArea::vertical()
-                    .id_source("connections_content")
-                    .scroll_bar_visibility(ScrollBarVisibility::AlwaysHidden)
-                    .auto_shrink([false; 2])
-                    .show(ui, |ui| {
-                        ui.add_space(1.0);
-                        ui.vertical_centered(|ui| {
-                            let max_width = if !dual_panel {
-                                Root::SIDE_PANEL_WIDTH * 1.3
+                egui::CentralPanel::default()
+                    .frame(egui::Frame {
+                        stroke: View::item_stroke(),
+                        inner_margin: Margin {
+                            left: if show_connections {
+                                View::get_left_inset() + 4.0
                             } else {
-                                ui.available_width()
-                            };
-                            View::max_width_ui(ui, max_width, |ui| {
-                                self.connections.ui(ui, cb);
+                                0.0
+                            },
+                            right: if show_connections {
+                                View::far_right_inset_margin(ui) + 4.0
+                            } else {
+                                0.0
+                            },
+                            top: 3.0,
+                            bottom: if View::is_desktop() && show_connections {
+                                6.0
+                            } else {
+                                4.0
+                            },
+                        },
+                        fill: Colors::fill(),
+                        ..Default::default()
+                    })
+                    .show_inside(ui, |ui| {
+                        ScrollArea::vertical()
+                            .id_source("connections_content")
+                            .scroll_bar_visibility(ScrollBarVisibility::AlwaysHidden)
+                            .auto_shrink([false; 2])
+                            .show(ui, |ui| {
+                                ui.add_space(1.0);
+                                ui.vertical_centered(|ui| {
+                                    let max_width = if !dual_panel {
+                                        Root::SIDE_PANEL_WIDTH * 1.3
+                                    } else {
+                                        ui.available_width()
+                                    };
+                                    View::max_width_ui(ui, max_width, |ui| {
+                                        self.connections.ui(ui, cb);
+                                    });
+                                });
                             });
-                        });
                     });
             });
 

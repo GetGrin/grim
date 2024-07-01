@@ -206,20 +206,6 @@ impl WalletsContent {
                 egui::Frame::default()
             } else {
                 egui::Frame {
-                    outer_margin: Margin {
-                        left: if !root_dual_panel {
-                            -0.5
-                        } else {
-                            0.0
-                        },
-                        right: if !wallet_panel_opened {
-                            -0.5
-                        } else {
-                            0.0
-                        },
-                        top: 0.0,
-                        bottom: 0.0,
-                    },
                     stroke: View::item_stroke(),
                     fill: Colors::fill_deep(),
                     inner_margin: Margin {
@@ -227,6 +213,16 @@ impl WalletsContent {
                         right: View::far_right_inset_margin(ui) + 4.0,
                         top: 3.0,
                         bottom: 4.0,
+                    },
+                    outer_margin: Margin {
+                        left: 0.0,
+                        right: if !wallet_panel_opened {
+                            -0.5
+                        } else {
+                            0.0
+                        },
+                        top: 0.0,
+                        bottom: 0.0,
                     },
                     ..Default::default()
                 }

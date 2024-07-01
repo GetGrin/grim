@@ -111,23 +111,19 @@ impl Root {
         let (is_panel_open, panel_width) = Self::network_panel_state_width(ui, dual_panel);
 
         // Show network content.
-        if is_panel_open {
-            egui::SidePanel::left("network_panel")
-                .resizable(false)
-                .exact_width(panel_width)
-                .frame(egui::Frame {
-                    fill: Colors::fill(),
-                    ..Default::default()
-                })
-                .show_inside(ui, |ui| {
-                    self.network.ui(ui, cb);
-                });
-        }
+        egui::SidePanel::left("network_panel")
+            .resizable(false)
+            .exact_width(panel_width)
+            .frame(egui::Frame {
+                ..Default::default()
+            })
+            .show_animated_inside(ui, is_panel_open, |ui| {
+                self.network.ui(ui, cb);
+            });
 
         // Show wallets content.
         egui::CentralPanel::default()
             .frame(egui::Frame {
-                fill: Colors::fill(),
                 ..Default::default()
             })
             .show_inside(ui, |ui| {
