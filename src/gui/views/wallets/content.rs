@@ -214,16 +214,6 @@ impl WalletsContent {
                         top: 3.0,
                         bottom: 4.0,
                     },
-                    outer_margin: Margin {
-                        left: 0.0,
-                        right: if !wallet_panel_opened {
-                            -0.5
-                        } else {
-                            0.0
-                        },
-                        top: 0.0,
-                        bottom: 0.0,
-                    },
                     ..Default::default()
                 }
             })

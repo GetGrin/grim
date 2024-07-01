@@ -79,12 +79,6 @@ impl NetworkContent {
             .resizable(false)
             .exact_width(ui.available_width())
             .frame(egui::Frame {
-                outer_margin: Margin {
-                    left: -0.5,
-                    right: -0.5,
-                    top: 0.0,
-                    bottom: 0.0,
-                },
                 ..Default::default()
             })
             .show_animated_inside(ui, !show_connections, |ui| {
@@ -108,16 +102,6 @@ impl NetworkContent {
         // Show connections content.
         egui::CentralPanel::default()
             .frame(egui::Frame {
-                outer_margin: if show_connections {
-                    Margin {
-                        left: -0.5,
-                        right: -0.5,
-                        top: 0.0,
-                        bottom: -0.5,
-                    }
-                } else {
-                    Margin::ZERO
-                },
                 ..Default::default()
             })
             .show_inside(ui, |ui| {
@@ -142,7 +126,7 @@ impl NetworkContent {
                                 4.0
                             },
                         },
-                        fill: Colors::fill(),
+                        fill: Colors::button(),
                         ..Default::default()
                     })
                     .show_inside(ui, |ui| {
