@@ -53,7 +53,8 @@ impl NetworkContent {
 
         // Show integrated node tabs content.
         if !show_connections {
-            egui::TopBottomPanel::bottom("node_tabs_panel")
+            egui::TopBottomPanel::bottom("node_tabs_content")
+                .min_height(0.5)
                 .resizable(false)
                 .frame(egui::Frame {
                     inner_margin: Margin {
@@ -75,10 +76,24 @@ impl NetworkContent {
         }
 
         // Show current node tab content.
-        egui::SidePanel::right("node_tab_content_panel")
+        egui::SidePanel::right("node_tab_content")
             .resizable(false)
             .exact_width(ui.available_width())
             .frame(egui::Frame {
+                outer_margin: if !show_connections {
+                    Margin {
+                        left: 0.0,
+                        right: if !dual_panel {
+                            -0.5
+                        } else {
+                            0.0
+                        },
+                        top: 0.0,
+                        bottom: 0.0,
+                    }
+                } else {
+                    Margin::ZERO
+                },
                 ..Default::default()
             })
             .show_animated_inside(ui, !show_connections, |ui| {
@@ -102,6 +117,20 @@ impl NetworkContent {
         // Show connections content.
         egui::CentralPanel::default()
             .frame(egui::Frame {
+                outer_margin: if show_connections {
+                    Margin {
+                        left: 0.0,
+                        right: if !dual_panel {
+                            -0.5
+                        } else {
+                            0.0
+                        },
+                        top: 0.0,
+                        bottom: 0.0,
+                    }
+                } else {
+                    Margin::ZERO
+                },
                 ..Default::default()
             })
             .show_inside(ui, |ui| {

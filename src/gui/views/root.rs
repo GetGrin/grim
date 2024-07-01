@@ -14,7 +14,7 @@
 
 use std::sync::atomic::{AtomicBool, Ordering};
 use egui::os::OperatingSystem;
-use egui::{Align, Layout, Margin, RichText};
+use egui::{Align, Layout, RichText};
 use lazy_static::lazy_static;
 
 use crate::gui::Colors;
@@ -115,16 +115,6 @@ impl Root {
             .resizable(false)
             .exact_width(panel_width)
             .frame(egui::Frame {
-                outer_margin: Margin {
-                    left: 0.0,
-                    right: if dual_panel {
-                        -0.5
-                    } else {
-                        0.0
-                    },
-                    top: 0.0,
-                    bottom: 0.0,
-                },
                 ..Default::default()
             })
             .show_animated_inside(ui, is_panel_open, |ui| {

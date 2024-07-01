@@ -132,7 +132,7 @@ impl WalletContent {
 
         // Show wallet tabs panel.
         let show_tabs = !Self::block_navigation_on_sync(wallet);
-        egui::TopBottomPanel::bottom("wallet_tabs")
+        egui::TopBottomPanel::bottom("wallet_tabs_content")
             .frame(egui::Frame {
                 fill: Colors::fill(),
                 inner_margin: Margin {
