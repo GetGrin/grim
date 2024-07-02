@@ -9,9 +9,21 @@ keywords = [ "crypto", "grin", "mimblewimble" ]
 edition = "2021"
 build = "src/build/build.rs"
 
+[[bin]]
+name = "grim-bin"
+path = "src/main.rs"
+
 [lib]
 name="grim"
-crate_type=["cdylib", "rlib"]
+crate-type = ["rlib"]
+
+[profile.release-apk]
+inherits = "release"
+strip = true
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
 
 [dependencies]
 log = "0.4"

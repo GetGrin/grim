@@ -24,7 +24,7 @@ cd ..
 
 # Setup release argument
 type=$1
-[[ ${type} == "release" ]] && release_param+=(--release)
+[[ ${type} == "release" ]] && release_param="--profile release-apk"
 
 # Setup platform argument
 [[ $2 == "v7" ]] && arch+=(armeabi-v7a)
@@ -39,12 +39,29 @@ type=$1
 [[ $2 == "v8" ]] && rustup target install aarch64-linux-android
 
 # Build native code
-mkdir -p android/app/src/main/jniLibs
 cargo install cargo-ndk
+
+rm -rf target/aarch64-linux-android
+rm -rf target/armv7-linux-androideabi
+mkdir -p android/app/src/main/jniLibs
+
+sed -i -e 's/"rlib"/"rlib","cdylib"/g' Cargo.toml
+
+# temp fix for https://stackoverflow.com/questions/57193895/error-use-of-undeclared-identifier-pthread-mutex-robust-cargo-build-liblmdb-s
+success=0
+export CPPFLAGS="-DMDB_USE_ROBUST=0" && export CFLAGS="-DMDB_USE_ROBUST=0"
 cargo ndk -t ${arch} -o android/app/src/main/jniLibs build ${release_param}
+unset CPPFLAGS && unset CFLAGS
+cargo ndk -t ${arch} -o android/app/src/main/jniLibs build ${release_param}
+if [ $? -eq 0 ]
+then
+  success=1
+fi
+
+sed -i -e 's/"rlib","cdylib"/"rlib"/g' Cargo.toml
 
 # Build Android application and launch at all connected devices
-if [ $? -eq 0 ]
+if [ $success -eq 1 ]
 then
   cd android
 

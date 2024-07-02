@@ -14,8 +14,6 @@
 
 #![windows_subsystem = "windows"]
 
-use egui::os::OperatingSystem;
-
 pub fn main() {
     #[allow(dead_code)]
     #[cfg(not(target_os = "android"))]
@@ -37,6 +35,7 @@ fn real_main() {
 
     use std::sync::Arc;
     use egui::pos2;
+    use egui::os::OperatingSystem;
     use eframe::icon_data::from_png_bytes;
 
     let platform = Desktop::default();
