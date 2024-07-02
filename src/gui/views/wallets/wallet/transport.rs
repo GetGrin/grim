@@ -26,7 +26,7 @@ use grin_wallet_libwallet::SlatepackAddress;
 use crate::gui::Colors;
 use crate::gui::icons::{CHECK_CIRCLE, COPY, DOTS_THREE_CIRCLE, EXPORT, GEAR_SIX, GLOBE_SIMPLE, POWER, QR_CODE, SHIELD_CHECKERED, SHIELD_SLASH, WARNING_CIRCLE, X_CIRCLE};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{CameraContent, Modal, QrCodeContent, Root, View};
+use crate::gui::views::{CameraContent, Modal, QrCodeContent, Content, View};
 use crate::gui::views::types::{ModalPosition, TextEditOptions};
 use crate::gui::views::wallets::wallet::types::{WalletTab, WalletTabType};
 use crate::gui::views::wallets::wallet::WalletContent;
@@ -106,7 +106,7 @@ impl WalletTab for WalletTransport {
                     .auto_shrink([false; 2])
                     .show(ui, |ui| {
                         ui.vertical_centered(|ui| {
-                            View::max_width_ui(ui, Root::SIDE_PANEL_WIDTH * 1.3, |ui| {
+                            View::max_width_ui(ui, Content::SIDE_PANEL_WIDTH * 1.3, |ui| {
                                 self.ui(ui, wallet, cb);
                             });
                         });

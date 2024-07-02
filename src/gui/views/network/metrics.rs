@@ -19,7 +19,7 @@ use grin_servers::{DiffBlock, ServerStats};
 use crate::gui::Colors;
 use crate::gui::icons::{AT, COINS, CUBE_TRANSPARENT, HOURGLASS_LOW, HOURGLASS_MEDIUM, TIMER};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{NetworkContent, Root, View};
+use crate::gui::views::{NetworkContent, Content, View};
 use crate::gui::views::network::types::{NetworkTab, NetworkTabType};
 use crate::node::Node;
 
@@ -66,7 +66,7 @@ impl NetworkTab for NetworkMetrics {
 
         ui.add_space(1.0);
         ui.vertical_centered(|ui| {
-            View::max_width_ui(ui, Root::SIDE_PANEL_WIDTH * 1.3, |ui| {
+            View::max_width_ui(ui, Content::SIDE_PANEL_WIDTH * 1.3, |ui| {
                 let stats = server_stats.as_ref().unwrap();
                 // Show emission and difficulty info.
                 info_ui(ui, stats);

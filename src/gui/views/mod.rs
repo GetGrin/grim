@@ -23,8 +23,8 @@ pub use title_panel::*;
 mod modal;
 pub use modal::*;
 
-mod root;
-pub use root::*;
+mod content;
+pub use content::*;
 
 mod network;
 pub use network::*;

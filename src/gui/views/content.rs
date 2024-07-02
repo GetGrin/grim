@@ -31,7 +31,7 @@ lazy_static! {
 }
 
 /// Contains main ui content, handles side panel state.
-pub struct Root {
+pub struct Content {
     /// Side panel [`NetworkContent`] content.
     network: NetworkContent,
     /// Central panel [`WalletsContent`] content.
@@ -49,7 +49,7 @@ pub struct Root {
     allowed_modal_ids: Vec<&'static str>
 }
 
-impl Default for Root {
+impl Default for Content {
     fn default() -> Self {
         // Exit from eframe only for non-mobile platforms.
         let os = OperatingSystem::from_target_os();
@@ -69,7 +69,7 @@ impl Default for Root {
     }
 }
 
-impl ModalContainer for Root {
+impl ModalContainer for Content {
     fn modal_ids(&self) -> &Vec<&'static str> {
         &self.allowed_modal_ids
     }
@@ -87,7 +87,7 @@ impl ModalContainer for Root {
     }
 }
 
-impl Root {
+impl Content {
     /// Identifier for exit confirmation [`Modal`].
     pub const EXIT_MODAL_ID: &'static str = "exit_confirmation_modal";
     /// Identifier for wallet opening [`Modal`].
@@ -153,7 +153,8 @@ impl Root {
             let is_fullscreen = ui.ctx().input(|i| {
                 i.viewport().fullscreen.unwrap_or(false)
             });
-            View::window_size(ui).0 - if View::is_desktop() && !is_fullscreen {
+            View::window_size(ui).0 - if View::is_desktop() && !is_fullscreen &&
+                OperatingSystem::from_target_os() != OperatingSystem::Mac {
                 Self::WINDOW_FRAME_MARGIN * 2.0
             } else {
                 0.0

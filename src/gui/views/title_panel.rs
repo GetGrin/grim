@@ -16,7 +16,7 @@ use egui::{Margin, Id};
 use egui_extras::{Size, Strip, StripBuilder};
 
 use crate::gui::Colors;
-use crate::gui::views::{Root, View};
+use crate::gui::views::{Content, View};
 use crate::gui::views::types::{TitleContentType, TitleType};
 
 /// Title panel with left/right action buttons and text in the middle.
@@ -66,7 +66,7 @@ impl TitlePanel {
                 StripBuilder::new(ui)
                     .size(Size::exact(Self::DEFAULT_HEIGHT))
                     .size(if dual_title {
-                        Size::exact(Root::SIDE_PANEL_WIDTH - 2.0 * Self::DEFAULT_HEIGHT)
+                        Size::exact(Content::SIDE_PANEL_WIDTH - 2.0 * Self::DEFAULT_HEIGHT)
                     } else {
                         Size::remainder()
                     })

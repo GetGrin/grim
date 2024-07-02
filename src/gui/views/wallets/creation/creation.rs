@@ -19,7 +19,7 @@ use grin_util::ZeroingString;
 use crate::gui::Colors;
 use crate::gui::icons::{CHECK, CLIPBOARD_TEXT, COPY, FOLDER_PLUS, SCAN, SHARE_FAT};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Modal, Root, View};
+use crate::gui::views::{Modal, Content, View};
 use crate::gui::views::types::{ModalPosition, TextEditOptions};
 use crate::gui::views::wallets::creation::MnemonicSetup;
 use crate::gui::views::wallets::creation::types::Step;
@@ -84,7 +84,7 @@ impl WalletCreation {
                 .show_inside(ui, |ui| {
                     ui.vertical_centered(|ui| {
                         ui.vertical_centered(|ui| {
-                            View::max_width_ui(ui, Root::SIDE_PANEL_WIDTH * 2.0, |ui| {
+                            View::max_width_ui(ui, Content::SIDE_PANEL_WIDTH * 2.0, |ui| {
                                 self.step_control_ui(ui, on_create, cb);
                             });
                         });
@@ -118,9 +118,9 @@ impl WalletCreation {
                     .show(ui, |ui| {
                         ui.vertical_centered(|ui| {
                             let max_width = if self.step == Some(Step::SetupConnection) {
-                                Root::SIDE_PANEL_WIDTH * 1.3
+                                Content::SIDE_PANEL_WIDTH * 1.3
                             } else {
-                                Root::SIDE_PANEL_WIDTH * 2.0
+                                Content::SIDE_PANEL_WIDTH * 2.0
                             };
                             View::max_width_ui(ui, max_width, |ui| {
                                 self.step_content_ui(ui, cb);

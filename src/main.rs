@@ -69,9 +69,14 @@ fn real_main() {
     }
 
     // Setup window decorations.
+    let is_mac_os = OperatingSystem::from_target_os() == OperatingSystem::Mac;
     viewport = viewport
+        .with_fullsize_content_view(true)
+        .with_title_shown(false)
+        .with_titlebar_buttons_shown(false)
+        .with_titlebar_shown(false)
         .with_transparent(true)
-        .with_decorations(false);
+        .with_decorations(is_mac_os);
 
     let mut options = eframe::NativeOptions {
         viewport,

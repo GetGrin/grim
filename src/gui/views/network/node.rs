@@ -19,7 +19,7 @@ use grin_servers::PeerStats;
 use crate::gui::Colors;
 use crate::gui::icons::{AT, CUBE, DEVICES, FLOW_ARROW, HANDSHAKE, PACKAGE, SHARE_NETWORK};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{NetworkContent, Root, View};
+use crate::gui::views::{NetworkContent, Content, View};
 use crate::gui::views::network::types::{NetworkTab, NetworkTabType};
 use crate::node::{Node, NodeConfig};
 
@@ -60,7 +60,7 @@ impl NetworkTab for NetworkNode {
             .show(ui, |ui| {
                 ui.add_space(2.0);
                 ui.vertical_centered(|ui| {
-                    View::max_width_ui(ui, Root::SIDE_PANEL_WIDTH * 1.3, |ui| {
+                    View::max_width_ui(ui, Content::SIDE_PANEL_WIDTH * 1.3, |ui| {
                         // Show node stats content.
                         node_stats_ui(ui);
                     });

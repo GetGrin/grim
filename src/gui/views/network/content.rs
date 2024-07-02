@@ -20,7 +20,7 @@ use crate::AppConfig;
 use crate::gui::Colors;
 use crate::gui::icons::{ARROWS_COUNTER_CLOCKWISE, BRIEFCASE, DATABASE, DOTS_THREE_OUTLINE_VERTICAL, FACTORY, FADERS, GAUGE, POWER};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{ConnectionsContent, NetworkMetrics, NetworkMining, NetworkNode, NetworkSettings, Root, TitlePanel, View};
+use crate::gui::views::{ConnectionsContent, NetworkMetrics, NetworkMining, NetworkNode, NetworkSettings, Content, TitlePanel, View};
 use crate::gui::views::network::types::{NetworkTab, NetworkTabType};
 use crate::gui::views::types::{TitleContentType, TitleType};
 use crate::node::{Node, NodeError};
@@ -46,7 +46,7 @@ impl Default for NetworkContent {
 impl NetworkContent {
     pub fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         let show_connections = AppConfig::show_connections_network_panel();
-        let dual_panel = Root::is_dual_panel_mode(ui);
+        let dual_panel = Content::is_dual_panel_mode(ui);
 
         // Show title panel.
         self.title_ui(ui, show_connections);
@@ -68,7 +68,7 @@ impl NetworkContent {
                 })
                 .show_inside(ui, |ui| {
                     ui.vertical_centered(|ui| {
-                        View::max_width_ui(ui, Root::SIDE_PANEL_WIDTH * 1.3, |ui| {
+                        View::max_width_ui(ui, Content::SIDE_PANEL_WIDTH * 1.3, |ui| {
                             self.tabs_ui(ui);
                         });
                     });
@@ -80,20 +80,6 @@ impl NetworkContent {
             .resizable(false)
             .exact_width(ui.available_width())
             .frame(egui::Frame {
-                outer_margin: if !show_connections {
-                    Margin {
-                        left: 0.0,
-                        right: if !dual_panel {
-                            -0.5
-                        } else {
-                            0.0
-                        },
-                        top: 0.0,
-                        bottom: 0.0,
-                    }
-                } else {
-                    Margin::ZERO
-                },
                 ..Default::default()
             })
             .show_animated_inside(ui, !show_connections, |ui| {
@@ -117,65 +103,45 @@ impl NetworkContent {
         // Show connections content.
         egui::CentralPanel::default()
             .frame(egui::Frame {
-                outer_margin: if show_connections {
-                    Margin {
-                        left: 0.0,
-                        right: if !dual_panel {
-                            -0.5
-                        } else {
-                            0.0
-                        },
-                        top: 0.0,
-                        bottom: 0.0,
-                    }
-                } else {
-                    Margin::ZERO
+                stroke: View::item_stroke(),
+                inner_margin: Margin {
+                    left: if show_connections {
+                        View::get_left_inset() + 4.0
+                    } else {
+                        0.0
+                    },
+                    right: if show_connections {
+                        View::far_right_inset_margin(ui) + 4.0
+                    } else {
+                        0.0
+                    },
+                    top: 3.0,
+                    bottom: if View::is_desktop() && show_connections {
+                        6.0
+                    } else {
+                        4.0
+                    },
                 },
+                fill: Colors::button(),
                 ..Default::default()
             })
             .show_inside(ui, |ui| {
-                egui::CentralPanel::default()
-                    .frame(egui::Frame {
-                        stroke: View::item_stroke(),
-                        inner_margin: Margin {
-                            left: if show_connections {
-                                View::get_left_inset() + 4.0
+                ScrollArea::vertical()
+                    .id_source("connections_content")
+                    .scroll_bar_visibility(ScrollBarVisibility::AlwaysHidden)
+                    .auto_shrink([false; 2])
+                    .show(ui, |ui| {
+                        ui.add_space(1.0);
+                        ui.vertical_centered(|ui| {
+                            let max_width = if !dual_panel {
+                                Content::SIDE_PANEL_WIDTH * 1.3
                             } else {
-                                0.0
-                            },
-                            right: if show_connections {
-                                View::far_right_inset_margin(ui) + 4.0
-                            } else {
-                                0.0
-                            },
-                            top: 3.0,
-                            bottom: if View::is_desktop() && show_connections {
-                                6.0
-                            } else {
-                                4.0
-                            },
-                        },
-                        fill: Colors::button(),
-                        ..Default::default()
-                    })
-                    .show_inside(ui, |ui| {
-                        ScrollArea::vertical()
-                            .id_source("connections_content")
-                            .scroll_bar_visibility(ScrollBarVisibility::AlwaysHidden)
-                            .auto_shrink([false; 2])
-                            .show(ui, |ui| {
-                                ui.add_space(1.0);
-                                ui.vertical_centered(|ui| {
-                                    let max_width = if !dual_panel {
-                                        Root::SIDE_PANEL_WIDTH * 1.3
-                                    } else {
-                                        ui.available_width()
-                                    };
-                                    View::max_width_ui(ui, max_width, |ui| {
-                                        self.connections.ui(ui, cb);
-                                    });
-                                });
+                                ui.available_width()
+                            };
+                            View::max_width_ui(ui, max_width, |ui| {
+                                self.connections.ui(ui, cb);
                             });
+                        });
                     });
             });
 
@@ -245,9 +211,9 @@ impl NetworkContent {
                 });
             }
         }, |ui| {
-            if !Root::is_dual_panel_mode(ui) {
+            if !Content::is_dual_panel_mode(ui) {
                 View::title_button_big(ui, BRIEFCASE, |_| {
-                    Root::toggle_network_panel();
+                    Content::toggle_network_panel();
                 });
             }
         }, ui);
