@@ -40,9 +40,6 @@ type=$1
 
 # Build native code
 cargo install cargo-ndk
-
-rm -rf target/aarch64-linux-android
-rm -rf target/armv7-linux-androideabi
 mkdir -p android/app/src/main/jniLibs
 
 sed -i -e 's/"rlib"/"rlib","cdylib"/g' Cargo.toml
@@ -51,8 +48,11 @@ sed -i -e 's/"rlib"/"rlib","cdylib"/g' Cargo.toml
 success=0
 export CPPFLAGS="-DMDB_USE_ROBUST=0" && export CFLAGS="-DMDB_USE_ROBUST=0"
 cargo ndk -t ${arch} -o android/app/src/main/jniLibs build ${release_param}
-unset CPPFLAGS && unset CFLAGS
-cargo ndk -t ${arch} -o android/app/src/main/jniLibs build ${release_param}
+if [ $? -eq 1 ]
+then
+  unset CPPFLAGS && unset CFLAGS
+  cargo ndk -t ${arch} -o android/app/src/main/jniLibs build ${release_param}
+fi
 if [ $? -eq 0 ]
 then
   success=1
