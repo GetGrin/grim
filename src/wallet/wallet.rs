@@ -356,7 +356,9 @@ impl Wallet {
                     self.is_open.store(true, Ordering::Relaxed);
                 }
                 Err(e) => {
-                    self.instance = None;
+                    if !self.syncing() {
+                        self.instance = None;
+                    }
                     return Err(e)
                 }
             }
