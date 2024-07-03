@@ -111,14 +111,11 @@ impl WalletsContent {
             || (!dual_panel && show_wallet) ||
             (!root_dual_panel && Content::is_network_panel_open());
 
-        let wallet_panel_opened = self.wallet_panel_opened();
-
         // Show title panel.
-        if !list_hidden || wallet_panel_opened {
-            self.title_ui(ui, dual_panel, create_wallet, show_wallet);
-        }
+        self.title_ui(ui, dual_panel, create_wallet, show_wallet);
 
         // Show wallet panel content.
+        let wallet_panel_opened = self.wallet_panel_opened();
         egui::SidePanel::right("wallet_panel")
             .resizable(false)
             .exact_width(wallet_panel_width)
@@ -136,10 +133,6 @@ impl WalletsContent {
                 ..Default::default()
             })
             .show_animated_inside(ui, wallet_panel_opened, |ui| {
-                // Do not draw content on zero width.
-                if content_width == 0.0 {
-                    return;
-                }
                 if create_wallet || !show_wallet {
                     // Show wallet creation content.
                     self.creation_content.ui(ui, cb, |wallet| {
@@ -218,11 +211,7 @@ impl WalletsContent {
                 }
             })
             .show_inside(ui, |ui| {
-                if list_hidden {
-                    return;
-                }
-                // Update ui after 1 sec at single panel mode.
-                if !dual_panel {
+                if !list_hidden && !dual_panel {
                     ui.ctx().request_repaint_after(Duration::from_millis(1000));
                 }
                 self.wallet_list_ui(ui, cb);
