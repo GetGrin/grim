@@ -48,7 +48,7 @@ impl ExternalConnection {
     }
 
     /// Check connection availability.
-    pub fn check_conn_availability(&self) {
+    fn check_conn_availability(&self) {
         // Check every connection at separate thread.
         let conn = self.clone();
         std::thread::spawn(move || {

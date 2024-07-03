@@ -39,6 +39,8 @@ pub struct ConnectionSetup {
 
     /// Current wallet external connection.
     curr_ext_conn: Option<ExternalConnection>,
+    /// Flag to check connections availability.
+    check_connections: bool,
 
     /// [`Modal`] identifiers allowed at this ui container.
     modal_ids: Vec<&'static str>
@@ -56,6 +58,7 @@ impl Default for ConnectionSetup {
             ext_node_secret_edit: "".to_string(),
             ext_node_url_error: false,
             curr_ext_conn: None,
+            check_connections: true,
             modal_ids: vec![
                 ADD_EXT_CONNECTION_MODAL
             ]
@@ -166,25 +169,32 @@ impl ConnectionSetup {
             ui.add_space(4.0);
 
             let mut ext_conn_list = ConnectionsConfig::ext_conn_list();
-            // Check if current external connection was deleted to show at list.
+
+            // Check if current external connection was deleted to show at 1st place.
             if let Some(wallet) = wallet {
                 if let Some(conn) = wallet.get_current_ext_conn() {
                     if ext_conn_list.iter()
                         .filter(|c| c.id == conn.id)
                         .collect::<Vec<&ExternalConnection>>().is_empty() {
                         if self.curr_ext_conn.is_none() {
-                            conn.check_conn_availability();
                             self.curr_ext_conn = Some(conn);
                         }
                         ext_conn_list.insert(0, self.curr_ext_conn.as_ref().unwrap().clone());
                     }
                 }
             }
+
+            // Check connections availability.
+            if self.check_connections {
+                ExternalConnection::start_ext_conn_availability_check();
+                self.check_connections = false;
+            }
+
             if !ext_conn_list.is_empty() {
                 ui.add_space(8.0);
                 for (index, conn) in ext_conn_list.iter().enumerate() {
                     ui.horizontal_wrapped(|ui| {
-                        // Draw connection list item.
+                        // Draw external connection item.
                         self.ext_conn_item_ui(ui, wallet, conn, index, ext_conn_list.len());
                     });
                 }
@@ -344,10 +354,12 @@ impl ConnectionSetup {
                                 Some(self.ext_node_secret_edit.to_owned())
                             };
                             let ext_conn = ExternalConnection::new(url.clone(), secret);
-                            ext_conn.check_conn_availability();
                             ConnectionsConfig::add_ext_conn(ext_conn.clone());
+                            self.check_connections = true;
+
                             // Set added connection as current.
                             self.method = ConnectionMethod::External(ext_conn.id);
+
                             // Close modal.
                             cb.hide_keyboard();
                             modal.close();

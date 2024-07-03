@@ -37,24 +37,25 @@ pub struct ConnectionsContent {
     /// Editing external connection identifier for [`Modal`].
     ext_conn_id_edit: Option<i64>,
 
+    /// Flag to check connections availability.
+    check_connections: bool,
+
     /// [`Modal`] identifiers allowed at this ui container.
     modal_ids: Vec<&'static str>
 }
 
 impl Default for ConnectionsContent {
     fn default() -> Self {
-        if AppConfig::show_connections_network_panel() {
-            ExternalConnection::start_ext_conn_availability_check();
-        }
         Self {
             first_modal_launch: true,
             ext_node_url_edit: "".to_string(),
             ext_node_secret_edit: "".to_string(),
             ext_node_url_error: false,
             ext_conn_id_edit: None,
+            check_connections: true,
             modal_ids: vec![
                 Self::NETWORK_EXT_CONNECTION_MODAL
-            ]
+            ],
         }
     }
 }
@@ -88,12 +89,16 @@ impl ConnectionsContent {
         // Show network type selection.
         let saved_chain_type = AppConfig::chain_type();
         NodeSetup::chain_type_ui(ui);
-
-        // Start external connections availability check on network type change.
-        if saved_chain_type != AppConfig::chain_type() {
-            ExternalConnection::start_ext_conn_availability_check();
-        }
         ui.add_space(6.0);
+
+        // Check connections availability.
+        if saved_chain_type != AppConfig::chain_type() {
+            self.check_connections = true;
+        }
+        if self.check_connections {
+            ExternalConnection::start_ext_conn_availability_check();
+            self.check_connections = false;
+        }
 
         // Show integrated node info content.
         Self::integrated_node_item_ui(ui, |ui| {
@@ -339,12 +344,12 @@ impl ConnectionsContent {
 
                             // Update or create new connection.
                             let mut ext_conn = ExternalConnection::new(url, secret);
-                            ext_conn.check_conn_availability();
                             if let Some(id) = self.ext_conn_id_edit {
                                 ext_conn.id = id;
                             }
                             self.ext_conn_id_edit = None;
                             ConnectionsConfig::add_ext_conn(ext_conn);
+                            self.check_connections = true;
 
                             // Close modal.
                             cb.hide_keyboard();
