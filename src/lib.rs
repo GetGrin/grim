@@ -136,6 +136,9 @@ pub fn start(mut options: NativeOptions, app_creator: eframe::AppCreator) -> efr
 /// Setup application [`egui::Style`] and [`egui::Visuals`].
 pub fn setup_visuals(ctx: &Context) {
     let mut style = (*ctx.style()).clone();
+    // Setup selection.
+    style.interaction.selectable_labels = false;
+    style.interaction.multi_widget_text_select = false;
     // Setup spacing for buttons.
     style.spacing.button_padding = egui::vec2(12.0, 8.0);
     // Make scroll-bar thinner and lighter.
