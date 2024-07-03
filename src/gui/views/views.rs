@@ -33,6 +33,12 @@ use crate::gui::views::types::TextEditOptions;
 pub struct View;
 
 impl View {
+    /// Check if current platform is desktop
+    pub fn is_desktop() -> bool {
+        let os = OperatingSystem::from_target_os();
+        os != OperatingSystem::Android && os != OperatingSystem::IOS
+    }
+
     /// Format timestamp in seconds with local UTC offset.
     pub fn format_time(ts: i64) -> String {
         let utc_offset = chrono::Local::now().offset().local_minus_utc();
@@ -76,17 +82,9 @@ impl View {
     }
 
     /// Get width and height of app window.
-    pub fn window_size(ui: &mut egui::Ui) -> (f32, f32) {
-
-        ui.ctx().input(|i| {
-            return match i.viewport().inner_rect {
-                None => {
-                    let rect = i.screen_rect;
-                    (rect.width(), rect.height())
-                },
-                Some(rect) => (rect.width(), rect.height())
-            };
-        })
+    pub fn window_size(ui: &egui::Ui) -> (f32, f32) {
+        let rect = ui.ctx().screen_rect();
+        (rect.width(), rect.height())
     }
 
     /// Callback on Enter key press event.
@@ -179,8 +177,18 @@ impl View {
         false
     }
 
-    /// Title button with transparent background fill color, contains only icon.
-    pub fn title_button(ui: &mut egui::Ui, icon: &str, action: impl FnOnce()) {
+    /// Draw big size title button.
+    pub fn title_button_big(ui: &mut egui::Ui, icon: &str, action: impl FnOnce(&mut egui::Ui)) {
+        Self::title_button(ui, 22.0, icon, action);
+    }
+
+    /// Draw small size title button.
+    pub fn title_button_small(ui: &mut egui::Ui, icon: &str, action: impl FnOnce(&mut egui::Ui)) {
+        Self::title_button(ui, 16.0, icon, action);
+    }
+
+    /// Draw title button with transparent background color, contains only icon.
+    fn title_button(ui: &mut egui::Ui, size: f32, icon: &str, action: impl FnOnce(&mut egui::Ui)) {
         ui.scope(|ui| {
             // Disable strokes.
             ui.style_mut().visuals.widgets.inactive.bg_stroke = Stroke::NONE;
@@ -190,7 +198,7 @@ impl View {
             ui.style_mut().visuals.widgets.active.expansion = 0.0;
 
             // Setup text.
-            let wt = RichText::new(icon.to_string()).size(22.0).color(Colors::title(true));
+            let wt = RichText::new(icon.to_string()).size(size).color(Colors::title(true));
             // Draw button.
             let br = Button::new(wt)
                 .fill(Colors::TRANSPARENT)
@@ -198,10 +206,13 @@ impl View {
                 .on_hover_cursor(CursorIcon::PointingHand);
             br.surrender_focus();
             if Self::touched(ui, br) {
-                (action)();
+                (action)(ui);
             }
         });
     }
+
+    /// Padding for tab items.
+    pub const TAB_ITEMS_PADDING: f32 = 5.0;
 
     /// Tab button with white background fill color, contains only icon.
     pub fn tab_button(ui: &mut egui::Ui, icon: &str, active: bool, action: impl FnOnce()) {
@@ -413,6 +424,7 @@ impl View {
                     .ui(ui);
                 // Show keyboard on click.
                 if text_edit_resp.clicked() {
+                    text_edit_resp.request_focus();
                     cb.show_keyboard();
                 }
                 // Setup focus on input field.
@@ -514,6 +526,7 @@ impl View {
             },
             fill: Colors::TRANSPARENT,
             stroke: Self::item_stroke(),
+            blur_width: 0.0,
             fill_texture_id: Default::default(),
             uv: Rect::ZERO
         };

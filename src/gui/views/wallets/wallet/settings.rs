@@ -17,7 +17,7 @@ use egui::scroll_area::ScrollBarVisibility;
 
 use crate::gui::Colors;
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Root, View};
+use crate::gui::views::{Content, View};
 use crate::gui::views::wallets::setup::{CommonSetup, ConnectionSetup, RecoverySetup};
 use crate::gui::views::wallets::wallet::types::{WalletTab, WalletTabType};
 use crate::gui::views::wallets::wallet::WalletContent;
@@ -80,7 +80,7 @@ impl WalletTab for WalletSettings {
                     .scroll_bar_visibility(ScrollBarVisibility::AlwaysHidden)
                     .show(ui, |ui| {
                         ui.vertical_centered(|ui| {
-                            View::max_width_ui(ui, Root::SIDE_PANEL_WIDTH * 1.3, |ui| {
+                            View::max_width_ui(ui, Content::SIDE_PANEL_WIDTH * 1.3, |ui| {
                                 // Show common wallet setup.
                                 self.common_setup.ui(ui, wallet, cb);
                                 // Show wallet connections setup.

@@ -12,8 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use grim::gui::App;
-use grim::gui::platform::Desktop;
+#![windows_subsystem = "windows"]
 
 pub fn main() {
     #[allow(dead_code)]
@@ -36,6 +35,7 @@ fn real_main() {
 
     use std::sync::Arc;
     use egui::pos2;
+    use egui::os::OperatingSystem;
     use eframe::icon_data::from_png_bytes;
 
     let platform = Desktop::default();
@@ -55,6 +55,7 @@ fn real_main() {
     let (width, height) = AppConfig::window_size();
 
     let mut viewport = egui::ViewportBuilder::default()
+        .with_min_inner_size([AppConfig::MIN_WIDTH, AppConfig::MIN_HEIGHT])
         .with_inner_size([width, height]);
 
     // Setup an icon.
@@ -67,21 +68,41 @@ fn real_main() {
         viewport = viewport.with_position(pos2(x, y));
     }
 
+    // Setup window decorations.
+    let is_mac_os = OperatingSystem::from_target_os() == OperatingSystem::Mac;
+    viewport = viewport
+        .with_fullsize_content_view(true)
+        .with_title_shown(false)
+        .with_titlebar_buttons_shown(false)
+        .with_titlebar_shown(false)
+        .with_transparent(true)
+        .with_decorations(is_mac_os);
+
     let mut options = eframe::NativeOptions {
         viewport,
         ..Default::default()
     };
-    options.renderer = eframe::Renderer::Wgpu;
+
+    // Use Glow renderer for Windows.
+    let is_windows = OperatingSystem::from_target_os() == OperatingSystem::Windows;
+    options.renderer = if is_windows {
+        eframe::Renderer::Glow
+    } else {
+        eframe::Renderer::Wgpu
+    };
 
     match grim::start(options.clone(), grim::app_creator(App::new(platform.clone()))) {
         Ok(_) => {}
-        Err(_) => {
-            // Start with Glow renderer on error.
+        Err(e) => {
+            if is_windows {
+                panic!("{}", e);
+            }
+            // Start with another renderer on error.
             options.renderer = eframe::Renderer::Glow;
             match grim::start(options, grim::app_creator(App::new(platform))) {
                 Ok(_) => {}
-                Err(_) => {
-                    panic!("Impossible to render");
+                Err(e) => {
+                    panic!("{}", e);
                 }
             }
         }

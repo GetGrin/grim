@@ -14,6 +14,7 @@
 
 use grin_core::global::ChainTypes;
 use serde_derive::{Deserialize, Serialize};
+use crate::gui::views::Content;
 
 use crate::node::{NodeConfig, PeersConfig};
 use crate::Settings;
@@ -69,10 +70,16 @@ impl Default for AppConfig {
 }
 
 impl AppConfig {
-    /// Default window width.
-    pub const DEFAULT_WIDTH: f32 = 1280.0;
-    /// Default window height.
-    pub const DEFAULT_HEIGHT: f32 = 745.0;
+    /// Desktop window frame margin sum, horizontal or vertical.
+    const FRAME_MARGIN: f32 = Content::WINDOW_FRAME_MARGIN * 2.0;
+    /// Default desktop window width.
+    pub const DEFAULT_WIDTH: f32 = Content::SIDE_PANEL_WIDTH * 3.0 + Self::FRAME_MARGIN;
+    /// Default desktop window height.
+    pub const DEFAULT_HEIGHT: f32 = 706.0;
+    /// Minimal desktop window width.
+    pub const MIN_WIDTH: f32 = Content::SIDE_PANEL_WIDTH + Self::FRAME_MARGIN;
+    /// Minimal desktop window height.
+    pub const MIN_HEIGHT: f32 = 630.0 + Content::WINDOW_TITLE_HEIGHT + Self::FRAME_MARGIN;
 
     /// Application configuration file name.
     pub const FILE_NAME: &'static str = "app.toml";

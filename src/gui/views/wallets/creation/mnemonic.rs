@@ -17,7 +17,7 @@ use egui::{Id, RichText};
 use crate::gui::Colors;
 use crate::gui::icons::PENCIL;
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{CameraContent, Modal, Root, View};
+use crate::gui::views::{CameraContent, Modal, Content, View};
 use crate::gui::views::types::{ModalContainer, ModalPosition, QrScanResult, TextEditOptions};
 use crate::wallet::Mnemonic;
 use crate::wallet::types::{PhraseMode, PhraseSize};
@@ -304,6 +304,8 @@ impl MnemonicSetup {
                 columns[1].vertical_centered_justified(|ui| {
                     // Callback to save the word.
                     let mut save = || {
+                        self.word_edit = self.word_edit.trim().to_string();
+
                         // Check if word is valid.
                         let word_index = self.word_num_edit - 1;
                         if !self.mnemonic.is_valid_word(&self.word_edit, word_index) {
@@ -432,7 +434,7 @@ impl MnemonicSetup {
 /// Calculate word list columns count based on available ui width.
 fn list_columns_count(ui: &mut egui::Ui) -> usize {
     let w = ui.available_width();
-    let min_panel_w = Root::SIDE_PANEL_WIDTH - 12.0;
+    let min_panel_w = Content::SIDE_PANEL_WIDTH - 12.0;
     let double_min_panel_w = min_panel_w * 2.0;
     if w >= min_panel_w * 1.5 && w < double_min_panel_w {
         3

@@ -24,7 +24,7 @@ use parking_lot::RwLock;
 use crate::gui::Colors;
 use crate::gui::icons::{BROOM, CLIPBOARD_TEXT, COPY, DOWNLOAD_SIMPLE, PROHIBIT, QR_CODE, SCAN, UPLOAD_SIMPLE};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{CameraContent, FilePickButton, Modal, QrCodeContent, Root, View};
+use crate::gui::views::{CameraContent, FilePickButton, Modal, QrCodeContent, Content, View};
 use crate::gui::views::types::{ModalPosition, QrScanResult, TextEditOptions};
 use crate::gui::views::wallets::wallet::types::{SLATEPACK_MESSAGE_HINT, WalletTab, WalletTabType};
 use crate::gui::views::wallets::wallet::WalletContent;
@@ -144,7 +144,7 @@ impl WalletTab for WalletMessages {
                     .auto_shrink([false; 2])
                     .show(ui, |ui| {
                         ui.vertical_centered(|ui| {
-                            View::max_width_ui(ui, Root::SIDE_PANEL_WIDTH * 1.3, |ui| {
+                            View::max_width_ui(ui, Content::SIDE_PANEL_WIDTH * 1.3, |ui| {
                                 self.ui(ui, wallet, cb);
                             });
                         });
@@ -665,6 +665,7 @@ impl WalletMessages {
                     .response;
                 // Show soft keyboard on click.
                 if response_empty && resp.clicked() {
+                    resp.request_focus();
                     cb.show_keyboard();
                 }
                 if response_empty && resp.has_focus() {

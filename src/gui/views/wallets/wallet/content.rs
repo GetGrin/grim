@@ -22,7 +22,7 @@ use crate::AppConfig;
 use crate::gui::Colors;
 use crate::gui::icons::{ARROWS_CLOCKWISE, BRIDGE, CHAT_CIRCLE_TEXT, CHECK, CHECK_FAT, COPY, FOLDER_USER, GEAR_FINE, GRAPH, PACKAGE, PATH, POWER, SCAN, SPINNER, USERS_THREE};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{CameraContent, Modal, Root, View};
+use crate::gui::views::{CameraContent, Modal, Content, View};
 use crate::gui::views::types::{ModalPosition, QrScanResult, TextEditOptions};
 use crate::gui::views::wallets::{WalletTransactions, WalletMessages, WalletTransport, WalletSettings};
 use crate::gui::views::wallets::types::{GRIN, WalletTab, WalletTabType};
@@ -80,15 +80,18 @@ impl WalletContent {
         // Show modal content for this ui container.
         self.modal_content_ui(ui, wallet, cb);
 
-        let dual_panel = Root::is_dual_panel_mode(ui);
+        let dual_panel = Content::is_dual_panel_mode(ui);
 
         let data = wallet.get_data();
         let data_empty = data.is_none();
 
         // Show wallet balance panel not on Settings tab with selected non-repairing
         // wallet, when there is no error and data is not empty.
-        let show_balance = self.current_tab.get_type() != WalletTabType::Settings && !data_empty
-            && !wallet.sync_error() && !wallet.is_repairing();
+        let mut show_balance = self.current_tab.get_type() != WalletTabType::Settings && !data_empty
+            && !wallet.sync_error() && !wallet.is_repairing() && !wallet.is_closing();
+        if wallet.get_current_ext_conn().is_none() && !Node::is_running() {
+            show_balance = false;
+        }
         egui::TopBottomPanel::top(Id::from("wallet_balance").with(wallet.identifier()))
             .frame(egui::Frame {
                 fill: Colors::fill(),
@@ -100,13 +103,17 @@ impl WalletContent {
                     bottom: 0.0,
                 },
                 outer_margin: Margin {
-                    left: 0.0,
+                    left: if dual_panel {
+                        -0.5
+                    } else {
+                        0.0
+                    },
                     right: 0.0,
                     top: 0.0,
-                    bottom: if !dual_panel {
-                        0.0
-                    } else {
+                    bottom: if dual_panel {
                         -1.0
+                    } else {
+                        -0.5
                     },
                 },
                 ..Default::default()
@@ -117,28 +124,29 @@ impl WalletContent {
                         ui.add_space(1.0);
                     }
                     // Draw account info.
-                    View::max_width_ui(ui, Root::SIDE_PANEL_WIDTH * 1.3, |ui| {
+                    View::max_width_ui(ui, Content::SIDE_PANEL_WIDTH * 1.3, |ui| {
                         self.account_ui(ui, wallet, data.unwrap(), cb);
                     });
                 });
             });
 
         // Show wallet tabs panel.
-        egui::TopBottomPanel::bottom("wallet_tabs")
+        let show_tabs = !Self::block_navigation_on_sync(wallet);
+        egui::TopBottomPanel::bottom("wallet_tabs_content")
             .frame(egui::Frame {
                 fill: Colors::fill(),
                 inner_margin: Margin {
-                    left: View::far_left_inset_margin(ui) + 4.0,
-                    right: View::get_right_inset() + 4.0,
-                    top: 4.0,
-                    bottom: View::get_bottom_inset() + 4.0,
+                    left: View::far_left_inset_margin(ui) + View::TAB_ITEMS_PADDING,
+                    right: View::get_right_inset() + View::TAB_ITEMS_PADDING,
+                    top: View::TAB_ITEMS_PADDING,
+                    bottom: View::get_bottom_inset() + View::TAB_ITEMS_PADDING,
                 },
                 ..Default::default()
             })
-            .show_animated_inside(ui, !Self::block_navigation_on_sync(wallet), |ui| {
+            .show_animated_inside(ui, show_tabs, |ui| {
                 ui.vertical_centered(|ui| {
                     // Draw wallet tabs.
-                    View::max_width_ui(ui, Root::SIDE_PANEL_WIDTH * 1.3, |ui| {
+                    View::max_width_ui(ui, Content::SIDE_PANEL_WIDTH * 1.3, |ui| {
                         self.tabs_ui(ui, wallet);
                     });
                 });
@@ -147,6 +155,16 @@ impl WalletContent {
         // Show tab content panel.
         egui::CentralPanel::default()
             .frame(egui::Frame {
+                outer_margin: Margin {
+                    left: if dual_panel {
+                        -0.5
+                    } else {
+                        0.0
+                    },
+                    right: 0.0,
+                    top: 0.0,
+                    bottom: 0.0,
+                },
                 stroke: View::item_stroke(),
                 fill: Colors::white_or_black(false),
                 ..Default::default()
@@ -512,7 +530,7 @@ impl WalletContent {
     fn tabs_ui(&mut self, ui: &mut egui::Ui, wallet: &Wallet) {
         ui.scope(|ui| {
             // Setup spacing between tabs.
-            ui.style_mut().spacing.item_spacing = egui::vec2(4.0, 0.0);
+            ui.style_mut().spacing.item_spacing = egui::vec2(View::TAB_ITEMS_PADDING, 0.0);
             // Setup vertical padding inside tab button.
             ui.style_mut().spacing.button_padding = egui::vec2(0.0, 4.0);
 
@@ -558,13 +576,13 @@ impl WalletContent {
         } else if wallet.get_current_ext_conn().is_none() {
             if !Node::is_running() || Node::is_stopping() {
                 View::center_content(ui, 108.0, |ui| {
-                    View::max_width_ui(ui, Root::SIDE_PANEL_WIDTH * 1.5, |ui| {
+                    View::max_width_ui(ui, Content::SIDE_PANEL_WIDTH * 1.5, |ui| {
                         let text = t!("wallets.enable_node", "settings" => GEAR_FINE);
                         ui.label(RichText::new(text).size(16.0).color(Colors::inactive_text()));
                         ui.add_space(8.0);
                         // Show button to enable integrated node at non-dual root panel mode
                         // or when network connections are not showing and node is not stopping
-                        let dual_panel_root = Root::is_dual_panel_mode(ui);
+                        let dual_panel_root = Content::is_dual_panel_mode(ui);
                         if (!dual_panel_root || AppConfig::show_connections_network_panel())
                             && !Node::is_stopping() {
                             let enable_text = format!("{} {}", POWER, t!("network.enable_node"));
@@ -622,7 +640,7 @@ impl WalletContent {
     /// Draw wallet sync progress content.
     pub fn sync_progress_ui(ui: &mut egui::Ui, wallet: &Wallet) {
         View::center_content(ui, 162.0, |ui| {
-            View::max_width_ui(ui, Root::SIDE_PANEL_WIDTH * 1.5, |ui| {
+            View::max_width_ui(ui, Content::SIDE_PANEL_WIDTH * 1.5, |ui| {
                 View::big_loading_spinner(ui);
                 ui.add_space(18.0);
                 // Setup sync progress text.

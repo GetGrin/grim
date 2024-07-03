@@ -18,7 +18,7 @@ use egui::scroll_area::ScrollBarVisibility;
 use crate::gui::Colors;
 use crate::gui::icons::ARROW_COUNTER_CLOCKWISE;
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Modal, Root, View};
+use crate::gui::views::{Modal, Content, View};
 use crate::gui::views::network::setup::{DandelionSetup, NodeSetup, P2PSetup, PoolSetup, StratumSetup};
 use crate::gui::views::network::types::{NetworkTab, NetworkTabType};
 use crate::gui::views::types::{ModalContainer, ModalPosition};
@@ -91,7 +91,7 @@ impl NetworkTab for NetworkSettings {
             .show(ui, |ui| {
                 ui.add_space(1.0);
                 ui.vertical_centered(|ui| {
-                    View::max_width_ui(ui, Root::SIDE_PANEL_WIDTH * 1.3, |ui| {
+                    View::max_width_ui(ui, Content::SIDE_PANEL_WIDTH * 1.3, |ui| {
                         // Draw node setup section.
                         self.node.ui(ui, cb);
 

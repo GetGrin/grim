@@ -17,7 +17,6 @@ use std::thread;
 use std::time::{SystemTime, UNIX_EPOCH};
 use egui::{Align, Id, Layout, Margin, RichText, Rounding, ScrollArea};
 use egui::scroll_area::ScrollBarVisibility;
-use egui_pull_to_refresh::PullToRefresh;
 use grin_core::core::amount_to_hr_string;
 use grin_util::ToHex;
 use grin_wallet_libwallet::{Error, Slate, SlateState, TxLogEntryType};
@@ -26,7 +25,7 @@ use parking_lot::RwLock;
 use crate::gui::Colors;
 use crate::gui::icons::{ARROW_CIRCLE_DOWN, ARROW_CIRCLE_UP, ARROW_CLOCKWISE, BRIDGE, BROOM, CALENDAR_CHECK, CHAT_CIRCLE_TEXT, CHECK, CHECK_CIRCLE, CLIPBOARD_TEXT, COPY, DOTS_THREE_CIRCLE, FILE_ARCHIVE, FILE_TEXT, GEAR_FINE, HASH_STRAIGHT, PROHIBIT, QR_CODE, SCAN, X_CIRCLE};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{CameraContent, FilePickButton, Modal, QrCodeContent, Root, View};
+use crate::gui::views::{CameraContent, FilePickButton, Modal, PullToRefresh, QrCodeContent, Content, View};
 use crate::gui::views::types::ModalPosition;
 use crate::gui::views::wallets::types::WalletTab;
 use crate::gui::views::wallets::wallet::types::{GRIN, SLATEPACK_MESSAGE_HINT, WalletTabType};
@@ -146,7 +145,7 @@ impl WalletTransactions {
         let amount_conf = data.info.amount_awaiting_confirmation;
         let amount_fin = data.info.amount_awaiting_finalization;
         let amount_locked = data.info.amount_locked;
-        View::max_width_ui(ui, Root::SIDE_PANEL_WIDTH * 1.3, |ui| {
+        View::max_width_ui(ui, Content::SIDE_PANEL_WIDTH * 1.3, |ui| {
             // Show non-zero awaiting confirmation amount.
             if amount_conf != 0 {
                 let awaiting_conf = amount_to_hr_string(amount_conf, true);
@@ -223,7 +222,7 @@ impl WalletTransactions {
                     .auto_shrink([false; 2])
                     .show_rows(ui, TX_ITEM_HEIGHT, txs.len(), |ui, row_range| {
                         ui.add_space(1.0);
-                        View::max_width_ui(ui, Root::SIDE_PANEL_WIDTH * 1.3, |ui| {
+                        View::max_width_ui(ui, Content::SIDE_PANEL_WIDTH * 1.3, |ui| {
                             let padding = amount_conf != 0 || amount_fin != 0 || amount_locked != 0;
                             for index in row_range {
                                 let tx = txs.get(index).unwrap();
@@ -856,6 +855,7 @@ impl WalletTransactions {
                         .show(ui).response;
                     // Show soft keyboard on click.
                     if self.tx_info_finalize && resp.clicked() {
+                        resp.request_focus();
                         cb.show_keyboard();
                     }
                     if self.tx_info_finalize && resp.has_focus() {

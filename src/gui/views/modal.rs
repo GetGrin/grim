@@ -18,9 +18,10 @@ use parking_lot::RwLock;
 use std::sync::atomic::{AtomicBool, Ordering};
 use egui::{Align2, Rect, RichText, Rounding, Stroke, Vec2};
 use egui::epaint::{RectShape, Shadow};
+use egui::os::OperatingSystem;
 
 use crate::gui::Colors;
-use crate::gui::views::{Root, View};
+use crate::gui::views::{Content, View};
 use crate::gui::views::types::{ModalPosition, ModalState};
 
 lazy_static! {
@@ -43,9 +44,9 @@ pub struct Modal {
 
 impl Modal {
     /// Margin from [`Modal`] window at top/left/right.
-    const DEFAULT_MARGIN: f32 = 6.0;
+    const DEFAULT_MARGIN: f32 = 8.0;
     /// Maximum width of the content.
-    const DEFAULT_WIDTH: f32 = Root::SIDE_PANEL_WIDTH - (2.0 * Self::DEFAULT_MARGIN);
+    const DEFAULT_WIDTH: f32 = Content::SIDE_PANEL_WIDTH - (2.0 * Self::DEFAULT_MARGIN);
 
     /// Create closeable [`Modal`] with center position.
     pub fn new(id: &'static str) -> Self {
@@ -160,7 +161,22 @@ impl Modal {
 
     /// Draw [`egui::Window`] with provided content.
     fn window_ui(&self, ctx: &egui::Context, add_content: impl FnOnce(&mut egui::Ui, &Modal)) {
-        let rect = ctx.screen_rect();
+        let is_fullscreen = ctx.input(|i| {
+            i.viewport().fullscreen.unwrap_or(false)
+        });
+        let is_mac_os = OperatingSystem::from_target_os() == OperatingSystem::Mac;
+
+        let mut rect = ctx.screen_rect();
+        if View::is_desktop() && !is_mac_os {
+            let margin = if !is_fullscreen {
+                Content::WINDOW_FRAME_MARGIN
+            } else {
+                0.0
+            };
+            rect = rect.shrink(margin - 0.5);
+            rect.min += egui::vec2(0.0, Content::WINDOW_TITLE_HEIGHT + 0.5);
+            rect.max.x += 0.5;
+        }
         egui::Window::new("modal_bg_window")
             .title_bar(false)
             .resizable(false)
@@ -180,7 +196,7 @@ impl Modal {
         let width = f32::min(available_width, Self::DEFAULT_WIDTH);
 
         // Show main content Window at given position.
-        let (content_align, content_offset) = self.modal_position();
+        let (content_align, content_offset) = self.modal_position(is_fullscreen);
         let layer_id = egui::Window::new(format!("modal_window_{}", self.id))
             .title_bar(false)
             .resizable(false)
@@ -212,13 +228,26 @@ impl Modal {
     }
 
     /// Get [`egui::Window`] position based on [`ModalPosition`].
-    fn modal_position(&self) -> (Align2, Vec2) {
+    fn modal_position(&self, is_fullscreen: bool) -> (Align2, Vec2) {
         let align = match self.position {
             ModalPosition::CenterTop => Align2::CENTER_TOP,
             ModalPosition::Center => Align2::CENTER_CENTER
         };
+
         let x_align = View::get_left_inset() - View::get_right_inset();
-        let y_align = View::get_top_inset() + Self::DEFAULT_MARGIN;
+
+        let is_mac_os = OperatingSystem::from_target_os() == OperatingSystem::Mac;
+        let extra_y = if View::is_desktop() && !is_mac_os {
+            Content::WINDOW_TITLE_HEIGHT + if !is_fullscreen {
+                Content::WINDOW_FRAME_MARGIN
+            } else {
+                0.0
+            }
+        } else {
+            0.0
+        };
+        let y_align = View::get_top_inset() + Self::DEFAULT_MARGIN + extra_y;
+
         let offset = match self.position {
             ModalPosition::CenterTop => Vec2::new(x_align, y_align),
             ModalPosition::Center => Vec2::new(x_align, 0.0)
@@ -248,6 +277,7 @@ impl Modal {
             rounding,
             fill: Colors::fill(),
             stroke: Stroke::NONE,
+            blur_width: 0.0,
             fill_texture_id: Default::default(),
             uv: Rect::ZERO
         };
@@ -280,6 +310,7 @@ impl Modal {
             },
             fill: Colors::yellow(),
             stroke: Stroke::NONE,
+            blur_width: 0.0,
             fill_texture_id: Default::default(),
             uv: Rect::ZERO
         };
@@ -288,12 +319,12 @@ impl Modal {
         // Draw title content.
         let title_resp = ui.allocate_ui_at_rect(rect, |ui| {
             ui.vertical_centered_justified(|ui| {
-                ui.add_space(9.0);
+                ui.add_space(Self::DEFAULT_MARGIN);
                 ui.label(RichText::new(self.title.as_ref().unwrap())
                     .size(19.0)
                     .color(Colors::title(true))
                 );
-                ui.add_space(8.0);
+                ui.add_space(Self::DEFAULT_MARGIN);
             });
         }).response;
 

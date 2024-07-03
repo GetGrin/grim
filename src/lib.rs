@@ -112,7 +112,7 @@ pub fn app_creator<T: 'static>(app: App<T>) -> eframe::AppCreator
         // Setup fonts.
         setup_fonts(&cc.egui_ctx);
         // Return app instance.
-        Box::new(app)
+        Ok(Box::new(app))
     })
 }
 

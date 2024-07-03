@@ -96,7 +96,7 @@ wallets:
   parse_s3_slatepack_desc: 'Transaktion posten, um das Senden von %{amount} abzuschließen ツ:'
   resp_slatepack_err: 'Beim Erstellen der Antwort ist ein Fehler aufgetreten. Überprüfen Sie die Eingabedaten:'
   resp_exists_err: 'Eine solche Transaktion existiert bereits.'
-  resp_canceled_err: 'Eine solche Transaktion wurde schon abgebrochen.
+  resp_canceled_err: 'Eine solche Transaktion wurde schon abgebrochen.'
   create_request_desc: 'Erstellen Sie eine Anfrage zum Senden oder Empfangen der Gelder:'
   send_request_desc: 'Sie haben eine Anfrage zum Senden von %{amount} ツ erstellt. Senden Sie diese Nachricht an den Empfänger:'
   send_slatepack_err: Beim Erstellen der Anfrage zum Senden von Geldern ist ein Fehler aufgetreten. Überprüfen Sie die Eingabedaten.
@@ -142,7 +142,7 @@ transport:
   bin_file: 'Binärdatei:'
   conn_line: 'Verbindungsleitung:'
   bridges_disabled: Brücken deaktiviert
-  bridge_name: 'Brücke %{b}
+  bridge_name: 'Brücke %{b}'
 network:
   self: Netzwerk
   type: 'Netzwerk Typ:'

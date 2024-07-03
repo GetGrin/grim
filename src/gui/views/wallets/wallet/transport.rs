@@ -26,7 +26,7 @@ use grin_wallet_libwallet::SlatepackAddress;
 use crate::gui::Colors;
 use crate::gui::icons::{CHECK_CIRCLE, COPY, DOTS_THREE_CIRCLE, EXPORT, GEAR_SIX, GLOBE_SIMPLE, POWER, QR_CODE, SHIELD_CHECKERED, SHIELD_SLASH, WARNING_CIRCLE, X_CIRCLE};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{CameraContent, Modal, QrCodeContent, Root, View};
+use crate::gui::views::{CameraContent, Modal, QrCodeContent, Content, View};
 use crate::gui::views::types::{ModalPosition, TextEditOptions};
 use crate::gui::views::wallets::wallet::types::{WalletTab, WalletTabType};
 use crate::gui::views::wallets::wallet::WalletContent;
@@ -106,7 +106,7 @@ impl WalletTab for WalletTransport {
                     .auto_shrink([false; 2])
                     .show(ui, |ui| {
                         ui.vertical_centered(|ui| {
-                            View::max_width_ui(ui, Root::SIDE_PANEL_WIDTH * 1.3, |ui| {
+                            View::max_width_ui(ui, Content::SIDE_PANEL_WIDTH * 1.3, |ui| {
                                 self.ui(ui, wallet, cb);
                             });
                         });
@@ -260,21 +260,6 @@ impl WalletTransport {
                                 .size(18.0)
                                 .color(Colors::title(false)));
                         });
-                        // Setup bridges status text.
-                        let bridge = TorConfig::get_bridge();
-                        let bridges_text = match &bridge {
-                            None => {
-                                format!("{} {}", SHIELD_SLASH, t!("transport.bridges_disabled"))
-                            }
-                            Some(b) => {
-                                let name = b.protocol_name().to_uppercase();
-                                format!("{} {}",
-                                        SHIELD_CHECKERED,
-                                        t!("transport.bridge_name", "b" = name))
-                            }
-                        };
-                        ui.label(RichText::new(bridges_text).size(15.0).color(Colors::text(false)));
-                        ui.add_space(1.0);
 
                         // Setup Tor status text.
                         let is_running = Tor::is_service_running(service_id);
@@ -292,7 +277,24 @@ impl WalletTransport {
                             (X_CIRCLE, t!("transport.disconnected"))
                         };
                         let status_text = format!("{} {}", icon, text);
-                        ui.label(RichText::new(status_text).size(15.0).color(Colors::gray()));
+                        ui.label(RichText::new(status_text).size(15.0).color(Colors::text(false)));
+                        ui.add_space(1.0);
+
+                        // Setup bridges status text.
+                        let bridge = TorConfig::get_bridge();
+                        let bridges_text = match &bridge {
+                            None => {
+                                format!("{} {}", SHIELD_SLASH, t!("transport.bridges_disabled"))
+                            }
+                            Some(b) => {
+                                let name = b.protocol_name().to_uppercase();
+                                format!("{} {}",
+                                        SHIELD_CHECKERED,
+                                        t!("transport.bridge_name", "b" = name))
+                            }
+                        };
+
+                        ui.label(RichText::new(bridges_text).size(15.0).color(Colors::gray()));
                     });
                 });
             });

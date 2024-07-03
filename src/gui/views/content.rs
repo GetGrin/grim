@@ -31,25 +31,25 @@ lazy_static! {
 }
 
 /// Contains main ui content, handles side panel state.
-pub struct Root {
+pub struct Content {
     /// Side panel [`NetworkContent`] content.
     network: NetworkContent,
     /// Central panel [`WalletsContent`] content.
-    wallets: WalletsContent,
+    pub wallets: WalletsContent,
 
     /// Check if app exit is allowed on close event of [`eframe::App`] implementation.
     pub(crate) exit_allowed: bool,
     /// Flag to show exit progress at [`Modal`].
     show_exit_progress: bool,
 
-    /// Flag to check if first it's first draw of content.
+    /// Flag to check it's first draw of content.
     first_draw: bool,
 
     /// List of allowed [`Modal`] ids for this [`ModalContainer`].
     allowed_modal_ids: Vec<&'static str>
 }
 
-impl Default for Root {
+impl Default for Content {
     fn default() -> Self {
         // Exit from eframe only for non-mobile platforms.
         let os = OperatingSystem::from_target_os();
@@ -69,7 +69,7 @@ impl Default for Root {
     }
 }
 
-impl ModalContainer for Root {
+impl ModalContainer for Content {
     fn modal_ids(&self) -> &Vec<&'static str> {
         &self.allowed_modal_ids
     }
@@ -87,7 +87,7 @@ impl ModalContainer for Root {
     }
 }
 
-impl Root {
+impl Content {
     /// Identifier for exit confirmation [`Modal`].
     pub const EXIT_MODAL_ID: &'static str = "exit_confirmation_modal";
     /// Identifier for wallet opening [`Modal`].
@@ -98,44 +98,36 @@ impl Root {
 
     /// Default width of side panel at application UI.
     pub const SIDE_PANEL_WIDTH: f32 = 400.0;
+    /// Desktop window title height.
+    pub const WINDOW_TITLE_HEIGHT: f32 = 38.0;
+    /// Margin of window frame at desktop.
+    pub const WINDOW_FRAME_MARGIN: f32 = 6.0;
 
     pub fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         // Draw modal content for current ui container.
         self.current_modal_ui(ui, cb);
 
-        let (is_panel_open, panel_width) = Self::network_panel_state_width(ui);
+        let dual_panel = Self::is_dual_panel_mode(ui);
+        let (is_panel_open, panel_width) = Self::network_panel_state_width(ui, dual_panel);
+
         // Show network content.
         egui::SidePanel::left("network_panel")
             .resizable(false)
             .exact_width(panel_width)
             .frame(egui::Frame {
-                fill: Colors::white_or_black(false),
                 ..Default::default()
             })
             .show_animated_inside(ui, is_panel_open, |ui| {
-                // Set content height as window height.
-                let mut rect = ui.available_rect_before_wrap();
-                let window_size = View::window_size(ui);
-                rect.set_height(window_size.1);
-                ui.allocate_ui_at_rect(rect, |ui| {
-                    self.network.ui(ui, cb);
-                });
+                self.network.ui(ui, cb);
             });
 
         // Show wallets content.
         egui::CentralPanel::default()
             .frame(egui::Frame {
-                fill: Colors::fill_deep(),
                 ..Default::default()
             })
             .show_inside(ui, |ui| {
-                // Set content height as window height.
-                let mut rect = ui.available_rect_before_wrap();
-                let window_size = View::window_size(ui);
-                rect.set_height(window_size.1);
-                ui.allocate_ui_at_rect(rect, |ui| {
-                    self.wallets.ui(ui, cb);
-                });
+                self.wallets.ui(ui, cb);
             });
 
         // Show integrated node warning on Android if needed.
@@ -153,19 +145,26 @@ impl Root {
     }
 
     /// Get [`NetworkContent`] panel state and width.
-    fn network_panel_state_width(ui: &mut egui::Ui) -> (bool, f32) {
-        let dual_panel_mode = Self::is_dual_panel_mode(ui);
-        let is_panel_open = dual_panel_mode || Self::is_network_panel_open();
-        let panel_width = if dual_panel_mode {
+    fn network_panel_state_width(ui: &mut egui::Ui, dual_panel: bool) -> (bool, f32) {
+        let is_panel_open = dual_panel || Self::is_network_panel_open();
+        let panel_width = if dual_panel {
             Self::SIDE_PANEL_WIDTH + View::get_left_inset()
         } else {
-            View::window_size(ui).0
+            let is_fullscreen = ui.ctx().input(|i| {
+                i.viewport().fullscreen.unwrap_or(false)
+            });
+            View::window_size(ui).0 - if View::is_desktop() && !is_fullscreen &&
+                OperatingSystem::from_target_os() != OperatingSystem::Mac {
+                Self::WINDOW_FRAME_MARGIN * 2.0
+            } else {
+                0.0
+            }
         };
         (is_panel_open, panel_width)
     }
 
     /// Check if ui can show [`NetworkContent`] and [`WalletsContent`] at same time.
-    pub fn is_dual_panel_mode(ui: &mut egui::Ui) -> bool {
+    pub fn is_dual_panel_mode(ui: &egui::Ui) -> bool {
         let (w, h) = View::window_size(ui);
         // Screen is wide if width is greater than height or just 20% smaller.
         let is_wide_screen = w > h || w + (w * 0.2) >= h;
