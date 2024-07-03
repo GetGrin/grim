@@ -18,7 +18,7 @@ use egui::{Align, Context, CursorIcon, Layout, Modifiers, Rect, ResizeDirection,
 use egui::epaint::{RectShape};
 use egui::os::OperatingSystem;
 
-use crate::{AppConfig, built_info};
+use crate::AppConfig;
 use crate::gui::Colors;
 use crate::gui::icons::{ARROWS_IN, ARROWS_OUT, CARET_DOWN, MOON, SUN, X};
 use crate::gui::platform::PlatformCallbacks;
@@ -257,7 +257,7 @@ impl<Platform: PlatformCallbacks> App<Platform> {
         let title_text = if hide_app_name {
             "ツ".to_string()
         } else {
-            format!("Grim {}", built_info::PKG_VERSION)
+            format!("Grim {}", crate::VERSION)
         };
         painter.text(
             title_rect.center(),

@@ -23,7 +23,7 @@ use egui::epaint::text::TextWrapping;
 use egui::os::OperatingSystem;
 use egui::text::{LayoutJob, TextFormat};
 use egui::text_edit::TextEditState;
-use crate::{AppConfig, built_info};
+use crate::AppConfig;
 
 use crate::gui::Colors;
 use crate::gui::icons::{CHECK_SQUARE, CLIPBOARD_TEXT, COPY, EYE, EYE_SLASH, SCAN, SQUARE};
@@ -655,7 +655,7 @@ impl View {
             .color(Colors::white_or_black(true))
         );
         ui.add_space(-2.0);
-        ui.label(RichText::new(built_info::PKG_VERSION)
+        ui.label(RichText::new(crate::VERSION)
             .size(16.0)
             .color(Colors::title(false))
         );

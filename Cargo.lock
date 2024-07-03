@@ -3773,7 +3773,6 @@ dependencies = [
  "arboard",
  "arti-client",
  "arti-hyper",
- "built",
  "chrono",
  "curve25519-dalek 4.1.3",
  "dark-light",

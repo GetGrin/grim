@@ -37,10 +37,7 @@ mod tor;
 mod settings;
 pub mod gui;
 
-// Include build information.
-pub mod built_info {
-    include!(concat!(env!("OUT_DIR"), "/built.rs"));
-}
+pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 /// Android platform entry point.
 #[allow(dead_code)]
