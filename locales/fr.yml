@@ -1,0 +1,290 @@
+lang_name: Français
+copy: Copier
+paste: Coller
+continue: Continuer
+complete: Terminer
+error: Erreur
+retry: Réessayer
+close: Fermer
+change: Changer
+show: Afficher
+delete: Supprimer
+clear: Effacer
+create: Créer
+id: Identifiant
+kernel: Noyau
+settings: Paramètres
+language: Langue
+scan: Scanner
+qr_code: QR Code
+scan_qr: Scanner le QR code
+repeat: Répéter
+scan_result: Résultat du scan
+back: Retour
+share: Partager
+theme: 'Thème:'
+dark: Sombre
+light: Clair
+choose_file: Choisir un fichier
+wallets:
+  await_conf_amount: En attente de confirmation
+  await_fin_amount: En attente de finalisation
+  locked_amount: Verrouillé
+  txs_empty: "Pour recevoir des fonds manuellement ou par transport, utilisez les boutons %{message} ou %{transport} en bas de l'écran. Pour modifier les paramètres du portefeuille, appuyez sur le bouton %{settings}."
+  title: Portefeuilles
+  create_desc: Créer ou importer un portefeuille existant à partir de la phrase de récupération sauvegardée.
+  add: Ajouter un portefeuille
+  name: 'Nom:'
+  pass: 'Mot de passe:'
+  pass_empty: Entrez le mot de passe du portefeuille
+  current_pass: 'Mot de passe actuel:'
+  new_pass: 'Nouveau mot de passe:'
+  min_tx_conf_count: 'Nombre minimum de confirmations pour les transactions:'
+  recover: Restaurer
+  recovery_phrase: Phrase de récupération
+  words_count: 'Nombre de mots:'
+  enter_word: 'Entrez le mot #%{number}:'
+  not_valid_word: Mot entré non valide
+  not_valid_phrase: Phrase entrée non valide
+  create_phrase_desc: Notez et sauvegardez votre phrase de récupération en toute sécurité.
+  restore_phrase_desc: Entrez les mots de votre phrase de récupération sauvegardée.
+  setup_conn_desc: Choisissez comment votre portefeuille se connecte au réseau.
+  conn_method: Méthode de connexion
+  ext_conn: 'Connexions externes:'
+  add_node: Ajouter un noeud
+  node_url: 'URL du noeud:'
+  node_secret: 'Secret API (facultatif):'
+  invalid_url: URL entrée non valide
+  open: Ouvrir le portefeuille
+  wrong_pass: Mot de passe entré incorrect
+  locked: Verrouillé
+  unlocked: Déverrouillé
+  enable_node: "Activez le noeud intégré pour utiliser le portefeuille ou changez les paramètres de connexion en sélectionnant %{settings} en bas de l'écran."
+  node_loading: "Le portefeuille sera chargé après la synchronisation du noeud intégré. Vous pouvez changer la connexion en sélectionnant %{settings} en bas de l'écran."
+  loading: Chargement
+  closing: Fermeture
+  checking: Vérification
+  default_wallet: Portefeuille par défaut
+  new_account_desc: 'Entrez le nom du nouveau compte:'
+  wallet_loading: Chargement du portefeuille
+  wallet_closing: Fermeture du portefeuille
+  wallet_checking: Vérification du portefeuille
+  tx_loading: Chargement des transactions
+  default_account: Compte par défaut
+  accounts: Comptes
+  tx_sent: Envoyé
+  tx_received: Reçu
+  tx_sending: Envoi
+  tx_receiving: Réception
+  tx_confirming: En attente de confirmation
+  tx_canceled: Annulé
+  tx_cancelling: Annulation
+  tx_finalizing: Finalisation
+  tx_confirmed: Confirmé
+  txs: Transactions
+  tx: Transaction
+  messages: Messages
+  transport: Transport
+  input_slatepack_desc: 'Entrez le message Slatepack reçu pour créer une réponse ou finaliser la demande:'
+  parse_slatepack_err: "Une erreur s'est produite lors de la lecture du message, vérifiez l'entrée:"
+  pay_balance_error: 'Le solde du compte est insuffisant pour payer %{amount} ツ et les frais de réseau.'
+  parse_i1_slatepack_desc: 'Pour payer %{amount} ツ, envoyez ce message au destinataire:'
+  parse_i2_slatepack_desc: 'Finalisez la transaction pour recevoir %{amount} ツ:'
+  parse_i3_slatepack_desc: 'Publiez la transaction pour finaliser la réception de %{amount} ツ:'
+  parse_s1_slatepack_desc: "Pour recevoir %{amount} ツ, envoyez ce message à l'expéditeur:"
+  parse_s2_slatepack_desc: 'Finalisez la transaction pour envoyer %{amount} ツ:'
+  parse_s3_slatepack_desc: "Publiez la transaction pour finaliser l'envoi de %{amount} ツ:"
+  resp_slatepack_err: "Une erreur s'est produite lors de la création de la réponse, vérifiez les données saisies ou réessayez:"
+  resp_exists_err: Une telle transaction existe déjà.
+  resp_canceled_err: Une telle transaction a déjà été annulée.
+  create_request_desc: 'Créez une demande pour envoyer ou recevoir des fonds:'
+  send_request_desc: 'Vous avez créé une demande pour envoyer %{amount} ツ. Envoyez ce message au destinataire:'
+  send_slatepack_err: "Une erreur s'est produite lors de la création de la demande d'envoi de fonds, vérifiez les données saisies ou réessayez."
+  invoice_desc: "Vous avez créé une demande pour recevoir %{amount} ツ. Envoyez ce message à l'expéditeur:"
+  invoice_slatepack_err: "Une erreur s'est produite lors de l'émission de la facture, vérifiez les données saisies ou réessayez."
+  finalize_slatepack_err: "Une erreur s'est produite lors de la finalisation, vérifiez les données saisies ou réessayez:"
+  finalize: Finaliser
+  use_dandelion: Utiliser Dandelion
+  enter_amount_send: 'Vous avez %{amount} ツ. Entrez le montant à envoyer:'
+  enter_amount_receive: 'Entrez le montant à recevoir:'
+  recovery: Récupération
+  repair_wallet: Réparer le portefeuille
+  repair_desc: Vérifiez un portefeuille, réparez et restaurez les sorties manquantes si nécessaire. Cette opération prendra du temps.
+  repair_unavailable: "Vous avez besoin d'une connexion active au noeud et d'une synchronisation complète du portefeuille."
+  delete: Supprimer le portefeuille
+  delete_conf: Êtes-vous sûr de vouloir supprimer le portefeuille?
+  delete_desc: "Assurez-vous d'avoir sauvegardé votre phrase de récupération pour accéder aux fonds plus tard."
+  wallet_loading_err: "Une erreur s'est produite lors de la synchronisation du portefeuille. Vous pouvez réessayer ou changer les paramètres de connexion en sélectionnant %{settings} en bas de l'écran."
+  wallet: Portefeuille
+  send: Envoyer
+  receive: Recevoir
+  settings: Paramètres du portefeuille
+  tx_send_cancel_conf: "Êtes-vous sûr de vouloir annuler l'envoi de %{amount} ツ?"
+  tx_receive_cancel_conf: 'Êtes-vous sûr de vouloir annuler la réception de %{amount} ツ?'
+  rec_phrase_not_found: Phrase de récupération non trouvée.
+  restore_wallet_desc: "Restaurer le portefeuille en supprimant tous les fichiers si la réparation habituelle n'a pas aidé. Vous devrez rouvrir votre portefeuille."
+transport:
+  desc: 'Utilisez le transport pour recevoir ou envoyer des messages de manière synchronisée:'
+  tor_network: Réseau Tor
+  connected: Connecté
+  connecting: Connexion en cours
+  disconnecting: Déconnexion en cours
+  conn_error: Erreur de connexion
+  disconnected: Déconnecté
+  receiver_address: 'Adresse du destinataire:'
+  incorrect_addr_err: 'Adresse entrée incorrecte:'
+  tor_send_error: "Une erreur s'est produite lors de l'envoi via Tor. Assurez-vous que le destinataire est en ligne, la transaction a été annulée."
+  tor_autorun_desc: "Lancer automatiquement le service Tor à l'ouverture du portefeuille pour recevoir les transactions de manière synchronisée."
+  tor_sending: 'Envoi de %{amount} ツ via Tor'
+  tor_settings: Paramètres Tor
+  bridges: Passerelles
+  bridges_desc: Configurez des passerelles pour contourner la censure du réseau Tor si la connexion habituelle ne fonctionne pas.
+  bin_file: 'Fichier binaire:'
+  conn_line: 'Ligne de connexion:'
+  bridges_disabled: Passerelles désactivés
+  bridge_name: 'Passerelles %{b}'
+network:
+  self: Réseau
+  type: 'Type de réseau:'
+  mainnet: Principal
+  testnet: Test
+  connections: Connexions
+  node: Noeud intégré
+  metrics: Métriques
+  mining: Minage
+  settings: Paramètres du noeud
+  enable_node: Activer le noeud
+  autorun: Exécution automatique
+  disabled_server: "Activez le noeud intégré ou ajoutez une autre méthode de connexion en appuyant sur %{dots} dans le coin supérieur gauche de l'écran."
+  no_ips: "Il n'y a pas d'adresses IP disponibles sur votre système, le serveur ne peut pas démarrer, vérifiez votre connectivité réseau"
+  available: Disponible
+not_available: Indisponible
+availability_check: Vérification de la disponibilité
+android_warning: "Attention aux utilisateurs Android. Pour synchroniser correctement le noeud intégré, vous devez autoriser l'accès aux notifications et supprimer les restrictions d'utilisation de la batterie pour l'application Grim dans les paramètres système de votre téléphone. Cette opération est nécessaire pour le bon fonctionnement de l'application en arrière-plan."
+sync_status:
+  node_restarting: Le noeud redémarre
+  node_down: Le noeud est hors ligne
+  initial: Le noeud démarre
+  no_sync: Le noeud fonctionne
+  awaiting_peers: En attente de pairs
+  header_sync: Téléchargement des en-têtes
+  header_sync_percent: 'Téléchargement des en-têtes : %{percent}%'
+  tx_hashset_pibd: "Téléchargement de l'état (PIBD)"
+  tx_hashset_pibd_percent: "Téléchargement de l'état (PIBD) : %{percent}%"
+  tx_hashset_download: "Téléchargement de l'état"
+  tx_hashset_download_percent: "Téléchargement de l'état : %{percent}%"
+  tx_hashset_setup_history: "Préparation de l'état (historique) : %{percent}%"
+  tx_hashset_setup_position: "Préparation de l'état (position) : %{percent}%"
+  tx_hashset_setup: "Préparation de l'état"
+  tx_hashset_range_proofs_validation: "Validation de l'état (preuves de plage) : %{percent}%"
+  tx_hashset_kernels_validation: "Validation de l'état (kernels) : %{percent}%"
+  tx_hashset_save: "Finalisation de l'état de la chaîne"
+  body_sync: Téléchargement des blocs
+  body_sync_percent: 'Téléchargement des blocs : %{percent}%'
+  shutdown: Le noeud se ferme
+network_node:
+  header: En-tête
+  block: Bloc
+  hash: Hash
+  height: Hauteur
+  difficulty: Difficulté
+  time: Temps
+  main_pool: Pool principal
+  stem_pool: Pool secondaire
+  data: Données
+  size: Taille (GB)
+  peers: Pairs
+  error_clean: Les données du noeud ont été corrompues, une resynchronisation est nécessaire.
+  resync: Resynchronisation
+  error_p2p_api: "Une erreur s'est produite lors de l'initialisation du serveur %{p2p_api}, vérifiez les paramètres %{p2p_api} en sélectionnant %{settings} en bas de l'écran."
+  error_config: "Une erreur s'est produite lors de l'initialisation de la configuration, vérifiez les paramètres en sélectionnant %{settings} en bas de l'écran."
+  error_unknown: "Une erreur s'est produite lors de l'initialisation, vérifiez les paramètres du noeud intégré en sélectionnant %{settings} en bas de l'écran ou resynchronisez."
+network_metrics:
+  loading: Les métriques seront disponibles après la synchronisation
+  emission: Émission
+  inflation: Inflation
+  supply: Offre
+  block_time: Temps de bloc
+  reward: Récompense
+  difficulty_window: 'Fenêtre de difficulté %{size}'
+network_mining:
+  loading: Le minage sera disponible après la synchronisation
+  info: "Le serveur de minage est activé, vous pouvez changer ses paramètres en sélectionnant %{settings} en bas de l'écran. Les données sont mises à jour lorsque les appareils sont connectés."
+  restart_server_required: Le redémarrage du serveur est nécessaire pour appliquer les modifications.
+  rewards_wallet: Portefeuille pour les récompenses
+  server: Serveur Stratum
+  address: Adresse
+  miners: Mineurs
+  devices: Appareils
+  blocks_found: Blocs trouvés
+  hashrate: 'Taux de hachage (C%{bits})'
+  connected: Connecté
+  disconnected: Déconnecté
+network_settings:
+  change_value: Modifier la valeur
+  stratum_ip: 'Adresse IP Stratum :'
+  stratum_port: 'Port Stratum :'
+  port_unavailable: Le port spécifié est indisponible
+  restart_node_required: Le redémarrage du noeud est nécessaire pour appliquer les modifications.
+  enable: Activer
+  disable: Désactiver
+  restart: Redémarrer
+  server: Serveur
+  api_ip: 'Adresse IP API :'
+  api_port: 'Port API :'
+  api_secret: 'Jeton API Rest et API Propriétaire V2 :'
+  foreign_api_secret: 'Jeton API étranger :'
+  disabled: Désactivé
+  enabled: Activé
+  ftl: 'La Limite de Temps Futur (FTL) :'
+  ftl_description: "Limite de combien de temps dans le futur, par rapport à l'heure locale d'un noeud en secondes, l'horodatage sur un nouveau bloc peut être, afin que le bloc soit accepté."
+  not_valid_value: "La valeur entrée n'est pas valide"
+  full_validation: Validation complète
+  full_validation_description: Exécuter une validation complète de la chaîne lors du traitement de chaque bloc (sauf pendant la synchronisation).
+  archive_mode: Mode archive
+  archive_mode_desc: "Exécuter le noeud en mode archive complet (plus d'espace disque et de temps seront nécessaires pour la synchronisation)."
+  attempt_time: 'Temps de tentative de minage (en secondes) :'
+  attempt_time_desc: "Le temps pendant lequel tenter de miner sur un en-tête particulier avant d'arrêter et de récupérer à nouveau les transactions du pool"
+  min_share_diff: 'La difficulté minimale acceptable du partage :'
+  reset_settings_desc: Réinitialiser les paramètres du noeud aux valeurs par défaut
+  reset_settings: Réinitialiser les paramètres
+  reset: Réinitialiser
+  tx_pool: Pool de transactions
+  pool_fee: 'Frais de base acceptés dans le pool :'
+  reorg_period: 'Période de rétention du cache de réorganisation (en minutes) :'
+  max_tx_pool: 'Nombre maximum de transactions dans le pool :'
+  max_tx_stempool: 'Nombre maximum de transactions dans le pool secondaire :'
+  max_tx_weight: 'Poids total maximum des transactions pouvant être sélectionnées pour créer un bloc :'
+  epoch_duration: "Durée de l'époque (en secondes) :"
+  embargo_timer: "Minuterie d'embargo (en secondes) :"
+  aggregation_period: "Période d'agrégation (en secondes) :"
+  stem_probability: 'Probabilité de la phase secondaire :'
+  stem_txs: Transactions secondaires
+  p2p_server: Serveur P2P
+  p2p_port: 'Port P2P :'
+  add_seed: Ajouter une seed DNS
+  seed_address: 'Adresse de la seed DNS :'
+  add_peer: Ajouter un pair
+  peer_address: 'Adresse du pair :'
+  peer_address_error: "Entrez l'adresse IP ou le nom DNS (assurez-vous que l'hôte spécifié est disponible) au format correct, par exemple : 192.168.0.1:1234 ou example.com:5678"
+  default: Par défaut
+  allow_list: Liste autorisée
+  allow_list_desc: Se connecter uniquement aux pairs de cette liste.
+  deny_list: Liste refusée
+  deny_list_desc: Ne jamais se connecter aux pairs de cette liste.
+  favourites: Favoris
+  favourites_desc: Une liste de pairs préférés à connecter.
+  ban_window: 'Combien de temps (en secondes) un pair banni doit rester banni :'
+  ban_window_desc: La décision de bannir est prise par le noeud, en fonction de la validité des données reçues du pair.
+  max_inbound_count: 'Nombre maximum de connexions de pairs entrants :'
+  max_outbound_count: 'Nombre maximum de connexions de pairs sortants :'
+  reset_peers_desc: Réinitialiser les données des pairs. Utilisez-le avec précaution uniquement en cas de problèmes pour trouver des pairs.
+  reset_peers: Réinitialiser les pairs
+modal:
+  cancel: Annuler
+  save: Sauvegarder
+  confirmation: Confirmation
+  add: Ajouter
+modal_exit:
+  description: "Êtes-vous sûr de vouloir quitter l'application ?"
+  exit: Quitter
