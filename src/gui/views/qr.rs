@@ -16,10 +16,8 @@ use std::mem::size_of;
 use std::sync::Arc;
 use parking_lot::RwLock;
 use std::thread;
-use egui::{SizeHint, TextureHandle, TextureOptions};
+use egui::{SizeHint, TextureHandle};
 use egui::epaint::RectShape;
-use egui::load::SizedTexture;
-use egui_extras::image::load_svg_bytes_with_size;
 use image::{ExtendedColorType, ImageEncoder};
 use image::codecs::png::{CompressionType, FilterType, PngEncoder};
 use qrcodegen::QrCode;
@@ -251,19 +249,7 @@ impl QrCodeContent {
         let mut content_rect = ui.allocate_ui_at_rect(rect, |ui| {
             ui.add_space(10.0);
             let size = SizeHint::Size(ui.available_width() as u32, ui.available_width() as u32);
-            let color_img = load_svg_bytes_with_size(svg.as_slice(), Some(size)).unwrap();
-            // Create image texture.
-            let texture_handle = ui.ctx().load_texture("qr_code",
-                                                       color_img.clone(),
-                                                       TextureOptions::default());
-            self.texture_handle = Some(texture_handle.clone());
-            let img_size = egui::emath::vec2(color_img.width() as f32,
-                                             color_img.height() as f32);
-            let sized_img = SizedTexture::new(texture_handle.id(), img_size);
-            // Add image to content.
-            ui.add(egui::Image::from_texture(sized_img)
-                .max_height(ui.available_width())
-                .fit_to_original_size(1.0));
+            self.texture_handle = Some(View::svg_image(ui, "qr_code", svg.as_slice(), Some(size)));
             ui.add_space(10.0);
         }).response.rect;
 

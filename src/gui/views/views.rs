@@ -17,14 +17,16 @@ use std::sync::Arc;
 use parking_lot::RwLock;
 use lazy_static::lazy_static;
 
-use egui::{Align, Button, CursorIcon, Layout, lerp, PointerState, Rect, Response, Rgba, RichText, Sense, Spinner, TextBuffer, TextStyle, Widget};
+use egui::{Align, Button, CursorIcon, Layout, lerp, PointerState, Rect, Response, Rgba, RichText, Sense, SizeHint, Spinner, TextBuffer, TextStyle, TextureHandle, TextureOptions, Widget};
 use egui::epaint::{Color32, FontId, RectShape, Rounding, Stroke};
 use egui::epaint::text::TextWrapping;
+use egui::load::SizedTexture;
 use egui::os::OperatingSystem;
 use egui::text::{LayoutJob, TextFormat};
 use egui::text_edit::TextEditState;
-use crate::AppConfig;
+use egui_extras::image::load_svg_bytes_with_size;
 
+use crate::AppConfig;
 use crate::gui::Colors;
 use crate::gui::icons::{CHECK_SQUARE, CLIPBOARD_TEXT, COPY, EYE, EYE_SLASH, SCAN, SQUARE};
 use crate::gui::platform::PlatformCallbacks;
@@ -634,6 +636,26 @@ impl View {
         painter.hline(line_rect.x_range(),
                       painter.round_to_pixel(line_rect.center().y),
                       Stroke { width: 1.0, color });
+    }
+
+    /// Draw SVG image from provided data with optional provided size.
+    pub fn svg_image(ui: &mut egui::Ui,
+                     name: &str,
+                     svg: &[u8],
+                     size: Option<SizeHint>) -> TextureHandle {
+        let color_img = load_svg_bytes_with_size(svg, size).unwrap();
+        // Create image texture.
+        let texture_handle = ui.ctx().load_texture(name,
+                                                   color_img.clone(),
+                                                   TextureOptions::default());
+        let img_size = egui::emath::vec2(color_img.width() as f32,
+                                         color_img.height() as f32);
+        let sized_img = SizedTexture::new(texture_handle.id(), img_size);
+        // Add image to content.
+        ui.add(egui::Image::from_texture(sized_img)
+            .max_height(ui.available_width())
+            .fit_to_original_size(1.0));
+        texture_handle
     }
 
     /// Draw application logo image with name and version.
