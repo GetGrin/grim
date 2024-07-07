@@ -275,7 +275,7 @@ impl WalletsContent {
         };
 
         // Draw title panel.
-        TitlePanel::ui(title_content, |ui| {
+        TitlePanel::new(Id::new("wallets_title_panel")).ui(title_content, |ui| {
             if show_wallet && !dual_panel {
                 View::title_button_big(ui, ARROW_LEFT, |_| {
                     self.wallets.select(None);

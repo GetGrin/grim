@@ -13,7 +13,7 @@
 // limitations under the License.
 
 use std::time::Duration;
-use egui::{Margin, RichText, ScrollArea};
+use egui::{Id, Margin, RichText, ScrollArea};
 use egui::scroll_area::ScrollBarVisibility;
 
 use crate::AppConfig;
@@ -201,7 +201,7 @@ impl NetworkContent {
         };
 
         // Draw title panel.
-        TitlePanel::ui(TitleType::Single(title_content), |ui| {
+        TitlePanel::new(Id::from("network_title_panel")).ui(TitleType::Single(title_content), |ui| {
             if !show_connections {
                 View::title_button_big(ui, DOTS_THREE_OUTLINE_VERTICAL, |_| {
                     AppConfig::toggle_show_connections_network_panel();

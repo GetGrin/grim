@@ -46,8 +46,8 @@ grin_wallet_util = "5.3.1"
 grin_wallet_controller = "5.3.1"
 
 ## ui
-egui = { version = "0.27.2", default-features = false }
-egui_extras = { version = "0.27.2", features = ["image", "svg"] }
+egui = { version = "0.28.1", default-features = false }
+egui_extras = { version = "0.28.1", features = ["image", "svg"] }
 rust-i18n = "2.3.1"
 
 ## other
@@ -109,7 +109,7 @@ openpnp_capture_sys = "0.4.0"
 [target.'cfg(not(target_os = "android"))'.dependencies]
 env_logger = "0.11.3"
 winit = { version = "0.29.15" }
-eframe = { version = "0.27.2", features = ["wgpu", "glow"] }
+eframe = { version = "0.28.1", features = ["wgpu", "glow"] }
 arboard = "3.2.0"
 rfd = "0.14.1"
 dark-light = "1.1.1"
@@ -120,16 +120,10 @@ jni = "0.21.1"
 android-activity = { version = "0.6.0", features = ["game-activity"] }
 wgpu = "0.20.1"
 winit = { version = "0.29.15", features = ["android-game-activity"] }
-eframe = { version = "0.27.2", features = ["wgpu", "android-game-activity"] }
+eframe = { version = "0.28.1", features = ["wgpu", "android-game-activity"] }
 
-### patch grin store
-#grin_store = "5.3.1"
-#[patch.crates-io]
-#grin_store = { path = "../grin-store" }
 [patch.crates-io]
+### patch grin store
+#grin_store = { path = "../grin-store" }
 ### fix cross-compilation support for macos
 openpnp_capture_sys = { git = "https://github.com/ardocrat/openpnp-capture-rs", branch = "cross_compilation_support" }
-### actual version
-egui = { git = "https://github.com/emilk/egui/", rev="10571e9da5b3658964adc8b85c7e3f8c1353e0db" }
-egui_extras = { git = "https://github.com/emilk/egui/", rev="10571e9da5b3658964adc8b85c7e3f8c1353e0db" }
-eframe = { git = "https://github.com/emilk/egui/", rev="10571e9da5b3658964adc8b85c7e3f8c1353e0db" }
