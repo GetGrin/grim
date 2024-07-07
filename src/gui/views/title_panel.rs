@@ -114,9 +114,9 @@ impl TitlePanel {
                     View::ellipsize_text(ui, text, 19.0, Colors::title(true));
                 }
                 TitleContentType::WithSubTitle(text, subtitle, animate) => {
-                    ui.add_space(3.0);
+                    ui.add_space(4.0);
                     View::ellipsize_text(ui, text, 18.0, Colors::title(true));
-                    ui.add_space(-1.0);
+                    ui.add_space(-2.0);
                     View::animate_text(ui, subtitle, 15.0, Colors::text(true), animate)
                 }
             }
