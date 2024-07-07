@@ -40,25 +40,21 @@ type=$1
 
 # Build native code
 cargo install cargo-ndk
-mkdir -p android/app/src/main/jniLibs
 
-sed -i -e 's/"rlib"/"rlib","cdylib"/g' Cargo.toml
+sed -i -e 's/"rlib"/"cdylib","rlib"/g' Cargo.toml
 
 # temp fix for https://stackoverflow.com/questions/57193895/error-use-of-undeclared-identifier-pthread-mutex-robust-cargo-build-liblmdb-s
 success=0
 export CPPFLAGS="-DMDB_USE_ROBUST=0" && export CFLAGS="-DMDB_USE_ROBUST=0"
+cargo ndk -t ${arch} build ${release_param}
+unset CPPFLAGS && unset CFLAGS
 cargo ndk -t ${arch} -o android/app/src/main/jniLibs build ${release_param}
-if [ $? -eq 1 ]
-then
-  unset CPPFLAGS && unset CFLAGS
-  cargo ndk -t ${arch} -o android/app/src/main/jniLibs build ${release_param}
-fi
 if [ $? -eq 0 ]
 then
   success=1
 fi
 
-sed -i -e 's/"rlib","cdylib"/"rlib"/g' Cargo.toml
+sed -i -e 's/"cdylib","rlib"/"rlib"/g' Cargo.toml
 
 # Build Android application and launch at all connected devices
 if [ $success -eq 1 ]
