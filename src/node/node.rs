@@ -662,6 +662,128 @@ pub extern "C" fn Java_mw_gri_android_BackgroundService_getSyncTitle(
 #[cfg(target_os = "android")]
 #[allow(non_snake_case)]
 #[no_mangle]
+/// Get start text for Android notification in Java string format.
+pub extern "C" fn Java_mw_gri_android_BackgroundService_getStartText(
+    _env: jni::JNIEnv,
+    _class: jni::objects::JObject,
+    _activity: jni::objects::JObject,
+) -> jni::sys::jstring {
+    let j_text = _env.new_string(t!("network_settings.enable"));
+    return j_text.unwrap().into_raw();
+}
+
+#[allow(dead_code)]
+#[cfg(target_os = "android")]
+#[allow(non_snake_case)]
+#[no_mangle]
+/// Get stop text for Android notification in Java string format.
+pub extern "C" fn Java_mw_gri_android_BackgroundService_getStopText(
+    _env: jni::JNIEnv,
+    _class: jni::objects::JObject,
+    _activity: jni::objects::JObject,
+) -> jni::sys::jstring {
+    let j_text = _env.new_string(t!("network_settings.disable"));
+    return j_text.unwrap().into_raw();
+}
+
+#[allow(dead_code)]
+#[cfg(target_os = "android")]
+#[allow(non_snake_case)]
+#[no_mangle]
+/// Get exit text for Android notification in Java string format.
+pub extern "C" fn Java_mw_gri_android_BackgroundService_getExitText(
+    _env: jni::JNIEnv,
+    _class: jni::objects::JObject,
+    _activity: jni::objects::JObject,
+) -> jni::sys::jstring {
+    let j_text = _env.new_string(t!("modal_exit.exit"));
+    return j_text.unwrap().into_raw();
+}
+
+#[allow(dead_code)]
+#[cfg(target_os = "android")]
+#[allow(non_snake_case)]
+#[no_mangle]
+/// Check if node launch is possible.
+pub extern "C" fn Java_mw_gri_android_BackgroundService_canStartNode(
+    _env: jni::JNIEnv,
+    _class: jni::objects::JObject,
+    _activity: jni::objects::JObject,
+) -> jni::sys::jboolean {
+    let loading = Node::is_stopping() || Node::is_restarting() || Node::is_starting();
+    return (!loading && !Node::is_running()) as jni::sys::jboolean;
+}
+
+#[allow(dead_code)]
+#[cfg(target_os = "android")]
+#[allow(non_snake_case)]
+#[no_mangle]
+/// Check if node stop is possible.
+pub extern "C" fn Java_mw_gri_android_BackgroundService_canStopNode(
+    _env: jni::JNIEnv,
+    _class: jni::objects::JObject,
+    _activity: jni::objects::JObject,
+) -> jni::sys::jboolean {
+    let loading = Node::is_stopping() || Node::is_restarting() || Node::is_starting();
+    return (!loading && Node::is_running()) as jni::sys::jboolean;
+}
+
+#[allow(dead_code)]
+#[cfg(target_os = "android")]
+#[allow(non_snake_case)]
+#[no_mangle]
+/// Check if node stop is possible.
+pub extern "C" fn Java_mw_gri_android_NotificationActionsReceiver_isNodeRunning(
+    _env: jni::JNIEnv,
+    _class: jni::objects::JObject,
+    _activity: jni::objects::JObject,
+) -> jni::sys::jboolean {
+    return Node::is_running() as jni::sys::jboolean;
+}
+
+#[allow(dead_code)]
+#[cfg(target_os = "android")]
+#[allow(non_snake_case)]
+#[no_mangle]
+/// Start node from Android Java code.
+pub extern "C" fn Java_mw_gri_android_NotificationActionsReceiver_startNode(
+    _env: jni::JNIEnv,
+    _class: jni::objects::JObject,
+    _activity: jni::objects::JObject,
+) {
+    Node::start();
+}
+
+#[allow(dead_code)]
+#[cfg(target_os = "android")]
+#[allow(non_snake_case)]
+#[no_mangle]
+/// Stop node from Android Java code.
+pub extern "C" fn Java_mw_gri_android_NotificationActionsReceiver_stopNode(
+    _env: jni::JNIEnv,
+    _class: jni::objects::JObject,
+    _activity: jni::objects::JObject,
+) {
+    Node::stop(false);
+}
+
+#[allow(dead_code)]
+#[cfg(target_os = "android")]
+#[allow(non_snake_case)]
+#[no_mangle]
+/// Stop node from Android Java code.
+pub extern "C" fn Java_mw_gri_android_NotificationActionsReceiver_stopNodeToExit(
+    _env: jni::JNIEnv,
+    _class: jni::objects::JObject,
+    _activity: jni::objects::JObject,
+) {
+    Node::stop(true);
+}
+
+#[allow(dead_code)]
+#[cfg(target_os = "android")]
+#[allow(non_snake_case)]
+#[no_mangle]
 /// Check if app exit is needed after node stop to finish Android app at background.
 pub extern "C" fn Java_mw_gri_android_BackgroundService_exitAppAfterNodeStop(
     _env: jni::JNIEnv,

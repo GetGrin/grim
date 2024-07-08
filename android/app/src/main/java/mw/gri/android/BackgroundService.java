@@ -1,16 +1,20 @@
 package mw.gri.android;
 
+import android.annotation.SuppressLint;
 import android.app.*;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.*;
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 
 import java.util.List;
 
-public class BackgroundService extends Service {
+import static android.app.Notification.EXTRA_NOTIFICATION_ID;
 
+public class BackgroundService extends Service {
     private static final String TAG = BackgroundService.class.getSimpleName();
     
     private PowerManager.WakeLock mWakeLock;
@@ -18,12 +22,38 @@ public class BackgroundService extends Service {
     private final Handler mHandler = new Handler(Looper.getMainLooper());
     private boolean mStopped = false;
 
-    private static final int SYNC_STATUS_NOTIFICATION_ID = 1;
+    private static final int NOTIFICATION_ID = 1;
     private NotificationCompat.Builder mNotificationBuilder;
 
     private String mNotificationContentText = "";
+    private Boolean mCanStart = null;
+    private Boolean mCanStop = null;
+
+    public static final String ACTION_START_NODE = "start_node";
+    public static final String ACTION_STOP_NODE = "stop_node";
+    public static final String ACTION_EXIT = "exit";
+    public static final String ACTION_REFRESH = "refresh";
+    public static final String ACTION_STOP = "stop";
+
+    private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
+        @SuppressLint("RestrictedApi")
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (intent.getAction().equals(ACTION_STOP)) {
+                mStopped = true;
+                // Remove actions buttons.
+                mNotificationBuilder.mActions.clear();
+                NotificationManager manager = getSystemService(NotificationManager.class);
+                manager.notify(NOTIFICATION_ID, mNotificationBuilder.build());
+            } else {
+                mHandler.removeCallbacks(mUpdateSyncStatus);
+                mHandler.post(mUpdateSyncStatus);
+            }
+        }
+    };
 
     private final Runnable mUpdateSyncStatus = new Runnable() {
+        @SuppressLint("RestrictedApi")
         @Override
         public void run() {
             if (mStopped) {
@@ -31,11 +61,11 @@ public class BackgroundService extends Service {
             }
             // Update sync status at notification.
             String syncStatusText = getSyncStatusText();
-            if (!mNotificationContentText.equals(syncStatusText)) {
+            boolean textChanged = !mNotificationContentText.equals(syncStatusText);
+            if (textChanged) {
                 mNotificationContentText = syncStatusText;
                 mNotificationBuilder.setContentText(mNotificationContentText);
-                NotificationManager manager = getSystemService(NotificationManager.class);
-                manager.notify(SYNC_STATUS_NOTIFICATION_ID, mNotificationBuilder.build());
+                mNotificationBuilder.setStyle(new NotificationCompat.BigTextStyle().bigText(mNotificationContentText));
             }
 
             // Send broadcast to MainActivity if exit from the app is needed after node stop.
@@ -44,13 +74,60 @@ public class BackgroundService extends Service {
                 mStopped = true;
             }
 
-            // Repeat notification update if service is not stopped.
             if (!mStopped) {
-                mHandler.postDelayed(this, 500);
+                boolean canStart = canStartNode();
+                boolean canStop = canStopNode();
+
+                boolean buttonsChanged = mCanStart == null || mCanStop == null ||
+                        mCanStart != canStart || mCanStop != canStop;
+                mCanStart = canStart;
+                mCanStop = canStop;
+                if (buttonsChanged) {
+                    mNotificationBuilder.mActions.clear();
+
+                    // Set up buttons to start/stop node.
+                    Intent startStopIntent = new Intent(BackgroundService.this, NotificationActionsReceiver.class);
+                    if (Build.VERSION.SDK_INT > 25) {
+                        startStopIntent.putExtra(EXTRA_NOTIFICATION_ID, NOTIFICATION_ID);
+                    }
+                    if (canStart) {
+                        startStopIntent.setAction(ACTION_START_NODE);
+                        PendingIntent i = PendingIntent
+                                .getBroadcast(BackgroundService.this, 1, startStopIntent, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_ONE_SHOT);
+                        mNotificationBuilder.addAction(R.drawable.ic_start, getStartText(), i);
+                    } else if (canStop) {
+                        startStopIntent.setAction(ACTION_STOP_NODE);
+                        PendingIntent i = PendingIntent
+                                .getBroadcast(BackgroundService.this, 1, startStopIntent, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_ONE_SHOT);
+                        mNotificationBuilder.addAction(R.drawable.ic_stop, getStopText(), i);
+                    }
+
+                    // Set up a button to exit from the app.
+                    if (canStart || canStop) {
+                        Intent exitIntent = new Intent(BackgroundService.this, NotificationActionsReceiver.class);
+                        if (Build.VERSION.SDK_INT > 25) {
+                            exitIntent.putExtra(EXTRA_NOTIFICATION_ID, NOTIFICATION_ID);
+                        }
+                        exitIntent.setAction(ACTION_EXIT);
+                        PendingIntent i = PendingIntent
+                                .getBroadcast(BackgroundService.this, 1, exitIntent, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_ONE_SHOT);
+                        mNotificationBuilder.addAction(R.drawable.ic_close, getExitText(), i);
+                    }
+                }
+
+                // Update notification.
+                if (textChanged || buttonsChanged) {
+                    NotificationManager manager = getSystemService(NotificationManager.class);
+                    manager.notify(NOTIFICATION_ID, mNotificationBuilder.build());
+                }
+
+                // Repeat notification update.
+                mHandler.postDelayed(this, 1000);
             }
         }
     };
 
+    @SuppressLint({"WakelockTimeout", "UnspecifiedRegisterReceiverFlag"})
     @Override
     public void onCreate() {
         if (mStopped) {
@@ -78,15 +155,20 @@ public class BackgroundService extends Service {
         mNotificationBuilder = new NotificationCompat.Builder(this, TAG)
                 .setContentTitle(this.getSyncTitle())
                 .setContentText(this.getSyncStatusText())
+                .setStyle(new NotificationCompat.BigTextStyle().bigText(this.getSyncStatusText()))
                 .setSmallIcon(R.drawable.ic_stat_name)
+                .setPriority(NotificationCompat.PRIORITY_MAX)
                 .setContentIntent(pendingIntent);
         Notification notification = mNotificationBuilder.build();
 
         // Start service at foreground state to prevent killing by system.
-        startForeground(SYNC_STATUS_NOTIFICATION_ID, notification);
+        startForeground(NOTIFICATION_ID, notification);
 
         // Update sync status at notification.
         mHandler.post(mUpdateSyncStatus);
+
+        // Register receiver to refresh notifications by intent.
+        registerReceiver(mReceiver, new IntentFilter(ACTION_REFRESH));
     }
 
     @Override
@@ -117,22 +199,26 @@ public class BackgroundService extends Service {
 
         // Stop updating the notification.
         mHandler.removeCallbacks(mUpdateSyncStatus);
+        unregisterReceiver(mReceiver);
+        clearNotification();
 
         // Remove service from foreground state.
         stopForeground(Service.STOP_FOREGROUND_REMOVE);
 
-        // Remove notification.
+        // Release wake lock to allow CPU to sleep at background.
+        if (mWakeLock != null && mWakeLock.isHeld()) {
+            mWakeLock.release();
+            mWakeLock = null;
+        }
+    }
+
+    // Remove notification.
+    private void clearNotification() {
         NotificationManager notificationManager = getSystemService(NotificationManager.class);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             notificationManager.deleteNotificationChannel(TAG);
         }
-        notificationManager.cancel(SYNC_STATUS_NOTIFICATION_ID);
-
-        // Release wake lock to allow CPU to sleep at background.
-        if (mWakeLock.isHeld()) {
-            mWakeLock.release();
-            mWakeLock = null;
-        }
+        notificationManager.cancel(NOTIFICATION_ID);
     }
 
     // Start the service.
@@ -165,10 +251,24 @@ public class BackgroundService extends Service {
         return false;
     }
 
-    // Get sync status text for notification from native code.
+    // Get sync status text for notification.
     private native String getSyncStatusText();
-    // Get sync title text for notification from native code.
+    // Get sync title text for notification.
     private native String getSyncTitle();
-    // Check if app from the app is needed after node stop from native code.
+
+    // Get start text for notification.
+    private native String getStartText();
+    // Get stop text for notification.
+    private native String getStopText();
+
+    // Check if start node is possible.
+    private native boolean canStartNode();
+    // Check if stop node is possible.
+    private native boolean canStopNode();
+
+    // Get exit text for notification.
+    private native String getExitText();
+
+    // Check if app from the app is needed after node stop.
     private native boolean exitAppAfterNodeStop();
 }
