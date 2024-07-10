@@ -24,8 +24,8 @@ use crate::gui::views::types::{ModalPosition, TextEditOptions};
 use crate::node::Node;
 use crate::wallet::Wallet;
 
-/// Wallet recovery setup content.
-pub struct RecoverySetup {
+/// Wallet recovery settings content.
+pub struct RecoverySettings {
     /// Wallet password [`Modal`] value.
     pass_edit: String,
     /// Flag to check if wrong password was entered.
@@ -40,7 +40,7 @@ const RECOVERY_PHRASE_MODAL: &'static str = "recovery_phrase_modal";
 /// Identifier to confirm wallet deletion [`Modal`].
 const DELETE_CONFIRMATION_MODAL: &'static str = "delete_wallet_confirmation_modal";
 
-impl Default for RecoverySetup {
+impl Default for RecoverySettings {
     fn default() -> Self {
         Self {
             wrong_pass: false,
@@ -50,7 +50,7 @@ impl Default for RecoverySetup {
     }
 }
 
-impl RecoverySetup {
+impl RecoverySettings {
     pub fn ui(&mut self, ui: &mut egui::Ui, wallet: &mut Wallet, cb: &dyn PlatformCallbacks) {
         // Show modal content for this ui container.
         self.modal_content_ui(ui, wallet, cb);

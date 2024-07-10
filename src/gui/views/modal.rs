@@ -319,7 +319,11 @@ impl Modal {
         // Draw title content.
         let title_resp = ui.allocate_ui_at_rect(rect, |ui| {
             ui.vertical_centered_justified(|ui| {
-                ui.add_space(Self::DEFAULT_MARGIN);
+                ui.add_space(Self::DEFAULT_MARGIN + if !View::is_desktop() {
+                    1.0
+                } else {
+                    0.0
+                });
                 ui.label(RichText::new(self.title.as_ref().unwrap())
                     .size(19.0)
                     .color(Colors::title(true))

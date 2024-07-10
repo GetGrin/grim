@@ -18,29 +18,27 @@ use egui::scroll_area::ScrollBarVisibility;
 use crate::gui::Colors;
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Content, View};
-use crate::gui::views::wallets::setup::{CommonSetup, ConnectionSetup, RecoverySetup};
-use crate::gui::views::wallets::wallet::types::{WalletTab, WalletTabType};
-use crate::gui::views::wallets::wallet::WalletContent;
-use crate::wallet::{ExternalConnection, Wallet};
+use crate::gui::views::wallets::settings::{CommonSettings, ConnectionSettings, RecoverySettings};
+use crate::gui::views::wallets::types::{WalletTab, WalletTabType};
+use crate::gui::views::wallets::WalletContent;
+use crate::wallet::Wallet;
 
 /// Wallet settings tab content.
 pub struct WalletSettings {
     /// Common setup content.
-    common_setup: CommonSetup,
+    common_setup: CommonSettings,
     /// Connection setup content.
-    conn_setup: ConnectionSetup,
+    conn_setup: ConnectionSettings,
     /// Recovery setup content.
-    recovery_setup: RecoverySetup
+    recovery_setup: RecoverySettings
 }
 
 impl Default for WalletSettings {
     fn default() -> Self {
-        // Check external connections availability on opening.
-        ExternalConnection::start_ext_conn_availability_check();
         Self {
-            common_setup: CommonSetup::default(),
-            conn_setup: ConnectionSetup::default(),
-            recovery_setup: RecoverySetup::default()
+            common_setup: CommonSettings::default(),
+            conn_setup: ConnectionSettings::default(),
+            recovery_setup: RecoverySettings::default()
         }
     }
 }

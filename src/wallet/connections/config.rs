@@ -102,11 +102,11 @@ impl ConnectionsConfig {
     }
 
     /// Set [`ExternalConnection`] availability flag.
-    pub fn update_ext_conn_availability(id: i64, available: bool) {
+    pub fn update_ext_conn_status(id: i64, available: Option<bool>) {
         let mut w_config = Settings::conn_config_to_update();
         for c in w_config.external.iter_mut() {
             if c.id == id {
-                c.available = Some(available);
+                c.available = available;
                 w_config.save();
                 break;
             }

@@ -206,7 +206,7 @@ impl NetworkContent {
                 View::title_button_big(ui, DOTS_THREE_OUTLINE_VERTICAL, |_| {
                     AppConfig::toggle_show_connections_network_panel();
                     if AppConfig::show_connections_network_panel() {
-                        ExternalConnection::start_ext_conn_availability_check();
+                        ExternalConnection::check_ext_conn_availability(None);
                     }
                 });
             }

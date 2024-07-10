@@ -34,3 +34,4 @@ mod connections;
 pub use connections::*;
 
 pub mod types;
+pub mod modals;

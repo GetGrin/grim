@@ -110,7 +110,11 @@ impl TitlePanel {
         ui.vertical_centered(|ui| {
             match content {
                 TitleContentType::Title(text) => {
-                    ui.add_space(13.0);
+                    ui.add_space(13.0 + if !View::is_desktop() {
+                        1.0
+                    } else {
+                        0.0
+                    });
                     View::ellipsize_text(ui, text, 19.0, Colors::title(true));
                 }
                 TitleContentType::WithSubTitle(text, subtitle, animate) => {

@@ -21,8 +21,8 @@ use crate::gui::views::{Modal, View};
 use crate::gui::views::types::{ModalPosition, TextEditOptions};
 use crate::wallet::Wallet;
 
-/// Common wallet setup content.
-pub struct CommonSetup {
+/// Common wallet settings content.
+pub struct CommonSettings {
     /// Wallet name [`Modal`] value.
     name_edit: String,
 
@@ -46,7 +46,7 @@ const PASS_EDIT_MODAL: &'static str = "wallet_pass_edit_modal";
 /// Identifier for minimum confirmations [`Modal`].
 const MIN_CONFIRMATIONS_EDIT_MODAL: &'static str = "wallet_min_conf_edit_modal";
 
-impl Default for CommonSetup {
+impl Default for CommonSettings {
     fn default() -> Self {
         Self {
             name_edit: "".to_string(),
@@ -59,7 +59,7 @@ impl Default for CommonSetup {
     }
 }
 
-impl CommonSetup {
+impl CommonSettings {
     pub fn ui(&mut self, ui: &mut egui::Ui, wallet: &mut Wallet, cb: &dyn PlatformCallbacks) {
         // Show modal content for this ui container.
         self.modal_content_ui(ui, wallet, cb);

@@ -49,8 +49,8 @@ impl ExternalConnection {
 
     /// Check connection availability.
     fn check_conn_availability(&self) {
-        // Check every connection at separate thread.
         let conn = self.clone();
+        ConnectionsConfig::update_ext_conn_status(conn.id, None);
         std::thread::spawn(move || {
             tokio::runtime::Builder::new_multi_thread()
                 .enable_all()
@@ -84,29 +84,33 @@ impl ExternalConnection {
                                 let status = res.status().as_u16();
                                 // Available on 200 HTTP status code.
                                 if status == 200 {
-                                    ConnectionsConfig::update_ext_conn_availability(conn.id, true);
+                                    ConnectionsConfig::update_ext_conn_status(conn.id, Some(true));
                                 } else {
-                                    ConnectionsConfig::update_ext_conn_availability(conn.id, false);
+                                    ConnectionsConfig::update_ext_conn_status(conn.id, Some(false));
                                 }
                             }
                             Err(_) => {
-                                ConnectionsConfig::update_ext_conn_availability(conn.id, false);
+                                ConnectionsConfig::update_ext_conn_status(conn.id, Some(false));
                             }
                         }
                     } else {
-                        ConnectionsConfig::update_ext_conn_availability(conn.id, false);
+                        ConnectionsConfig::update_ext_conn_status(conn.id, Some(false));
                     }
                 });
-
         });
     }
 
-    /// Check external connections availability at another thread.
-    pub fn start_ext_conn_availability_check() {
+    /// Check external connections availability.
+    pub fn check_ext_conn_availability(id: Option<i64>) {
         let conn_list = ConnectionsConfig::ext_conn_list();
         for conn in conn_list {
-            // Check every connection at separate thread.
-            conn.check_conn_availability();
+            if let Some(id) = id {
+                if id == conn.id {
+                    conn.check_conn_availability();
+                }
+            } else {
+                conn.check_conn_availability();
+            }
         }
     }
 }

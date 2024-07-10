@@ -12,61 +12,47 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::{Align, Id, Layout, RichText};
-use url::Url;
+use egui::{Align, Layout, RichText};
 
 use crate::gui::Colors;
 use crate::gui::icons::{CHECK, CHECK_CIRCLE, CHECK_FAT, DOTS_THREE_CIRCLE, GLOBE, GLOBE_SIMPLE, PLUS_CIRCLE, X_CIRCLE};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{ConnectionsContent, Modal, View};
-use crate::gui::views::types::{ModalContainer, ModalPosition, TextEditOptions};
+use crate::gui::views::modals::ExternalConnectionModal;
+use crate::gui::views::types::{ModalContainer, ModalPosition};
 use crate::wallet::{ConnectionsConfig, ExternalConnection, Wallet};
 use crate::wallet::types::ConnectionMethod;
 
-/// Wallet connection setup content.
-pub struct ConnectionSetup {
+/// Wallet connection settings content.
+pub struct ConnectionSettings {
     /// Selected connection method.
     pub method: ConnectionMethod,
 
-    /// Flag to check if modal was just opened.
-    first_modal_launch: bool,
-    /// External connection URL value for [`Modal`].
-    ext_node_url_edit: String,
-    /// External connection API secret value for [`Modal`].
-    ext_node_secret_edit: String,
-    /// Flag to show URL format error.
-    ext_node_url_error: bool,
-
     /// Current wallet external connection.
     curr_ext_conn: Option<ExternalConnection>,
-    /// Flag to check connections availability.
-    check_connections: bool,
+
+    /// External connection [`Modal`] content.
+    ext_conn_modal: ExternalConnectionModal,
 
     /// [`Modal`] identifiers allowed at this ui container.
     modal_ids: Vec<&'static str>
 }
 
-/// Identifier for [`Modal`] to add external connection.
-pub const ADD_EXT_CONNECTION_MODAL: &'static str = "add_ext_connection_modal";
-
-impl Default for ConnectionSetup {
+impl Default for ConnectionSettings {
     fn default() -> Self {
+        ExternalConnection::check_ext_conn_availability(None);
         Self {
             method: ConnectionMethod::Integrated,
-            first_modal_launch: true,
-            ext_node_url_edit: "".to_string(),
-            ext_node_secret_edit: "".to_string(),
-            ext_node_url_error: false,
             curr_ext_conn: None,
-            check_connections: true,
+            ext_conn_modal: ExternalConnectionModal::new(None),
             modal_ids: vec![
-                ADD_EXT_CONNECTION_MODAL
+                ExternalConnectionModal::WALLET_ID
             ]
         }
     }
 }
 
-impl ModalContainer for ConnectionSetup {
+impl ModalContainer for ConnectionSettings {
     fn modal_ids(&self) -> &Vec<&'static str> {
         &self.modal_ids
     }
@@ -76,13 +62,15 @@ impl ModalContainer for ConnectionSetup {
                 modal: &Modal,
                 cb: &dyn PlatformCallbacks) {
         match modal.id {
-            ADD_EXT_CONNECTION_MODAL => self.add_ext_conn_modal_ui(ui, modal, cb),
+            ExternalConnectionModal::WALLET_ID => {
+                self.ext_conn_modal.ui(ui, cb, modal, |_| {});
+            },
             _ => {}
         }
     }
 }
 
-impl ConnectionSetup {
+impl ConnectionSettings {
     /// Draw wallet creation setup content.
     pub fn create_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         self.ui(ui, None, cb);
@@ -184,12 +172,6 @@ impl ConnectionSetup {
                 }
             }
 
-            // Check connections availability.
-            if self.check_connections {
-                ExternalConnection::start_ext_conn_availability_check();
-                self.check_connections = false;
-            }
-
             if !ext_conn_list.is_empty() {
                 ui.add_space(8.0);
                 for (index, conn) in ext_conn_list.iter().enumerate() {
@@ -269,112 +251,12 @@ impl ConnectionSetup {
 
     /// Show external connection adding [`Modal`].
     fn show_add_ext_conn_modal(&mut self, cb: &dyn PlatformCallbacks) {
-        // Setup values for Modal.
-        self.first_modal_launch = true;
-        self.ext_node_url_edit = "".to_string();
-        self.ext_node_secret_edit = "".to_string();
-        self.ext_node_url_error = false;
+        self.ext_conn_modal = ExternalConnectionModal::new(None);
         // Show modal.
-        Modal::new(ADD_EXT_CONNECTION_MODAL)
+        Modal::new(ExternalConnectionModal::WALLET_ID)
             .position(ModalPosition::CenterTop)
             .title(t!("wallets.add_node"))
             .show();
         cb.show_keyboard();
-    }
-
-    /// Draw external connection adding [`Modal`] content.
-    pub fn add_ext_conn_modal_ui(&mut self,
-                                 ui: &mut egui::Ui,
-                                 modal: &Modal,
-                                 cb: &dyn PlatformCallbacks) {
-        ui.add_space(6.0);
-        ui.vertical_centered(|ui| {
-            ui.label(RichText::new(t!("wallets.node_url"))
-                .size(17.0)
-                .color(Colors::gray()));
-            ui.add_space(8.0);
-
-            // Draw node URL text edit.
-            let url_edit_id = Id::from(modal.id).with("node_url_edit");
-            let mut url_edit_opts = TextEditOptions::new(url_edit_id).paste().no_focus();
-            if self.first_modal_launch {
-                self.first_modal_launch = false;
-                url_edit_opts.focus = true;
-            }
-            View::text_edit(ui, cb, &mut self.ext_node_url_edit, &mut url_edit_opts);
-            ui.add_space(8.0);
-
-            ui.label(RichText::new(t!("wallets.node_secret"))
-                .size(17.0)
-                .color(Colors::gray()));
-            ui.add_space(8.0);
-
-            // Draw node API secret text edit.
-            let secret_edit_id = Id::from(modal.id).with("node_secret_edit");
-            let mut secret_edit_opts = TextEditOptions::new(secret_edit_id).paste().no_focus();
-            View::text_edit(ui, cb, &mut self.ext_node_secret_edit, &mut secret_edit_opts);
-
-            // Show error when specified URL is not valid.
-            if self.ext_node_url_error {
-                ui.add_space(10.0);
-                ui.label(RichText::new(t!("wallets.invalid_url"))
-                    .size(17.0)
-                    .color(Colors::red()));
-            }
-            ui.add_space(10.0);
-        });
-
-        // Show modal buttons.
-        ui.scope(|ui| {
-            // Setup spacing between buttons.
-            ui.spacing_mut().item_spacing = egui::Vec2::new(8.0, 0.0);
-
-            ui.columns(2, |columns| {
-                columns[0].vertical_centered_justified(|ui| {
-                    View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
-                        // Close modal.
-                        cb.hide_keyboard();
-                        modal.close();
-                    });
-                });
-                columns[1].vertical_centered_justified(|ui| {
-                    // Add connection button callback.
-                    let mut on_add = || {
-                        if !self.ext_node_url_edit.starts_with("http") {
-                            self.ext_node_url_edit = format!("http://{}", self.ext_node_url_edit)
-                        }
-                        let error = Url::parse(self.ext_node_url_edit.as_str()).is_err();
-                        self.ext_node_url_error = error;
-                        if !error {
-                            // Add external connection.
-                            let url = self.ext_node_url_edit.to_owned();
-                            let secret = if self.ext_node_secret_edit.is_empty() {
-                                None
-                            } else {
-                                Some(self.ext_node_secret_edit.to_owned())
-                            };
-                            let ext_conn = ExternalConnection::new(url.clone(), secret);
-                            ConnectionsConfig::add_ext_conn(ext_conn.clone());
-                            self.check_connections = true;
-
-                            // Set added connection as current.
-                            self.method = ConnectionMethod::External(ext_conn.id);
-
-                            // Close modal.
-                            cb.hide_keyboard();
-                            modal.close();
-                        }
-                    };
-
-                    // Add connection on Enter button press.
-                    View::on_enter_key(ui, || {
-                        (on_add)();
-                    });
-
-                    View::button(ui, t!("modal.add"), Colors::white_or_black(false), on_add);
-                });
-            });
-            ui.add_space(6.0);
-        });
     }
 }

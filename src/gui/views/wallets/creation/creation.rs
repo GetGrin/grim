@@ -23,7 +23,7 @@ use crate::gui::views::{Modal, Content, View};
 use crate::gui::views::types::{ModalPosition, TextEditOptions};
 use crate::gui::views::wallets::creation::MnemonicSetup;
 use crate::gui::views::wallets::creation::types::Step;
-use crate::gui::views::wallets::setup::ConnectionSetup;
+use crate::gui::views::wallets::settings::ConnectionSettings;
 use crate::node::Node;
 use crate::wallet::{ExternalConnection, Wallet};
 use crate::wallet::types::PhraseMode;
@@ -43,7 +43,7 @@ pub struct WalletCreation {
     /// Mnemonic phrase setup content.
     pub(crate) mnemonic_setup: MnemonicSetup,
     /// Network setup content.
-    pub(crate) network_setup: ConnectionSetup
+    pub(crate) network_setup: ConnectionSettings
 }
 
 impl Default for WalletCreation {
@@ -54,7 +54,7 @@ impl Default for WalletCreation {
             name_edit: String::from(""),
             pass_edit: String::from(""),
             mnemonic_setup: MnemonicSetup::default(),
-            network_setup: ConnectionSetup::default()
+            network_setup: ConnectionSettings::default()
         }
     }
 }
@@ -304,7 +304,7 @@ impl WalletCreation {
 
             // Check external connections availability on connection setup.
             if self.step == Some(Step::SetupConnection) {
-                ExternalConnection::start_ext_conn_availability_check();
+                ExternalConnection::check_ext_conn_availability(None);
             }
         });
     }

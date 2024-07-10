@@ -1,4 +1,4 @@
-// Copyright 2023 The Grim Developers
+// Copyright 2024 The Grim Developers
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,10 +13,4 @@
 // limitations under the License.
 
 mod connection;
-pub use connection::ConnectionSetup;
-
-mod common;
-pub use common::CommonSetup;
-
-mod recovery;
-pub use recovery::RecoverySetup;
+pub use connection::*;
