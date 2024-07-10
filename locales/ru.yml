@@ -226,6 +226,7 @@ network_settings:
   stratum_port: 'Порт Stratum:'
   port_unavailable: Указанный порт недоступен
   restart_node_required: Для применения изменений требуется перезапуск узла.
+  choose_wallet: Выбрать кошелёк
   enable: Включить
   disable: Выключить
   restart: Перезапуск

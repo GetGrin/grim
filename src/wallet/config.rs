@@ -92,6 +92,16 @@ impl WalletConfig {
         None
     }
 
+    /// Get wallet name by provided identifier.
+    pub fn name_by_id(id: i64) -> Option<String> {
+        let mut wallet_dir = WalletConfig::get_base_path(AppConfig::chain_type());
+        wallet_dir.push(id.to_string());
+        if let Some(cfg) = Self::load(wallet_dir) {
+            return Some(cfg.name);
+        }
+        None
+    }
+
     /// Save wallet config.
     pub fn save(&self) {
         let config_path = Self::get_config_file_path(self.chain_type, self.id);

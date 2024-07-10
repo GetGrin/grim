@@ -24,17 +24,27 @@ use crate::gui::views::{NetworkContent, Content, View};
 use crate::gui::views::network::setup::StratumSetup;
 use crate::gui::views::network::types::{NetworkTab, NetworkTabType};
 use crate::node::{Node, NodeConfig};
+use crate::wallet::WalletConfig;
 
 /// Mining tab content.
 pub struct NetworkMining {
     /// Stratum server setup content.
     stratum_server_setup: StratumSetup,
+
+    /// Wallet name for rewards.
+    wallet_name: String,
 }
 
 impl Default for NetworkMining {
     fn default() -> Self {
+        let wallet_name = if let Some(id) = NodeConfig::get_stratum_wallet_id() {
+            WalletConfig::name_by_id(id).unwrap_or("-".to_string())
+        } else {
+            "-".to_string()
+        };
         Self {
-            stratum_server_setup: StratumSetup::default()
+            stratum_server_setup: StratumSetup::default(),
+            wallet_name,
         }
     }
 }
@@ -103,10 +113,8 @@ impl NetworkTab for NetworkMining {
                                   [true, false, true, false]);
             });
             columns[1].vertical_centered(|ui| {
-                //TODO: Stratum mining wallet listening address. Replace with local wallet name.
-                let wallet_addr = NodeConfig::get_stratum_wallet_addr().replace("http://", "");
                 View::rounded_box(ui,
-                                  wallet_addr,
+                                  self.wallet_name.clone(),
                                   t!("network_mining.rewards_wallet"),
                                   [false, true, false, true]);
             });

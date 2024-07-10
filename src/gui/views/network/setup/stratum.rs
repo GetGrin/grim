@@ -21,6 +21,7 @@ use crate::gui::views::{Modal, View};
 use crate::gui::views::network::settings::NetworkSettings;
 use crate::gui::views::types::{ModalContainer, ModalPosition, TextEditOptions};
 use crate::node::{Node, NodeConfig};
+use crate::wallet::WalletConfig;
 
 /// Stratum server setup section content.
 pub struct StratumSetup {
@@ -34,6 +35,9 @@ pub struct StratumSetup {
 
     /// Flag to check if stratum port from saved config value is available.
     is_port_available: bool,
+
+    /// Wallet name to receive rewards.
+    wallet_name: Option<String>,
 
     /// Attempt time value in seconds to mine on a particular header.
     attempt_time_edit: String,
@@ -56,11 +60,17 @@ impl Default for StratumSetup {
     fn default() -> Self {
         let (ip, port) = NodeConfig::get_stratum_address();
         let is_port_available = NodeConfig::is_stratum_port_available(&ip, &port);
+        let wallet_name = if let Some(id) = NodeConfig::get_stratum_wallet_id() {
+            WalletConfig::name_by_id(id)
+        } else {
+            None
+        };
         Self {
             available_ips: NodeConfig::get_ip_addrs(),
             stratum_port_edit: port,
             stratum_port_available_edit: is_port_available,
             is_port_available,
+            wallet_name,
             attempt_time_edit: NodeConfig::get_stratum_attempt_time(),
             min_share_diff_edit: NodeConfig::get_stratum_min_share_diff(),
             modal_ids: vec![
@@ -101,7 +111,7 @@ impl StratumSetup {
 
         ui.vertical_centered(|ui| {
             // Show loading indicator or controls to start/stop stratum server if port is available.
-            if self.is_port_available {
+            if self.is_port_available && self.wallet_name.is_some() {
                 if Node::is_stratum_starting() || Node::is_stratum_stopping() {
                     ui.vertical_centered(|ui| {
                         ui.add_space(8.0);
@@ -142,6 +152,25 @@ impl StratumSetup {
             ui.add_space(8.0);
         });
 
+        View::horizontal_line(ui, Colors::item_stroke());
+        ui.add_space(6.0);
+
+        // Show wallet name.
+        ui.add_space(2.0);
+        ui.label(RichText::new(t!("wallets.wallet"))
+            .size(16.0)
+            .color(Colors::gray()));
+        ui.add_space(2.0);
+        ui.label(RichText::new(self.wallet_name.as_ref().unwrap_or(&"-".to_string()))
+            .size(16.0)
+            .color(Colors::white_or_black(true)));
+        ui.add_space(8.0);
+
+        View::button(ui, t!("network_settings.choose_wallet"), Colors::button(), || {
+            //TODO: select wallet
+        });
+
+        ui.add_space(12.0);
         View::horizontal_line(ui, Colors::item_stroke());
         ui.add_space(6.0);
 

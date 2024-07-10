@@ -226,6 +226,7 @@ network_settings:
   stratum_port: 'Port Stratum :'
   port_unavailable: Le port spécifié est indisponible
   restart_node_required: Le redémarrage du noeud est nécessaire pour appliquer les modifications.
+  choose_wallet: Choisir un portefeuille
   enable: Activer
   disable: Désactiver
   restart: Redémarrer

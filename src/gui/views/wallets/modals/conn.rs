@@ -30,6 +30,7 @@ pub struct WalletConnectionModal {
     /// Flag to show connection creation.
     show_conn_creation: bool,
 
+    /// External connection creation content.
     add_ext_conn_content: ExternalConnectionModal
 }
 
@@ -72,7 +73,7 @@ impl WalletConnectionModal {
             })
             .id_source("integrated_node")
             .scroll_bar_visibility(ScrollBarVisibility::AlwaysHidden)
-            .auto_shrink([false; 2])
+            .auto_shrink([true; 2])
             .show(ui, |ui| {
                 ui.add_space(2.0);
 

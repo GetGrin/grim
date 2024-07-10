@@ -319,24 +319,19 @@ impl Modal {
         // Draw title content.
         let title_resp = ui.allocate_ui_at_rect(rect, |ui| {
             ui.vertical_centered_justified(|ui| {
-                ui.add_space(Self::DEFAULT_MARGIN + if !View::is_desktop() {
-                    1.0
-                } else {
-                    0.0
-                });
+                ui.add_space(Self::DEFAULT_MARGIN + 1.0);
                 ui.label(RichText::new(self.title.as_ref().unwrap())
                     .size(19.0)
                     .color(Colors::title(true))
                 );
                 ui.add_space(Self::DEFAULT_MARGIN);
+                // Draw line below title.
+                View::horizontal_line(ui, Colors::item_stroke());
             });
         }).response;
 
         // Setup background shape to be painted behind title content.
         bg_shape.rect = title_resp.rect;
         ui.painter().set(bg_idx, bg_shape);
-
-        // Draw line below title.
-        View::horizontal_line(ui, Colors::stroke());
     }
 }

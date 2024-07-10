@@ -23,8 +23,8 @@ scan_result: Scan Ergebnis
 back: zurück
 share: teilen
 theme: 'Theme:'
-dark: dunkel
-light: hell
+dark: Dunkel
+light: Hell
 choose_file: Datei auswählen
 wallets:
   await_conf_amount: Erwarte Bestätigung
@@ -146,7 +146,7 @@ transport:
 network:
   self: Netzwerk
   type: 'Netzwerk Typ:'
-  mainnet: Haupt
+  mainnet: Main
   testnet: Test
   connections: Verbindungen
   node: Integrierte Node
@@ -226,6 +226,7 @@ network_settings:
   stratum_port: 'Stratum Port:'
   port_unavailable: Der angegebene Port ist nicht verfügbar
   restart_node_required: Ein Neustart der Node ist erforderlich, um die Änderungen zu übernehmen.
+  choose_wallet: Wählen Wallet
   enable: Aktivieren
   disable: Deaktivieren
   restart: Neustarten

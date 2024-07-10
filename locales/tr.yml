@@ -226,6 +226,7 @@ network_settings:
   stratum_port: 'Stratum port:'
   port_unavailable: Belirlenen port mevcut degil
   restart_node_required: Degisiklikler için yeniden Node BASLAT
+  choose_wallet: Cüzdan seç
   enable: Etkinlestir
   disable: Devredisi birak
   restart: Restart
