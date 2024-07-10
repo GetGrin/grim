@@ -19,7 +19,7 @@ crate-type = ["rlib"]
 [profile.release-apk]
 inherits = "release"
 strip = true
-opt-level = 3
+opt-level = "z"
 lto = true
 codegen-units = 1
 panic = "abort"
