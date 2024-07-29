@@ -5,6 +5,9 @@ Initially supported platforms are Linux, Mac, Windows, limited Android and possi
 
 Named by the character [Grim](http://harrypotter.wikia.com/wiki/Grim) - the shape of a large, black, menacing, spectral giant dog.
 
+![image](https://github.com/user-attachments/assets/a925b1c8-02c9-4b08-b888-0315d11138b6)
+
+
 ## Build instructions
 ### Install Rust
 
