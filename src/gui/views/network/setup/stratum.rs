@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use egui::{Id, RichText};
+use grin_chain::SyncStatus;
 
 use crate::gui::Colors;
 use crate::gui::icons::{BARBELL, HARD_DRIVES, PLUG, POWER, TIMER};
@@ -133,7 +134,8 @@ impl StratumSetup {
 
         ui.vertical_centered(|ui| {
             // Show loading indicator or controls to start/stop stratum server.
-            if self.is_port_available && self.wallet_name.is_some() {
+            if Node::get_sync_status().unwrap() == SyncStatus::NoSync &&
+                self.is_port_available && self.wallet_name.is_some() {
                 if Node::is_stratum_starting() || Node::is_stratum_stopping() {
                     ui.vertical_centered(|ui| {
                         ui.add_space(8.0);
