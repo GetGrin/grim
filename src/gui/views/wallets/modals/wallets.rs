@@ -110,6 +110,15 @@ impl WalletsModal {
                         View::ellipsize_text(ui, config.name, 18.0, Colors::title(false));
                     });
 
+                    // Setup wallet connection text.
+                    let conn = if let Some(conn) = wallet.get_current_ext_conn() {
+                        format!("{} {}", GLOBE_SIMPLE, conn.url)
+                    } else {
+                        format!("{} {}", COMPUTER_TOWER, t!("network.node"))
+                    };
+                    View::ellipsize_text(ui, conn, 15.0, Colors::text(false));
+                    ui.add_space(1.0);
+
                     // Setup wallet API text.
                     let address = if let Some(port) = config.api_port {
                         format!("127.0.0.1:{}", port)
@@ -117,16 +126,7 @@ impl WalletsModal {
                         "-".to_string()
                     };
                     let api_text = format!("{} {}", PLUGS_CONNECTED, address);
-                    ui.label(RichText::new(api_text).size(15.0).color(Colors::text(false)));
-                    ui.add_space(1.0);
-
-                    // Setup wallet connection text.
-                    let conn = if let Some(conn) = wallet.get_current_ext_conn() {
-                        format!("{} {}", GLOBE_SIMPLE, conn.url)
-                    } else {
-                        format!("{} {}", COMPUTER_TOWER, t!("network.node"))
-                    };
-                    View::ellipsize_text(ui, conn, 15.0, Colors::gray());
+                    ui.label(RichText::new(api_text).size(15.0).color(Colors::gray()));
                     ui.add_space(3.0);
                 });
             });
