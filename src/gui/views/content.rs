@@ -19,11 +19,13 @@ use lazy_static::lazy_static;
 
 use crate::gui::Colors;
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Modal, NetworkContent, NodeSetup, View, WalletsContent};
+use crate::gui::views::{Modal, View};
 use crate::gui::views::types::ModalContainer;
 use crate::node::Node;
 use crate::AppConfig;
 use crate::gui::icons::{CHECK, CHECK_FAT};
+use crate::gui::views::network::{NetworkContent, NodeSetup};
+use crate::gui::views::wallets::WalletsContent;
 
 lazy_static! {
     /// Global state to check if [`NetworkContent`] panel is open.

@@ -72,11 +72,11 @@ impl PeersConfig {
 
     /// Load saved peers to node server [`ConfigMembers`] config.
     pub(crate) fn load_to_server_config() {
-        let mut w_node_config = Settings::node_config_to_update();
+        let mut w_config = Settings::node_config_to_update();
         // Load seeds.
-        for seed in w_node_config.peers.seeds.clone() {
+        for seed in w_config.peers.seeds.clone() {
             if let Some(p) = Self::peer_to_addr(seed.to_string()) {
-                let mut seeds = w_node_config
+                let mut seeds = w_config
                     .node
                     .server
                     .p2p_config
@@ -84,13 +84,13 @@ impl PeersConfig {
                     .clone()
                     .unwrap_or(PeerAddrs::default());
                 seeds.peers.insert(seeds.peers.len(), p);
-                w_node_config.node.server.p2p_config.seeds = Some(seeds);
+                w_config.node.server.p2p_config.seeds = Some(seeds);
             }
         }
         // Load allowed peers.
-        for peer in w_node_config.peers.allowed.clone() {
+        for peer in w_config.peers.allowed.clone() {
             if let Some(p) = Self::peer_to_addr(peer.clone()) {
-                let mut allowed = w_node_config
+                let mut allowed = w_config
                     .node
                     .server
                     .p2p_config
@@ -98,13 +98,13 @@ impl PeersConfig {
                     .clone()
                     .unwrap_or(PeerAddrs::default());
                 allowed.peers.insert(allowed.peers.len(), p);
-                w_node_config.node.server.p2p_config.peers_allow = Some(allowed);
+                w_config.node.server.p2p_config.peers_allow = Some(allowed);
             }
         }
         // Load denied peers.
-        for peer in w_node_config.peers.denied.clone() {
+        for peer in w_config.peers.denied.clone() {
             if let Some(p) = Self::peer_to_addr(peer.clone()) {
-                let mut denied = w_node_config
+                let mut denied = w_config
                     .node
                     .server
                     .p2p_config
@@ -112,13 +112,13 @@ impl PeersConfig {
                     .clone()
                     .unwrap_or(PeerAddrs::default());
                 denied.peers.insert(denied.peers.len(), p);
-                w_node_config.node.server.p2p_config.peers_deny = Some(denied);
+                w_config.node.server.p2p_config.peers_deny = Some(denied);
             }
         }
         // Load preferred peers.
-        for peer in &w_node_config.peers.preferred.clone() {
+        for peer in &w_config.peers.preferred.clone() {
             if let Some(p) = Self::peer_to_addr(peer.clone()) {
-                let mut preferred = w_node_config
+                let mut preferred = w_config
                     .node
                     .server
                     .p2p_config
@@ -126,7 +126,7 @@ impl PeersConfig {
                     .clone()
                     .unwrap_or(PeerAddrs::default());
                 preferred.peers.insert(preferred.peers.len(), p);
-                w_node_config.node.server.p2p_config.peers_preferred = Some(preferred);
+                w_config.node.server.p2p_config.peers_preferred = Some(preferred);
             }
         }
     }
@@ -242,9 +242,9 @@ impl NodeConfig {
         let node_server_config = Self::save_default_node_server_config(&chain_type);
         let peers_config = Self::save_default_peers_config(&chain_type);
         {
-            let mut w_node_config = Settings::node_config_to_update();
-            w_node_config.node = node_server_config;
-            w_node_config.peers = peers_config;
+            let mut w_config = Settings::node_config_to_update();
+            w_config.node = node_server_config;
+            w_config.peers = peers_config;
         }
     }
 
@@ -329,15 +329,15 @@ impl NodeConfig {
     /// Save stratum server IP address and port.
     pub fn save_stratum_address(addr: &String, port: &String) {
         let addr_to_save = format!("{}:{}", addr, port);
-        let mut w_node_config = Settings::node_config_to_update();
-        w_node_config
+        let mut w_config = Settings::node_config_to_update();
+        w_config
             .node
             .server
             .stratum_mining_config
             .as_mut()
             .unwrap()
             .stratum_server_addr = Some(addr_to_save);
-        w_node_config.save();
+        w_config.save();
     }
 
     /// Check if stratum server port is available across the system and config.
@@ -383,23 +383,24 @@ impl NodeConfig {
 
     /// Save stratum mining server wallet address to get rewards.
     pub fn save_stratum_wallet_id(id: i64) {
-        let w_config = Settings::node_config_to_update();
+        let mut w_config = Settings::node_config_to_update();
         w_config.node
-            .clone()
             .server
             .stratum_mining_config
+            .as_mut()
             .unwrap()
             .wallet_listener_url = id.to_string();
         w_config.save();
+        println!()
     }
 
     /// Get the amount of time in seconds to attempt to mine on a particular header.
     pub fn get_stratum_attempt_time() -> String {
         let r_config = Settings::node_config_to_read();
         r_config.node
-            .clone()
             .server
             .stratum_mining_config
+            .as_ref()
             .unwrap()
             .attempt_time_per_block
             .to_string()
@@ -407,23 +408,23 @@ impl NodeConfig {
 
     /// Save stratum attempt time value in seconds.
     pub fn save_stratum_attempt_time(time: u32) {
-        let w_node_config = Settings::node_config_to_update();
-        w_node_config.node
-            .clone()
+        let mut w_config = Settings::node_config_to_update();
+        w_config.node
             .server
             .stratum_mining_config
+            .as_mut()
             .unwrap()
             .attempt_time_per_block = time;
-        w_node_config.save();
+        w_config.save();
     }
 
     /// Get minimum acceptable share difficulty to request from miners.
     pub fn get_stratum_min_share_diff() -> String {
         let r_config = Settings::node_config_to_read();
         r_config.node
-            .clone()
             .server
             .stratum_mining_config
+            .as_ref()
             .unwrap()
             .minimum_share_difficulty
             .to_string()
@@ -431,23 +432,24 @@ impl NodeConfig {
 
     /// Save minimum acceptable share difficulty.
     pub fn save_stratum_min_share_diff(diff: u64) {
-        let w_node_config = Settings::node_config_to_update();
-        w_node_config.node
-            .clone()
+        let mut w_config = Settings::node_config_to_update();
+        w_config.node
             .server
             .stratum_mining_config
+            .as_mut()
             .unwrap()
             .minimum_share_difficulty = diff;
-        w_node_config.save();
+        w_config.save();
     }
 
     /// Check if stratum mining server autorun is enabled.
     pub fn is_stratum_autorun_enabled() -> bool {
-        let stratum_config = Settings::node_config_to_read()
+        let r_config = Settings::node_config_to_read();
+        let stratum_config = r_config
             .node
-            .clone()
             .server
             .stratum_mining_config
+            .as_ref()
             .unwrap();
         if let Some(enable) = stratum_config.enable_stratum_server {
             return enable;
@@ -458,14 +460,14 @@ impl NodeConfig {
     /// Toggle stratum mining server autorun.
     pub fn toggle_stratum_autorun() {
         let autorun = Self::is_stratum_autorun_enabled();
-        let mut w_node_config = Settings::node_config_to_update();
-        w_node_config.node
+        let mut w_config = Settings::node_config_to_update();
+        w_config.node
             .server
             .stratum_mining_config
             .as_mut()
             .unwrap()
             .enable_stratum_server = Some(!autorun);
-        w_node_config.save();
+        w_config.save();
     }
 
     /// Get API server address.
@@ -484,9 +486,9 @@ impl NodeConfig {
     /// Save API server IP address and port.
     pub fn save_api_address(addr: &String, port: &String) {
         let addr_to_save = format!("{}:{}", addr, port);
-        let mut w_node_config = Settings::node_config_to_update();
-        w_node_config.node.server.api_http_addr = addr_to_save;
-        w_node_config.save();
+        let mut w_config = Settings::node_config_to_update();
+        w_config.node.server.api_http_addr = addr_to_save;
+        w_config.save();
     }
 
     /// Check if api server port is available across the system and config.
@@ -624,9 +626,9 @@ impl NodeConfig {
         } else {
             ChainValidationMode::EveryBlock
         };
-        let mut w_node_config = Settings::node_config_to_update();
-        w_node_config.node.server.chain_validation_mode = new_mode;
-        w_node_config.save();
+        let mut w_config = Settings::node_config_to_update();
+        w_config.node.server.chain_validation_mode = new_mode;
+        w_config.save();
     }
 
     /// Check if node is running in archive mode.
@@ -638,9 +640,9 @@ impl NodeConfig {
     /// Toggle archive node mode.
     pub fn toggle_archive_mode() {
         let archive_mode = Self::is_archive_mode();
-        let mut w_node_config = Settings::node_config_to_update();
-        w_node_config.node.server.archive_mode = Some(!archive_mode);
-        w_node_config.save();
+        let mut w_config = Settings::node_config_to_update();
+        w_config.node.server.archive_mode = Some(!archive_mode);
+        w_config.save();
     }
 
     /// Get P2P server port.
@@ -669,9 +671,9 @@ impl NodeConfig {
 
     /// Save P2P server port.
     pub fn save_p2p_port(port: u16) {
-        let mut w_node_config = Settings::node_config_to_update();
-        w_node_config.node.server.p2p_config.port = port;
-        w_node_config.save();
+        let mut w_config = Settings::node_config_to_update();
+        w_config.node.server.p2p_config.port = port;
+        w_config.save();
     }
 
     /// Check if default seed list is used.
@@ -686,9 +688,9 @@ impl NodeConfig {
         } else {
             Seeding::DNSSeed
         };
-        let mut w_node_config = Settings::node_config_to_update();
-        w_node_config.node.server.p2p_config.seeding_type = seeding_type;
-        w_node_config.save();
+        let mut w_config = Settings::node_config_to_update();
+        w_config.node.server.p2p_config.seeding_type = seeding_type;
+        w_config.save();
     }
 
     /// Get custom seed peers.
@@ -698,21 +700,21 @@ impl NodeConfig {
 
     /// Save custom seed peer.
     pub fn save_custom_seed(peer: String) {
-        let mut w_node_config = Settings::node_config_to_update();
-        let size = w_node_config.peers.seeds.len();
-        w_node_config.peers.seeds.insert(size, peer);
-        w_node_config.peers.save();
+        let mut w_config = Settings::node_config_to_update();
+        let size = w_config.peers.seeds.len();
+        w_config.peers.seeds.insert(size, peer);
+        w_config.peers.save();
     }
 
     /// Remove custom seed peer.
     pub fn remove_custom_seed(peer: &String) {
-        let mut w_node_config = Settings::node_config_to_update();
-        let mut seeds = w_node_config.peers.seeds.clone();
+        let mut w_config = Settings::node_config_to_update();
+        let mut seeds = w_config.peers.seeds.clone();
         if let Some(index) = seeds.iter().position(|x| x == peer) {
             seeds.remove(index);
         }
-        w_node_config.peers.seeds = seeds;
-        w_node_config.peers.save();
+        w_config.peers.seeds = seeds;
+        w_config.peers.save();
     }
 
     /// Get denied peer list.
@@ -722,21 +724,21 @@ impl NodeConfig {
 
     /// Save peer to denied list.
     pub fn deny_peer(peer: String) {
-        let mut w_node_config = Settings::node_config_to_update();
-        let size = w_node_config.peers.denied.len();
-        w_node_config.peers.denied.insert(size, peer);
-        w_node_config.peers.save();
+        let mut w_config = Settings::node_config_to_update();
+        let size = w_config.peers.denied.len();
+        w_config.peers.denied.insert(size, peer);
+        w_config.peers.save();
     }
 
     /// Remove denied peer.
     pub fn remove_denied_peer(peer: &String) {
-        let mut w_node_config = Settings::node_config_to_update();
-        let mut denied = w_node_config.peers.denied.clone();
+        let mut w_config = Settings::node_config_to_update();
+        let mut denied = w_config.peers.denied.clone();
         if let Some(index) = denied.iter().position(|x| x == peer) {
             denied.remove(index);
         }
-        w_node_config.peers.denied = denied;
-        w_node_config.peers.save();
+        w_config.peers.denied = denied;
+        w_config.peers.save();
     }
 
     /// Get allowed peer list.
@@ -746,21 +748,21 @@ impl NodeConfig {
 
     /// Save peer to allowed list.
     pub fn allow_peer(peer: String) {
-        let mut w_node_config = Settings::node_config_to_update();
-        let size = w_node_config.peers.allowed.len();
-        w_node_config.peers.allowed.insert(size, peer);
-        w_node_config.peers.save();
+        let mut w_config = Settings::node_config_to_update();
+        let size = w_config.peers.allowed.len();
+        w_config.peers.allowed.insert(size, peer);
+        w_config.peers.save();
     }
 
     /// Remove allowed peer.
     pub fn remove_allowed_peer(peer: &String) {
-        let mut w_node_config = Settings::node_config_to_update();
-        let mut allowed = w_node_config.peers.allowed.clone();
+        let mut w_config = Settings::node_config_to_update();
+        let mut allowed = w_config.peers.allowed.clone();
         if let Some(index) = allowed.iter().position(|x| x == peer) {
             allowed.remove(index);
         }
-        w_node_config.peers.allowed = allowed;
-        w_node_config.peers.save();
+        w_config.peers.allowed = allowed;
+        w_config.peers.save();
     }
 
     /// Get preferred peer list.
@@ -770,21 +772,21 @@ impl NodeConfig {
 
     /// Add peer at preferred list.
     pub fn prefer_peer(peer: String) {
-        let mut w_node_config = Settings::node_config_to_update();
-        let size = w_node_config.peers.preferred.len();
-        w_node_config.peers.preferred.insert(size, peer);
-        w_node_config.peers.save();
+        let mut w_config = Settings::node_config_to_update();
+        let size = w_config.peers.preferred.len();
+        w_config.peers.preferred.insert(size, peer);
+        w_config.peers.save();
     }
 
     /// Remove preferred peer.
     pub fn remove_preferred_peer(peer: &String) {
-        let mut w_node_config = Settings::node_config_to_update();
-        let mut preferred = w_node_config.peers.preferred.clone();
+        let mut w_config = Settings::node_config_to_update();
+        let mut preferred = w_config.peers.preferred.clone();
         if let Some(index) = preferred.iter().position(|x| x == peer) {
             preferred.remove(index);
         }
-        w_node_config.peers.preferred = preferred;
-        w_node_config.peers.save();
+        w_config.peers.preferred = preferred;
+        w_config.peers.save();
     }
 
     /// How long a banned peer should stay banned in ms.
@@ -794,9 +796,9 @@ impl NodeConfig {
 
     /// Save for how long a banned peer should stay banned in ms.
     pub fn save_p2p_ban_window(time: i64) {
-        let mut w_node_config = Settings::node_config_to_update();
-        w_node_config.node.server.p2p_config.ban_window = Some(time);
-        w_node_config.save();
+        let mut w_config = Settings::node_config_to_update();
+        w_config.node.server.p2p_config.ban_window = Some(time);
+        w_config.save();
     }
 
     /// Maximum number of inbound peer connections.
@@ -810,9 +812,9 @@ impl NodeConfig {
 
     /// Save maximum number of inbound peer connections.
     pub fn save_max_inbound_peers(count: u32) {
-        let mut w_node_config = Settings::node_config_to_update();
-        w_node_config.node.server.p2p_config.peer_max_inbound_count = Some(count);
-        w_node_config.save();
+        let mut w_config = Settings::node_config_to_update();
+        w_config.node.server.p2p_config.peer_max_inbound_count = Some(count);
+        w_config.save();
     }
 
     /// Maximum number of outbound peer connections.
@@ -827,11 +829,11 @@ impl NodeConfig {
 
     /// Save maximum number of outbound peer connections.
     pub fn save_max_outbound_peers(count: u32) {
-        let mut w_node_config = Settings::node_config_to_update();
-        w_node_config.node.server.p2p_config.peer_max_outbound_count = Some(count);
+        let mut w_config = Settings::node_config_to_update();
+        w_config.node.server.p2p_config.peer_max_outbound_count = Some(count);
         // Same value for preferred.
-        w_node_config.node.server.p2p_config.peer_min_preferred_outbound_count = Some(count);
-        w_node_config.save();
+        w_config.node.server.p2p_config.peer_min_preferred_outbound_count = Some(count);
+        w_config.save();
     }
 
     /// Base fee that's accepted into the pool.
@@ -841,9 +843,9 @@ impl NodeConfig {
 
     /// Save base fee that's accepted into the pool.
     pub fn save_base_fee(fee: u64) {
-        let mut w_node_config = Settings::node_config_to_update();
-        w_node_config.node.server.pool_config.accept_fee_base = fee;
-        w_node_config.save();
+        let mut w_config = Settings::node_config_to_update();
+        w_config.node.server.pool_config.accept_fee_base = fee;
+        w_config.save();
     }
 
     /// Reorg cache retention period in minutes.
@@ -853,9 +855,9 @@ impl NodeConfig {
 
     /// Save reorg cache retention period in minutes.
     pub fn save_reorg_cache_period(period: u32) {
-        let mut w_node_config = Settings::node_config_to_update();
-        w_node_config.node.server.pool_config.reorg_cache_period = period;
-        w_node_config.save();
+        let mut w_config = Settings::node_config_to_update();
+        w_config.node.server.pool_config.reorg_cache_period = period;
+        w_config.save();
     }
 
     /// Max amount of transactions at pool.
@@ -865,9 +867,9 @@ impl NodeConfig {
 
     /// Save max amount of transactions at pool.
     pub fn save_max_pool_size(amount: usize) {
-        let mut w_node_config = Settings::node_config_to_update();
-        w_node_config.node.server.pool_config.max_pool_size = amount;
-        w_node_config.save();
+        let mut w_config = Settings::node_config_to_update();
+        w_config.node.server.pool_config.max_pool_size = amount;
+        w_config.save();
     }
 
     /// Max amount of transactions at stem pool.
@@ -877,9 +879,9 @@ impl NodeConfig {
 
     /// Save max amount of transactions at stem pool.
     pub fn save_max_stempool_size(amount: usize) {
-        let mut w_node_config = Settings::node_config_to_update();
-        w_node_config.node.server.pool_config.max_stempool_size = amount;
-        w_node_config.save();
+        let mut w_config = Settings::node_config_to_update();
+        w_config.node.server.pool_config.max_stempool_size = amount;
+        w_config.save();
     }
 
     /// Max total weight of transactions that can get selected to build a block.
@@ -889,9 +891,9 @@ impl NodeConfig {
 
     /// Set max total weight of transactions that can get selected to build a block.
     pub fn save_mineable_max_weight(weight: u64) {
-        let mut w_node_config = Settings::node_config_to_update();
-        w_node_config.node.server.pool_config.mineable_max_weight = weight;
-        w_node_config.save();
+        let mut w_config = Settings::node_config_to_update();
+        w_config.node.server.pool_config.mineable_max_weight = weight;
+        w_config.save();
     }
 
     // Dandelion settings
@@ -903,9 +905,9 @@ impl NodeConfig {
 
     /// Save Dandelion epoch duration in seconds.
     pub fn save_dandelion_epoch(secs: u16) {
-        let mut w_node_config = Settings::node_config_to_update();
-        w_node_config.node.server.dandelion_config.epoch_secs = secs;
-        w_node_config.save();
+        let mut w_config = Settings::node_config_to_update();
+        w_config.node.server.dandelion_config.epoch_secs = secs;
+        w_config.save();
     }
 
     /// Dandelion embargo timer in seconds.
@@ -916,9 +918,9 @@ impl NodeConfig {
 
     /// Save Dandelion embargo timer in seconds.
     pub fn save_dandelion_embargo(secs: u16) {
-        let mut w_node_config = Settings::node_config_to_update();
-        w_node_config.node.server.dandelion_config.embargo_secs = secs;
-        w_node_config.save();
+        let mut w_config = Settings::node_config_to_update();
+        w_config.node.server.dandelion_config.embargo_secs = secs;
+        w_config.save();
     }
 
     /// Dandelion aggregation period in seconds.
@@ -928,9 +930,9 @@ impl NodeConfig {
 
     /// Save Dandelion aggregation period in seconds.
     pub fn save_dandelion_aggregation(secs: u16) {
-        let mut w_node_config = Settings::node_config_to_update();
-        w_node_config.node.server.dandelion_config.aggregation_secs = secs;
-        w_node_config.save();
+        let mut w_config = Settings::node_config_to_update();
+        w_config.node.server.dandelion_config.aggregation_secs = secs;
+        w_config.save();
     }
 
     /// Dandelion stem probability (default: stem 90% of the time, fluff 10% of the time).
@@ -940,9 +942,9 @@ impl NodeConfig {
 
     /// Save Dandelion stem probability.
     pub fn save_stem_probability(percent: u8) {
-        let mut w_node_config = Settings::node_config_to_update();
-        w_node_config.node.server.dandelion_config.stem_probability = percent;
-        w_node_config.save();
+        let mut w_config = Settings::node_config_to_update();
+        w_config.node.server.dandelion_config.stem_probability = percent;
+        w_config.save();
     }
 
     /// Default to always stem our txs as described in Dandelion++ paper.
@@ -953,8 +955,8 @@ impl NodeConfig {
     /// Toggle stem of our txs.
     pub fn toggle_always_stem_our_txs() {
         let stem_txs = Self::always_stem_our_txs();
-        let mut w_node_config = Settings::node_config_to_update();
-        w_node_config.node.server.dandelion_config.always_stem_our_txs = !stem_txs;
-        w_node_config.save();
+        let mut w_config = Settings::node_config_to_update();
+        w_config.node.server.dandelion_config.always_stem_our_txs = !stem_txs;
+        w_config.save();
     }
 }

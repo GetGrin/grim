@@ -19,7 +19,8 @@ use grin_servers::PeerStats;
 use crate::gui::Colors;
 use crate::gui::icons::{AT, CUBE, DEVICES, FLOW_ARROW, HANDSHAKE, PACKAGE, SHARE_NETWORK};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{NetworkContent, Content, View};
+use crate::gui::views::{Content, View};
+use crate::gui::views::network::NetworkContent;
 use crate::gui::views::network::types::{NetworkTab, NetworkTabType};
 use crate::node::{Node, NodeConfig};
 

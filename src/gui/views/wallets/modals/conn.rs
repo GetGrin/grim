@@ -18,11 +18,12 @@ use egui::scroll_area::ScrollBarVisibility;
 use crate::gui::Colors;
 use crate::gui::icons::{CHECK, CHECK_FAT, PLUS_CIRCLE};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{ConnectionsContent, Modal, View};
-use crate::gui::views::modals::ExternalConnectionModal;
+use crate::gui::views::{Modal, View};
+use crate::gui::views::network::ConnectionsContent;
+use crate::gui::views::network::modals::ExternalConnectionModal;
 use crate::wallet::{ConnectionsConfig, ExternalConnection};
 
-/// Wallet connection content.
+/// Wallet connection [`Modal`] content.
 pub struct WalletConnectionModal {
     /// Current external connection.
     pub ext_conn: Option<ExternalConnection>,
@@ -35,9 +36,6 @@ pub struct WalletConnectionModal {
 }
 
 impl WalletConnectionModal {
-    /// Identifier for [`Modal`].
-    pub const ID: &'static str = "select_connection_modal";
-
     /// Create from provided wallet connection.
     pub fn new(ext_conn: Option<ExternalConnection>) -> Self {
         ExternalConnection::check_ext_conn_availability(None);
@@ -69,7 +67,7 @@ impl WalletConnectionModal {
             .max_height(if ext_conn_list.len() < 4 {
                 330.0
             } else {
-                323.0
+                350.0
             })
             .id_source("integrated_node")
             .scroll_bar_visibility(ScrollBarVisibility::AlwaysHidden)

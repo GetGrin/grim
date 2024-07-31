@@ -24,7 +24,6 @@ use std::thread::Thread;
 use std::time::Duration;
 use futures::channel::oneshot;
 use serde_json::{json, Value};
-use rand::Rng;
 
 use grin_api::{ApiServer, Router};
 use grin_chain::SyncStatus;
@@ -42,6 +41,7 @@ use grin_wallet_impls::{DefaultLCProvider, DefaultWalletImpl, HTTPNodeClient};
 use grin_wallet_libwallet::{address, Error, InitTxArgs, IssueInvoiceTxArgs, NodeClient, RetrieveTxQueryArgs, RetrieveTxQuerySortField, RetrieveTxQuerySortOrder, Slate, SlatepackAddress, SlateState, SlateVersion, StatusMessage, TxLogEntry, TxLogEntryType, VersionedSlate, WalletInst, WalletLCProvider};
 use grin_wallet_libwallet::api_impl::owner::{cancel_tx, retrieve_summary_info, retrieve_txs};
 use grin_wallet_util::OnionV3Address;
+use rand::Rng;
 
 use crate::AppConfig;
 use crate::node::{Node, NodeConfig};
@@ -1450,18 +1450,19 @@ fn sync_wallet_data(wallet: &Wallet, from_node: bool) {
 /// Start Foreign API server to receive txs over transport and mining rewards.
 fn start_api_server(wallet: &Wallet) -> Result<(ApiServer, u16), Error> {
     let host = "127.0.0.1";
-    // Find free port.
-    let port = if wallet.get_config().chain_type == ChainTypes::Mainnet {
-        rand::thread_rng().gen_range(37000..40000)
-    } else {
-        rand::thread_rng().gen_range(47000..50000)
-    };
+    let port = wallet.get_config().api_port.unwrap_or(rand::thread_rng().gen_range(10000..30000));
     let free_port = (port..).find(|port| {
         return match TcpListener::bind((host, port.to_owned())) {
             Ok(_) => {
                 let node_p2p_port = NodeConfig::get_p2p_port();
                 let node_api_port = NodeConfig::get_api_ip_port().1;
-                port.to_string() != node_p2p_port && port.to_string() != node_api_port
+                let free = port.to_string() != node_p2p_port && port.to_string() != node_api_port;
+                if free {
+                    let mut config = wallet.config.write();
+                    config.api_port = Some(*port);
+                    config.save();
+                }
+                free
             },
             Err(_) => false
         }

@@ -14,3 +14,6 @@
 
 mod conn;
 pub use conn::*;
+
+mod wallets;
+pub use wallets::*;

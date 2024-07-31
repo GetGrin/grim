@@ -227,6 +227,7 @@ network_settings:
   port_unavailable: Der angegebene Port ist nicht verfügbar
   restart_node_required: Ein Neustart der Node ist erforderlich, um die Änderungen zu übernehmen.
   choose_wallet: Wählen Wallet
+  stratum_wallet_warning: Wallet muss geöffnet sein, um Belohnungen zu erhalten.
   enable: Aktivieren
   disable: Deaktivieren
   restart: Neustarten

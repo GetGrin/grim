@@ -227,6 +227,7 @@ network_settings:
   port_unavailable: Belirlenen port mevcut degil
   restart_node_required: Degisiklikler için yeniden Node BASLAT
   choose_wallet: Cüzdan seç
+  stratum_wallet_warning: Odul almak için cüzdan açilmalidir.
   enable: Etkinlestir
   disable: Devredisi birak
   restart: Restart

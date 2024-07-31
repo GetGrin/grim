@@ -26,11 +26,9 @@ pub use modal::*;
 mod content;
 pub use content::*;
 
-mod network;
-pub use network::*;
+pub mod network;
 
-mod wallets;
-pub use wallets::*;
+pub mod wallets;
 
 mod camera;
 pub use camera::*;

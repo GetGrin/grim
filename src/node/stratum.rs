@@ -47,6 +47,7 @@ use grin_util::ToHex;
 use grin_servers::ServerTxPool;
 use log::{debug, error, info, warn};
 use serde_derive::{Deserialize, Serialize};
+use crate::wallet::WalletConfig;
 
 type Tx = mpsc::UnboundedSender<String>;
 
@@ -586,7 +587,16 @@ impl Handler {
                 {
                     let mut state = self.current_state.write();
                     let wallet_listener_url = if !config.burn_reward {
-                        Some(config.wallet_listener_url.clone())
+                        if let Ok(id) = config.wallet_listener_url.parse::<i64>() {
+                            if let Some(port) = WalletConfig::api_port_by_id(id) {
+                                let url = format!("http://127.0.0.1:{}", port);
+                                Some(url)
+                            } else {
+                                None
+                            }
+                        } else {
+                            None
+                        }
                     } else {
                         None
                     };

@@ -18,6 +18,7 @@ use std::string::ToString;
 
 use grin_core::global::ChainTypes;
 use grin_wallet_libwallet::{Slate};
+use rand::Rng;
 use serde_derive::{Deserialize, Serialize};
 
 use crate::{AppConfig, Settings};
@@ -41,7 +42,9 @@ pub struct WalletConfig {
     /// Flag to use Dandelion to broadcast transactions.
     pub use_dandelion: Option<bool>,
     /// Flag to enable Tor listener on start.
-    pub enable_tor_listener: Option<bool>
+    pub enable_tor_listener: Option<bool>,
+    /// Wallet API port.
+    pub api_port: Option<u16>,
 }
 
 /// Base wallets directory name.
@@ -77,6 +80,7 @@ impl WalletConfig {
             min_confirmations: MIN_CONFIRMATIONS_DEFAULT,
             use_dandelion: Some(true),
             enable_tor_listener: Some(true),
+            api_port: Some(rand::thread_rng().gen_range(10000..30000)),
         };
         Settings::write_to_file(&config, config_path);
         config
@@ -98,6 +102,16 @@ impl WalletConfig {
         wallet_dir.push(id.to_string());
         if let Some(cfg) = Self::load(wallet_dir) {
             return Some(cfg.name);
+        }
+        None
+    }
+
+    /// Get wallet API port by provided identifier.
+    pub fn api_port_by_id(id: i64) -> Option<u16> {
+        let mut wallet_dir = WalletConfig::get_base_path(AppConfig::chain_type());
+        wallet_dir.push(id.to_string());
+        if let Some(cfg) = Self::load(wallet_dir) {
+            return cfg.api_port;
         }
         None
     }

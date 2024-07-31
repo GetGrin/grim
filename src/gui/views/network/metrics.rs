@@ -19,7 +19,8 @@ use grin_servers::{DiffBlock, ServerStats};
 use crate::gui::Colors;
 use crate::gui::icons::{AT, COINS, CUBE_TRANSPARENT, HOURGLASS_LOW, HOURGLASS_MEDIUM, TIMER};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{NetworkContent, Content, View};
+use crate::gui::views::{Content, View};
+use crate::gui::views::network::NetworkContent;
 use crate::gui::views::network::types::{NetworkTab, NetworkTabType};
 use crate::node::Node;
 

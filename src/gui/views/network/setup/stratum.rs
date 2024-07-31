@@ -20,11 +20,17 @@ use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, View};
 use crate::gui::views::network::settings::NetworkSettings;
 use crate::gui::views::types::{ModalContainer, ModalPosition, TextEditOptions};
+use crate::gui::views::wallets::modals::WalletsModal;
 use crate::node::{Node, NodeConfig};
-use crate::wallet::WalletConfig;
+use crate::wallet::{WalletConfig, WalletList};
 
 /// Stratum server setup section content.
 pub struct StratumSetup {
+    /// Wallet list to select for mining rewards.
+    wallets: WalletList,
+    /// Wallets [`Modal`] content.
+    wallets_modal: WalletsModal,
+
     /// IP Addresses available at system.
     available_ips: Vec<String>,
 
@@ -49,6 +55,8 @@ pub struct StratumSetup {
     modal_ids: Vec<&'static str>
 }
 
+/// Identifier for wallet selection [`Modal`].
+const WALLET_SELECTION_MODAL: &'static str = "stratum_wallet_selection_modal";
 /// Identifier for stratum port [`Modal`].
 const STRATUM_PORT_MODAL: &'static str = "stratum_port";
 /// Identifier for attempt time [`Modal`].
@@ -60,12 +68,21 @@ impl Default for StratumSetup {
     fn default() -> Self {
         let (ip, port) = NodeConfig::get_stratum_address();
         let is_port_available = NodeConfig::is_stratum_port_available(&ip, &port);
-        let wallet_name = if let Some(id) = NodeConfig::get_stratum_wallet_id() {
+
+        // Setup mining rewards wallet name and identifier.
+        let mut wallet_id = NodeConfig::get_stratum_wallet_id();
+        let wallet_name = if let Some(id) = wallet_id {
             WalletConfig::name_by_id(id)
         } else {
             None
         };
+        if wallet_name.is_none() {
+            wallet_id = None;
+        }
+
         Self {
+            wallets: WalletList::default(),
+            wallets_modal: WalletsModal::new(wallet_id),
             available_ips: NodeConfig::get_ip_addrs(),
             stratum_port_edit: port,
             stratum_port_available_edit: is_port_available,
@@ -74,6 +91,7 @@ impl Default for StratumSetup {
             attempt_time_edit: NodeConfig::get_stratum_attempt_time(),
             min_share_diff_edit: NodeConfig::get_stratum_min_share_diff(),
             modal_ids: vec![
+                WALLET_SELECTION_MODAL,
                 STRATUM_PORT_MODAL,
                 ATTEMPT_TIME_MODAL,
                 MIN_SHARE_DIFF_MODAL
@@ -92,6 +110,10 @@ impl ModalContainer for StratumSetup {
                 modal: &Modal,
                 cb: &dyn PlatformCallbacks) {
         match modal.id {
+            WALLET_SELECTION_MODAL => self.wallets_modal.ui(ui, modal, &self.wallets, |id| {
+                NodeConfig::save_stratum_wallet_id(id);
+                self.wallet_name = WalletConfig::name_by_id(id);
+            }),
             STRATUM_PORT_MODAL => self.port_modal(ui, modal, cb),
             ATTEMPT_TIME_MODAL => self.attempt_modal(ui, modal, cb),
             MIN_SHARE_DIFF_MODAL => self.min_diff_modal(ui, modal, cb),
@@ -110,7 +132,7 @@ impl StratumSetup {
         ui.add_space(6.0);
 
         ui.vertical_centered(|ui| {
-            // Show loading indicator or controls to start/stop stratum server if port is available.
+            // Show loading indicator or controls to start/stop stratum server.
             if self.is_port_available && self.wallet_name.is_some() {
                 if Node::is_stratum_starting() || Node::is_stratum_stopping() {
                     ui.vertical_centered(|ui| {
@@ -150,29 +172,31 @@ impl StratumSetup {
                 );
             }
             ui.add_space(8.0);
+            View::horizontal_line(ui, Colors::item_stroke());
+            ui.add_space(8.0);
+
+            // Show wallet name.
+            ui.label(RichText::new(self.wallet_name.as_ref().unwrap_or(&"-".to_string()))
+                .size(16.0)
+                .color(Colors::white_or_black(true)));
+            ui.add_space(8.0);
+
+            // Show button to select wallet.
+            View::button(ui, t!("network_settings.choose_wallet"), Colors::button(), || {
+                self.show_wallets_modal();
+            });
+            ui.add_space(12.0);
+
+            if self.wallet_name.is_some() {
+                ui.label(RichText::new(t!("network_settings.stratum_wallet_warning"))
+                    .size(16.0)
+                    .color(Colors::inactive_text())
+                );
+                ui.add_space(12.0);
+            }
+            View::horizontal_line(ui, Colors::item_stroke());
+            ui.add_space(6.0);
         });
-
-        View::horizontal_line(ui, Colors::item_stroke());
-        ui.add_space(6.0);
-
-        // Show wallet name.
-        ui.add_space(2.0);
-        ui.label(RichText::new(t!("wallets.wallet"))
-            .size(16.0)
-            .color(Colors::gray()));
-        ui.add_space(2.0);
-        ui.label(RichText::new(self.wallet_name.as_ref().unwrap_or(&"-".to_string()))
-            .size(16.0)
-            .color(Colors::white_or_black(true)));
-        ui.add_space(8.0);
-
-        View::button(ui, t!("network_settings.choose_wallet"), Colors::button(), || {
-            //TODO: select wallet
-        });
-
-        ui.add_space(12.0);
-        View::horizontal_line(ui, Colors::item_stroke());
-        ui.add_space(6.0);
 
         // Show message when IP addresses are not available on the system.
         if self.available_ips.is_empty() {
@@ -208,6 +232,16 @@ impl StratumSetup {
             // Show minimum acceptable share difficulty setup.
             self.min_diff_ui(ui, cb);
         });
+    }
+
+    /// Show wallet selection [`Modal`].
+    fn show_wallets_modal(&mut self) {
+        self.wallets_modal = WalletsModal::new(NodeConfig::get_stratum_wallet_id());
+        // Show modal.
+        Modal::new(WALLET_SELECTION_MODAL)
+            .position(ModalPosition::Center)
+            .title(t!("network_settings.choose_wallet"))
+            .show();
     }
 
     /// Draw stratum port value setup content.

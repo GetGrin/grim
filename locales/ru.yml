@@ -227,6 +227,7 @@ network_settings:
   port_unavailable: Указанный порт недоступен
   restart_node_required: Для применения изменений требуется перезапуск узла.
   choose_wallet: Выбрать кошелёк
+  stratum_wallet_warning: Кошелёк должен быть открыт для получения наград.
   enable: Включить
   disable: Выключить
   restart: Перезапуск

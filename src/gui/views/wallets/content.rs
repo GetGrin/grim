@@ -53,6 +53,8 @@ pub struct WalletsContent {
     modal_ids: Vec<&'static str>
 }
 
+/// Identifier for connection selection [`Modal`].
+const CONNECTION_SELECTION_MODAL: &'static str = "wallets_connection_selection_modal";
 /// Identifier for wallet opening [`Modal`].
 const OPEN_WALLET_MODAL: &'static str = "open_wallet_modal";
 
@@ -69,7 +71,7 @@ impl Default for WalletsContent {
             modal_ids: vec![
                 OPEN_WALLET_MODAL,
                 WalletCreation::NAME_PASS_MODAL,
-                WalletConnectionModal::ID,
+                CONNECTION_SELECTION_MODAL,
             ]
         }
     }
@@ -89,7 +91,7 @@ impl ModalContainer for WalletsContent {
             WalletCreation::NAME_PASS_MODAL => {
                 self.creation_content.name_pass_modal_ui(ui, modal, cb)
             },
-            WalletConnectionModal::ID => {
+            CONNECTION_SELECTION_MODAL => {
                 if let Some(content) = self.conn_modal_content.as_mut() {
                     content.ui(ui, modal, cb, |id| {
                         let list = self.wallets.list();
@@ -415,9 +417,6 @@ impl WalletsContent {
         ui.painter().rect(rect, rounding, bg, stroke);
 
         ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
-            // Setup padding for item buttons.
-            ui.style_mut().spacing.button_padding = egui::vec2(14.0, 0.0);
-
             if !wallet.is_open() {
                 // Show button to open closed wallet.
                 View::item_button(ui, View::item_rounding(0, 1, true), FOLDER_OPEN, None, || {
@@ -520,7 +519,7 @@ impl WalletsContent {
         let ext_conn = wallet.get_current_ext_conn();
         self.conn_modal_content = Some(WalletConnectionModal::new(ext_conn));
         // Show modal.
-        Modal::new(WalletConnectionModal::ID)
+        Modal::new(CONNECTION_SELECTION_MODAL)
             .position(ModalPosition::CenterTop)
             .title(t!("wallets.conn_method"))
             .show();
