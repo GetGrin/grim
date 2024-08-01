@@ -134,7 +134,7 @@ impl StratumSetup {
 
         ui.vertical_centered(|ui| {
             // Show loading indicator or controls to start/stop stratum server.
-            if Node::get_sync_status().unwrap() == SyncStatus::NoSync &&
+            if Node::get_sync_status().unwrap_or(SyncStatus::Initial) == SyncStatus::NoSync &&
                 self.is_port_available && self.wallet_name.is_some() {
                 if Node::is_stratum_starting() || Node::is_stratum_stopping() {
                     ui.vertical_centered(|ui| {
@@ -147,6 +147,8 @@ impl StratumSetup {
                     let disable_text = format!("{} {}", POWER, t!("network_settings.disable"));
                     View::action_button(ui, disable_text, || {
                         Node::stop_stratum();
+                        let (ip, port) = NodeConfig::get_stratum_address();
+                        self.is_port_available = NodeConfig::is_stratum_port_available(&ip, &port);
                     });
                     ui.add_space(6.0);
                 } else {

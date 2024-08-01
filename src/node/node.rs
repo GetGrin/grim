@@ -616,10 +616,15 @@ pub fn start_stratum_mining_server(server: &Server, config: StratumServerConfig)
     );
     let stop_state = NODE_STATE.stratum_stop_state.clone();
     stop_state.reset();
-    let _ = thread::Builder::new()
-        .name("stratum_server".to_string())
-        .spawn(move || {
+    let server_state = stop_state.clone();
+    thread::spawn(move || {
             stratum_server.run_loop(proof_size, sync_state, stop_state);
+            server_state.reset();
+            // Reset stratum stats.
+            {
+                let mut w_stratum_stats = NODE_STATE.stratum_stats.write();
+                *w_stratum_stats = StratumStats::default();
+            }
         });
 }
 

@@ -84,7 +84,7 @@ pub fn get_block(
     while let Err(e) = result {
         let mut new_key_id = key_id.to_owned();
         match e {
-            self::Error::Chain(c) => match c {
+            Error::Chain(c) => match c {
                 grin_chain::Error::DuplicateCommitment(_) => {
                     debug!(
 						"Duplicate commit for potential coinbase detected. Trying next derivation."
@@ -93,10 +93,10 @@ pub fn get_block(
                     new_key_id = None;
                 }
                 _ => {
-                    error!("Chain Error: {}", c);
+                    error!("Chain Error: {:?}", c);
                 }
             },
-            self::Error::WalletComm(_) => {
+            Error::WalletComm(_) => {
                 error!(
 					"Error building new block: Can't connect to wallet listener at {:?}; will retry",
 					wallet_listener_url.as_ref().unwrap()
@@ -233,11 +233,11 @@ fn burn_reward(block_fees: BlockFees) -> Result<(Output, TxKernel, BlockFees), E
 fn get_coinbase(
     wallet_listener_url: Option<String>,
     block_fees: BlockFees,
-) -> Result<(core::Output, core::TxKernel, BlockFees), Error> {
-    match wallet_listener_url {
+) -> Result<(Output, TxKernel, BlockFees), Error> {
+    return match wallet_listener_url {
         None => {
             // Burn it
-            return burn_reward(block_fees);
+            burn_reward(block_fees)
         }
         Some(wallet_listener_url) => {
             let res = create_coinbase(&wallet_listener_url, &block_fees)?;
@@ -245,12 +245,12 @@ fn get_coinbase(
             let kernel = res.kernel;
             let key_id = res.key_id;
             let block_fees = BlockFees {
-                key_id: key_id,
+                key_id,
                 ..block_fees
             };
 
             debug!("get_coinbase: {:?}", block_fees);
-            return Ok((output, kernel, block_fees));
+            Ok((output, kernel, block_fees))
         }
     }
 }
@@ -273,7 +273,7 @@ fn create_coinbase(dest: &str, block_fees: &BlockFees) -> Result<CbData, Error> 
     let timeout = grin_api::client::TimeOut::default();
     let res: String = grin_api::client::send_request(req, timeout).map_err(|e| {
         let report = format!(
-            "Failed to get coinbase from {}. Is the wallet listening? {}",
+            "Failed to get coinbase from {}. Is the wallet listening? {:?}",
             dest, e
         );
         error!("{}", report);

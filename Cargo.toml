@@ -94,7 +94,8 @@ tls-api = "0.9.0"
 tls-api-native-tls = "0.9.0"
 
 ## stratum server
-tokio-util = { version = "0.7.8", features = ["codec"] }
+tokio-old = {version = "0.2", features = ["full"], package = "tokio" }
+tokio-util-old = { version = "0.2", features = ["codec"], package = "tokio-util" }
 
 [target.'cfg(all(not(target_os = "windows"), not(target_os = "android")))'.dependencies]
 eye = { version = "0.5.0", default-features = false }
