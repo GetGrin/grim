@@ -9,7 +9,7 @@ keywords = [ "crypto", "grin", "mimblewimble" ]
 edition = "2021"
 
 [[bin]]
-name = "grim-bin"
+name = "grim"
 path = "src/main.rs"
 
 [lib]

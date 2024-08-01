@@ -21,7 +21,7 @@ To build and run application go to project directory and run:
 
 ```
 cargo build --release
-./target/release/grim-bin
+./target/release/grim
 ```
 
 ### Android
