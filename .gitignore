@@ -12,7 +12,7 @@ android/keystore.properties
 target
 .cargo/
 app/src/main/jniLibs
-macos/Grim.app/Contents/MacOS/grim-bin
+macos/Grim.app/Contents/MacOS/grim
 macos/cert.pem
 linux/Grim.AppDir/AppRun
 .intentionally-empty-file.o

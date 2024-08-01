@@ -40,7 +40,7 @@ rm -rf target/aarch64-apple-darwin
 cargo install cargo-zigbuild@0.18.4
 cargo zigbuild --release --target ${arch}
 rm -rf .intentionally-empty-file.o
-yes | cp -rf target/${arch}/release/grim-bin macos/Grim.app/Contents/MacOS
+yes | cp -rf target/${arch}/release/grim macos/Grim.app/Contents/MacOS
 
 ### Sign .app resources:
 #rcodesign generate-self-signed-certificate

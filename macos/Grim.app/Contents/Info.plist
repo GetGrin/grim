@@ -9,7 +9,7 @@
         <string>Grim</string>
 
         <key>CFBundleExecutable</key>
-        <string>grim-bin</string>
+        <string>grim</string>
 
         <key>CFBundleIconFile</key>
         <string>AppIcon</string>

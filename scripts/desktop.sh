@@ -21,5 +21,5 @@ cargo build ${release_param[@]}
 # Start application
 if [ $? -eq 0 ]
 then
-  ./target/${type}/grim-bin
+  ./target/${type}/grim
 fi
