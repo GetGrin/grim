@@ -19,7 +19,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::str::FromStr;
 use std::sync::Arc;
-use std::thread;
+use std::{fs, thread};
 use std::time::Duration;
 
 use arti_client::config::{CfgPath, TorClientConfigBuilder};
@@ -83,10 +83,18 @@ impl Default for Tor {
     fn default() -> Self {
         let runtime = TokioNativeTlsRuntime::create().unwrap();
         let config = Self::build_config();
-        let client = TorClient::with_runtime(runtime)
+        let client = if let Ok(c) = TorClient::with_runtime(runtime)
             .config(config.clone())
-            .create_unbootstrapped()
-            .unwrap();
+            .create_unbootstrapped() {
+            c
+        } else {
+            fs::remove_dir_all(TorConfig::state_path()).unwrap();
+            fs::remove_dir_all(TorConfig::cache_path()).unwrap();
+            let runtime = TokioNativeTlsRuntime::create().unwrap();
+            TorClient::with_runtime(runtime)
+                .config(config.clone())
+                .create_unbootstrapped().unwrap()
+        };
         Self {
             running_services: Arc::new(RwLock::new(BTreeMap::new())),
             starting_services: Arc::new(RwLock::new(BTreeSet::new())),
