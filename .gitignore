@@ -2,6 +2,7 @@
 android/.gradle
 android/local.properties
 android/keystore
+android/keystore.asc
 android/keystore.properties
 /.idea
 .DS_Store
