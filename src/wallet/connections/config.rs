@@ -33,7 +33,7 @@ impl ConnectionsConfig {
 
     /// Initialize configuration for provided [`ChainTypes`].
     pub fn for_chain_type(chain_type: &ChainTypes) -> Self {
-        let path = Settings::get_config_path(Self::FILE_NAME, Some(chain_type.shortname()));
+        let path = Settings::config_path(Self::FILE_NAME, Some(chain_type.shortname()));
         let parsed = Settings::read_from_file::<ConnectionsConfig>(path.clone());
         if !path.exists() || parsed.is_err() {
             let default_config = ConnectionsConfig {
@@ -57,7 +57,7 @@ impl ConnectionsConfig {
     pub fn save(&self) {
         let chain_type = AppConfig::chain_type();
         let sub_dir = Some(chain_type.shortname());
-        Settings::write_to_file(self, Settings::get_config_path(Self::FILE_NAME, sub_dir));
+        Settings::write_to_file(self, Settings::config_path(Self::FILE_NAME, sub_dir));
     }
 
     /// Get [`ExternalConnection`] list.

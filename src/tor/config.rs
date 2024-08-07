@@ -61,12 +61,12 @@ impl TorConfig {
 
     /// Save application configuration to the file.
     pub fn save(&self) {
-        Settings::write_to_file(self, Settings::get_config_path(Self::FILE_NAME, None));
+        Settings::write_to_file(self, Settings::config_path(Self::FILE_NAME, None));
     }
 
     /// Get path from subdirectory name.
     fn sub_dir_path(name: &str) -> String {
-        let mut base = Settings::get_base_path(Some(Self::DIR_NAME.to_string()));
+        let mut base = Settings::base_path(Some(Self::DIR_NAME.to_string()));
         base.push(name);
         base.to_str().unwrap().to_string()
     }

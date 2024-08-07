@@ -26,6 +26,8 @@ theme: 'Tema:'
 dark: Karanlik
 light: Isik
 choose_file: Dosya seçin
+crash_report: Ariza Raporu
+crash_report_warning: Uygulama beklenmedik bir sekilde kapandi son kez, kilitlenme raporunu gelistiricilerle paylasabilirsiniz.
 wallets:
   await_conf_amount: Onay bekleniyor
   await_fin_amount: Tamamlanma bekleniyor

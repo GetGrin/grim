@@ -26,6 +26,8 @@ theme: 'Thème:'
 dark: Sombre
 light: Clair
 choose_file: Choisir un fichier
+crash_report: Rapport d'échec
+crash_report_warning: L'application s'est fermée de manière inattendue la dernière fois, vous pouvez partager un rapport d'incident avec les développeurs.
 wallets:
   await_conf_amount: En attente de confirmation
   await_fin_amount: En attente de finalisation

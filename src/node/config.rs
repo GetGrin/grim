@@ -47,7 +47,7 @@ impl PeersConfig {
     /// Save peers config to the file.
     pub fn save(&self) {
         let chain_type = AppConfig::chain_type();
-        let config_path = Settings::get_config_path(Self::FILE_NAME, Some(chain_type.shortname()));
+        let config_path = Settings::config_path(Self::FILE_NAME, Some(chain_type.shortname()));
         Settings::write_to_file(self, config_path);
         // Load changes to node server config.
         Self::load_to_server_config();
@@ -149,7 +149,7 @@ impl NodeConfig {
         // Initialize peers config.
         let peers_config = {
             let sub_dir = Some(chain_type.shortname());
-            let path = Settings::get_config_path(PeersConfig::FILE_NAME, sub_dir);
+            let path = Settings::config_path(PeersConfig::FILE_NAME, sub_dir);
             let config = Settings::read_from_file::<PeersConfig>(path.clone());
             if !path.exists() || config.is_err() {
                 Self::save_default_peers_config(chain_type)
@@ -161,7 +161,7 @@ impl NodeConfig {
         // Initialize node config.
         let node_config = {
             let sub_dir = Some(chain_type.shortname());
-            let path = Settings::get_config_path(SERVER_CONFIG_FILE_NAME, sub_dir);
+            let path = Settings::config_path(SERVER_CONFIG_FILE_NAME, sub_dir);
             let config = Settings::read_from_file::<ConfigMembers>(path.clone());
             if !path.exists() || config.is_err() {
                 Self::save_default_node_server_config(chain_type)
@@ -176,10 +176,10 @@ impl NodeConfig {
     /// Save default node config for specified [`ChainTypes`].
     fn save_default_node_server_config(chain_type: &ChainTypes) -> ConfigMembers {
         let sub_dir = Some(chain_type.shortname());
-        let path = Settings::get_config_path(SERVER_CONFIG_FILE_NAME, sub_dir.clone());
+        let path = Settings::config_path(SERVER_CONFIG_FILE_NAME, sub_dir.clone());
 
         let mut default_config = GlobalConfig::for_chain(chain_type);
-        default_config.update_paths(&Settings::get_base_path(sub_dir));
+        default_config.update_paths(&Settings::base_path(sub_dir));
         let mut config = default_config.members.unwrap();
 
         // Generate random p2p and api ports.
@@ -214,7 +214,7 @@ impl NodeConfig {
     /// Save default peers config for specified [`ChainTypes`].
     fn save_default_peers_config(chain_type: &ChainTypes) -> PeersConfig {
         let sub_dir = Some(chain_type.shortname());
-        let path = Settings::get_config_path(PeersConfig::FILE_NAME, sub_dir);
+        let path = Settings::config_path(PeersConfig::FILE_NAME, sub_dir);
         let config = PeersConfig::default();
         Settings::write_to_file(&config, path);
         config
@@ -223,7 +223,7 @@ impl NodeConfig {
     /// Save node config to the file.
     pub fn save(&self) {
         let sub_dir = Some(self.node.server.chain_type.shortname());
-        let config_path = Settings::get_config_path(SERVER_CONFIG_FILE_NAME, sub_dir);
+        let config_path = Settings::config_path(SERVER_CONFIG_FILE_NAME, sub_dir);
         Settings::write_to_file(&self.node, config_path);
     }
 
@@ -264,7 +264,7 @@ impl NodeConfig {
     /// Get path for secret file.
     fn get_secret_path(chain_type: &ChainTypes, secret_file_name: &str) -> PathBuf {
         let sub_dir = Some(chain_type.shortname());
-        let grin_path = Settings::get_base_path(sub_dir);
+        let grin_path = Settings::base_path(sub_dir);
         let mut api_secret_path = grin_path;
         api_secret_path.push(secret_file_name);
         api_secret_path

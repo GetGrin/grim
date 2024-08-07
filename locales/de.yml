@@ -26,6 +26,8 @@ theme: 'Theme:'
 dark: Dunkel
 light: Hell
 choose_file: Datei auswählen
+crash_report: Absturzbericht
+crash_report_warning: Anwendung wurde beim letzten Mal unerwartet geschlossen, Sie können den Absturzbericht mit Entwicklern teilen.
 wallets:
   await_conf_amount: Erwarte Bestätigung
   await_fin_amount: Warten auf die Fertigstellung

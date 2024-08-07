@@ -125,7 +125,7 @@ impl WalletConfig {
     /// Get wallets base directory path for provided [`ChainTypes`].
     pub fn get_base_path(chain_type: ChainTypes) -> PathBuf {
         let sub_dir = Some(chain_type.shortname());
-        let mut wallets_path = Settings::get_base_path(sub_dir);
+        let mut wallets_path = Settings::base_path(sub_dir);
         wallets_path.push(BASE_DIR_NAME);
         // Create wallets base directory if it doesn't exist.
         if !wallets_path.exists() {

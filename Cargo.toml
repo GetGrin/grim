@@ -16,6 +16,9 @@ path = "src/main.rs"
 name="grim"
 crate-type = ["rlib"]
 
+[profile.release]
+debug = 1
+
 [profile.release-apk]
 inherits = "release"
 strip = true
@@ -51,6 +54,8 @@ egui_extras = { version = "0.28.1", features = ["image", "svg"] }
 rust-i18n = "2.3.1"
 
 ## other
+backtrace = "0.3"
+panic-message = "0.3.0"
 thiserror = "1.0.58"
 futures = "0.3"
 dirs = "5.0.1"

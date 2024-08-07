@@ -49,6 +49,9 @@ pub struct AppConfig {
 
     /// Flag to check if dark theme should be used, use system settings if not set.
     use_dark_theme: Option<bool>,
+
+    /// Flag to show crash report when happened.
+    show_crash: Option<bool>
 }
 
 impl Default for AppConfig {
@@ -65,6 +68,7 @@ impl Default for AppConfig {
             y: None,
             lang: None,
             use_dark_theme: None,
+            show_crash: None,
         }
     }
 }
@@ -89,7 +93,7 @@ impl AppConfig {
 
     /// Save application configuration to the file.
     pub fn save(&self) {
-        Settings::write_to_file(self, Settings::get_config_path(Self::FILE_NAME, None));
+        Settings::write_to_file(self, Settings::config_path(Self::FILE_NAME, None));
     }
 
     /// Change global [`ChainTypes`] and load new [`NodeConfig`].
@@ -239,6 +243,19 @@ impl AppConfig {
     pub fn set_dark_theme(use_dark: bool) {
         let mut w_config = Settings::app_config_to_update();
         w_config.use_dark_theme = Some(use_dark);
+        w_config.save();
+    }
+
+    /// Check if crash report should be shown on application start.
+    pub fn show_crash() -> bool {
+        let r_config = Settings::app_config_to_read();
+        r_config.show_crash.unwrap_or(false)
+    }
+
+    /// Setup flag to show crash report on application start.
+    pub fn set_show_crash(show: bool) {
+        let mut w_config = Settings::app_config_to_update();
+        w_config.show_crash = Some(show);
         w_config.save();
     }
 }

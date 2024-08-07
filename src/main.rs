@@ -29,19 +29,41 @@ fn real_main() {
         .parse_default_env()
         .init();
 
-    use grim::gui::platform::Desktop;
-    use grim::gui::App;
+    // Setup callback on panic crash.
+    std::panic::set_hook(Box::new(|info| {
+        let backtrace = backtrace::Backtrace::new();
+        // Format error.
+        let time = grim::gui::views::View::format_time(chrono::Utc::now().timestamp());
+        let target = egui::os::OperatingSystem::from_target_os();
+        let ver = grim::VERSION;
+        let msg = panic_message::panic_info_message(info);
+        let err = format!("{} - {:?} - v{}\n\n{}\n\n{:?}", time, target, ver, msg, backtrace);
+        // Save backtrace to file.
+        let log = grim::Settings::crash_report_path();
+        if log.exists() {
+            std::fs::remove_file(log.clone()).unwrap();
+        }
+        std::fs::write(log, err.as_bytes()).unwrap();
+        // Setup flag to show crash after app restart.
+        grim::AppConfig::set_show_crash(true);
+    }));
+
+    // Start GUI.
+    let _ = std::panic::catch_unwind(|| {
+        start_desktop_gui();
+    });
+}
+
+/// Start GUI with Desktop related setup.
+#[allow(dead_code)]
+#[cfg(not(target_os = "android"))]
+fn start_desktop_gui() {
     use grim::AppConfig;
+    use dark_light::Mode;
 
-    use std::sync::Arc;
-    use egui::pos2;
-    use egui::os::OperatingSystem;
-    use eframe::icon_data::from_png_bytes;
-
-    let platform = Desktop::default();
+    let platform = grim::gui::platform::Desktop::default();
 
     // Setup system theme if not set.
-    use dark_light::Mode;
     if let None = AppConfig::dark_theme() {
         let dark = match dark_light::detect() {
             Mode::Dark => true,
@@ -57,49 +79,46 @@ fn real_main() {
     let mut viewport = egui::ViewportBuilder::default()
         .with_min_inner_size([AppConfig::MIN_WIDTH, AppConfig::MIN_HEIGHT])
         .with_inner_size([width, height]);
-
     // Setup an icon.
-    if let Ok(icon) = from_png_bytes(include_bytes!("../img/icon.png")) {
-        viewport = viewport.with_icon(Arc::new(icon));
+    if let Ok(icon) = eframe::icon_data::from_png_bytes(include_bytes!("../img/icon.png")) {
+        viewport = viewport.with_icon(std::sync::Arc::new(icon));
     }
-
     // Setup window position.
     if let Some((x, y)) = AppConfig::window_pos() {
-        viewport = viewport.with_position(pos2(x, y));
+        viewport = viewport.with_position(egui::pos2(x, y));
     }
-
     // Setup window decorations.
-    let is_mac_os = OperatingSystem::from_target_os() == OperatingSystem::Mac;
+    let is_mac = egui::os::OperatingSystem::from_target_os() == egui::os::OperatingSystem::Mac;
     viewport = viewport
         .with_fullsize_content_view(true)
         .with_title_shown(false)
         .with_titlebar_buttons_shown(false)
         .with_titlebar_shown(false)
         .with_transparent(true)
-        .with_decorations(is_mac_os);
+        .with_decorations(is_mac);
 
     let mut options = eframe::NativeOptions {
         viewport,
         ..Default::default()
     };
-
     // Use Glow renderer for Windows.
-    let is_windows = OperatingSystem::from_target_os() == OperatingSystem::Windows;
-    options.renderer = if is_windows {
+    let win = egui::os::OperatingSystem::from_target_os() == egui::os::OperatingSystem::Windows;
+    options.renderer = if win {
         eframe::Renderer::Glow
     } else {
         eframe::Renderer::Wgpu
     };
 
-    match grim::start(options.clone(), grim::app_creator(App::new(platform.clone()))) {
+    // Start GUI.
+    match grim::start(options.clone(), grim::app_creator(grim::gui::App::new(platform.clone()))) {
         Ok(_) => {}
         Err(e) => {
-            if is_windows {
+            if win {
                 panic!("{}", e);
             }
             // Start with another renderer on error.
             options.renderer = eframe::Renderer::Glow;
-            match grim::start(options, grim::app_creator(App::new(platform))) {
+            match grim::start(options, grim::app_creator(grim::gui::App::new(platform))) {
                 Ok(_) => {}
                 Err(e) => {
                     panic!("{}", e);

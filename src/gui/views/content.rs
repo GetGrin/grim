@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::fs;
 use std::sync::atomic::{AtomicBool, Ordering};
 use egui::os::OperatingSystem;
 use egui::{Align, Layout, RichText};
@@ -20,10 +21,10 @@ use lazy_static::lazy_static;
 use crate::gui::Colors;
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, View};
-use crate::gui::views::types::ModalContainer;
+use crate::gui::views::types::{ModalContainer, ModalPosition};
 use crate::node::Node;
-use crate::AppConfig;
-use crate::gui::icons::{CHECK, CHECK_FAT};
+use crate::{AppConfig, Settings};
+use crate::gui::icons::{CHECK, CHECK_FAT, FILE_X};
 use crate::gui::views::network::{NetworkContent, NodeSetup};
 use crate::gui::views::wallets::WalletsContent;
 
@@ -63,9 +64,10 @@ impl Default for Content {
             show_exit_progress: false,
             first_draw: true,
             allowed_modal_ids: vec![
-                Self::EXIT_MODAL_ID,
+                Self::EXIT_CONFIRMATION_MODAL,
                 Self::SETTINGS_MODAL,
                 Self::ANDROID_INTEGRATED_NODE_WARNING_MODAL,
+                Self::CRASH_REPORT_MODAL
             ],
         }
     }
@@ -79,11 +81,12 @@ impl ModalContainer for Content {
     fn modal_ui(&mut self,
                 ui: &mut egui::Ui,
                 modal: &Modal,
-                _: &dyn PlatformCallbacks) {
+                cb: &dyn PlatformCallbacks) {
         match modal.id {
-            Self::EXIT_MODAL_ID => self.exit_modal_content(ui, modal),
+            Self::EXIT_CONFIRMATION_MODAL => self.exit_modal_content(ui, modal),
             Self::SETTINGS_MODAL => self.settings_modal_ui(ui, modal),
             Self::ANDROID_INTEGRATED_NODE_WARNING_MODAL => self.android_warning_modal_ui(ui, modal),
+            Self::CRASH_REPORT_MODAL => self.crash_report_modal_ui(ui, modal, cb),
             _ => {}
         }
     }
@@ -91,12 +94,13 @@ impl ModalContainer for Content {
 
 impl Content {
     /// Identifier for exit confirmation [`Modal`].
-    pub const EXIT_MODAL_ID: &'static str = "exit_confirmation_modal";
+    pub const EXIT_CONFIRMATION_MODAL: &'static str = "exit_confirmation_modal";
     /// Identifier for wallet opening [`Modal`].
     pub const SETTINGS_MODAL: &'static str = "settings_modal";
-
     /// Identifier for integrated node warning [`Modal`] on Android.
     const ANDROID_INTEGRATED_NODE_WARNING_MODAL: &'static str = "android_node_warning_modal";
+    /// Identifier for crash report [`Modal`].
+    const CRASH_REPORT_MODAL: &'static str = "crash_report_modal";
 
     /// Default width of side panel at application UI.
     pub const SIDE_PANEL_WIDTH: f32 = 400.0;
@@ -132,16 +136,23 @@ impl Content {
                 self.wallets.ui(ui, cb);
             });
 
-        // Show integrated node warning on Android if needed.
-        if self.first_draw && OperatingSystem::from_target_os() == OperatingSystem::Android &&
-            AppConfig::android_integrated_node_warning_needed() {
-            Modal::new(Self::ANDROID_INTEGRATED_NODE_WARNING_MODAL)
-                .title(t!("network.node"))
-                .show();
-        }
-
-        // Setup first draw flag.
         if self.first_draw {
+            // Show crash report if needed.
+            if AppConfig::show_crash() {
+                Modal::new(Self::CRASH_REPORT_MODAL)
+                    .closeable(false)
+                    .position(ModalPosition::Center)
+                    .title(t!("crash_report"))
+                    .show();
+            } else {
+                // Show integrated node warning on Android if needed.
+                if OperatingSystem::from_target_os() == OperatingSystem::Android &&
+                    AppConfig::android_integrated_node_warning_needed() {
+                    Modal::new(Self::ANDROID_INTEGRATED_NODE_WARNING_MODAL)
+                        .title(t!("network.node"))
+                        .show();
+                }
+            }
             self.first_draw = false;
         }
     }
@@ -187,9 +198,9 @@ impl Content {
         NETWORK_PANEL_OPEN.load(Ordering::Relaxed)
     }
 
-    /// Show exit confirmation modal.
+    /// Show exit confirmation [`Modal`].
     pub fn show_exit_modal() {
-        Modal::new(Self::EXIT_MODAL_ID)
+        Modal::new(Self::EXIT_CONFIRMATION_MODAL)
             .title(t!("modal.confirmation"))
             .show();
     }
@@ -383,13 +394,47 @@ impl Content {
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network.android_warning"))
-                .size(15.0)
+                .size(16.0)
                 .color(Colors::text(false)));
         });
         ui.add_space(8.0);
         ui.vertical_centered_justified(|ui| {
             View::button(ui, t!("continue"), Colors::white_or_black(false), || {
                 AppConfig::show_android_integrated_node_warning();
+                modal.close();
+            });
+        });
+        ui.add_space(6.0);
+    }
+
+    /// Draw content for integrated node warning [`Modal`] on Android.
+    fn crash_report_modal_ui(&mut self,
+                             ui: &mut egui::Ui,
+                             modal: &Modal,
+                             cb: &dyn PlatformCallbacks) {
+        ui.add_space(6.0);
+        ui.vertical_centered(|ui| {
+            ui.label(RichText::new(t!("crash_report_warning"))
+                .size(16.0)
+                .color(Colors::text(false)));
+            ui.add_space(6.0);
+            // Draw button to share crash report.
+            let text = format!("{} {}", FILE_X, t!("share"));
+            View::colored_text_button(ui, text, Colors::blue(), Colors::white_or_black(false), || {
+                if let Ok(data) = fs::read_to_string(Settings::crash_report_path()) {
+                    cb.share_data(Settings::CRASH_REPORT_FILE_NAME.to_string(),
+                                  data.as_bytes().to_vec()).unwrap_or_default()
+                }
+                AppConfig::set_show_crash(false);
+                modal.close();
+            });
+        });
+        ui.add_space(8.0);
+        View::horizontal_line(ui, Colors::item_stroke());
+        ui.add_space(8.0);
+        ui.vertical_centered_justified(|ui| {
+            View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
+                AppConfig::set_show_crash(false);
                 modal.close();
             });
         });

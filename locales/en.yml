@@ -26,6 +26,8 @@ theme: 'Theme:'
 dark: Dark
 light: Light
 choose_file: Choose file
+crash_report: Crash report
+crash_report_warning: Application closed unexpectedly last time, you can share crash report with developers.
 wallets:
   await_conf_amount: Awaiting confirmation
   await_fin_amount: Awaiting finalization

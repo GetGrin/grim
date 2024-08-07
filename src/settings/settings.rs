@@ -33,9 +33,6 @@ lazy_static! {
     static ref SETTINGS_STATE: Arc<Settings> = Arc::new(Settings::init());
 }
 
-/// Main application directory name.
-const MAIN_DIR_NAME: &'static str = ".grim";
-
 /// Contains initialized configurations.
 pub struct Settings {
     /// Application configuration.
@@ -49,14 +46,20 @@ pub struct Settings {
 }
 
 impl Settings {
+    /// Main application directory name.
+    pub const MAIN_DIR_NAME: &'static str = ".grim";
+
+    /// Crash report file name.
+    pub const CRASH_REPORT_FILE_NAME: &'static str = "crash.log";
+
     /// Initialize settings with app and node configs.
     fn init() -> Self {
         // Initialize app config.
-        let app_config_path = Settings::get_config_path(AppConfig::FILE_NAME, None);
+        let app_config_path = Settings::config_path(AppConfig::FILE_NAME, None);
         let app_config = Self::init_config::<AppConfig>(app_config_path);
 
         // Initialize tor config.
-        let tor_config_path = Settings::get_config_path(TorConfig::FILE_NAME, None);
+        let tor_config_path = Settings::config_path(TorConfig::FILE_NAME, None);
         let tor_config = Self::init_config::<TorConfig>(tor_config_path);
 
         let chain_type = &app_config.chain_type;
@@ -121,13 +124,13 @@ impl Settings {
     }
 
     /// Get base directory path for configuration.
-    pub fn get_base_path(sub_dir: Option<String>) -> PathBuf {
+    pub fn base_path(sub_dir: Option<String>) -> PathBuf {
         // Check if dir exists.
         let mut path = match dirs::home_dir() {
             Some(p) => p,
             None => PathBuf::new(),
         };
-        path.push(MAIN_DIR_NAME);
+        path.push(Self::MAIN_DIR_NAME);
         if sub_dir.is_some() {
             path.push(sub_dir.unwrap());
         }
@@ -139,10 +142,17 @@ impl Settings {
     }
 
     /// Get configuration file path from provided name and sub-directory if needed.
-    pub fn get_config_path(config_name: &str, sub_dir: Option<String>) -> PathBuf {
-        let mut settings_path = Self::get_base_path(sub_dir);
-        settings_path.push(config_name);
-        settings_path
+    pub fn config_path(config_name: &str, sub_dir: Option<String>) -> PathBuf {
+        let mut path = Self::base_path(sub_dir);
+        path.push(config_name);
+        path
+    }
+
+    /// Get configuration file path from provided name and sub-directory if needed.
+    pub fn crash_report_path() -> PathBuf {
+        let mut path = Self::base_path(None);
+        path.push(Self::CRASH_REPORT_FILE_NAME);
+        path
     }
 
     /// Read configuration from the file.
