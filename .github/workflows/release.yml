@@ -63,6 +63,7 @@ jobs:
         working-directory: android
         run: |
           rm -rf app/build
+          rm -rf app/src/main/jniLibs/*
           ./gradlew assembleRelease
           mv app/build/outputs/apk/release/app-release.apk grim-${{ github.ref_name }}-android-armv7.apk
       - name: Checksum APK ARMv7
@@ -82,6 +83,7 @@ jobs:
         working-directory: android
         run: |
           rm -rf app/build
+          rm -rf app/src/main/jniLibs/*
           ./gradlew assembleRelease
           mv app/build/outputs/apk/release/app-release.apk grim-${{ github.ref_name }}-android-x86_64.apk
       - name: Checksum APK x86
