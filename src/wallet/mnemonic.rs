@@ -55,15 +55,9 @@ impl Mnemonic {
         self.confirm_words = Self::empty_words(&self.size);
     }
 
-    /// Check if provided word is in BIP39 format and equal to non-empty generated word at index.
-    pub fn is_valid_word(&self, word: &String, index: usize) -> bool {
-        let valid = search(word).is_ok();
-        let equal = if let Some(gen_word) = self.words.get(index) {
-            gen_word.is_empty() || gen_word == word
-        } else {
-            false
-        };
-        valid && equal
+    /// Check if provided word is in BIP39 format.
+    pub fn is_valid_word(&self, word: &String) -> bool {
+        search(word).is_ok()
     }
 
     /// Check if current phrase is valid.
@@ -116,12 +110,12 @@ impl Mnemonic {
                 return;
             }
             let mut words = vec![];
-            words_split.enumerate().for_each(|(i, word)| {
-                if confirmation && !self.is_valid_word(&word.to_string(), i) {
+            words_split.for_each(|word| {
+                if confirmation && !self.is_valid_word(&word.to_string()) {
                     words = vec![];
                     return;
                 }
-                words.insert(i, word.to_string())
+                words.push(word.to_string())
             });
             if confirmation {
                 if !words.is_empty() {

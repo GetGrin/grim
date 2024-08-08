@@ -261,6 +261,7 @@ impl MnemonicSetup {
     /// Reset mnemonic phrase to default values.
     pub fn reset(&mut self) {
         self.mnemonic = Mnemonic::default();
+        self.valid_phrase = true;
     }
 
     /// Draw word input [`Modal`] content.
@@ -307,8 +308,7 @@ impl MnemonicSetup {
                         self.word_edit = self.word_edit.trim().to_string();
 
                         // Check if word is valid.
-                        let word_index = self.word_num_edit - 1;
-                        if !self.mnemonic.is_valid_word(&self.word_edit, word_index) {
+                        if !self.mnemonic.is_valid_word(&self.word_edit) {
                             self.valid_word_edit = false;
                             return;
                         }
@@ -321,6 +321,7 @@ impl MnemonicSetup {
                         };
 
                         // Save word at list.
+                        let word_index = self.word_num_edit - 1;
                         words.remove(word_index);
                         words.insert(word_index, self.word_edit.clone());
 

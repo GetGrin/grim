@@ -43,7 +43,10 @@ pub struct WalletCreation {
     /// Mnemonic phrase setup content.
     pub(crate) mnemonic_setup: MnemonicSetup,
     /// Network setup content.
-    pub(crate) network_setup: ConnectionSettings
+    pub(crate) network_setup: ConnectionSettings,
+
+    /// Flag to check if an error occurred during wallet creation.
+    creation_error: Option<String>,
 }
 
 impl Default for WalletCreation {
@@ -54,7 +57,8 @@ impl Default for WalletCreation {
             name_edit: String::from(""),
             pass_edit: String::from(""),
             mnemonic_setup: MnemonicSetup::default(),
-            network_setup: ConnectionSettings::default()
+            network_setup: ConnectionSettings::default(),
+            creation_error: None,
         }
     }
 }
@@ -160,20 +164,32 @@ impl WalletCreation {
                         .confirm_words
                         .contains(&String::from(""));
                     (text, available)
-                },
-                Step::SetupConnection => (t!("wallets.setup_conn_desc"), true)
+                }
+                Step::SetupConnection => {
+                    (t!("wallets.setup_conn_desc"), self.creation_error.is_none())
+                }
             };
-            // Show step description.
-            ui.add_space(2.0);
-            ui.label(RichText::new(step_text).size(16.0).color(Colors::gray()));
-            ui.add_space(2.0);
-            // Show error if entered phrase is not valid.
-            if !self.mnemonic_setup.valid_phrase {
-                step_available = false;
-                ui.label(RichText::new(t!("wallets.not_valid_phrase"))
-                    .size(16.0)
-                    .color(Colors::red()));
+
+            // Show step description or error if entered phrase is not valid.
+            if self.mnemonic_setup.valid_phrase && self.creation_error.is_none() {
                 ui.add_space(2.0);
+                ui.label(RichText::new(step_text).size(16.0).color(Colors::gray()));
+                ui.add_space(2.0);
+            } else {
+                step_available = false;
+                // Show error text.
+                if let Some(err) = &self.creation_error {
+                    ui.add_space(10.0);
+                    ui.label(RichText::new(err)
+                        .size(16.0)
+                        .color(Colors::red()));
+                    ui.add_space(10.0);
+                } else {
+                    ui.label(RichText::new(&t!("wallets.not_valid_phrase"))
+                        .size(16.0)
+                        .color(Colors::red()));
+                    ui.add_space(2.0);
+                };
             }
             if step == Step::EnterMnemonic {
                 ui.add_space(4.0);
@@ -278,24 +294,29 @@ impl WalletCreation {
                     },
                     Step::SetupConnection => {
                         // Create wallet at last step.
-                        let name = self.name_edit.clone();
-                        let pass = self.pass_edit.clone();
-                        let phrase = self.mnemonic_setup.mnemonic.get_phrase();
                         let conn_method = &self.network_setup.method;
-                        let mut wallet = Wallet::create(name,
-                                                        pass.clone(),
-                                                        phrase,
-                                                        conn_method).unwrap();
-                        // Open created wallet.
-                        wallet.open(pass).unwrap();
-                        // Pass created wallet to callback.
-                        (on_create)(wallet);
-                        // Reset input data.
-                        self.step = None;
-                        self.name_edit = String::from("");
-                        self.pass_edit = String::from("");
-                        self.mnemonic_setup.reset();
-                        None
+                        match Wallet::create(&self.name_edit,
+                                                        &self.pass_edit,
+                                                        &self.mnemonic_setup.mnemonic,
+                                                        conn_method) {
+                            Ok(mut w) => {
+                                // Open created wallet.
+                                w.open(&self.pass_edit).unwrap();
+                                // Pass created wallet to callback.
+                                (on_create)(w);
+                                // Reset input data.
+                                self.step = None;
+                                self.name_edit = String::from("");
+                                self.pass_edit = String::from("");
+                                self.mnemonic_setup.reset();
+                                None
+
+                            }
+                            Err(e) => {
+                                self.creation_error = Some(format!("{:?}", e));
+                                Some(Step::SetupConnection)
+                            }
+                        }
                     }
                 }
             } else {
@@ -364,6 +385,7 @@ impl WalletCreation {
                         self.name_edit = String::from("");
                         self.pass_edit = String::from("");
                         self.mnemonic_setup.reset();
+                        self.creation_error = None;
                     },
                     Step::ConfirmMnemonic => self.step = Some(Step::EnterMnemonic),
                     Step::SetupConnection => self.step = Some(Step::EnterMnemonic)

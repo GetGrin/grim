@@ -46,7 +46,7 @@ use rand::Rng;
 use crate::AppConfig;
 use crate::node::{Node, NodeConfig};
 use crate::tor::Tor;
-use crate::wallet::{ConnectionsConfig, ExternalConnection, WalletConfig};
+use crate::wallet::{ConnectionsConfig, ExternalConnection, Mnemonic, WalletConfig};
 use crate::wallet::store::TxHeightStore;
 use crate::wallet::types::{ConnectionMethod, WalletAccount, WalletData, WalletInstance, WalletTransaction};
 
@@ -127,21 +127,21 @@ impl Wallet {
 
     /// Create new wallet.
     pub fn create(
-        name: String,
-        password: String,
-        mnemonic: String,
+        name: &String,
+        password: &String,
+        mnemonic: &Mnemonic,
         conn_method: &ConnectionMethod
     ) -> Result<Wallet, Error> {
-        let mut config = WalletConfig::create(name, conn_method);
+        let mut config = WalletConfig::create(name.clone(), conn_method);
         let w = Wallet::new(config.clone());
         {
             let instance = Self::create_wallet_instance(&mut config)?;
             let mut w_lock = instance.lock();
             let p = w_lock.lc_provider()?;
             p.create_wallet(None,
-                            Some(ZeroingString::from(mnemonic.clone())),
-                            mnemonic.len(),
-                            ZeroingString::from(password),
+                            Some(ZeroingString::from(mnemonic.get_phrase())),
+                            mnemonic.size.entropy_size(),
+                            ZeroingString::from(password.clone()),
                             false,
             )?;
         }
@@ -312,7 +312,7 @@ impl Wallet {
     }
 
     /// Open the wallet and start [`WalletData`] sync at separate thread.
-    pub fn open(&mut self, password: String) -> Result<(), Error> {
+    pub fn open(&mut self, password: &String) -> Result<(), Error> {
         if self.is_open() {
             return Err(Error::GenericError("Already opened".to_string()));
         }
@@ -334,7 +334,7 @@ impl Wallet {
             let instance = self.instance.clone().unwrap();
             let mut wallet_lock = instance.lock();
             let lc = wallet_lock.lc_provider()?;
-            match lc.open_wallet(None, ZeroingString::from(password), false, false) {
+            match lc.open_wallet(None, ZeroingString::from(password.clone()), false, false) {
                 Ok(_) => {
                     // Reset an error on opening.
                     self.set_sync_error(false);

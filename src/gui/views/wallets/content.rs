@@ -589,7 +589,7 @@ impl WalletsContent {
                         if self.pass_edit.is_empty() {
                             return;
                         }
-                        match self.wallets.open_selected(self.pass_edit.clone()) {
+                        match self.wallets.open_selected(&self.pass_edit) {
                             Ok(_) => {
                                 // Clear values.
                                 self.pass_edit = "".to_string();

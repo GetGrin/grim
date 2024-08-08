@@ -133,11 +133,11 @@ impl WalletList {
     }
 
     /// Open selected [`Wallet`].
-    pub fn open_selected(&mut self, password: String) -> Result<(), Error> {
+    pub fn open_selected(&mut self, password: &String) -> Result<(), Error> {
         let selected_id = self.selected_id.clone();
         for w in self.mut_list() {
             if Some(w.get_config().id) == selected_id {
-                return w.open(password.clone());
+                return w.open(password);
             }
         }
         Err(Error::GenericError("Wallet is not selected".to_string()))
