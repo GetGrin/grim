@@ -41,15 +41,6 @@ jobs:
         run: |
           unset CPPFLAGS && unset CFLAGS && cargo ndk -t arm64-v8a -o android/app/src/main/jniLibs build --profile release-apk
           sed -i -e 's/"cdylib","rlib"/"rlib"/g' Cargo.toml
-      - name: Build APK ARMv8
-        working-directory: android
-        run: |
-          ./gradlew assembleRelease
-          mv app/build/outputs/apk/release/app-release.apk grim-${{ github.ref_name }}-android-armv8.apk
-      - name: Checksum APK ARMv8
-        working-directory: android
-        shell: pwsh
-        run: get-filehash -algorithm sha256 grim-${{ github.ref_name }}-android-armv8.apk | Format-List |  Out-String | ForEach-Object { $_.Trim() } > grim-${{ github.ref_name }}-android-armv8-sha256sum.txt
       - name: Build lib ARMv7 1/2
         continue-on-error: true
         run: |
@@ -59,17 +50,17 @@ jobs:
         run: |
           unset CPPFLAGS && unset CFLAGS && cargo ndk -t armeabi-v7a -o android/app/src/main/jniLibs build --profile release-apk
           sed -i -e 's/"cdylib","rlib"/"rlib"/g' Cargo.toml
-      - name: Build APK ARMv7
+      - name: Build APK ARM
         working-directory: android
         run: |
           rm -rf app/build
-          rm -rf app/src/main/jniLibs/*
           ./gradlew assembleRelease
-          mv app/build/outputs/apk/release/app-release.apk grim-${{ github.ref_name }}-android-armv7.apk
-      - name: Checksum APK ARMv7
+          mv app/build/outputs/apk/release/app-release.apk grim-${{ github.ref_name }}-android.apk
+          rm -rf app/src/main/jniLibs/*
+      - name: Checksum APK ARM
         working-directory: android
         shell: pwsh
-        run: get-filehash -algorithm sha256 grim-${{ github.ref_name }}-android-armv7.apk | Format-List |  Out-String | ForEach-Object { $_.Trim() } > grim-${{ github.ref_name }}-android-armv7-sha256sum.txt
+        run: get-filehash -algorithm sha256 grim-${{ github.ref_name }}-android.apk | Format-List |  Out-String | ForEach-Object { $_.Trim() } > grim-${{ github.ref_name }}-android-sha256sum.txt
       - name: Build lib x86 1/2
         continue-on-error: true
         run: |
@@ -83,7 +74,6 @@ jobs:
         working-directory: android
         run: |
           rm -rf app/build
-          rm -rf app/src/main/jniLibs/*
           ./gradlew assembleRelease
           mv app/build/outputs/apk/release/app-release.apk grim-${{ github.ref_name }}-android-x86_64.apk
       - name: Checksum APK x86
@@ -94,10 +84,8 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            android/grim-${{ github.ref_name }}-android-armv8.apk
-            android/grim-${{ github.ref_name }}-android-armv8-sha256sum.txt
-            android/grim-${{ github.ref_name }}-android-armv7.apk
-            android/grim-${{ github.ref_name }}-android-armv7-sha256sum.txt
+            android/grim-${{ github.ref_name }}-android.apk
+            android/grim-${{ github.ref_name }}-android-sha256sum.txt
             android/grim-${{ github.ref_name }}-android-x86_64.apk
             android/grim-${{ github.ref_name }}-android-x86_64-sha256sum.txt
 
