@@ -20,21 +20,18 @@ use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{CameraContent, Modal, Content, View};
 use crate::gui::views::types::{ModalContainer, ModalPosition, QrScanResult, TextEditOptions};
 use crate::wallet::Mnemonic;
-use crate::wallet::types::{PhraseMode, PhraseSize};
+use crate::wallet::types::{PhraseMode, PhraseSize, PhraseWord};
 
 /// Mnemonic phrase setup content.
 pub struct MnemonicSetup {
     /// Current mnemonic phrase.
-    pub(crate) mnemonic: Mnemonic,
-
-    /// Flag to check if entered phrase was valid.
-    pub(crate) valid_phrase: bool,
+    pub mnemonic: Mnemonic,
 
     /// Current word number to edit at [`Modal`].
-    word_num_edit: usize,
+    word_index_edit: usize,
     /// Entered word value for [`Modal`].
     word_edit: String,
-    /// Flag to check if entered word is valid.
+    /// Flag to check if entered word is valid at [`Modal`].
     valid_word_edit: bool,
 
     /// Camera content for QR scan [`Modal`].
@@ -56,8 +53,7 @@ impl Default for MnemonicSetup {
     fn default() -> Self {
         Self {
             mnemonic: Mnemonic::default(),
-            valid_phrase: true,
-            word_num_edit: 0,
+            word_index_edit: 0,
             word_edit: String::from(""),
             valid_word_edit: true,
             camera_content: CameraContent::default(),
@@ -103,7 +99,7 @@ impl MnemonicSetup {
         ui.add_space(6.0);
 
         // Show words setup.
-        self.word_list_ui(ui, self.mnemonic.mode == PhraseMode::Import, cb);
+        self.word_list_ui(ui, self.mnemonic.mode() == PhraseMode::Import, cb);
     }
 
     /// Draw content for phrase confirmation step.
@@ -123,7 +119,7 @@ impl MnemonicSetup {
     /// Draw mode and size setup.
     fn mode_type_ui(&mut self, ui: &mut egui::Ui) {
         // Show mode setup.
-        let mut mode = self.mnemonic.mode.clone();
+        let mut mode = self.mnemonic.mode();
         ui.columns(2, |columns| {
             columns[0].vertical_centered(|ui| {
                 let create_mode = PhraseMode::Generate;
@@ -136,8 +132,8 @@ impl MnemonicSetup {
                 View::radio_value(ui, &mut mode, import_mode, import_text);
             });
         });
-        if mode != self.mnemonic.mode {
-            self.mnemonic.set_mode(mode)
+        if mode != self.mnemonic.mode() {
+            self.mnemonic.set_mode(mode);
         }
 
         ui.add_space(10.0);
@@ -150,7 +146,7 @@ impl MnemonicSetup {
         ui.add_space(6.0);
 
         // Show mnemonic phrase size setup.
-        let mut size = self.mnemonic.size.clone();
+        let mut size = self.mnemonic.size();
         ui.columns(5, |columns| {
             for (index, word) in PhraseSize::VALUES.iter().enumerate() {
                 columns[index].vertical_centered(|ui| {
@@ -159,29 +155,20 @@ impl MnemonicSetup {
                 });
             }
         });
-        if size != self.mnemonic.size {
+        if size != self.mnemonic.size() {
             self.mnemonic.set_size(size);
         }
     }
 
-    /// Draw list of words for mnemonic phrase.
-    fn word_list_ui(&mut self, ui: &mut egui::Ui, edit_words: bool, cb: &dyn PlatformCallbacks) {
+    /// Draw grid of words for mnemonic phrase.
+    fn word_list_ui(&mut self, ui: &mut egui::Ui, edit: bool, cb: &dyn PlatformCallbacks) {
         ui.add_space(6.0);
         ui.scope(|ui| {
             // Setup spacing between columns.
             ui.spacing_mut().item_spacing = egui::Vec2::new(6.0, 6.0);
 
             // Select list of words based on current mode and edit flag.
-            let words = match self.mnemonic.mode {
-                PhraseMode::Generate => {
-                    if edit_words {
-                        &self.mnemonic.confirm_words
-                    } else {
-                        &self.mnemonic.words
-                    }
-                }
-                PhraseMode::Import => &self.mnemonic.words
-            }.clone();
+            let words = self.mnemonic.words(edit);
 
             let mut word_number = 0;
             let cols = list_columns_count(ui);
@@ -192,25 +179,25 @@ impl MnemonicSetup {
                     ui.columns(cols, |columns| {
                         columns[0].horizontal(|ui| {
                             let word = chunk.get(0).unwrap();
-                            self.word_item_ui(ui, word_number, word, edit_words, cb);
+                            self.word_item_ui(ui, word_number, word, edit, cb);
                         });
                         columns[1].horizontal(|ui| {
                             word_number += 1;
                             let word = chunk.get(1).unwrap();
-                            self.word_item_ui(ui, word_number, word, edit_words, cb);
+                            self.word_item_ui(ui, word_number, word, edit, cb);
                         });
                         if size > 2 {
                             columns[2].horizontal(|ui| {
                                 word_number += 1;
                                 let word = chunk.get(2).unwrap();
-                                self.word_item_ui(ui, word_number, word, edit_words, cb);
+                                self.word_item_ui(ui, word_number, word, edit, cb);
                             });
                         }
                         if size > 3 {
                             columns[3].horizontal(|ui| {
                                 word_number += 1;
                                 let word = chunk.get(3).unwrap();
-                                self.word_item_ui(ui, word_number, word, edit_words, cb);
+                                self.word_item_ui(ui, word_number, word, edit, cb);
                             });
                         }
                     });
@@ -218,7 +205,7 @@ impl MnemonicSetup {
                     ui.columns(cols, |columns| {
                         columns[0].horizontal(|ui| {
                             let word = chunk.get(0).unwrap();
-                            self.word_item_ui(ui, word_number, word, edit_words, cb);
+                            self.word_item_ui(ui, word_number, word, edit, cb);
                         });
                     });
                 }
@@ -227,20 +214,24 @@ impl MnemonicSetup {
         ui.add_space(6.0);
     }
 
-    /// Draw word list item for current mode.
+    /// Draw word grid item.
     fn word_item_ui(&mut self,
                     ui: &mut egui::Ui,
                     num: usize,
-                    word: &String,
+                    word: &PhraseWord,
                     edit: bool,
                     cb: &dyn PlatformCallbacks) {
+        let color = if !word.valid || (word.text.is_empty() && !self.mnemonic.valid()) {
+            Colors::red()
+        } else {
+            Colors::white_or_black(true)
+        };
         if edit {
             ui.add_space(6.0);
             View::button(ui, PENCIL.to_string(), Colors::button(), || {
-                // Setup modal values.
-                self.word_num_edit = num;
-                self.word_edit = word.clone();
-                self.valid_word_edit = true;
+                self.word_index_edit = num - 1;
+                self.word_edit = word.text.clone();
+                self.valid_word_edit = word.valid;
                 // Show word edit modal.
                 Modal::new(WORD_INPUT_MODAL)
                     .position(ModalPosition::CenterTop)
@@ -248,34 +239,33 @@ impl MnemonicSetup {
                     .show();
                 cb.show_keyboard();
             });
-            ui.label(RichText::new(format!("#{} {}", num, word))
+            ui.label(RichText::new(format!("#{} {}", num, word.text))
                 .size(17.0)
-                .color(Colors::white_or_black(true)));
+                .color(color));
         } else {
             ui.add_space(12.0);
-            let text = format!("#{} {}", num, word);
-            ui.label(RichText::new(text).size(17.0).color(Colors::white_or_black(true)));
+            let text = format!("#{} {}", num, word.text);
+            ui.label(RichText::new(text).size(17.0).color(color));
         }
     }
 
-    /// Reset mnemonic phrase to default values.
+    /// Reset mnemonic phrase state to default values.
     pub fn reset(&mut self) {
         self.mnemonic = Mnemonic::default();
-        self.valid_phrase = true;
     }
 
     /// Draw word input [`Modal`] content.
     fn word_modal_ui(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
-            ui.label(RichText::new(t!("wallets.enter_word", "number" => self.word_num_edit))
+            ui.label(RichText::new(t!("wallets.enter_word", "number" => self.word_index_edit + 1))
                 .size(17.0)
                 .color(Colors::gray()));
             ui.add_space(8.0);
 
             // Draw word value text edit.
             let mut text_edit_opts = TextEditOptions::new(
-                Id::from(modal.id).with(self.word_num_edit)
+                Id::from(modal.id).with(self.word_index_edit)
             );
             View::text_edit(ui, cb, &mut self.word_edit, &mut text_edit_opts);
 
@@ -305,38 +295,22 @@ impl MnemonicSetup {
                 columns[1].vertical_centered_justified(|ui| {
                     // Callback to save the word.
                     let mut save = || {
-                        self.word_edit = self.word_edit.trim().to_string();
-
-                        // Check if word is valid.
-                        if !self.mnemonic.is_valid_word(&self.word_edit) {
-                            self.valid_word_edit = false;
+                        // Insert word checking validity.
+                        let word = &self.word_edit.trim().to_string();
+                        self.valid_word_edit = self.mnemonic.insert(self.word_index_edit, word);
+                        if !self.valid_word_edit {
                             return;
                         }
-                        self.valid_word_edit = true;
-
-                        // Select list where to save word.
-                        let words = match self.mnemonic.mode {
-                            PhraseMode::Generate => &mut self.mnemonic.confirm_words,
-                            PhraseMode::Import => &mut self.mnemonic.words
-                        };
-
-                        // Save word at list.
-                        let word_index = self.word_num_edit - 1;
-                        words.remove(word_index);
-                        words.insert(word_index, self.word_edit.clone());
-
                         // Close modal or go to next word to edit.
-                        let close_modal = words.len() == self.word_num_edit
-                            || !words.get(self.word_num_edit).unwrap().is_empty();
+                        let next_word = self.mnemonic.get(self.word_index_edit + 1);
+                        let close_modal = next_word.is_none() ||
+                            (!next_word.as_ref().unwrap().text.is_empty() &&
+                            next_word.unwrap().valid);
                         if close_modal {
-                            // Check if entered phrase was valid when all words were entered.
-                            if !self.mnemonic.words.contains(&String::from("")) {
-                                self.valid_phrase = self.mnemonic.is_valid_phrase();
-                            }
                             cb.hide_keyboard();
                             modal.close();
                         } else {
-                            self.word_num_edit += 1;
+                            self.word_index_edit += 1;
                             self.word_edit = String::from("");
                         }
                     };
@@ -383,8 +357,8 @@ impl MnemonicSetup {
             self.camera_content.clear_state();
             match &result {
                 QrScanResult::Text(text) => {
-                    self.mnemonic.import_text(text, false);
-                    if self.mnemonic.is_valid_phrase() {
+                    self.mnemonic.import(text);
+                    if self.mnemonic.valid() {
                         modal.close();
                         return;
                     }

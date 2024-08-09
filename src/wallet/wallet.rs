@@ -140,7 +140,7 @@ impl Wallet {
             let p = w_lock.lc_provider()?;
             p.create_wallet(None,
                             Some(ZeroingString::from(mnemonic.get_phrase())),
-                            mnemonic.size.entropy_size(),
+                            mnemonic.size().entropy_size(),
                             ZeroingString::from(password.clone()),
                             false,
             )?;

@@ -19,6 +19,15 @@ use grin_util::Mutex;
 use grin_wallet_impls::{DefaultLCProvider, HTTPNodeClient};
 use grin_wallet_libwallet::{TxLogEntry, TxLogEntryType, WalletInfo, WalletInst};
 
+/// Mnemonic phrase word.
+#[derive(Clone)]
+pub struct PhraseWord {
+    /// Word text.
+    pub text: String,
+    /// Flag to check if word is valid.
+    pub valid: bool,
+}
+
 /// Mnemonic phrase setup mode.
 #[derive(PartialEq, Clone)]
 pub enum PhraseMode {

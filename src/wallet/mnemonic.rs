@@ -16,18 +16,20 @@ use grin_keychain::mnemonic::{from_entropy, search, to_entropy};
 use grin_util::ZeroingString;
 use rand::{Rng, thread_rng};
 
-use crate::wallet::types::{PhraseMode, PhraseSize};
+use crate::wallet::types::{PhraseMode, PhraseSize, PhraseWord};
 
 /// Mnemonic phrase container.
 pub struct Mnemonic {
     /// Phrase setup mode.
-    pub(crate) mode: PhraseMode,
+    mode: PhraseMode,
     /// Size of phrase based on words count.
-    pub(crate) size: PhraseSize,
+    size: PhraseSize,
     /// Generated words.
-    pub(crate) words: Vec<String>,
+    words: Vec<PhraseWord>,
     /// Words to confirm the phrase.
-    pub(crate) confirm_words: Vec<String>
+    confirmation: Vec<PhraseWord>,
+    /// Flag to check if entered phrase if valid.
+    valid: bool,
 }
 
 impl Default for Mnemonic {
@@ -35,43 +37,67 @@ impl Default for Mnemonic {
         let size = PhraseSize::Words24;
         let mode = PhraseMode::Generate;
         let words = Self::generate_words(&mode, &size);
-        let confirm_words = Self::empty_words(&size);
-        Self { mode, size, words, confirm_words }
+        let confirmation = Self::empty_words(&size);
+        Self { mode, size, words, confirmation, valid: true }
     }
 }
 
 impl Mnemonic {
-    /// Change mnemonic phrase setup [`PhraseMode`].
+    /// Generate words based on provided [`PhraseMode`].
     pub fn set_mode(&mut self, mode: PhraseMode) {
         self.mode = mode;
         self.words = Self::generate_words(&self.mode, &self.size);
-        self.confirm_words = Self::empty_words(&self.size);
+        self.confirmation = Self::empty_words(&self.size);
+        self.valid = true;
     }
 
-    /// Change mnemonic phrase words [`PhraseSize`].
+    /// Get current phrase mode.
+    pub fn mode(&self) -> PhraseMode {
+        self.mode.clone()
+    }
+
+    /// Generate words based on provided [`PhraseSize`].
     pub fn set_size(&mut self, size: PhraseSize) {
         self.size = size;
         self.words = Self::generate_words(&self.mode, &self.size);
-        self.confirm_words = Self::empty_words(&self.size);
+        self.confirmation = Self::empty_words(&self.size);
+        self.valid = true;
     }
 
-    /// Check if provided word is in BIP39 format.
-    pub fn is_valid_word(&self, word: &String) -> bool {
-        search(word).is_ok()
+    /// Get current phrase size.
+    pub fn size(&self) -> PhraseSize {
+        self.size.clone()
+    }
+
+    /// Get words based on current [`PhraseMode`].
+    pub fn words(&self, edit: bool) -> Vec<PhraseWord> {
+        match self.mode {
+            PhraseMode::Generate => {
+                if edit {
+                    &self.confirmation
+                } else {
+                    &self.words
+                }
+            }
+            PhraseMode::Import => &self.words
+        }.clone()
     }
 
     /// Check if current phrase is valid.
-    pub fn is_valid_phrase(&self) -> bool {
-        to_entropy(self.get_phrase().as_str()).is_ok()
+    pub fn valid(&self) -> bool {
+        self.valid
     }
 
     /// Get phrase from words.
     pub fn get_phrase(&self) -> String {
-        self.words.iter().map(|x| x.to_string() + " ").collect::<String>()
+        self.words.iter()
+            .enumerate()
+            .map(|(i, x)| if i == 0 { "" } else { " " }.to_owned() + &x.text)
+            .collect::<String>()
     }
 
-    /// Generate list of words based on provided [`PhraseMode`] and [`PhraseSize`].
-    fn generate_words(mode: &PhraseMode, size: &PhraseSize) -> Vec<String> {
+    /// Generate [`PhraseWord`] list based on provided [`PhraseMode`] and [`PhraseSize`].
+    fn generate_words(mode: &PhraseMode, size: &PhraseSize) -> Vec<PhraseWord> {
         match mode {
             PhraseMode::Generate => {
                 let mut rng = thread_rng();
@@ -81,8 +107,14 @@ impl Mnemonic {
                 }
                 from_entropy(&entropy).unwrap()
                     .split(" ")
-                    .map(|s| String::from(s))
-                    .collect::<Vec<String>>()
+                    .map(|s| {
+                        let text = s.to_string();
+                        PhraseWord {
+                            text,
+                            valid: true,
+                        }
+                    })
+                    .collect::<Vec<PhraseWord>>()
             },
             PhraseMode::Import => {
                 Self::empty_words(size)
@@ -91,39 +123,117 @@ impl Mnemonic {
     }
 
     /// Generate empty list of words based on provided [`PhraseSize`].
-    fn empty_words(size: &PhraseSize) -> Vec<String> {
+    fn empty_words(size: &PhraseSize) -> Vec<PhraseWord> {
         let mut words = Vec::with_capacity(size.value());
         for _ in 0..size.value() {
-            words.push(String::from(""))
+            words.push(PhraseWord {
+                text: "".to_string(),
+                valid: true,
+            });
         }
         words
     }
 
-    /// Set words from provided text if possible.
-    pub fn import_text(&mut self, text: &ZeroingString, confirmation: bool) {
+    /// Insert word into provided index and return validation result.
+    pub fn insert(&mut self, index: usize, word: &String) -> bool {
+        // Check if word is valid.
+        let found = search(word).is_ok();
+        if !found {
+            return false;
+        }
+        let is_confirmation = self.mode == PhraseMode::Generate;
+        if is_confirmation {
+            let w = self.words.get(index).unwrap();
+            if word != &w.text {
+                return false;
+            }
+        }
+
+        // Save valid word at list.
+        let words = if is_confirmation {
+            &mut self.confirmation
+        } else {
+            &mut self.words
+        };
+        words.remove(index);
+        words.insert(index, PhraseWord { text: word.to_owned(), valid: true });
+
+        // Validate phrase when all words are entered.
+        let mut has_empty = false;
+        let _: Vec<_> = words.iter().map(|w| {
+            if w.text.is_empty() {
+                has_empty = true;
+            }
+        }).collect();
+        if !has_empty {
+            self.valid = to_entropy(self.get_phrase().as_str()).is_ok();
+        }
+        true
+    }
+
+    /// Get word from provided index.
+    pub fn get(&self, index: usize) -> Option<PhraseWord> {
+        let words = match self.mode {
+            PhraseMode::Generate => &self.confirmation,
+            PhraseMode::Import => &self.words
+        };
+        let word = words.get(index);
+        if let Some(w) = word {
+            return Some(PhraseWord {
+                text: w.text.clone(),
+                valid: w.valid
+            });
+        }
+        None
+    }
+
+    /// Setup phrase from provided text if possible.
+    pub fn import(&mut self, text: &ZeroingString) {
         let words_split = text.trim().split(" ");
         let count = words_split.clone().count();
         if let Some(size) = PhraseSize::type_for_value(count) {
-            if !confirmation {
+            // Setup phrase size.
+            let confirm = self.mode == PhraseMode::Generate;
+            if !confirm {
                 self.size = size;
             } else if self.size != size {
                 return;
             }
+
+            // Setup word list.
             let mut words = vec![];
-            words_split.for_each(|word| {
-                if confirmation && !self.is_valid_word(&word.to_string()) {
-                    words = vec![];
-                    return;
-                }
-                words.push(word.to_string())
+            words_split.for_each(|w| {
+                let mut text = w.to_string();
+                text.retain(|c| c.is_alphabetic());
+                let valid = search(&text).is_ok();
+                words.push(PhraseWord { text, valid });
             });
-            if confirmation {
-                if !words.is_empty() {
-                    self.confirm_words = words;
+            let mut has_invalid = false;
+            for (i, w) in words.iter().enumerate() {
+                if !self.insert(i, &w.text) {
+                    has_invalid = true;
                 }
-            } else {
-                self.words = words;
             }
+            self.valid = !has_invalid;
         }
+    }
+
+    /// Check if phrase has invalid or empty words.
+    pub fn has_empty_or_invalid(&self) -> bool {
+        let words = match self.mode {
+            PhraseMode::Generate => &self.confirmation,
+            PhraseMode::Import => &self.words
+        };
+        let mut has_empty = false;
+        let mut has_invalid = false;
+        let _: Vec<_> = words.iter().map(|w| {
+            if w.text.is_empty() {
+                has_empty = true;
+            }
+            if !w.valid {
+                has_invalid = true;
+            }
+        }).collect();
+        has_empty || has_invalid
     }
 }

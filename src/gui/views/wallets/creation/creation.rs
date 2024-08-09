@@ -143,26 +143,19 @@ impl WalletCreation {
             // Setup step description text and availability.
             let (step_text, mut step_available) = match step {
                 Step::EnterMnemonic => {
-                    let mode = &self.mnemonic_setup.mnemonic.mode;
-                    let text = if mode == &PhraseMode::Generate {
-                        t!("wallets.create_phrase_desc")
-                    } else {
-                        t!("wallets.restore_phrase_desc")
+                    let mode = &self.mnemonic_setup.mnemonic.mode();
+                    let (text, available) = match mode {
+                        PhraseMode::Generate => (t!("wallets.create_phrase_desc"), true),
+                        PhraseMode::Import => {
+                            let available = !self.mnemonic_setup.mnemonic.has_empty_or_invalid();
+                            (t!("wallets.restore_phrase_desc"), available)
+                        }
                     };
-                    let available = !self
-                        .mnemonic_setup
-                        .mnemonic
-                        .words
-                        .contains(&String::from(""));
                     (text, available)
                 }
                 Step::ConfirmMnemonic => {
                     let text = t!("wallets.restore_phrase_desc");
-                    let available = !self
-                        .mnemonic_setup
-                        .mnemonic
-                        .confirm_words
-                        .contains(&String::from(""));
+                    let available = !self.mnemonic_setup.mnemonic.has_empty_or_invalid();
                     (text, available)
                 }
                 Step::SetupConnection => {
@@ -170,8 +163,11 @@ impl WalletCreation {
                 }
             };
 
-            // Show step description or error if entered phrase is not valid.
-            if self.mnemonic_setup.valid_phrase && self.creation_error.is_none() {
+            // Show step description or error.
+            let generate_step = step == Step::EnterMnemonic &&
+                self.mnemonic_setup.mnemonic.mode() == PhraseMode::Generate;
+            if (self.mnemonic_setup.mnemonic.valid() && self.creation_error.is_none()) ||
+                generate_step {
                 ui.add_space(2.0);
                 ui.label(RichText::new(step_text).size(16.0).color(Colors::gray()));
                 ui.add_space(2.0);
@@ -185,6 +181,7 @@ impl WalletCreation {
                         .color(Colors::red()));
                     ui.add_space(10.0);
                 } else {
+                    ui.add_space(2.0);
                     ui.label(RichText::new(&t!("wallets.not_valid_phrase"))
                         .size(16.0)
                         .color(Colors::red()));
@@ -225,8 +222,8 @@ impl WalletCreation {
                 } else {
                     let paste_text = format!("{} {}", CLIPBOARD_TEXT, t!("paste").to_uppercase());
                     View::button(ui, paste_text, Colors::white_or_black(false), || {
-                        let data = ZeroingString::from(cb.get_string_from_buffer().trim());
-                        self.mnemonic_setup.mnemonic.import_text(&data, true);
+                        let data = ZeroingString::from(cb.get_string_from_buffer());
+                        self.mnemonic_setup.mnemonic.import(&data);
                     });
                 }
                 ui.add_space(4.0);
@@ -241,7 +238,7 @@ impl WalletCreation {
 
     /// Draw copy or paste button at [`Step::EnterMnemonic`].
     fn copy_or_paste_button_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
-        match self.mnemonic_setup.mnemonic.mode {
+        match self.mnemonic_setup.mnemonic.mode() {
             PhraseMode::Generate => {
                 // Show copy button.
                 let c_t = format!("{} {}", COPY, t!("copy").to_uppercase());
@@ -253,8 +250,8 @@ impl WalletCreation {
                 // Show paste button.
                 let p_t = format!("{} {}", CLIPBOARD_TEXT, t!("paste").to_uppercase());
                 View::button(ui, p_t, Colors::white_or_black(false), || {
-                    let data = ZeroingString::from(cb.get_string_from_buffer().trim());
-                    self.mnemonic_setup.mnemonic.import_text(&data, false);
+                    let data = ZeroingString::from(cb.get_string_from_buffer());
+                    self.mnemonic_setup.mnemonic.import(&data);
                 });
             }
         }
@@ -278,15 +275,10 @@ impl WalletCreation {
             self.step = if let Some(step) = &self.step {
                 match step {
                     Step::EnterMnemonic => {
-                        if self.mnemonic_setup.mnemonic.mode == PhraseMode::Generate {
+                        if self.mnemonic_setup.mnemonic.mode() == PhraseMode::Generate {
                             Some(Step::ConfirmMnemonic)
                         } else {
-                            // Check if entered phrase was valid.
-                            if self.mnemonic_setup.valid_phrase {
-                                Some(Step::SetupConnection)
-                            } else {
-                                Some(Step::EnterMnemonic)
-                            }
+                            Some(Step::SetupConnection)
                         }
                     }
                     Step::ConfirmMnemonic => {
@@ -388,7 +380,10 @@ impl WalletCreation {
                         self.creation_error = None;
                     },
                     Step::ConfirmMnemonic => self.step = Some(Step::EnterMnemonic),
-                    Step::SetupConnection => self.step = Some(Step::EnterMnemonic)
+                    Step::SetupConnection => {
+                        self.creation_error = None;
+                        self.step = Some(Step::EnterMnemonic)
+                    }
                 }
             }
         }
