@@ -94,5 +94,6 @@ git commit -m "release: v$VERSION_NEXT"
 # Create git tag for new version
 # ==================================
 
-# Create a tag at master branch
+# Create a tag and push to master branch
 git tag "v$VERSION_NEXT" master
+git push origin master --follow-tags
