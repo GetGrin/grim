@@ -16,7 +16,7 @@ use grin_core::global::ChainTypes;
 use serde_derive::{Deserialize, Serialize};
 use crate::gui::views::Content;
 
-use crate::node::{NodeConfig, PeersConfig};
+use crate::node::NodeConfig;
 use crate::Settings;
 use crate::wallet::ConnectionsConfig;
 
@@ -112,10 +112,6 @@ impl AppConfig {
                 let node_config = NodeConfig::for_chain_type(chain_type);
                 w_node_config.node = node_config.node;
                 w_node_config.peers = node_config.peers;
-            }
-            // Load saved peers to node config.
-            {
-                PeersConfig::load_to_server_config();
             }
             // Load connections configuration
             {

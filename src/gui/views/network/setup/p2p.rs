@@ -91,7 +91,7 @@ impl Default for P2PSetup {
     fn default() -> Self {
         let port = NodeConfig::get_p2p_port();
         let is_port_available = NodeConfig::is_p2p_port_available(&port);
-        let default_main_seeds = grin_servers::MAINNET_DNS_SEEDS
+        let default_main_seeds = Node::MAINNET_DNS_SEEDS
             .iter()
             .map(|s| s.to_string())
             .collect();
@@ -370,6 +370,8 @@ impl P2PSetup {
                 ui.label(RichText::new(desc)
                     .size(16.0)
                     .color(Colors::inactive_text()));
+            }
+            if !peers.is_empty() {
                 ui.add_space(12.0);
             }
 

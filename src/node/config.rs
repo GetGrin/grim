@@ -49,8 +49,6 @@ impl PeersConfig {
         let chain_type = AppConfig::chain_type();
         let config_path = Settings::config_path(Self::FILE_NAME, Some(chain_type.shortname()));
         Settings::write_to_file(self, config_path);
-        // Load changes to node server config.
-        Self::load_to_server_config();
     }
 
     /// Convert string to [`PeerAddr`] if address is in correct format (`host:port`) and available.
@@ -71,7 +69,7 @@ impl PeersConfig {
     }
 
     /// Load saved peers to node server [`ConfigMembers`] config.
-    pub(crate) fn load_to_server_config() {
+    pub fn load_to_server_config() {
         let mut w_config = Settings::node_config_to_update();
         // Load seeds.
         for seed in w_config.peers.seeds.clone() {
@@ -683,10 +681,9 @@ impl NodeConfig {
 
     /// Toggle seeding type to use default or custom seed list.
     pub fn toggle_seeding_type() {
-        let seeding_type = if Self::is_default_seeding_type() {
-            Seeding::List
-        } else {
-            Seeding::DNSSeed
+        let seeding_type = match Self::is_default_seeding_type() {
+            true => Seeding::List,
+            false => Seeding::DNSSeed
         };
         let mut w_config = Settings::node_config_to_update();
         w_config.node.server.p2p_config.seeding_type = seeding_type;

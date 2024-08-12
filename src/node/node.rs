@@ -24,10 +24,12 @@ use futures::channel::oneshot;
 use grin_chain::SyncStatus;
 use grin_core::global;
 use grin_core::global::ChainTypes;
+use grin_p2p::msg::PeerAddrs;
+use grin_p2p::Seeding;
 use grin_servers::{Server, ServerStats, StratumServerConfig, StratumStats};
 use grin_servers::common::types::Error;
 
-use crate::node::{NodeConfig, NodeError};
+use crate::node::{NodeConfig, NodeError, PeersConfig};
 use crate::node::stratum::{StratumStopState, StratumServer};
 
 lazy_static! {
@@ -82,6 +84,16 @@ impl Default for Node {
 impl Node {
     /// Delay for thread to update the stats.
     pub const STATS_UPDATE_DELAY: Duration = Duration::from_millis(1000);
+
+    /// Default Mainnet DNS Seeds
+    pub const MAINNET_DNS_SEEDS: &'static[&'static str] = &[
+        "mainnet.seed.grin.lesceller.com",
+        "grinseed.revcore.net",
+        "mainnet-seed.grinnode.live",
+        "mainnet.grin.punksec.de",
+        "grinnode.30-r.com",
+        "grincoin.org"
+    ];
 
     /// Stop the [`Server`] and setup exit flag after if needed.
     pub fn stop(exit_after_stop: bool) {
@@ -516,9 +528,28 @@ impl Node {
 
 /// Start the node [`Server`].
 fn start_node_server() -> Result<Server, Error>  {
-    // Get saved server config.
+    // Setup server config.
+    PeersConfig::load_to_server_config();
     let config = NodeConfig::node_server_config();
     let mut server_config = config.server.clone();
+
+    // Setup Mainnet DNSSeed
+    if server_config.chain_type == ChainTypes::Mainnet && NodeConfig::is_default_seeding_type() {
+        server_config.p2p_config.seeding_type = Seeding::List;
+        server_config.p2p_config.seeds = Some(PeerAddrs::default());
+        for seed in Node::MAINNET_DNS_SEEDS {
+            let addr = format!("{}:3414", seed);
+            if let Some(p) = PeersConfig::peer_to_addr(addr) {
+                let mut seeds = server_config
+                    .p2p_config
+                    .seeds
+                    .clone()
+                    .unwrap_or(PeerAddrs::default());
+                seeds.peers.insert(seeds.peers.len(), p);
+                server_config.p2p_config.seeds = Some(seeds);
+            }
+        }
+    }
 
     // Fix to avoid too many opened files.
     server_config.p2p_config.peer_min_preferred_outbound_count =
