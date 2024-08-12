@@ -171,7 +171,7 @@ impl ConnectionsContent {
                         DOTS_THREE_CIRCLE
                     };
                     let status_text = format!("{} {}", status_icon, Node::get_sync_status_text());
-                    ui.label(RichText::new(status_text).size(15.0).color(Colors::text(false)));
+                    View::ellipsize_text(ui, status_text, 15.0, Colors::text(false));
                     ui.add_space(1.0);
 
                     // Setup node API address text.
