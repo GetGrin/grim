@@ -49,9 +49,12 @@ fn real_main() {
     }));
 
     // Start GUI.
-    let _ = std::panic::catch_unwind(|| {
+    match std::panic::catch_unwind(|| {
         start_desktop_gui();
-    });
+    }) {
+        Ok(_) => {}
+        Err(e) => println!("{:?}", e)
+    }
 }
 
 /// Start GUI with Desktop related setup.

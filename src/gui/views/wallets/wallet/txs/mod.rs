@@ -1,4 +1,4 @@
-// Copyright 2023 The Grim Developers
+// Copyright 2024 The Grim Developers
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,32 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub mod types;
-
-mod views;
-pub use views::View;
-
-mod title_panel;
-pub use title_panel::*;
-
-mod modal;
-pub use modal::*;
-
 mod content;
 pub use content::*;
 
-pub mod network;
-
-pub mod wallets;
-
-mod camera;
-pub use camera::*;
-
-mod qr;
-pub use qr::*;
-
-mod file_pick;
-pub use file_pick::*;
-
-mod pull_to_refresh;
-pub use pull_to_refresh::*;
+mod tx;
+pub use tx::*;

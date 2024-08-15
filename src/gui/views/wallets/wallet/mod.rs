@@ -13,10 +13,12 @@
 // limitations under the License.
 
 pub mod types;
-pub mod settings;
+
+mod settings;
+pub use settings::*;
 
 mod txs;
-pub use txs::WalletTransactions;
+pub use txs::*;
 
 mod messages;
 pub use messages::WalletMessages;

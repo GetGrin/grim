@@ -26,7 +26,7 @@ use crate::gui::views::{CameraContent, Modal, Content, View};
 use crate::gui::views::types::{ModalPosition, QrScanResult, TextEditOptions};
 use crate::gui::views::wallets::{WalletTransactions, WalletMessages, WalletTransport};
 use crate::gui::views::wallets::types::{GRIN, WalletTab, WalletTabType};
-use crate::gui::views::wallets::settings::WalletSettings;
+use crate::gui::views::wallets::wallet::WalletSettings;
 use crate::node::Node;
 use crate::wallet::{Wallet, WalletConfig};
 use crate::wallet::types::{WalletAccount, WalletData};

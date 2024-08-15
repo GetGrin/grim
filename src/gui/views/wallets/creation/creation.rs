@@ -23,7 +23,7 @@ use crate::gui::views::{Modal, Content, View};
 use crate::gui::views::types::{ModalPosition, TextEditOptions};
 use crate::gui::views::wallets::creation::MnemonicSetup;
 use crate::gui::views::wallets::creation::types::Step;
-use crate::gui::views::wallets::settings::ConnectionSettings;
+use crate::gui::views::wallets::ConnectionSettings;
 use crate::node::Node;
 use crate::wallet::{ExternalConnection, Wallet};
 use crate::wallet::types::PhraseMode;
