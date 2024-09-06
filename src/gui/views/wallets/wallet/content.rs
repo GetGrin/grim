@@ -148,7 +148,7 @@ impl WalletContent {
                 ui.vertical_centered(|ui| {
                     // Draw wallet tabs.
                     View::max_width_ui(ui, Content::SIDE_PANEL_WIDTH * 1.3, |ui| {
-                        self.tabs_ui(ui, wallet);
+                        self.tabs_ui(ui);
                     });
                 });
             });
@@ -468,7 +468,7 @@ impl WalletContent {
                 QrScanResult::Slatepack(message) => {
                     // Redirect to messages to handle parsed message.
                     let mut messages =
-                        WalletMessages::new(wallet.can_use_dandelion(), Some(message.to_string()));
+                        WalletMessages::new(Some(message.to_string()));
                     messages.parse_message(wallet);
                     modal.close();
                     self.current_tab = Box::new(messages);
@@ -477,8 +477,7 @@ impl WalletContent {
                 QrScanResult::Address(receiver) => {
                     if wallet.get_data().unwrap().info.amount_currently_spendable > 0 {
                         // Redirect to send amount with Tor.
-                        let addr = wallet.slatepack_address().unwrap();
-                        let mut transport = WalletTransport::new(addr.clone());
+                        let mut transport = WalletTransport::default();
                         modal.close();
                         transport.show_send_tor_modal(cb, Some(receiver.to_string()));
                         self.current_tab = Box::new(transport);
@@ -528,7 +527,7 @@ impl WalletContent {
     }
 
     /// Draw tab buttons in the bottom of the screen.
-    fn tabs_ui(&mut self, ui: &mut egui::Ui, wallet: &Wallet) {
+    fn tabs_ui(&mut self, ui: &mut egui::Ui) {
         ui.scope(|ui| {
             // Setup spacing between tabs.
             ui.style_mut().spacing.item_spacing = egui::vec2(View::TAB_ITEMS_PADDING, 0.0);
@@ -547,14 +546,13 @@ impl WalletContent {
                     let is_messages = current_type == WalletTabType::Messages;
                     View::tab_button(ui, CHAT_CIRCLE_TEXT, is_messages, || {
                         self.current_tab = Box::new(
-                            WalletMessages::new(wallet.can_use_dandelion(), None)
+                            WalletMessages::new(None)
                         );
                     });
                 });
                 columns[2].vertical_centered_justified(|ui| {
                     View::tab_button(ui, BRIDGE, current_type == WalletTabType::Transport, || {
-                        let addr = wallet.slatepack_address().unwrap();
-                        self.current_tab = Box::new(WalletTransport::new(addr));
+                        self.current_tab = Box::new(WalletTransport::default());
                     });
                 });
                 columns[3].vertical_centered_justified(|ui| {

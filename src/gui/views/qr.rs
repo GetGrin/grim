@@ -30,8 +30,8 @@ use crate::gui::views::View;
 
 /// QR code image from text.
 pub struct QrCodeContent {
-    /// Text to create QR code.
-    pub(crate) text: String,
+    /// QR code text.
+    text: String,
 
     /// Flag to draw animated QR with Uniform Resources
     /// https://github.com/BlockchainCommons/Research/blob/master/papers/bcr-2020-005-ur.md
@@ -62,18 +62,18 @@ impl QrCodeContent {
     }
 
     /// Draw QR code.
-    pub fn ui(&mut self, ui: &mut egui::Ui, text: String, cb: &dyn PlatformCallbacks) {
+    pub fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         if self.animated {
             // Show animated QR code.
-            self.animated_ui(ui, text, cb);
+            self.animated_ui(ui, cb);
         } else {
             // Show static QR code.
-            self.static_ui(ui, text, cb);
+            self.static_ui(ui, cb);
         }
     }
 
     /// Draw animated QR code content.
-    fn animated_ui(&mut self, ui: &mut egui::Ui, text: String, cb: &dyn PlatformCallbacks) {
+    fn animated_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         if !self.has_image() {
             let space = (ui.available_width() - View::BIG_SPINNER_SIZE) / 2.0;
             ui.vertical_centered(|ui| {
@@ -84,7 +84,7 @@ impl QrCodeContent {
 
             // Create multiple vector images from text if not creating.
             if !self.loading() {
-                self.create_svg_list(text);
+                self.create_svg_list();
             }
         } else {
             let svg_list = {
@@ -111,7 +111,7 @@ impl QrCodeContent {
 
             // Show QR code text.
             ui.add_space(6.0);
-            View::ellipsize_text(ui, text.clone(), 16.0, Colors::inactive_text());
+            View::ellipsize_text(ui, self.text.clone(), 16.0, Colors::inactive_text());
             ui.add_space(6.0);
 
             ui.vertical_centered(|ui| {
@@ -131,7 +131,7 @@ impl QrCodeContent {
                                 w_state.exporting = true;
                             }
                             // Create GIF to export.
-                            self.create_qr_gif(text, DEFAULT_QR_SIZE as usize);
+                            self.create_qr_gif();
                     });
                 } else {
                     ui.vertical_centered(|ui| {
@@ -171,7 +171,7 @@ impl QrCodeContent {
     }
 
     /// Draw static QR code content.
-    fn static_ui(&mut self, ui: &mut egui::Ui, text: String, cb: &dyn PlatformCallbacks) {
+    fn static_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         if !self.has_image() {
             let space = (ui.available_width() - View::BIG_SPINNER_SIZE) / 2.0;
             ui.vertical_centered(|ui| {
@@ -182,7 +182,7 @@ impl QrCodeContent {
 
             // Create vector image from text if not creating.
             if !self.loading() {
-                self.create_svg(text);
+                self.create_svg();
             }
         } else {
             // Create image from SVG data.
@@ -194,7 +194,7 @@ impl QrCodeContent {
 
             // Show QR code text.
             ui.add_space(6.0);
-            View::ellipsize_text(ui, text.clone(), 16.0, Colors::inactive_text());
+            View::ellipsize_text(ui, self.text.clone(), 16.0, Colors::inactive_text());
             ui.add_space(6.0);
 
             // Show button to share QR.
@@ -204,21 +204,22 @@ impl QrCodeContent {
                                           share_text,
                                           Colors::blue(),
                                           Colors::white_or_black(false), || {
-                    if let Ok(qr) = QrCode::encode_text(text.as_str(), qrcodegen::QrCodeEcc::Low) {
-                        if let Some(data) = Self::qr_to_image_data(qr, DEFAULT_QR_SIZE as usize) {
-                            let mut png = vec![];
-                            let png_enc = PngEncoder::new_with_quality(&mut png,
-                                                                       CompressionType::Best,
-                                                                       FilterType::NoFilter);
-                            if let Ok(()) = png_enc.write_image(data.as_slice(),
-                                                                DEFAULT_QR_SIZE,
-                                                                DEFAULT_QR_SIZE,
-                                                                ExtendedColorType::L8) {
-                                let name = format!("{}.png", chrono::Utc::now().timestamp());
-                                cb.share_data(name, png).unwrap_or_default();
+                        let text = self.text.as_str();
+                        if let Ok(qr) = QrCode::encode_text(text, qrcodegen::QrCodeEcc::Low) {
+                            if let Some(data) = Self::qr_to_image_data(qr, DEFAULT_QR_SIZE as usize) {
+                                let mut png = vec![];
+                                let png_enc = PngEncoder::new_with_quality(&mut png,
+                                                                           CompressionType::Best,
+                                                                           FilterType::NoFilter);
+                                if let Ok(()) = png_enc.write_image(data.as_slice(),
+                                                                    DEFAULT_QR_SIZE,
+                                                                    DEFAULT_QR_SIZE,
+                                                                    ExtendedColorType::L8) {
+                                    let name = format!("{}.png", chrono::Utc::now().timestamp());
+                                    cb.share_data(name, png).unwrap_or_default();
+                                }
                             }
                         }
-                    }
                 });
             });
             ui.add_space(8.0);
@@ -267,8 +268,9 @@ impl QrCodeContent {
     }
 
     /// Create multiple vector QR code images at separate thread.
-    fn create_svg_list(&self, text: String) {
+    fn create_svg_list(&self) {
         let qr_state = self.qr_image_state.clone();
+        let text = self.text.clone();
         thread::spawn(move || {
             let mut encoder = ur::Encoder::bytes(text.as_bytes(), 100).unwrap();
             let mut data = Vec::with_capacity(encoder.fragment_count());
@@ -294,8 +296,9 @@ impl QrCodeContent {
     }
 
     /// Create vector QR code image at separate thread.
-    fn create_svg(&self, text: String) {
+    fn create_svg(&self) {
         let qr_state = self.qr_image_state.clone();
+        let text = self.text.clone();
         thread::spawn(move || {
             if let Ok(qr) = QrCode::encode_text(text.as_str(), qrcodegen::QrCodeEcc::Low) {
                 let svg = Self::qr_to_svg(qr, 0);
@@ -332,13 +335,14 @@ impl QrCodeContent {
     }
 
     /// Create GIF image at separate thread.
-    fn create_qr_gif(&self, text: String, size: usize) {
+    fn create_qr_gif(&self) {
         {
             let mut w_state = self.qr_image_state.write();
             w_state.gif_creating = true;
 
         }
         let qr_state = self.qr_image_state.clone();
+        let text = self.text.clone();
         thread::spawn(move || {
             // Setup GIF image encoder.
             let mut gif = vec![];
@@ -354,7 +358,7 @@ impl QrCodeContent {
                     ) {
                         // Create an image from QR data.
                         let image = qr.render()
-                            .max_dimensions(size as u32, size as u32)
+                            .max_dimensions(DEFAULT_QR_SIZE, DEFAULT_QR_SIZE)
                             .dark_color(image::Rgb([0, 0, 0]))
                             .light_color(image::Rgb([255, 255, 255]))
                             .build();

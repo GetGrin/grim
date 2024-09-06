@@ -232,7 +232,7 @@ impl RecoverySettings {
                         });
                     });
                     columns[1].vertical_centered_justified(|ui| {
-                        View::button(ui, "OK".to_owned(), Colors::white_or_black(false), || {
+                        let mut on_next = || {
                             match wallet.get_recovery(self.pass_edit.clone()) {
                                 Ok(phrase) => {
                                     self.wrong_pass = false;
@@ -243,6 +243,12 @@ impl RecoverySettings {
                                     self.wrong_pass = true;
                                 }
                             }
+                        };
+                        View::on_enter_key(ui, || {
+                            (on_next)();
+                        });
+                        View::button(ui, "OK".to_owned(), Colors::white_or_black(false), || {
+                            on_next();
                         });
                     });
                 });

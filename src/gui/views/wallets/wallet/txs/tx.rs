@@ -21,7 +21,7 @@ use grin_util::ToHex;
 use grin_wallet_libwallet::{Error, Slate, SlateState, TxLogEntryType};
 use parking_lot::RwLock;
 use crate::gui::Colors;
-use crate::gui::icons::{ARROW_CLOCKWISE, BROOM, CHECK, CLIPBOARD_TEXT, COPY, FILE_ARCHIVE, FILE_TEXT, HASH_STRAIGHT, PROHIBIT, QR_CODE, SCAN};
+use crate::gui::icons::{BROOM, CHECK, CLIPBOARD_TEXT, COPY, FILE_ARCHIVE, FILE_TEXT, HASH_STRAIGHT, PROHIBIT, QR_CODE, SCAN};
 use crate::gui::platform::PlatformCallbacks;
 
 use crate::gui::views::{CameraContent, FilePickButton, Modal, QrCodeContent, View};
@@ -41,7 +41,7 @@ pub struct WalletTransactionModal {
     response_edit: String,
 
     /// Flag to show transaction finalization input.
-    pub show_finalization: bool,
+    show_finalization: bool,
     /// Finalization Slatepack message input value.
     finalize_edit: String,
     /// Flag to check if error happened during transaction finalization.
@@ -49,17 +49,13 @@ pub struct WalletTransactionModal {
     /// Flag to check if transaction is finalizing.
     finalizing: bool,
     /// Transaction finalization result.
-    final_result: Arc<RwLock<Option<Result<Slate, Error>>>>,
+    final_result: Arc<RwLock<Option<Result<WalletTransaction, Error>>>>,
 
-    /// Flag to check if QR code is showing.
-    show_qr: bool,
     /// QR code Slatepack message image content.
-    qr_code_content: QrCodeContent,
+    qr_code_content: Option<QrCodeContent>,
 
-    /// Flag to check if QR code scanner is showing.
-    show_scanner: bool,
     /// QR code scanner content.
-    scanner_content: CameraContent,
+    qr_scan_content: Option<CameraContent>,
 
     /// Button to parse picked file content.
     file_pick_button: FilePickButton,
@@ -67,7 +63,7 @@ pub struct WalletTransactionModal {
 
 impl WalletTransactionModal {
     /// Create new content instance with [`Wallet`] from provided [`WalletTransaction`].
-    pub fn new(wallet: &Wallet, tx: &WalletTransaction) -> Self {
+    pub fn new(wallet: &Wallet, tx: &WalletTransaction, show_finalization: bool) -> Self {
         Self {
             tx_id: tx.data.id,
             slate_id: match tx.data.tx_slate_id {
@@ -98,13 +94,11 @@ impl WalletTransactionModal {
             },
             finalize_edit: "".to_string(),
             finalize_error: false,
-            show_finalization: false,
+            show_finalization,
             finalizing: false,
             final_result: Arc::new(RwLock::new(None)),
-            show_qr: false,
-            qr_code_content: QrCodeContent::new("".to_string(), true),
-            show_scanner: false,
-            scanner_content: CameraContent::default(),
+            qr_code_content: None,
+            qr_scan_content: None,
             file_pick_button: FilePickButton::default(),
         }
     }
@@ -133,7 +127,7 @@ impl WalletTransactionModal {
         }
         let tx = txs.get(0).unwrap();
 
-        if !self.show_qr && !self.show_scanner {
+        if self.qr_code_content.is_none() && self.qr_scan_content.is_none() {
             ui.add_space(6.0);
 
             // Show transaction amount status and time.
@@ -174,25 +168,6 @@ impl WalletTransactionModal {
                         wallet.cancel(tx.data.id);
                     });
                 }
-
-                // Draw button to repost transaction.
-                if wallet_loaded && tx.can_repost(&data) {
-                    let r = if self.show_finalization {
-                        Rounding::default()
-                    } else {
-                        let mut r = r.clone();
-                        r.nw = 0.0;
-                        r.sw = 0.0;
-                        r
-                    };
-                    View::item_button(ui, r, ARROW_CLOCKWISE, Some(Colors::green()), || {
-                        cb.hide_keyboard();
-                        // Post tx after getting slate from slatepack file.
-                        if let Some((s, _)) = wallet.read_slate_by_tx(tx) {
-                            let _ = wallet.post(&s, wallet.can_use_dandelion());
-                        }
-                    });
-                }
             });
 
             // Show transaction ID info.
@@ -207,54 +182,49 @@ impl WalletTransactionModal {
             }
         }
 
-        // Show Slatepack message or reset flag to show QR if not available.
-        if !tx.posting && !tx.data.confirmed && !tx.cancelling &&
+        // Show Slatepack message or reset QR code state if not available.
+        if !tx.finalizing && !tx.data.confirmed && !tx.cancelling &&
             (tx.data.tx_type == TxLogEntryType::TxSent ||
-                tx.data.tx_type == TxLogEntryType::TxReceived) {
+                tx.data.tx_type == TxLogEntryType::TxReceived) && !self.response_edit.is_empty() {
             self.message_ui(ui, tx, wallet, modal, cb);
-        } else if self.show_qr {
-            self.qr_code_content.clear_state();
-            self.show_qr = false;
+        } else if let Some(qr_content) = self.qr_code_content.as_mut() {
+            qr_content.clear_state();
         }
 
         if !self.finalizing {
             // Setup spacing between buttons.
             ui.spacing_mut().item_spacing = egui::Vec2::new(8.0, 0.0);
 
-            if self.show_qr {
+            if self.qr_code_content.is_some() {
                 // Show buttons to close modal or come back to text request content.
                 ui.columns(2, |cols| {
                     cols[0].vertical_centered_justified(|ui| {
                         View::button(ui, t!("close"), Colors::white_or_black(false), || {
-                            self.qr_code_content.clear_state();
-                            self.show_qr = false;
+                            self.qr_code_content = None;
                             modal.close();
                         });
                     });
                     cols[1].vertical_centered_justified(|ui| {
                         View::button(ui, t!("back"), Colors::white_or_black(false), || {
-                            self.qr_code_content.clear_state();
-                            self.show_qr = false;
+                            self.qr_code_content = None;
                         });
                     });
                 });
-            } else if self.show_scanner {
+            } else if self.qr_scan_content.is_some() {
                 ui.add_space(8.0);
                 // Show buttons to close modal or scanner.
                 ui.columns(2, |cols| {
                     cols[0].vertical_centered_justified(|ui| {
                         View::button(ui, t!("close"), Colors::white_or_black(false), || {
                             cb.stop_camera();
-                            self.scanner_content.clear_state();
-                            self.show_scanner = false;
+                            self.qr_scan_content = None;
                             modal.close();
                         });
                     });
                     cols[1].vertical_centered_justified(|ui| {
                         View::button(ui, t!("back"), Colors::white_or_black(false), || {
                             cb.stop_camera();
-                            self.scanner_content.clear_state();
-                            self.show_scanner = false;
+                            self.qr_scan_content = None;
                             modal.enable_closing();
                         });
                     });
@@ -361,20 +331,19 @@ impl WalletTransactionModal {
         ui.add_space(6.0);
 
         // Draw QR code scanner content if requested.
-        if self.show_scanner {
-            if let Some(result) = self.scanner_content.qr_scan_result() {
+        if let Some(qr_scan_content) = self.qr_scan_content.as_mut() {
+            if let Some(result) = qr_scan_content.qr_scan_result() {
                 cb.stop_camera();
-                self.scanner_content.clear_state();
+                qr_scan_content.clear_state();
 
                 // Setup value to finalization input field.
                 self.finalize_edit = result.text();
                 self.on_finalization_input_change(tx, wallet, modal, cb);
 
                 modal.enable_closing();
-                self.scanner_content.clear_state();
-                self.show_scanner = false;
+                self.qr_scan_content = None;
             } else {
-                self.scanner_content.ui(ui, cb);
+                qr_scan_content.ui(ui, cb);
             }
             return;
         }
@@ -427,16 +396,9 @@ impl WalletTransactionModal {
         let message_before = message_edit.clone();
 
         // Draw QR code content if requested.
-        if self.show_qr {
-            let text = message_edit.clone();
-            if text.is_empty() {
-                self.qr_code_content.clear_state();
-                self.show_qr = false;
-            } else {
-                // Draw QR code content.
-                self.qr_code_content.ui(ui, text.clone(), cb);
-                return;
-            }
+        if let Some(qr_content) = self.qr_code_content.as_mut() {
+            qr_content.ui(ui, cb);
+            return;
         }
 
         // Draw Slatepack message finalization input or request text.
@@ -498,7 +460,7 @@ impl WalletTransactionModal {
                         cb.hide_keyboard();
                         modal.disable_closing();
                         cb.start_camera();
-                        self.show_scanner = true;
+                        self.qr_scan_content = Some(CameraContent::default());
                     });
                 });
                 columns[1].vertical_centered_justified(|ui| {
@@ -535,9 +497,10 @@ impl WalletTransactionModal {
                 columns[0].vertical_centered_justified(|ui| {
                     // Draw button to show Slatepack message as QR code.
                     let qr_text = format!("{} {}", QR_CODE, t!("qr_code"));
-                    View::button(ui, qr_text, Colors::button(), || {
+                    View::button(ui, qr_text.clone(), Colors::button(), || {
                         cb.hide_keyboard();
-                        self.show_qr = true;
+                        let text = self.response_edit.clone();
+                        self.qr_code_content = Some(QrCodeContent::new(text, true));
                     });
                 });
                 columns[1].vertical_centered_justified(|ui| {
@@ -599,7 +562,7 @@ impl WalletTransactionModal {
                     self.finalizing = true;
                     modal.disable_closing();
                     thread::spawn(move || {
-                        let res = wallet.finalize(&message, wallet.can_use_dandelion());
+                        let res = wallet.finalize(&message);
                         let mut w_res = final_res.write();
                         *w_res = Some(res);
                     });

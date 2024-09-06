@@ -19,7 +19,7 @@ use grin_core::core::amount_to_hr_string;
 use grin_wallet_libwallet::TxLogEntryType;
 
 use crate::gui::Colors;
-use crate::gui::icons::{ARROW_CIRCLE_DOWN, ARROW_CIRCLE_UP, ARROW_CLOCKWISE, BRIDGE, CALENDAR_CHECK, CHAT_CIRCLE_TEXT, CHECK, CHECK_CIRCLE, DOTS_THREE_CIRCLE, FILE_TEXT, GEAR_FINE, PROHIBIT, X_CIRCLE};
+use crate::gui::icons::{ARROW_CIRCLE_DOWN, ARROW_CIRCLE_UP, BRIDGE, CALENDAR_CHECK, CHAT_CIRCLE_TEXT, CHECK, CHECK_CIRCLE, DOTS_THREE_CIRCLE, FILE_TEXT, GEAR_FINE, PROHIBIT, X_CIRCLE};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, PullToRefresh, Content, View};
 use crate::gui::views::types::ModalPosition;
@@ -226,19 +226,6 @@ impl WalletTransactions {
                                                 .show();
                                         });
                                     }
-
-                                    // Draw button to repost transaction.
-                                    if tx.can_repost(data) {
-                                        let r = Rounding::default();
-                                        let (icon, color) = (ARROW_CLOCKWISE, Colors::green());
-                                        View::item_button(ui, r, icon, Some(color), || {
-                                            cb.hide_keyboard();
-                                            // Post tx after getting slate from slatepack file.
-                                            if let Some((s, _)) = wallet.read_slate_by_tx(tx) {
-                                                let _ = wallet.post(&s, wallet.can_use_dandelion());
-                                            }
-                                        });
-                                    }
                                 });
                             }
                         });
@@ -249,7 +236,7 @@ impl WalletTransactions {
         if refresh_resp.should_refresh() {
             self.manual_sync = Some(now);
             if !wallet.syncing() {
-                wallet.sync(true);
+                wallet.sync();
             }
         }
     }
@@ -339,7 +326,7 @@ impl WalletTransactions {
                             || tx.data.tx_type == TxLogEntryType::TxReceivedCancelled;
                         if is_canceled {
                             format!("{} {}", X_CIRCLE, t!("wallets.tx_canceled"))
-                        } else if tx.posting {
+                        } else if tx.finalizing {
                             format!("{} {}", DOTS_THREE_CIRCLE, t!("wallets.tx_finalizing"))
                         } else {
                             if tx.cancelling {
@@ -431,8 +418,7 @@ impl WalletTransactions {
 
     /// Show transaction information [`Modal`].
     fn show_tx_info_modal(&mut self, wallet: &Wallet, tx: &WalletTransaction, finalize: bool) {
-        let mut modal = WalletTransactionModal::new(wallet, tx);
-        modal.show_finalization = finalize;
+        let modal = WalletTransactionModal::new(wallet, tx, finalize);
         self.tx_info_content = Some(modal);
         Modal::new(TX_INFO_MODAL)
             .position(ModalPosition::CenterTop)

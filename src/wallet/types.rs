@@ -158,14 +158,12 @@ pub struct WalletTransaction {
     pub amount: u64,
     /// Flag to check if transaction is cancelling.
     pub cancelling: bool,
-    /// Flag to check if transaction is posting after finalization.
-    pub posting: bool,
     /// Flag to check if transaction can be finalized based on Slatepack message state.
     pub can_finalize: bool,
+    /// Flag to check if transaction is finalizing.
+    pub finalizing: bool,
     /// Block height when tx was confirmed.
     pub conf_height: Option<u64>,
-    /// Block height when tx was reposted.
-    pub repost_height: Option<u64>,
     /// Flag to check if tx was received after sync from node.
     pub from_node: bool,
 }
@@ -173,16 +171,8 @@ pub struct WalletTransaction {
 impl WalletTransaction {
     /// Check if transaction can be cancelled.
     pub fn can_cancel(&self) -> bool {
-        self.from_node && !self.cancelling && !self.posting && !self.data.confirmed &&
+        self.from_node && !self.cancelling && !self.data.confirmed &&
             self.data.tx_type != TxLogEntryType::TxReceivedCancelled
             && self.data.tx_type != TxLogEntryType::TxSentCancelled
-    }
-
-    /// Check if transaction can be reposted.
-    pub fn can_repost(&self, data: &WalletData) -> bool {
-        let last_height = data.info.last_confirmed_height;
-        let min_conf = data.info.minimum_confirmations;
-        self.from_node && self.posting && self.repost_height.is_some() &&
-            last_height - self.repost_height.unwrap() > min_conf
     }
 }
