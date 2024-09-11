@@ -19,7 +19,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use parking_lot::RwLock;
 use lazy_static::lazy_static;
-use egui::{UserAttentionType, ViewportCommand};
+use egui::{UserAttentionType, ViewportCommand, WindowLevel};
 use rfd::FileDialog;
 
 use crate::gui::platform::PlatformCallbacks;
@@ -126,14 +126,6 @@ impl PlatformCallbacks for Desktop {
             r_data.is_some()
         };
         if has_data {
-            // Reset window state.
-            let r_ctx = self.ctx.read();
-            if r_ctx.is_some() {
-                let ctx = r_ctx.as_ref().unwrap();
-                ctx.send_viewport_cmd(
-                    ViewportCommand::RequestUserAttention(UserAttentionType::Reset)
-                );
-            }
             // Clear data.
             let mut w_data = PASSED_DATA.write();
             let data = w_data.clone();
@@ -160,16 +152,22 @@ impl Desktop {
         let mut w_data = PASSED_DATA.write();
         *w_data = Some(data);
 
-        // Bring focus on window.
         let r_ctx = self.ctx.read();
         if r_ctx.is_some() {
             let ctx = r_ctx.as_ref().unwrap();
-            ctx.send_viewport_cmd(ViewportCommand::Visible(true));
-            ctx.send_viewport_cmd(ViewportCommand::Minimized(false));
+            // Request attention on taskbar.
             ctx.send_viewport_cmd(
                 ViewportCommand::RequestUserAttention(UserAttentionType::Informational)
             );
-            ctx.send_viewport_cmd(ViewportCommand::Focus);
+            // Un-minimize window.
+            if ctx.input(|i| i.viewport().minimized.unwrap_or(false)) {
+                ctx.send_viewport_cmd(ViewportCommand::Minimized(false));
+            }
+            // Focus to window.
+            if !ctx.input(|i| i.viewport().focused.unwrap_or(false)) {
+                ctx.send_viewport_cmd(ViewportCommand::WindowLevel(WindowLevel::AlwaysOnTop));
+                ctx.send_viewport_cmd(ViewportCommand::Focus);
+            }
             ctx.request_repaint();
         }
     }
