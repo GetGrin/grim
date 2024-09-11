@@ -35,7 +35,6 @@ use crate::wallet::types::{WalletAccount, WalletData};
 pub struct WalletContent {
     /// List of wallet accounts for [`Modal`].
     accounts: Vec<WalletAccount>,
-
     /// Flag to check if account is creating.
     account_creating: bool,
     /// Account label [`Modal`] value.
@@ -49,21 +48,7 @@ pub struct WalletContent {
     qr_scan_result: Option<QrScanResult>,
 
     /// Current tab content to show.
-    pub current_tab: Box<dyn WalletTab>
-}
-
-impl Default for WalletContent {
-    fn default() -> Self {
-        Self {
-            accounts: vec![],
-            account_creating: false,
-            account_label_edit: "".to_string(),
-            account_creation_error: false,
-            camera_content: CameraContent::default(),
-            qr_scan_result: None,
-            current_tab: Box::new(WalletTransactions::default())
-        }
-    }
+    pub current_tab: Box<dyn WalletTab>,
 }
 
 /// Identifier for account list [`Modal`].
@@ -73,6 +58,24 @@ const ACCOUNT_LIST_MODAL: &'static str = "account_list_modal";
 const QR_CODE_SCAN_MODAL: &'static str = "qr_code_scan_modal";
 
 impl WalletContent {
+    /// Create new instance with optional data.
+    pub fn new(data: Option<String>) -> Self {
+        let mut content = Self {
+            accounts: vec![],
+            account_creating: false,
+            account_label_edit: "".to_string(),
+            account_creation_error: false,
+            camera_content: CameraContent::default(),
+            qr_scan_result: None,
+            current_tab: Box::new(WalletTransactions::default()),
+        };
+        // Provide data to messages.
+        if data.is_some() {
+            content.current_tab = Box::new(WalletMessages::new(data));
+        }
+        content
+    }
+
     /// Draw wallet content.
     pub fn ui(&mut self,
               ui: &mut egui::Ui,

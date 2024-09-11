@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use crate::gui::icons::{FOLDER_LOCK, FOLDER_OPEN, SPINNER, WARNING_CIRCLE};
 use crate::gui::platform::PlatformCallbacks;
 use crate::wallet::Wallet;
 
@@ -47,5 +48,40 @@ impl WalletTabType {
             WalletTabType::Transport => t!("wallets.transport"),
             WalletTabType::Settings => t!("wallets.settings")
         }
+    }
+}
+
+/// Get wallet status text.
+pub fn status_text(wallet: &Wallet) -> String {
+    if wallet.is_open() {
+        if wallet.sync_error() {
+            format!("{} {}", WARNING_CIRCLE, t!("error"))
+        } else if wallet.is_closing() {
+            format!("{} {}", SPINNER, t!("wallets.closing"))
+        } else if wallet.is_repairing() {
+            let repair_progress = wallet.repairing_progress();
+            if repair_progress == 0 {
+                format!("{} {}", SPINNER, t!("wallets.checking"))
+            } else {
+                format!("{} {}: {}%",
+                        SPINNER,
+                        t!("wallets.checking"),
+                        repair_progress)
+            }
+        } else if wallet.syncing() {
+            let info_progress = wallet.info_sync_progress();
+            if info_progress == 100 || info_progress == 0 {
+                format!("{} {}", SPINNER, t!("wallets.loading"))
+            } else {
+                format!("{} {}: {}%",
+                        SPINNER,
+                        t!("wallets.loading"),
+                        info_progress)
+            }
+        } else {
+            format!("{} {}", FOLDER_OPEN, t!("wallets.unlocked"))
+        }
+    } else {
+        format!("{} {}", FOLDER_LOCK, t!("wallets.locked"))
     }
 }

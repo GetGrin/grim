@@ -167,6 +167,10 @@ impl PlatformCallbacks for Android {
         }
         None
     }
+
+    fn consume_data(&mut self) -> Option<String> {
+        None
+    }
 }
 
 lazy_static! {

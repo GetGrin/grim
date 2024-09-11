@@ -22,6 +22,7 @@ pub mod platform;
 pub mod platform;
 
 pub trait PlatformCallbacks {
+    fn set_context(&mut self, ctx: &egui::Context);
     fn show_keyboard(&self);
     fn hide_keyboard(&self);
     fn copy_string_to_buffer(&self, data: String);
@@ -34,4 +35,5 @@ pub trait PlatformCallbacks {
     fn share_data(&self, name: String, data: Vec<u8>) -> Result<(), std::io::Error>;
     fn pick_file(&self) -> Option<String>;
     fn picked_file(&self) -> Option<String>;
+    fn consume_data(&mut self) -> Option<String>;
 }

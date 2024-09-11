@@ -33,13 +33,16 @@ use crate::wallet::Wallet;
 
 /// Slatepack messages interaction tab content.
 pub struct WalletMessages {
+    /// Flag to check if it's first content draw.
+    first_draw: bool,
+
     /// Slatepacks message input text.
     message_edit: String,
     /// Flag to check if message request is loading.
     message_loading: bool,
     /// Error on finalization, parse or response creation.
     message_error: String,
-    /// Parsed message result with finalization flag and transaction.
+    /// Parsed message result.
     message_result: Arc<RwLock<Option<(Slate, Result<WalletTransaction, Error>)>>>,
 
     /// Wallet transaction [`Modal`] content.
@@ -111,6 +114,7 @@ impl WalletMessages {
     /// Create new content instance, put message into input if provided.
     pub fn new(message: Option<String>) -> Self {
         Self {
+            first_draw: true,
             message_edit: message.unwrap_or("".to_string()),
             message_loading: false,
             message_error: "".to_string(),
@@ -128,6 +132,14 @@ impl WalletMessages {
               ui: &mut egui::Ui,
               wallet: &mut Wallet,
               cb: &dyn PlatformCallbacks) {
+        if self.first_draw {
+            // Parse provided message on first draw.
+            if !self.message_edit.is_empty() {
+                self.parse_message(wallet);
+            }
+            self.first_draw = false;
+        }
+
         ui.add_space(3.0);
 
         // Show creation of request to send or receive funds.

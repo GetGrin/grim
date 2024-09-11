@@ -141,6 +141,13 @@ impl Settings {
         path
     }
 
+    /// Get desktop application socket path.
+    pub fn socket_path() -> String {
+        let mut socket_path = Self::base_path(None);
+        socket_path.push("grim.socket");
+        socket_path.to_str().unwrap().to_string()
+    }
+
     /// Get configuration file path from provided name and sub-directory if needed.
     pub fn config_path(config_name: &str, sub_dir: Option<String>) -> PathBuf {
         let mut path = Self::base_path(sub_dir);

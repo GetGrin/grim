@@ -4,3 +4,4 @@ Exec=grim
 Icon=grim
 Type=Application
 Categories=Finance
+MimeType=application/x-slatepack;text/plain;

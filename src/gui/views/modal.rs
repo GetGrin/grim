@@ -35,7 +35,7 @@ pub struct Modal {
     /// Identifier for modal.
     pub(crate) id: &'static str,
     /// Position on the screen.
-    position: ModalPosition,
+    pub position: ModalPosition,
     /// To check if it can be closed.
     closeable: Arc<AtomicBool>,
     /// Title text
@@ -62,6 +62,12 @@ impl Modal {
     pub fn position(mut self, position: ModalPosition) -> Self {
         self.position = position;
         self
+    }
+
+    /// Change [`Modal`] position on the screen.
+    pub fn change_position(position: ModalPosition) {
+        let mut w_state = MODAL_STATE.write();
+        w_state.modal.as_mut().unwrap().position = position;
     }
 
     /// Mark [`Modal`] closed.

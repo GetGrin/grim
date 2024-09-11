@@ -13,12 +13,13 @@
 // limitations under the License.
 
 use std::fs::File;
-use std::io:: Write;
-use lazy_static::lazy_static;
-use parking_lot::RwLock;
+use std::io::Write;
+use std::thread;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
-use std::thread;
+use parking_lot::RwLock;
+use lazy_static::lazy_static;
+use egui::{UserAttentionType, ViewportCommand};
 use rfd::FileDialog;
 
 use crate::gui::platform::PlatformCallbacks;
@@ -28,17 +29,16 @@ use crate::gui::platform::PlatformCallbacks;
 pub struct Desktop {
     /// Flag to check if camera stop is needed.
     stop_camera: Arc<AtomicBool>,
-}
-
-impl Default for Desktop {
-    fn default() -> Self {
-        Self {
-            stop_camera: Arc::new(AtomicBool::new(false)),
-        }
-    }
+    /// Context to repaint content and handle viewport commands.
+    ctx: Arc<RwLock<Option<egui::Context>>>,
 }
 
 impl PlatformCallbacks for Desktop {
+    fn set_context(&mut self, ctx: &egui::Context) {
+        let mut w_ctx = self.ctx.write();
+        *w_ctx = Some(ctx.clone());
+    }
+
     fn show_keyboard(&self) {}
 
     fn hide_keyboard(&self) {}
@@ -119,9 +119,61 @@ impl PlatformCallbacks for Desktop {
     fn picked_file(&self) -> Option<String> {
         None
     }
+
+    fn consume_data(&mut self) -> Option<String> {
+        let has_data = {
+            let r_data = PASSED_DATA.read();
+            r_data.is_some()
+        };
+        if has_data {
+            // Reset window state.
+            let r_ctx = self.ctx.read();
+            if r_ctx.is_some() {
+                let ctx = r_ctx.as_ref().unwrap();
+                ctx.send_viewport_cmd(
+                    ViewportCommand::RequestUserAttention(UserAttentionType::Reset)
+                );
+            }
+            // Clear data.
+            let mut w_data = PASSED_DATA.write();
+            let data = w_data.clone();
+            *w_data = None;
+            return data;
+        }
+        None
+    }
 }
 
 impl Desktop {
+    /// Create new instance with provided extra data from app opening.
+    pub fn new(data: Option<String>) -> Self {
+        let mut w_data = PASSED_DATA.write();
+        *w_data = data;
+        Self {
+            stop_camera: Arc::new(AtomicBool::new(false)),
+            ctx: Arc::new(RwLock::new(None)),
+        }
+    }
+
+    /// Handle data passed to application.
+    pub fn on_data(&self, data: String) {
+        let mut w_data = PASSED_DATA.write();
+        *w_data = Some(data);
+
+        // Bring focus on window.
+        let r_ctx = self.ctx.read();
+        if r_ctx.is_some() {
+            let ctx = r_ctx.as_ref().unwrap();
+            ctx.send_viewport_cmd(ViewportCommand::Visible(true));
+            ctx.send_viewport_cmd(ViewportCommand::Minimized(false));
+            ctx.send_viewport_cmd(
+                ViewportCommand::RequestUserAttention(UserAttentionType::Informational)
+            );
+            ctx.send_viewport_cmd(ViewportCommand::Focus);
+            ctx.request_repaint();
+        }
+    }
+
     #[allow(dead_code)]
     #[cfg(target_os = "windows")]
     fn start_camera_capture(stop_camera: Arc<AtomicBool>) {
@@ -205,4 +257,7 @@ impl Desktop {
 lazy_static! {
     /// Last captured image from started camera.
     static ref LAST_CAMERA_IMAGE: Arc<RwLock<Option<(Vec<u8>, u32)>>> = Arc::new(RwLock::new(None));
+
+    /// Data passed from deeplink or opened file.
+    static ref PASSED_DATA: Arc<RwLock<Option<String>>> = Arc::new(RwLock::new(None));
 }

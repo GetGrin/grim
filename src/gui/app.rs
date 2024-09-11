@@ -32,25 +32,38 @@ lazy_static! {
 /// Implements ui entry point and contains platform-specific callbacks.
 pub struct App<Platform> {
     /// Platform specific callbacks handler.
-    pub(crate) platform: Platform,
-
-    /// Main ui content.
+    pub platform: Platform,
+    /// Main content.
     content: Content,
-
     /// Last window resize direction.
-    resize_direction: Option<ResizeDirection>
+    resize_direction: Option<ResizeDirection>,
+    /// Flag to check if it's first draw.
+    first_draw: bool,
 }
 
 impl<Platform: PlatformCallbacks> App<Platform> {
     pub fn new(platform: Platform) -> Self {
-        Self { platform, content: Content::default(), resize_direction: None }
+        Self {
+            platform,
+            content: Content::default(),
+            resize_direction: None,
+            first_draw: true,
+        }
     }
 
     /// Draw application content.
     pub fn ui(&mut self, ctx: &Context) {
+        // Set Desktop platform context on first draw.
+        if self.first_draw {
+            if View::is_desktop() {
+                self.platform.set_context(ctx);
+            }
+            self.first_draw = false;
+        }
+
         // Handle Esc keyboard key event and platform Back button key event.
         let back_pressed = BACK_BUTTON_PRESSED.load(Ordering::Relaxed);
-        if ctx.input_mut(|i| i.consume_key(Modifiers::NONE, egui::Key::Escape)) || back_pressed {
+        if back_pressed || ctx.input_mut(|i| i.consume_key(Modifiers::NONE, egui::Key::Escape)) {
             self.content.on_back();
             if back_pressed {
                 BACK_BUTTON_PRESSED.store(false, Ordering::Relaxed);
@@ -59,8 +72,8 @@ impl<Platform: PlatformCallbacks> App<Platform> {
             ctx.request_repaint();
         }
 
-        // Handle Close event (on desktop).
-        if ctx.input(|i| i.viewport().close_requested()) {
+        // Handle Close event on desktop.
+        if View::is_desktop() && ctx.input(|i| i.viewport().close_requested()) {
             if !self.content.exit_allowed {
                 ctx.send_viewport_cmd(ViewportCommand::CancelClose);
                 Content::show_exit_modal();
@@ -91,6 +104,11 @@ impl<Platform: PlatformCallbacks> App<Platform> {
                         ui.add_space(-1.0);
                     }
                     self.content.ui(ui, &self.platform);
+                }
+
+                // Provide incoming data to wallets.
+                if let Some(data) = self.platform.consume_data() {
+                    self.content.wallets.on_data(ui, Some(data), &self.platform);
                 }
             });
     }
