@@ -42,7 +42,7 @@ fn real_main() {
     }
 
     // Check if another app instance already running.
-    if is_app_running(data.clone()) {
+    if is_app_running(&data) {
         return;
     }
 
@@ -58,7 +58,7 @@ fn real_main() {
         // Save backtrace to file.
         let log = grim::Settings::crash_report_path();
         if log.exists() {
-            std::fs::remove_file(log.clone()).unwrap();
+            let _ = std::fs::remove_file(log.clone());
         }
         std::fs::write(log, err.as_bytes()).unwrap();
         // Setup flag to show crash after app restart.
@@ -74,48 +74,7 @@ fn real_main() {
     }
 }
 
-/// Check if application is already running to pass extra data.
-#[allow(dead_code)]
-#[cfg(not(target_os = "android"))]
-fn is_app_running(data: Option<String>) -> bool {
-    use tor_rtcompat::BlockOn;
-    let runtime = tor_rtcompat::tokio::TokioNativeTlsRuntime::create().unwrap();
-    let res: Result<(), Box<dyn std::error::Error>> = runtime
-        .block_on(async {
-            use interprocess::local_socket::{
-                tokio::{prelude::*, Stream},
-                GenericFilePath
-            };
-            use tokio::{
-                io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
-                try_join,
-            };
-
-            let socket_path = grim::Settings::socket_path();
-            let name = socket_path.to_fs_name::<GenericFilePath>()?;
-            // Connect to running application socket.
-            let conn = Stream::connect(name).await?;
-
-            let (rec, mut sen) = conn.split();
-            let mut rec = BufReader::new(rec);
-            let data = data.unwrap_or("".to_string());
-            let mut buffer = String::with_capacity(data.len());
-
-            // Send extra data to socket.
-            let send = sen.write_all(data.as_bytes());
-            let recv = rec.read_line(&mut buffer);
-            try_join!(send, recv)?;
-
-            drop((rec, sen));
-            Ok(())
-        });
-    return match res {
-        Ok(_) => true,
-        Err(_) => false
-    }
-}
-
-/// Start GUI with Desktop related setup passing extra data from opening.
+/// Start GUI with Desktop related setup passing data from opening.
 #[allow(dead_code)]
 #[cfg(not(target_os = "android"))]
 fn start_desktop_gui(data: Option<String>) {
@@ -199,7 +158,46 @@ fn start_desktop_gui(data: Option<String>) {
     }
 }
 
-/// Start socket that handles data for single application instance.
+/// Check if application is already running to pass data.
+#[allow(dead_code)]
+#[cfg(not(target_os = "android"))]
+fn is_app_running(data: &Option<String>) -> bool {
+    use tor_rtcompat::BlockOn;
+    let runtime = tor_rtcompat::tokio::TokioNativeTlsRuntime::create().unwrap();
+    let res: Result<(), Box<dyn std::error::Error>> = runtime
+        .block_on(async {
+            use interprocess::local_socket::{
+                tokio::{prelude::*, Stream},
+                GenericFilePath, GenericNamespaced
+            };
+            use tokio::{
+                io::AsyncWriteExt,
+            };
+
+            let socket_path = grim::Settings::socket_path();
+            let name = if GenericNamespaced::is_supported() {
+                "grim.sock".to_ns_name::<GenericNamespaced>()?
+            } else {
+                socket_path.clone().to_fs_name::<GenericFilePath>()?
+            };
+            // Connect to running application socket.
+            let conn = Stream::connect(name).await?;
+            let (rec, mut sen) = conn.split();
+
+            // Send data to socket.
+            let data = data.clone().unwrap_or("".to_string());
+            let _ = sen.write_all(data.as_bytes()).await;
+
+            drop((rec, sen));
+            Ok(())
+        });
+    return match res {
+        Ok(_) => true,
+        Err(_) => false
+    }
+}
+
+/// Start desktop socket that handles data for single application instance.
 #[allow(dead_code)]
 #[cfg(not(target_os = "android"))]
 fn start_app_socket(platform: grim::gui::platform::Desktop) {
@@ -209,36 +207,35 @@ fn start_app_socket(platform: grim::gui::platform::Desktop) {
         .block_on(async {
             use interprocess::local_socket::{
                 tokio::{prelude::*, Stream},
-                GenericFilePath, Listener, ListenerOptions,
+                GenericFilePath, GenericNamespaced, Listener, ListenerOptions,
             };
             use std::io;
             use tokio::{
-                io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
-                try_join,
+                io::{AsyncBufReadExt, BufReader},
             };
 
             // Handle incoming connection.
             async fn handle_conn(conn: Stream)
-                -> io::Result<String> {
-                let mut rec = BufReader::new(&conn);
-                let mut sen = &conn;
-
+                                 -> io::Result<String> {
+                let mut read = BufReader::new(&conn);
                 let mut buffer = String::new();
-                let send = sen.write_all(b"");
-                let recv = rec.read_line(&mut buffer);
-
-                // Read data and send answer.
-                try_join!(recv, send)?;
-
+                // Read data.
+                let _ = read.read_line(&mut buffer).await;
                 Ok(buffer)
             }
 
             let socket_path = grim::Settings::socket_path();
-            std::fs::remove_file(socket_path.clone()).unwrap();
-            let name = socket_path.to_fs_name::<GenericFilePath>()?;
-            let opts = ListenerOptions::new().name(name);
+            let name = if GenericNamespaced::is_supported() {
+                "grim.sock".to_ns_name::<GenericNamespaced>()?
+            } else {
+                socket_path.clone().to_fs_name::<GenericFilePath>()?
+            };
+            if socket_path.exists() {
+                let _ = std::fs::remove_file(socket_path);
+            }
 
-            // Create socket listener.
+            // Create listener.
+            let opts = ListenerOptions::new().name(name);
             let listener = match opts.create_tokio() {
                 Err(e) if e.kind() == io::ErrorKind::AddrInUse => {
                     eprintln!("Socket file is occupied.");
@@ -251,7 +248,10 @@ fn start_app_socket(platform: grim::gui::platform::Desktop) {
             loop {
                 let conn = match listener.accept().await {
                     Ok(c) => c,
-                    Err(_) => continue
+                    Err(e) => {
+                        println!("{:?}", e);
+                        continue
+                    }
                 };
                 let res = handle_conn(conn).await;
                 match res {

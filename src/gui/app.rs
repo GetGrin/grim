@@ -114,13 +114,15 @@ impl<Platform: PlatformCallbacks> App<Platform> {
 
                 // Provide incoming data to wallets.
                 if let Some(data) = self.platform.consume_data() {
-                    self.content.wallets.on_data(ui, Some(data), &self.platform);
+                    if !data.is_empty() {
+                        self.content.wallets.on_data(ui, Some(data), &self.platform);
+                    }
                     self.attention_required = true;
                 }
             });
 
         // Check if desktop window was focused after requested attention.
-        if View::is_desktop() && self.attention_required
+        if  self.attention_required && View::is_desktop()
             && ctx.input(|i| i.viewport().focused.unwrap_or(true)) {
             self.attention_required = false;
             ctx.send_viewport_cmd(
