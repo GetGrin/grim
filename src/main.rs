@@ -41,11 +41,6 @@ fn real_main() {
         data = content
     }
 
-    // Check if another app instance already running.
-    if is_app_running(&data) {
-        return;
-    }
-
     // Setup callback on panic crash.
     std::panic::set_hook(Box::new(|info| {
         let backtrace = backtrace::Backtrace::new();
@@ -67,7 +62,14 @@ fn real_main() {
 
     // Start GUI.
     match std::panic::catch_unwind(|| {
-        start_desktop_gui(data);
+        if is_app_running(&data) {
+            return;
+        } else if let Some(data) = data {
+            grim::on_data(data);
+        }
+        let platform = grim::gui::platform::Desktop::new();
+        start_app_socket(platform.clone());
+        start_desktop_gui(platform);
     }) {
         Ok(_) => {}
         Err(e) => println!("{:?}", e)
@@ -77,7 +79,7 @@ fn real_main() {
 /// Start GUI with Desktop related setup passing data from opening.
 #[allow(dead_code)]
 #[cfg(not(target_os = "android"))]
-fn start_desktop_gui(data: Option<String>) {
+fn start_desktop_gui(platform: grim::gui::platform::Desktop) {
     use grim::AppConfig;
     use dark_light::Mode;
 
@@ -127,15 +129,6 @@ fn start_desktop_gui(data: Option<String>) {
         eframe::Renderer::Wgpu
     };
 
-    let mut platform = grim::gui::platform::Desktop::new(data);
-
-    // Start app socket at separate thread.
-    let socket_pl = platform.clone();
-    platform = socket_pl.clone();
-    std::thread::spawn(move || {
-        start_app_socket(socket_pl);
-    });
-
     // Start GUI.
     let app = grim::gui::App::new(platform.clone());
     match grim::start(options.clone(), grim::app_creator(app)) {
@@ -176,16 +169,19 @@ fn is_app_running(data: &Option<String>) -> bool {
 
             let socket_path = grim::Settings::socket_path();
             let name = if GenericNamespaced::is_supported() {
-                "grim.sock".to_ns_name::<GenericNamespaced>()?
+                grim::Settings::SOCKET_NAME.to_ns_name::<GenericNamespaced>()?
             } else {
                 socket_path.clone().to_fs_name::<GenericFilePath>()?
             };
             // Connect to running application socket.
             let conn = Stream::connect(name).await?;
+            let data = data.clone().unwrap_or("".to_string());
+            if data.is_empty() {
+                return Ok(());
+            }
             let (rec, mut sen) = conn.split();
 
             // Send data to socket.
-            let data = data.clone().unwrap_or("".to_string());
             let _ = sen.write_all(data.as_bytes()).await;
 
             drop((rec, sen));
@@ -201,65 +197,69 @@ fn is_app_running(data: &Option<String>) -> bool {
 #[allow(dead_code)]
 #[cfg(not(target_os = "android"))]
 fn start_app_socket(platform: grim::gui::platform::Desktop) {
-    use tor_rtcompat::BlockOn;
-    let runtime = tor_rtcompat::tokio::TokioNativeTlsRuntime::create().unwrap();
-    let _: Result<_, _> = runtime
-        .block_on(async {
-            use interprocess::local_socket::{
-                tokio::{prelude::*, Stream},
-                GenericFilePath, GenericNamespaced, Listener, ListenerOptions,
-            };
-            use std::io;
-            use tokio::{
-                io::{AsyncBufReadExt, BufReader},
-            };
-
-            // Handle incoming connection.
-            async fn handle_conn(conn: Stream)
-                                 -> io::Result<String> {
-                let mut read = BufReader::new(&conn);
-                let mut buffer = String::new();
-                // Read data.
-                let _ = read.read_line(&mut buffer).await;
-                Ok(buffer)
-            }
-
-            let socket_path = grim::Settings::socket_path();
-            let name = if GenericNamespaced::is_supported() {
-                "grim.sock".to_ns_name::<GenericNamespaced>()?
-            } else {
-                socket_path.clone().to_fs_name::<GenericFilePath>()?
-            };
-            if socket_path.exists() {
-                let _ = std::fs::remove_file(socket_path);
-            }
-
-            // Create listener.
-            let opts = ListenerOptions::new().name(name);
-            let listener = match opts.create_tokio() {
-                Err(e) if e.kind() == io::ErrorKind::AddrInUse => {
-                    eprintln!("Socket file is occupied.");
-                    return Err::<Listener, io::Error>(e);
-                }
-                x => x?,
-            };
-
-            // Handle connections.
-            loop {
-                let conn = match listener.accept().await {
-                    Ok(c) => c,
-                    Err(e) => {
-                        println!("{:?}", e);
-                        continue
-                    }
+    std::thread::spawn(move || {
+        use tor_rtcompat::BlockOn;
+        let runtime = tor_rtcompat::tokio::TokioNativeTlsRuntime::create().unwrap();
+        let _: Result<_, _> = runtime
+            .block_on(async {
+                use interprocess::local_socket::{
+                    tokio::{prelude::*, Stream},
+                    GenericFilePath, GenericNamespaced, Listener, ListenerOptions,
                 };
-                let res = handle_conn(conn).await;
-                match res {
-                    Ok(data) => {
-                        platform.on_data(data)
-                    },
-                    Err(_) => {}
+                use std::io;
+                use tokio::{
+                    io::{AsyncBufReadExt, BufReader},
+                };
+                use grim::gui::platform::PlatformCallbacks;
+
+                // Handle incoming connection.
+                async fn handle_conn(conn: Stream)
+                                     -> io::Result<String> {
+                    let mut read = BufReader::new(&conn);
+                    let mut buffer = String::new();
+                    // Read data.
+                    let _ = read.read_line(&mut buffer).await;
+                    Ok(buffer)
                 }
-            }
-        });
+
+                let socket_path = grim::Settings::socket_path();
+                let name = if GenericNamespaced::is_supported() {
+                    grim::Settings::SOCKET_NAME.to_ns_name::<GenericNamespaced>()?
+                } else {
+                    socket_path.clone().to_fs_name::<GenericFilePath>()?
+                };
+                if socket_path.exists() {
+                    let _ = std::fs::remove_file(socket_path);
+                }
+
+                // Create listener.
+                let opts = ListenerOptions::new().name(name);
+                let listener = match opts.create_tokio() {
+                    Err(e) if e.kind() == io::ErrorKind::AddrInUse => {
+                        eprintln!("Socket file is occupied.");
+                        return Err::<Listener, io::Error>(e);
+                    }
+                    x => x?,
+                };
+
+                loop {
+                    let conn = match listener.accept().await {
+                        Ok(c) => c,
+                        Err(e) => {
+                            println!("{:?}", e);
+                            continue
+                        }
+                    };
+                    // Handle connection.
+                    let res = handle_conn(conn).await;
+                    match res {
+                        Ok(data) => {
+                            grim::on_data(data);
+                            platform.request_user_attention();
+                        },
+                        Err(_) => {}
+                    }
+                }
+            });
+    });
 }

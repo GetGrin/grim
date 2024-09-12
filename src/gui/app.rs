@@ -42,8 +42,6 @@ pub struct App<Platform> {
 
     /// Flag to check if it's first draw.
     first_draw: bool,
-    /// Flag to check if attention required after window focus.
-    attention_required: bool,
 }
 
 impl<Platform: PlatformCallbacks> App<Platform> {
@@ -52,14 +50,13 @@ impl<Platform: PlatformCallbacks> App<Platform> {
             platform,
             content: Content::default(),
             resize_direction: None,
-            first_draw: true,
-            attention_required: false,
+            first_draw: true
         }
     }
 
     /// Draw application content.
     pub fn ui(&mut self, ctx: &Context) {
-        // Set Desktop platform context on first draw.
+        // Set platform context on first draw.
         if self.first_draw {
             if View::is_desktop() {
                 self.platform.set_context(ctx);
@@ -113,22 +110,17 @@ impl<Platform: PlatformCallbacks> App<Platform> {
                 }
 
                 // Provide incoming data to wallets.
-                if let Some(data) = self.platform.consume_data() {
+                if let Some(data) = crate::consume_passed_data() {
                     if !data.is_empty() {
                         self.content.wallets.on_data(ui, Some(data), &self.platform);
                     }
-                    self.attention_required = true;
                 }
             });
 
         // Check if desktop window was focused after requested attention.
-        if  self.attention_required && View::is_desktop()
-            && ctx.input(|i| i.viewport().focused.unwrap_or(true)) {
-            self.attention_required = false;
-            ctx.send_viewport_cmd(
-                ViewportCommand::RequestUserAttention(egui::UserAttentionType::Reset)
-            );
-            ctx.send_viewport_cmd(ViewportCommand::WindowLevel(egui::WindowLevel::Normal));
+        if self.platform.user_attention_required() &&
+            ctx.input(|i| i.viewport().focused.unwrap_or(true)) {
+            self.platform.clear_user_attention();
         }
     }
 

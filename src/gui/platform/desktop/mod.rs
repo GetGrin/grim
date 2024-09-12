@@ -27,10 +27,14 @@ use crate::gui::platform::PlatformCallbacks;
 /// Desktop platform related actions.
 #[derive(Clone)]
 pub struct Desktop {
-    /// Flag to check if camera stop is needed.
-    stop_camera: Arc<AtomicBool>,
     /// Context to repaint content and handle viewport commands.
     ctx: Arc<RwLock<Option<egui::Context>>>,
+
+    /// Flag to check if camera stop is needed.
+    stop_camera: Arc<AtomicBool>,
+
+    /// Flag to check if attention required after window focusing.
+    attention_required: Arc<AtomicBool>,
 }
 
 impl PlatformCallbacks for Desktop {
@@ -120,38 +124,7 @@ impl PlatformCallbacks for Desktop {
         None
     }
 
-    fn consume_data(&mut self) -> Option<String> {
-        let has_data = {
-            let r_data = PASSED_DATA.read();
-            r_data.is_some()
-        };
-        if has_data {
-            // Clear data.
-            let mut w_data = PASSED_DATA.write();
-            let data = w_data.clone();
-            *w_data = None;
-            return data;
-        }
-        None
-    }
-}
-
-impl Desktop {
-    /// Create new instance with provided extra data from app opening.
-    pub fn new(data: Option<String>) -> Self {
-        let mut w_data = PASSED_DATA.write();
-        *w_data = data;
-        Self {
-            stop_camera: Arc::new(AtomicBool::new(false)),
-            ctx: Arc::new(RwLock::new(None)),
-        }
-    }
-
-    /// Handle data passed to application.
-    pub fn on_data(&self, data: String) {
-        let mut w_data = PASSED_DATA.write();
-        *w_data = Some(data);
-
+    fn request_user_attention(&self) {
         let r_ctx = self.ctx.read();
         if r_ctx.is_some() {
             let ctx = r_ctx.as_ref().unwrap();
@@ -169,6 +142,33 @@ impl Desktop {
                 ctx.send_viewport_cmd(ViewportCommand::Focus);
             }
             ctx.request_repaint();
+        }
+        self.attention_required.store(true, Ordering::Relaxed);
+    }
+
+    fn user_attention_required(&self) -> bool {
+        self.attention_required.load(Ordering::Relaxed)
+    }
+
+    fn clear_user_attention(&self) {
+        let r_ctx = self.ctx.read();
+        if r_ctx.is_some() {
+            let ctx = r_ctx.as_ref().unwrap();
+            ctx.send_viewport_cmd(
+                ViewportCommand::RequestUserAttention(UserAttentionType::Reset)
+            );
+            ctx.send_viewport_cmd(ViewportCommand::WindowLevel(WindowLevel::Normal));
+        }
+        self.attention_required.store(false, Ordering::Relaxed);
+    }
+}
+
+impl Desktop {
+    pub fn new() -> Self {
+        Self {
+            stop_camera: Arc::new(AtomicBool::new(false)),
+            ctx: Arc::new(RwLock::new(None)),
+            attention_required: Arc::new(AtomicBool::new(false)),
         }
     }
 
@@ -255,7 +255,4 @@ impl Desktop {
 lazy_static! {
     /// Last captured image from started camera.
     static ref LAST_CAMERA_IMAGE: Arc<RwLock<Option<(Vec<u8>, u32)>>> = Arc::new(RwLock::new(None));
-
-    /// Data passed from deeplink or opened file.
-    static ref PASSED_DATA: Arc<RwLock<Option<String>>> = Arc::new(RwLock::new(None));
 }

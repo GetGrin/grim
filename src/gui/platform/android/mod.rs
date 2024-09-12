@@ -30,7 +30,11 @@ use crate::gui::platform::PlatformCallbacks;
 /// Android platform implementation.
 #[derive(Clone)]
 pub struct Android {
+    /// Android related state.
     android_app: AndroidApp,
+
+    /// Context to repaint content and handle viewport commands.
+    ctx: Arc<RwLock<Option<egui::Context>>>,
 }
 
 impl Android {
@@ -38,6 +42,7 @@ impl Android {
     pub fn new(app: AndroidApp) -> Self {
         Self {
             android_app: app,
+            ctx: Arc::new(RwLock::new(None)),
         }
     }
 
@@ -56,6 +61,11 @@ impl Android {
 }
 
 impl PlatformCallbacks for Android {
+    fn set_context(&mut self, ctx: &egui::Context) {
+        let mut w_ctx = self.ctx.write();
+        *w_ctx = Some(ctx.clone());
+    }
+
     fn show_keyboard(&self) {
         // Disable NDK soft input show call before fix for egui.
         // self.android_app.show_soft_input(false);
@@ -131,9 +141,12 @@ impl PlatformCallbacks for Android {
         cache.push("images");
         std::fs::create_dir_all(cache.to_str().unwrap())?;
         cache.push(name);
-        let mut image = File::create_new(cache.clone()).unwrap();
-        image.write_all(data.as_slice()).unwrap();
-        image.sync_all().unwrap();
+        if cache.exists() {
+            std::fs::remove_file(cache.clone())?;
+        }
+        let mut image = File::create_new(cache.clone())?;
+        image.write_all(data.as_slice())?;
+        image.sync_all()?;
         // Call share modal at system.
         let vm = unsafe { jni::JavaVM::from_raw(self.android_app.vm_as_ptr() as _) }.unwrap();
         let env = vm.attach_current_thread().unwrap();
@@ -168,9 +181,13 @@ impl PlatformCallbacks for Android {
         None
     }
 
-    fn consume_data(&mut self) -> Option<String> {
-        None
+    fn request_user_attention(&self) {}
+
+    fn user_attention_required(&self) -> bool {
+        false
     }
+
+    fn clear_user_attention(&self) {}
 }
 
 lazy_static! {

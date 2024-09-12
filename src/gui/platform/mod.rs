@@ -35,5 +35,7 @@ pub trait PlatformCallbacks {
     fn share_data(&self, name: String, data: Vec<u8>) -> Result<(), std::io::Error>;
     fn pick_file(&self) -> Option<String>;
     fn picked_file(&self) -> Option<String>;
-    fn consume_data(&mut self) -> Option<String>;
+    fn request_user_attention(&self);
+    fn user_attention_required(&self) -> bool;
+    fn clear_user_attention(&self);
 }

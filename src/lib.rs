@@ -17,6 +17,9 @@ extern crate rust_i18n;
 
 use eframe::NativeOptions;
 use egui::{Context, Stroke};
+use lazy_static::lazy_static;
+use std::sync::Arc;
+use parking_lot::RwLock;
 
 #[cfg(target_os = "android")]
 use winit::platform::android::activity::AndroidApp;
@@ -255,4 +258,31 @@ fn setup_i18n() {
             rust_i18n::set_locale(AppConfig::DEFAULT_LOCALE);
         }
     }
+}
+
+/// Get data provided from deeplink or opened file.
+pub fn consume_passed_data() -> Option<String> {
+    let has_data = {
+        let r_data = PASSED_DATA.read();
+        r_data.is_some()
+    };
+    if has_data {
+        // Clear data.
+        let mut w_data = PASSED_DATA.write();
+        let data = w_data.clone();
+        *w_data = None;
+        return data;
+    }
+    None
+}
+
+/// Provide data from deeplink or opened file.
+pub fn on_data(data: String) {
+    let mut w_data = PASSED_DATA.write();
+    *w_data = Some(data);
+}
+
+lazy_static! {
+    /// Data provided from deeplink or opened file.
+    pub static ref PASSED_DATA: Arc<RwLock<Option<String>>> = Arc::new(RwLock::new(None));
 }
