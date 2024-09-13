@@ -23,6 +23,7 @@ pub mod platform;
 
 pub trait PlatformCallbacks {
     fn set_context(&mut self, ctx: &egui::Context);
+    fn exit(&self);
     fn show_keyboard(&self);
     fn hide_keyboard(&self);
     fn copy_string_to_buffer(&self, data: String);

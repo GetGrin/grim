@@ -40,8 +40,8 @@ pub struct Content {
     /// Central panel [`WalletsContent`] content.
     pub wallets: WalletsContent,
 
-    /// Check if app exit is allowed on close event of [`eframe::App`] implementation.
-    pub(crate) exit_allowed: bool,
+    /// Check if app exit is allowed on Desktop close event.
+    pub exit_allowed: bool,
     /// Flag to show exit progress at [`Modal`].
     show_exit_progress: bool,
 
@@ -83,7 +83,7 @@ impl ModalContainer for Content {
                 modal: &Modal,
                 cb: &dyn PlatformCallbacks) {
         match modal.id {
-            Self::EXIT_CONFIRMATION_MODAL => self.exit_modal_content(ui, modal),
+            Self::EXIT_CONFIRMATION_MODAL => self.exit_modal_content(ui, modal, cb),
             Self::SETTINGS_MODAL => self.settings_modal_ui(ui, modal),
             Self::ANDROID_INTEGRATED_NODE_WARNING_MODAL => self.android_warning_modal_ui(ui, modal),
             Self::CRASH_REPORT_MODAL => self.crash_report_modal_ui(ui, modal, cb),
@@ -206,11 +206,11 @@ impl Content {
     }
 
     /// Draw exit confirmation modal content.
-    fn exit_modal_content(&mut self, ui: &mut egui::Ui, modal: &Modal) {
+    fn exit_modal_content(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
         if self.show_exit_progress {
             if !Node::is_running() {
                 self.exit_allowed = true;
-                ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
+                cb.exit();
                 modal.close();
             }
             ui.add_space(16.0);
@@ -244,7 +244,7 @@ impl Content {
                     View::button_ui(ui, t!("modal_exit.exit"), Colors::white_or_black(false), |ui| {
                         if !Node::is_running() {
                             self.exit_allowed = true;
-                            ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
+                            cb.exit();
                             modal.close();
                         } else {
                             Node::stop(true);

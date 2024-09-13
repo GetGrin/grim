@@ -260,15 +260,15 @@ fn setup_i18n() {
     }
 }
 
-/// Get data provided from deeplink or opened file.
-pub fn consume_passed_data() -> Option<String> {
+/// Get data from deeplink or opened file.
+pub fn consume_incoming_data() -> Option<String> {
     let has_data = {
-        let r_data = PASSED_DATA.read();
+        let r_data = INCOMING_DATA.read();
         r_data.is_some()
     };
     if has_data {
         // Clear data.
-        let mut w_data = PASSED_DATA.write();
+        let mut w_data = INCOMING_DATA.write();
         let data = w_data.clone();
         *w_data = None;
         return data;
@@ -278,11 +278,35 @@ pub fn consume_passed_data() -> Option<String> {
 
 /// Provide data from deeplink or opened file.
 pub fn on_data(data: String) {
-    let mut w_data = PASSED_DATA.write();
+    let mut w_data = INCOMING_DATA.write();
     *w_data = Some(data);
 }
 
 lazy_static! {
     /// Data provided from deeplink or opened file.
-    pub static ref PASSED_DATA: Arc<RwLock<Option<String>>> = Arc::new(RwLock::new(None));
+    pub static ref INCOMING_DATA: Arc<RwLock<Option<String>>> = Arc::new(RwLock::new(None));
+}
+
+/// Callback from Java code with with passed data.
+#[allow(dead_code)]
+#[allow(non_snake_case)]
+#[cfg(target_os = "android")]
+#[no_mangle]
+pub extern "C" fn Java_mw_gri_android_MainActivity_onData(
+    _env: jni::JNIEnv,
+    _class: jni::objects::JObject,
+    char: jni::sys::jstring
+) {
+    unsafe {
+        let j_obj = jni::objects::JString::from_raw(char);
+        if let Ok(j_str) = _env.get_string_unchecked(j_obj.as_ref()) {
+            match j_str.to_str() {
+                Ok(str) => {
+                    let mut w_path = INCOMING_DATA.write();
+                    *w_path = Some(str.to_string());
+                }
+                Err(_) => {}
+            }
+        };
+    }
 }

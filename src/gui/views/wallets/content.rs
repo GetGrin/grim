@@ -36,12 +36,10 @@ pub struct WalletsContent {
 
     /// Wallet selection [`Modal`] content.
     wallet_selection_content: Option<WalletsModal>,
-
     /// Wallet opening [`Modal`] content.
     open_wallet_content: Option<OpenWalletModal>,
-
     /// Wallet connection selection content.
-    conn_modal_content: Option<WalletConnectionModal>,
+    conn_selection_content: Option<WalletConnectionModal>,
 
     /// Selected [`Wallet`] content.
     wallet_content: WalletContent,
@@ -70,7 +68,7 @@ impl Default for WalletsContent {
             wallets: WalletList::default(),
             wallet_selection_content: None,
             open_wallet_content: None,
-            conn_modal_content: None,
+            conn_selection_content: None,
             wallet_content: WalletContent::new(None),
             creation_content: WalletCreation::default(),
             show_wallets_at_dual_panel: AppConfig::show_wallets_at_dual_panel(),
@@ -106,7 +104,7 @@ impl ModalContainer for WalletsContent {
                 self.creation_content.name_pass_modal_ui(ui, modal, cb)
             },
             CONNECTION_SELECTION_MODAL => {
-                if let Some(content) = self.conn_modal_content.as_mut() {
+                if let Some(content) = self.conn_selection_content.as_mut() {
                     content.ui(ui, modal, cb, |id| {
                         // Update wallet connection on select.
                         let list = self.wallets.list();
@@ -303,6 +301,7 @@ impl WalletsContent {
         }
     }
 
+    /// Show wallet selection with provided optional data.
     fn show_wallet_selection_modal(&mut self, data: Option<String>) {
         self.wallet_selection_content = Some(WalletsModal::new(None, data, true));
         // Show wallet selection modal.
@@ -557,7 +556,7 @@ impl WalletsContent {
     /// Show [`Modal`] to select connection for the wallet.
     fn show_connection_selector_modal(&mut self, wallet: &Wallet) {
         let ext_conn = wallet.get_current_ext_conn();
-        self.conn_modal_content = Some(WalletConnectionModal::new(ext_conn));
+        self.conn_selection_content = Some(WalletConnectionModal::new(ext_conn));
         // Show modal.
         Modal::new(CONNECTION_SELECTION_MODAL)
             .position(ModalPosition::CenterTop)

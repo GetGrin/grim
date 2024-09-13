@@ -66,6 +66,10 @@ impl PlatformCallbacks for Android {
         *w_ctx = Some(ctx.clone());
     }
 
+    fn exit(&self) {
+        self.call_java_method("exit", "()V", &[]).unwrap();
+    }
+
     fn show_keyboard(&self) {
         // Disable NDK soft input show call before fix for egui.
         // self.android_app.show_soft_input(false);
@@ -137,20 +141,18 @@ impl PlatformCallbacks for Android {
     fn share_data(&self, name: String, data: Vec<u8>) -> Result<(), std::io::Error> {
         // Create file at cache dir.
         let default_cache = OsString::from(dirs::cache_dir().unwrap());
-        let mut cache = PathBuf::from(env::var_os("XDG_CACHE_HOME").unwrap_or(default_cache));
-        cache.push("images");
-        std::fs::create_dir_all(cache.to_str().unwrap())?;
-        cache.push(name);
-        if cache.exists() {
-            std::fs::remove_file(cache.clone())?;
+        let mut file = PathBuf::from(env::var_os("XDG_CACHE_HOME").unwrap_or(default_cache));
+        file.push(name);
+        if file.exists() {
+            std::fs::remove_file(file.clone())?;
         }
-        let mut image = File::create_new(cache.clone())?;
+        let mut image = File::create_new(file.clone())?;
         image.write_all(data.as_slice())?;
         image.sync_all()?;
         // Call share modal at system.
         let vm = unsafe { jni::JavaVM::from_raw(self.android_app.vm_as_ptr() as _) }.unwrap();
         let env = vm.attach_current_thread().unwrap();
-        let arg_value = env.new_string(cache.to_str().unwrap()).unwrap();
+        let arg_value = env.new_string(file.to_str().unwrap()).unwrap();
         self.call_java_method("shareImage",
                               "(Ljava/lang/String;)V",
                               &[JValue::Object(&JObject::from(arg_value))]).unwrap();

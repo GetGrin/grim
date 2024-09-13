@@ -152,13 +152,17 @@ public class BackgroundService extends Service {
         // Show notification with sync status.
         Intent i = getPackageManager().getLaunchIntentForPackage(this.getPackageName());
         PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, i, PendingIntent.FLAG_IMMUTABLE);
-        mNotificationBuilder = new NotificationCompat.Builder(this, TAG)
-                .setContentTitle(this.getSyncTitle())
-                .setContentText(this.getSyncStatusText())
-                .setStyle(new NotificationCompat.BigTextStyle().bigText(this.getSyncStatusText()))
-                .setSmallIcon(R.drawable.ic_stat_name)
-                .setPriority(NotificationCompat.PRIORITY_MAX)
-                .setContentIntent(pendingIntent);
+        try {
+            mNotificationBuilder = new NotificationCompat.Builder(this, TAG)
+                    .setContentTitle(this.getSyncTitle())
+                    .setContentText(this.getSyncStatusText())
+                    .setStyle(new NotificationCompat.BigTextStyle().bigText(this.getSyncStatusText()))
+                    .setSmallIcon(R.drawable.ic_stat_name)
+                    .setPriority(NotificationCompat.PRIORITY_MAX)
+                    .setContentIntent(pendingIntent);
+        } catch (UnsatisfiedLinkError e) {
+            return;
+        }
         Notification notification = mNotificationBuilder.build();
 
         // Start service at foreground state to prevent killing by system.

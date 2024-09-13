@@ -110,7 +110,7 @@ impl<Platform: PlatformCallbacks> App<Platform> {
                 }
 
                 // Provide incoming data to wallets.
-                if let Some(data) = crate::consume_passed_data() {
+                if let Some(data) = crate::consume_incoming_data() {
                     if !data.is_empty() {
                         self.content.wallets.on_data(ui, Some(data), &self.platform);
                     }

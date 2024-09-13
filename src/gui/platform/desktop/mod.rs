@@ -43,6 +43,14 @@ impl PlatformCallbacks for Desktop {
         *w_ctx = Some(ctx.clone());
     }
 
+    fn exit(&self) {
+        let r_ctx = self.ctx.read();
+        if r_ctx.is_some() {
+            let ctx = r_ctx.as_ref().unwrap();
+            ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+        }
+    }
+
     fn show_keyboard(&self) {}
 
     fn hide_keyboard(&self) {}
