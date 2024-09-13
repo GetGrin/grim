@@ -34,11 +34,16 @@ rm -rf target/aarch64-apple-darwin
 [[ $2 == "arm" ]] && arch+=(aarch64-apple-darwin)
 [[ $2 == "universal" ]] && arch+=(universal2-apple-darwin)
 
-# Start release build with zig linker for cross-compilation
-# zig 0.12+ required
-cargo install cargo-zigbuild
-cargo zigbuild --release --target ${arch}
-rm -rf .intentionally-empty-file.o
+if [[ "$OSTYPE" != "darwin"* ]]; then
+  # Start release build with zig linker for cross-compilation
+  # zig 0.12+ required
+  cargo install cargo-zigbuild
+  cargo zigbuild --release --target ${arch}
+  rm -rf .intentionally-empty-file.o
+else
+  cargo build --release --target ${arch}
+fi
+
 mkdir macos/Grim.app/Contents/MacOS
 yes | cp -rf target/${arch}/release/grim macos/Grim.app/Contents/MacOS
 
