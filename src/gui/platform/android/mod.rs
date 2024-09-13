@@ -67,30 +67,30 @@ impl PlatformCallbacks for Android {
     }
 
     fn exit(&self) {
-        self.call_java_method("exit", "()V", &[]).unwrap();
+        let _ = self.call_java_method("exit", "()V", &[]);
     }
 
     fn show_keyboard(&self) {
         // Disable NDK soft input show call before fix for egui.
         // self.android_app.show_soft_input(false);
 
-        self.call_java_method("showKeyboard", "()V", &[]).unwrap();
+        let _ = self.call_java_method("showKeyboard", "()V", &[]);
     }
 
     fn hide_keyboard(&self) {
         // Disable NDK soft input hide call before fix for egui.
         // self.android_app.hide_soft_input(false);
 
-        self.call_java_method("hideKeyboard", "()V", &[]).unwrap();
+        let _ = self.call_java_method("hideKeyboard", "()V", &[]);
     }
 
     fn copy_string_to_buffer(&self, data: String) {
         let vm = unsafe { jni::JavaVM::from_raw(self.android_app.vm_as_ptr() as _) }.unwrap();
         let env = vm.attach_current_thread().unwrap();
         let arg_value = env.new_string(data).unwrap();
-        self.call_java_method("copyText",
-                              "(Ljava/lang/String;)V",
-                              &[JValue::Object(&JObject::from(arg_value))]).unwrap();
+        let _ = self.call_java_method("copyText",
+                                      "(Ljava/lang/String;)V",
+                                      &[JValue::Object(&JObject::from(arg_value))]);
     }
 
     fn get_string_from_buffer(&self) -> String {
@@ -109,12 +109,12 @@ impl PlatformCallbacks for Android {
         let mut w_image = LAST_CAMERA_IMAGE.write();
         *w_image = None;
         // Start camera.
-        self.call_java_method("startCamera", "()V", &[]).unwrap();
+        let _ = self.call_java_method("startCamera", "()V", &[]);
     }
 
     fn stop_camera(&self) {
         // Stop camera.
-        self.call_java_method("stopCamera", "()V", &[]).unwrap();
+        let _ = self.call_java_method("stopCamera", "()V", &[]);
         // Clear image.
         let mut w_image = LAST_CAMERA_IMAGE.write();
         *w_image = None;
@@ -129,19 +129,25 @@ impl PlatformCallbacks for Android {
     }
 
     fn can_switch_camera(&self) -> bool {
-        let result = self.call_java_method("camerasAmount", "()I", &[]).unwrap();
-        let amount = unsafe { result.i };
-        amount > 1
+        if let Some(res) = self.call_java_method("camerasAmount", "()I", &[]) {
+            let amount = unsafe { res.i };
+            return amount > 1;
+        }
+        false
     }
 
     fn switch_camera(&self) {
-        self.call_java_method("switchCamera", "()V", &[]).unwrap();
+        let _ = self.call_java_method("switchCamera", "()V", &[]);
     }
 
     fn share_data(&self, name: String, data: Vec<u8>) -> Result<(), std::io::Error> {
-        // Create file at cache dir.
         let default_cache = OsString::from(dirs::cache_dir().unwrap());
         let mut file = PathBuf::from(env::var_os("XDG_CACHE_HOME").unwrap_or(default_cache));
+        // File path for Android provider.
+        file.push("images");
+        if !file.exists() {
+            std::fs::create_dir(file.clone())?;
+        }
         file.push(name);
         if file.exists() {
             std::fs::remove_file(file.clone())?;
@@ -153,9 +159,9 @@ impl PlatformCallbacks for Android {
         let vm = unsafe { jni::JavaVM::from_raw(self.android_app.vm_as_ptr() as _) }.unwrap();
         let env = vm.attach_current_thread().unwrap();
         let arg_value = env.new_string(file.to_str().unwrap()).unwrap();
-        self.call_java_method("shareImage",
-                              "(Ljava/lang/String;)V",
-                              &[JValue::Object(&JObject::from(arg_value))]).unwrap();
+        let _ = self.call_java_method("shareImage",
+                                      "(Ljava/lang/String;)V",
+                                      &[JValue::Object(&JObject::from(arg_value))]);
         Ok(())
     }
 
@@ -164,7 +170,7 @@ impl PlatformCallbacks for Android {
         let mut w_path = PICKED_FILE_PATH.write();
         *w_path = None;
         // Launch file picker.
-        let _ = self.call_java_method("pickFile", "()V", &[]).unwrap();
+        let _ = self.call_java_method("pickFile", "()V", &[]);
         // Return empty string to identify async pick.
         Some("".to_string())
     }
