@@ -27,16 +27,20 @@ cd ..
 rustup target add x86_64-apple-darwin
 rustup target add aarch64-apple-darwin
 
-rm -rf target/x86_64-apple-darwin
-rm -rf target/aarch64-apple-darwin
-
 [[ $2 == "x86_64" ]] && arch+=(x86_64-apple-darwin)
 [[ $2 == "arm" ]] && arch+=(aarch64-apple-darwin)
-[[ $2 == "universal" ]] && arch+=(universal2-apple-darwin)
 
 if [[ "$OSTYPE" != "darwin"* ]]; then
-  # Start release build with zig linker for cross-compilation
-  # zig 0.12+ required
+  rustup target add x86_64h-apple-darwin
+  [[ $2 == "universal" ]] && arch+=(x86_64h-apple-darwin)
+else
+  [[ $2 == "universal" ]] && arch+=(universal2-apple-darwin)
+  rm -rf target/x86_64-apple-darwin
+  rm -rf target/aarch64-apple-darwin
+fi
+
+# Start release build with zig linker on non-MacOS systems
+if [[ "$OSTYPE" != "darwin"* ]]; then
   cargo install cargo-zigbuild
   cargo zigbuild --release --target ${arch}
   rm -rf .intentionally-empty-file.o
@@ -44,10 +48,9 @@ else
   cargo build --release --target ${arch}
 fi
 
-mkdir macos/Grim.app/Contents/MacOS
 yes | cp -rf target/${arch}/release/grim macos/Grim.app/Contents/MacOS
 
-### Sign .app resources on change:
+# Sign .app resources on change:
 #rcodesign generate-self-signed-certificate
 #rcodesign sign --pem-file cert.pem macos/Grim.app
 
