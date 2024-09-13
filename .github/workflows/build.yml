@@ -23,8 +23,8 @@ jobs:
         run: |
           chmod +x android/gradlew
           echo "${{ secrets.ANDROID_RELEASE_KEYSTORE }}" > release.keystore.asc
-          gpg -d --passphrase "${{ secrets.ANDROID_RELEASE_SECRET }}" --batch release.keystore.asc > android/keystore
-          echo -e "storePassword=${{ secrets.ANDROID_PASS }}\nkeyPassword=${{ secrets.ANDROID_PASS }}\nkeyAlias=grim\nstoreFile=../keystore" > android/keystore.properties    
+          base64 -d release.keystore.asc > android/keystore
+          echo -e "storePassword=${{ secrets.ANDROID_RELEASE_SECRET }}\nkeyPassword=${{ secrets.ANDROID_RELEASE_SECRET }}\nkeyAlias=grim\nstoreFile=../keystore" > android/keystore.properties
       - name: Build lib 1/2
         continue-on-error: true
         run: |
