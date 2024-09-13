@@ -40,6 +40,34 @@
         <key>CFBundleVersion</key>
         <string>1</string>
 
+        <key>CFBundleDocumentTypes</key>
+        <array>
+    		<dict>
+    			<key>CFBundleTypeName</key>
+    			<string>Apple SimpleText document</string>
+    			<key>CFBundleTypeRole</key>
+    			<string>Viewer</string>
+    			<key>LSItemContentTypes</key>
+    			<array>
+    				<string>com.apple.traditional-mac-plain-text</string>
+    			</array>
+    			<key>NSDocumentClass</key>
+    			<string>Document</string>
+    		</dict>
+        	<dict>
+        		<key>CFBundleTypeName</key>
+        		<string>Unknown document</string>
+        		<key>CFBundleTypeRole</key>
+        		<string>Viewer</string>
+        		<key>LSItemContentTypes</key>
+        		<array>
+        			<string>public.data</string>
+        		</array>
+        		<key>NSDocumentClass</key>
+        		<string>Document</string>
+        	</dict>
+	    </array>
+
         <key>LSApplicationCategoryType</key>
         <string>public.app-category.finance</string>
 
