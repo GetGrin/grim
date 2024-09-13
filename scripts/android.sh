@@ -59,12 +59,12 @@ function build_apk() {
 
   cd android
   ./gradlew clean
-  ./gradlew assembleRelease
+  ./gradlew assembleSignedRelease
 
   # Setup release file name
   if [ -n $1 ]; then
     rm -rf grim-${version}-$1.apk
-    mv app/build/outputs/apk/release/app-release.apk grim-${version}-$1.apk
+    mv app/build/outputs/apk/signedRelease/app-signedRelease.apk grim-${version}-$1.apk
   fi
 
   cd ..
