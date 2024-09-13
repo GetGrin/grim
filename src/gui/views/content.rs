@@ -241,7 +241,7 @@ impl Content {
                     });
                 });
                 columns[1].vertical_centered_justified(|ui| {
-                    View::button_ui(ui, t!("modal_exit.exit"), Colors::white_or_black(false), |ui| {
+                    View::button_ui(ui, t!("modal_exit.exit"), Colors::white_or_black(false), |_| {
                         if !Node::is_running() {
                             self.exit_allowed = true;
                             cb.exit();

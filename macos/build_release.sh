@@ -9,14 +9,13 @@ case $2 in
   exit 1
 esac
 
-if [[ ! -v SDKROOT ]]; then
+if [[ "$OSTYPE" != "darwin"* ]]; then
+  if [ -z ${SDKROOT+x} ]; then
     echo "MacOS SDKROOT is not set"
     exit 1
-elif [[ -z "SDKROOT" ]]; then
-    echo "MacOS SDKROOT is set to the empty string"
-    exit 1
-else
+  else
     echo "Use MacOS SDK: ${SDKROOT}"
+  fi
 fi
 
 # Setup build directory
