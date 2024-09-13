@@ -29,9 +29,9 @@ jobs:
       - name: Setup Java build
         run: |
           chmod +x android/gradlew
-          echo "${{ secrets.ANDROID_RELEASE_KEYSTORE }}" > release.keystore.asc
-          base64 -d release.keystore.asc > android/keystore
-          echo -e "storePassword=${{ secrets.ANDROID_RELEASE_SECRET }}\nkeyPassword=${{ secrets.ANDROID_RELEASE_SECRET }}\nkeyAlias=grim\nstoreFile=../keystore" > android/keystore.properties
+          echo "${{ secrets.ANDROID_RELEASE }}" > release.keystore.txt
+          base64 -d release.keystore.txt > android/keystore
+          echo -e "storePassword=${{ secrets.ANDROID_RELEASE_STORE }}\nkeyPassword=${{ secrets.ANDROID_RELEASE_KEY }}\nkeyAlias=${{ secrets.ANDROID_RELEASE_ALIAS }}\nstoreFile=../keystore" > android/keystore.properties
       - name: Build lib ARMv8 1/2
         continue-on-error: true
         run: |
