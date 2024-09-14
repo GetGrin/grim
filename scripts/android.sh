@@ -30,7 +30,7 @@ rustup target add aarch64-linux-android
 rustup target add x86_64-linux-android
 cargo install cargo-ndk
 
-success=0
+success=1
 
 ### Build native code
 [[ $1 == "release" ]] && release_param="--profile release-apk"
@@ -60,19 +60,33 @@ function build_apk() {
 
   cd android
   ./gradlew clean
-  ./gradlew assembleSignedRelease
+  # Build signed apk if keystore exists
+  if [ ! -f keystore.properties ]; then
+    ./gradlew assembleRelease
+    apk_path=app/build/outputs/apk/release/app-release.apk
+  else
+    ./gradlew assembleSignedRelease
+    apk_path=app/build/outputs/apk/signedRelease/app-signedRelease.apk
+  fi
 
-  if [ -n $1 ]; then
+  if [[ $1 == "" ]]; then
+    # Launch application at all connected devices.
+    for SERIAL in $(adb devices | grep -v List | cut -f 1);
+      do
+        adb -s $SERIAL install ${apk_path}
+        sleep 1s
+        adb -s $SERIAL shell am start -n mw.gri.android/.MainActivity;
+    done
+  else
     # Setup release file name
     name=grim-${version}-android-$1.apk
-    if [[ $1 == "arm" ]]; then
-      name=grim-${version}-android.apk
-    fi
+    [[ $1 == "arm" ]] && name=grim-${version}-android.apk
     rm -rf ${name}
-    mv app/build/outputs/apk/signedRelease/app-signedRelease.apk ${name}
+    mv ${apk_path} ${name}
 
     # Calculate checksum
-    checksum=grim-${version}-$1-sha256sum.txt
+    checksum=grim-${version}-android-$1-sha256sum.txt
+    [[ $1 == "arm" ]] && checksum=grim-${version}-android-sha256sum.txt
     rm -rf ${checksum}
     sha256sum ${name} > ${checksum}
   fi
@@ -85,14 +99,6 @@ rm -rf android/app/src/main/jniLibs/*
 if [[ $1 == "build" ]]; then
   build_lib $2
   [ $success -eq 1 ] && build_apk
-
-  # Launch application at all connected devices.
-  for SERIAL in $(adb devices | grep -v List | cut -f 1);
-    do
-      adb -s $SERIAL install ${apk_path}
-      sleep 1s
-      adb -s $SERIAL shell am start -n mw.gri.android/.MainActivity;
-  done
 else
   rm -rf target/release-apk
   rm -rf target/aarch64-linux-android
