@@ -33,7 +33,6 @@ cargo install cargo-ndk
 success=1
 
 ### Build native code
-[[ $1 == "release" ]] && release_param="--profile release-apk"
 function build_lib() {
   [[ $1 == "v7" ]] && arch=(armeabi-v7a)
   [[ $1 == "v8" ]] && arch=(arm64-v8a)
@@ -43,9 +42,9 @@ function build_lib() {
 
   # Fix for https://stackoverflow.com/questions/57193895/error-use-of-undeclared-identifier-pthread-mutex-robust-cargo-build-liblmdb-s
   export CPPFLAGS="-DMDB_USE_ROBUST=0" && export CFLAGS="-DMDB_USE_ROBUST=0"
-  cargo ndk -t ${arch} build ${release_param}
+  cargo ndk -t ${arch} build --profile release-apk
   unset CPPFLAGS && unset CFLAGS
-  cargo ndk -t ${arch} -o android/app/src/main/jniLibs build ${release_param}
+  cargo ndk -t ${arch} -o android/app/src/main/jniLibs build --profile release-apk
   if [ $? -eq 0 ]
   then
     success=1
