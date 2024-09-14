@@ -204,8 +204,10 @@ impl WalletTransactions {
                                         });
                                     }
 
+                                    let wallet_loaded = wallet.foreign_api_port().is_some();
+
                                     // Draw button to show transaction finalization.
-                                    if tx.can_finalize {
+                                    if wallet_loaded && tx.can_finalize {
                                         let (icon, color) = (CHECK, Some(Colors::green()));
                                         View::item_button(ui, Rounding::default(), icon, color, || {
                                             cb.hide_keyboard();
@@ -214,7 +216,6 @@ impl WalletTransactions {
                                     }
 
                                     // Draw button to cancel transaction.
-                                    let wallet_loaded = wallet.foreign_api_port().is_some();
                                     if wallet_loaded && tx.can_cancel() {
                                         let (icon, color) = (PROHIBIT, Some(Colors::red()));
                                         View::item_button(ui, Rounding::default(), icon, color, || {

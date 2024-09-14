@@ -140,8 +140,10 @@ impl WalletTransactionModal {
                     return;
                 }
 
+                let wallet_loaded = wallet.foreign_api_port().is_some();
+
                 // Draw button to show transaction finalization or transaction info.
-                if tx.can_finalize {
+                if wallet_loaded && tx.can_finalize {
                     let (icon, color) = if self.show_finalization {
                         (FILE_TEXT, None)
                     } else {
@@ -161,7 +163,6 @@ impl WalletTransactionModal {
                 }
 
                 // Draw button to cancel transaction.
-                let wallet_loaded = wallet.foreign_api_port().is_some();
                 if wallet_loaded && tx.can_cancel() {
                     View::item_button(ui, Rounding::default(), PROHIBIT, Some(Colors::red()), || {
                         cb.hide_keyboard();
