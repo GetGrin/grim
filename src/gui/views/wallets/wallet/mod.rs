@@ -28,3 +28,5 @@ pub use transport::WalletTransport;
 
 mod content;
 pub use content::WalletContent;
+
+mod accounts;
