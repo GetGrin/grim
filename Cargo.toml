@@ -16,9 +16,6 @@ path = "src/main.rs"
 name="grim"
 crate-type = ["rlib"]
 
-[profile.release]
-debug = 1
-
 [profile.release-apk]
 inherits = "release"
 strip = true
