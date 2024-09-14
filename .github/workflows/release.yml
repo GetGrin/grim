@@ -38,7 +38,7 @@ jobs:
       - name: Checksum AppImage x86
         working-directory: target/x86_64-unknown-linux-gnu/release
         shell: pwsh
-        run: get-filehash -algorithm sha256 grim-${{ github.ref_name }}-linux-x86_64.AppImage | Format-List |  Out-String | ForEach-Object { $_.Trim() } > grim-${{ github.ref_name }}-linux-x86_64-appimage-sha256sum.txt
+        run: sha256sum grim-${{ github.ref_name }}-linux-x86_64.AppImage > grim-${{ github.ref_name }}-linux-x86_64-appimage-sha256sum.txt
       - name: AppImage ARM
         run: |
           cp target/aarch64-unknown-linux-gnu/release/grim linux/Grim.AppDir/AppRun
@@ -46,7 +46,7 @@ jobs:
       - name: Checksum AppImage ARM
         working-directory: target/aarch64-unknown-linux-gnu/release
         shell: pwsh
-        run: get-filehash -algorithm sha256 grim-${{ github.ref_name }}-linux-arm.AppImage | Format-List |  Out-String | ForEach-Object { $_.Trim() } > grim-${{ github.ref_name }}-linux-arm-appimage-sha256sum.txt
+        run: sha256sum grim-${{ github.ref_name }}-linux-arm.AppImage > grim-${{ github.ref_name }}-linux-arm-appimage-sha256sum.txt
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
@@ -74,7 +74,7 @@ jobs:
       - name: Checksum release
         working-directory: target/release
         shell: pwsh
-        run: get-filehash -algorithm sha256 grim-${{ github.ref_name }}-win-x86_64.zip | Format-List |  Out-String | ForEach-Object { $_.Trim() } > grim-${{ github.ref_name }}-win-x86_64-sha256sum.txt
+        run: sha256sum grim-${{ github.ref_name }}-win-x86_64.zip > grim-${{ github.ref_name }}-win-x86_64-sha256sum.txt
       - name: Install cargo-wix
         run: cargo install cargo-wix
       - name: Run cargo-wix
@@ -82,7 +82,7 @@ jobs:
       - name: Checksum msi
         working-directory: target/wix
         shell: pwsh
-        run: get-filehash -algorithm sha256 grim-${{ github.ref_name }}-win-x86_64.msi | Format-List |  Out-String | ForEach-Object { $_.Trim() } > grim-${{ github.ref_name }}-win-x86_64-msi-sha256sum.txt
+        run: sha256sum grim-${{ github.ref_name }}-win-x86_64.msi > grim-${{ github.ref_name }}-win-x86_64-msi-sha256sum.txt
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
@@ -121,7 +121,7 @@ jobs:
       - name: Checksum Release x86
         working-directory: target/x86_64-apple-darwin/release
         shell: pwsh
-        run: get-filehash -algorithm sha256 grim-${{ github.ref_name }}-macos-x86_64.zip | Format-List |  Out-String | ForEach-Object { $_.Trim() } > grim-${{ github.ref_name }}-macos-x86_64-sha256sum.txt
+        run: sha256sum grim-${{ github.ref_name }}-macos-x86_64.zip > grim-${{ github.ref_name }}-macos-x86_64-sha256sum.txt
       - name: Release ARM
         run: |
           rustup target add aarch64-apple-darwin
@@ -136,7 +136,7 @@ jobs:
       - name: Checksum Release ARM
         working-directory: target/aarch64-apple-darwin/release
         shell: pwsh
-        run: get-filehash -algorithm sha256 grim-${{ github.ref_name }}-macos-arm.zip | Format-List |  Out-String | ForEach-Object { $_.Trim() } > grim-${{ github.ref_name }}-macos-arm-sha256sum.txt
+        run: sha256sum grim-${{ github.ref_name }}-macos-arm.zip > grim-${{ github.ref_name }}-macos-arm-sha256sum.txt
       - name: Release Universal
         run: |
           rustup target add aarch64-apple-darwin
@@ -152,7 +152,7 @@ jobs:
       - name: Checksum Release Universal
         working-directory: target/universal2-apple-darwin/release
         shell: pwsh
-        run: get-filehash -algorithm sha256 grim-${{ github.ref_name }}-macos-universal.zip | Format-List |  Out-String | ForEach-Object { $_.Trim() } > grim-${{ github.ref_name }}-macos-universal-sha256sum.txt
+        run: sha256sum grim-${{ github.ref_name }}-macos-universal.zip > grim-${{ github.ref_name }}-macos-universal-sha256sum.txt
       - name: Release
         uses: softprops/action-gh-release@v1
         with:

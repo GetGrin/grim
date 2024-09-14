@@ -33,6 +33,7 @@ cargo install cargo-ndk
 success=0
 
 ### Build native code
+[[ $1 == "release" ]] && release_param="--profile release-apk"
 function build_lib() {
   [[ $1 == "v7" ]] && arch=(armeabi-v7a)
   [[ $1 == "v8" ]] && arch=(arm64-v8a)
@@ -42,9 +43,9 @@ function build_lib() {
 
   # Fix for https://stackoverflow.com/questions/57193895/error-use-of-undeclared-identifier-pthread-mutex-robust-cargo-build-liblmdb-s
   export CPPFLAGS="-DMDB_USE_ROBUST=0" && export CFLAGS="-DMDB_USE_ROBUST=0"
-  cargo ndk -t ${arch} build --profile release-apk
+  cargo ndk -t ${arch} build ${release_param}
   unset CPPFLAGS && unset CFLAGS
-  cargo ndk -t ${arch} -o android/app/src/main/jniLibs build --profile release-apk
+  cargo ndk -t ${arch} -o android/app/src/main/jniLibs build ${release_param}
   if [ $? -eq 0 ]
   then
     success=1
@@ -61,20 +62,24 @@ function build_apk() {
   ./gradlew clean
   ./gradlew assembleSignedRelease
 
-  # Setup release file name
   if [ -n $1 ]; then
-    rm -rf grim-${version}-$1.apk
-    mv app/build/outputs/apk/signedRelease/app-signedRelease.apk grim-${version}-$1.apk
+    # Setup release file name
+    name=grim-${version}-android-$1.apk
+    if [[ $1 == "arm" ]]; then
+      name=grim-${version}-android.apk
+    fi
+    rm -rf ${name}
+    mv app/build/outputs/apk/signedRelease/app-signedRelease.apk ${name}
+
+    # Calculate checksum
+    checksum=grim-${version}-$1-sha256sum.txt
+    rm -rf ${checksum}
+    sha256sum ${name} > ${checksum}
   fi
 
   cd ..
 }
 
-# Remove build targets
-rm -rf target/release-apk
-rm -rf target/aarch64-linux-android
-rm -rf target/x86_64-linux-android
-rm -rf target/armv7-linux-androideabi
 rm -rf android/app/src/main/jniLibs/*
 
 if [[ $1 == "build" ]]; then
@@ -89,6 +94,11 @@ if [[ $1 == "build" ]]; then
       adb -s $SERIAL shell am start -n mw.gri.android/.MainActivity;
   done
 else
+  rm -rf target/release-apk
+  rm -rf target/aarch64-linux-android
+  rm -rf target/x86_64-linux-android
+  rm -rf target/armv7-linux-androideabi
+
   build_lib "v7"
   [ $success -eq 1 ] && build_lib "v8"
   [ $success -eq 1 ] && build_apk "arm"
