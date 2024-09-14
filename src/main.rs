@@ -36,7 +36,7 @@ fn real_main() {
         let path = std::path::PathBuf::from(&args[1]);
         let content = match std::fs::read_to_string(path) {
             Ok(s) => Some(s),
-            Err(_) => None
+            Err(_) => Some(args[1].clone())
         };
         data = content
     }
