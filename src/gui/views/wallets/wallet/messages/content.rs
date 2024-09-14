@@ -378,7 +378,6 @@ impl WalletMessages {
                         // Parse Slatepack message resetting message error.
                         if buf != previous {
                             self.parse_message(wallet);
-                            self.parse_message(wallet);
                         }
                     });
                 });
@@ -405,7 +404,7 @@ impl WalletMessages {
     }
 
     /// Parse message input making operation based on incoming status.
-    pub fn parse_message(&mut self, wallet: &Wallet) {
+    fn parse_message(&mut self, wallet: &Wallet) {
         self.message_error.clear();
         self.message_edit = self.message_edit.trim().to_string();
         if self.message_edit.is_empty() {

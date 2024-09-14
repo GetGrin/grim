@@ -25,8 +25,8 @@ use crate::gui::views::wallets::wallet::types::GRIN;
 use crate::wallet::types::WalletAccount;
 use crate::wallet::{Wallet, WalletConfig};
 
-/// Wallet accounts content.
-pub struct WalletAccounts {
+/// Wallet accounts [`Modal`] content.
+pub struct WalletAccountsModal {
     /// List of wallet accounts.
     accounts: Vec<WalletAccount>,
     /// Flag to check if account is creating.
@@ -37,7 +37,7 @@ pub struct WalletAccounts {
     account_creation_error: bool,
 }
 
-impl Default for WalletAccounts {
+impl Default for WalletAccountsModal {
     fn default() -> Self {
         Self {
             accounts: vec![],
@@ -48,7 +48,7 @@ impl Default for WalletAccounts {
     }
 }
 
-impl WalletAccounts {
+impl WalletAccountsModal {
     /// Create new instance from wallet accounts.
     pub fn new(accounts: Vec<WalletAccount>) -> Self {
         Self {
@@ -62,7 +62,7 @@ impl WalletAccounts {
     /// Draw [`Modal`] content.
     pub fn ui(&mut self,
               ui: &mut egui::Ui,
-              wallet: &mut Wallet,
+              wallet: &Wallet,
               modal: &Modal,
               cb: &dyn PlatformCallbacks) {
         if self.account_creating {
@@ -180,7 +180,7 @@ const ACCOUNT_ITEM_HEIGHT: f32 = 75.0;
 /// Draw account item.
 fn account_item_ui(ui: &mut egui::Ui,
                    modal: &Modal,
-                   wallet: &mut Wallet,
+                   wallet: &Wallet,
                    acc: &WalletAccount,
                    index: usize,
                    size: usize) {

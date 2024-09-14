@@ -13,20 +13,19 @@
 // limitations under the License.
 
 use std::time::Duration;
-use egui::{Align, Id, Layout, Margin, RichText, ScrollArea};
-use egui::scroll_area::ScrollBarVisibility;
+use egui::{Align, Id, Layout, Margin, RichText};
 use grin_chain::SyncStatus;
 use grin_core::core::amount_to_hr_string;
 
 use crate::AppConfig;
 use crate::gui::Colors;
-use crate::gui::icons::{ARROWS_CLOCKWISE, BRIDGE, CHAT_CIRCLE_TEXT, COPY, FOLDER_USER, GEAR_FINE, GRAPH, PACKAGE, POWER, SCAN, SPINNER, USERS_THREE};
+use crate::gui::icons::{ARROWS_CLOCKWISE, BRIDGE, CHAT_CIRCLE_TEXT, FOLDER_USER, GEAR_FINE, GRAPH, PACKAGE, POWER, SCAN, SPINNER, USERS_THREE};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{CameraContent, Modal, Content, View};
+use crate::gui::views::{Modal, Content, View};
 use crate::gui::views::types::{ModalPosition, QrScanResult};
 use crate::gui::views::wallets::{WalletTransactions, WalletMessages, WalletTransport};
 use crate::gui::views::wallets::types::{GRIN, WalletTab, WalletTabType};
-use crate::gui::views::wallets::wallet::accounts::WalletAccounts;
+use crate::gui::views::wallets::wallet::modals::{WalletAccountsModal, WalletScanModal};
 use crate::gui::views::wallets::wallet::WalletSettings;
 use crate::node::Node;
 use crate::wallet::{Wallet, WalletConfig};
@@ -35,12 +34,10 @@ use crate::wallet::types::WalletData;
 /// Selected and opened wallet content.
 pub struct WalletContent {
     /// Wallet accounts [`Modal`] content.
-    accounts_modal_content: Option<WalletAccounts>,
+    accounts_modal_content: Option<WalletAccountsModal>,
 
-    /// Camera content for QR scan [`Modal`].
-    camera_content: CameraContent,
-    /// QR code scan result
-    qr_scan_result: Option<QrScanResult>,
+    /// QR code scan [`Modal`] content.
+    scan_modal_content: Option<WalletScanModal>,
 
     /// Current tab content to show.
     pub current_tab: Box<dyn WalletTab>,
@@ -57,8 +54,7 @@ impl WalletContent {
     pub fn new(data: Option<String>) -> Self {
         let mut content = Self {
             accounts_modal_content: None,
-            camera_content: CameraContent::default(),
-            qr_scan_result: None,
+            scan_modal_content: None,
             current_tab: Box::new(WalletTransactions::default()),
         };
         // Provide data to messages.
@@ -180,7 +176,7 @@ impl WalletContent {
     /// Draw [`Modal`] content for this ui container.
     fn modal_content_ui(&mut self,
                         ui: &mut egui::Ui,
-                        wallet: &mut Wallet,
+                        wallet: &Wallet,
                         cb: &dyn PlatformCallbacks) {
         match Modal::opened() {
             None => {}
@@ -194,9 +190,36 @@ impl WalletContent {
                         }
                     }
                     QR_CODE_SCAN_MODAL => {
-                        Modal::ui(ui.ctx(), |ui, modal| {
-                            self.scan_qr_modal_ui(ui, wallet, modal, cb);
-                        });
+                        if let Some(content) = self.scan_modal_content.as_mut() {
+                            Modal::ui(ui.ctx(), |ui, modal| {
+                                content.ui(ui, wallet, modal, cb, |result| {
+                                    match result {
+                                        QrScanResult::Slatepack(message) => {
+                                            modal.close();
+                                            let msg = Some(message.to_string());
+                                            let messages = WalletMessages::new(msg);
+                                            self.current_tab = Box::new(messages);
+                                            return;
+                                        }
+                                        QrScanResult::Address(receiver) => {
+                                            let balance = wallet.get_data()
+                                                .unwrap()
+                                                .info
+                                                .amount_currently_spendable;
+                                            if balance > 0 {
+                                                modal.close();
+                                                let mut transport = WalletTransport::default();
+                                                let rec = Some(receiver.to_string());
+                                                transport.show_send_tor_modal(cb, rec);
+                                                self.current_tab = Box::new(transport);
+                                                return;
+                                            }
+                                        }
+                                        _ => {}
+                                    }
+                                });
+                            });
+                        }
                     }
                     _ => {}
                 }
@@ -219,8 +242,7 @@ impl WalletContent {
         ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
             // Draw button to scan QR code.
             View::item_button(ui, View::item_rounding(0, 2, true), SCAN, None, || {
-                self.qr_scan_result = None;
-                self.camera_content.clear_state();
+                self.scan_modal_content = Some(WalletScanModal::default());
                 // Show QR code scan modal.
                 Modal::new(QR_CODE_SCAN_MODAL)
                     .position(ModalPosition::CenterTop)
@@ -232,7 +254,7 @@ impl WalletContent {
 
             // Draw button to show list of accounts.
             View::item_button(ui, View::item_rounding(1, 3, true), USERS_THREE, None, || {
-                self.accounts_modal_content = Some(WalletAccounts::new(wallet.accounts()));
+                self.accounts_modal_content = Some(WalletAccountsModal::new(wallet.accounts()));
                 // Show account list modal.
                 Modal::new(ACCOUNT_LIST_MODAL)
                     .position(ModalPosition::CenterTop)
@@ -297,113 +319,6 @@ impl WalletContent {
                 })
             });
         });
-    }
-
-    /// Draw QR code scan [`Modal`] content.
-    fn scan_qr_modal_ui(&mut self,
-                             ui: &mut egui::Ui,
-                             wallet: &mut Wallet,
-                             modal: &Modal,
-                             cb: &dyn PlatformCallbacks) {
-        // Show scan result if exists or show camera content while scanning.
-        if let Some(result) = &self.qr_scan_result {
-            let mut result_text = result.text();
-            View::horizontal_line(ui, Colors::item_stroke());
-            ui.add_space(3.0);
-            ScrollArea::vertical()
-                .id_source(Id::from("qr_scan_result_input").with(wallet.get_config().id))
-                .scroll_bar_visibility(ScrollBarVisibility::AlwaysHidden)
-                .max_height(128.0)
-                .auto_shrink([false; 2])
-                .show(ui, |ui| {
-                    ui.add_space(7.0);
-                    egui::TextEdit::multiline(&mut result_text)
-                        .font(egui::TextStyle::Small)
-                        .desired_rows(5)
-                        .interactive(false)
-                        .desired_width(f32::INFINITY)
-                        .show(ui);
-                    ui.add_space(6.0);
-                });
-            ui.add_space(2.0);
-            View::horizontal_line(ui, Colors::item_stroke());
-            ui.add_space(10.0);
-
-            // Show copy button.
-            ui.vertical_centered(|ui| {
-                let copy_text = format!("{} {}", COPY, t!("copy"));
-                View::button(ui, copy_text, Colors::button(), || {
-                    cb.copy_string_to_buffer(result_text.to_string());
-                    self.qr_scan_result = None;
-                    modal.close();
-                });
-            });
-            ui.add_space(10.0);
-            View::horizontal_line(ui, Colors::item_stroke());
-            ui.add_space(6.0);
-        } else if let Some(result) = self.camera_content.qr_scan_result() {
-            cb.stop_camera();
-            self.camera_content.clear_state();
-            match &result {
-                QrScanResult::Slatepack(message) => {
-                    // Redirect to messages to handle parsed message.
-                    let mut messages =
-                        WalletMessages::new(Some(message.to_string()));
-                    messages.parse_message(wallet);
-                    modal.close();
-                    self.current_tab = Box::new(messages);
-                    return;
-                }
-                QrScanResult::Address(receiver) => {
-                    if wallet.get_data().unwrap().info.amount_currently_spendable > 0 {
-                        // Redirect to send amount with Tor.
-                        let mut transport = WalletTransport::default();
-                        modal.close();
-                        transport.show_send_tor_modal(cb, Some(receiver.to_string()));
-                        self.current_tab = Box::new(transport);
-                        return;
-                    }
-                }
-                _ => {}
-            }
-
-            // Set result and rename modal title.
-            self.qr_scan_result = Some(result);
-            Modal::set_title(t!("scan_result"));
-        } else {
-            ui.add_space(6.0);
-            self.camera_content.ui(ui, cb);
-            ui.add_space(6.0);
-        }
-
-        if self.qr_scan_result.is_some() {
-            // Setup spacing between buttons.
-            ui.spacing_mut().item_spacing = egui::Vec2::new(8.0, 0.0);
-
-            ui.columns(2, |columns| {
-                columns[0].vertical_centered_justified(|ui| {
-                    View::button(ui, t!("close"), Colors::white_or_black(false), || {
-                        self.qr_scan_result = None;
-                        modal.close();
-                    });
-                });
-                columns[1].vertical_centered_justified(|ui| {
-                    View::button(ui, t!("repeat"), Colors::white_or_black(false), || {
-                        Modal::set_title(t!("scan_qr"));
-                        self.qr_scan_result = None;
-                        cb.start_camera();
-                    });
-                });
-            });
-        } else {
-            ui.vertical_centered_justified(|ui| {
-                View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
-                    cb.stop_camera();
-                    modal.close();
-                });
-            });
-        }
-        ui.add_space(6.0);
     }
 
     /// Draw tab buttons in the bottom of the screen.

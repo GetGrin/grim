@@ -471,7 +471,7 @@ impl Wallet {
     }
 
     /// Set active account from provided label.
-    pub fn set_active_account(&mut self, label: &String) -> Result<(), Error> {
+    pub fn set_active_account(&self, label: &String) -> Result<(), Error> {
         let mut api = Owner::new(self.instance.clone().unwrap(), None);
         controller::owner_single_use(None, None, Some(&mut api), |api, m| {
             api.set_active_account(m, label)?;
