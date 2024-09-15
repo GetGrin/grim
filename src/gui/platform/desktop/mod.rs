@@ -226,36 +226,35 @@ impl Desktop {
 
         let ctx = PlatformContext::default();
         let devices = ctx.devices().unwrap();
-        let dev = ctx.open_device(&devices[0].uri).unwrap();
+        if let Ok(dev) = ctx.open_device(&devices[0].uri) {
+            let streams = dev.streams().unwrap();
+            let stream_desc = streams[0].clone();
+            let w = stream_desc.width;
+            let h = stream_desc.height;
 
-        let streams = dev.streams().unwrap();
-        let stream_desc = streams[0].clone();
-        let w = stream_desc.width;
-        let h = stream_desc.height;
+            let mut stream = dev.start_stream(&stream_desc).unwrap();
 
-        let mut stream = dev.start_stream(&stream_desc).unwrap();
-
-        loop {
-            // Stop if camera was stopped.
-            if stop_camera.load(Ordering::Relaxed) {
-                stop_camera.store(false, Ordering::Relaxed);
-                // Clear image.
+            loop {
+                // Stop if camera was stopped.
+                if stop_camera.load(Ordering::Relaxed) {
+                    stop_camera.store(false, Ordering::Relaxed);
+                    let mut w_image = LAST_CAMERA_IMAGE.write();
+                    *w_image = None;
+                    break;
+                }
+                // Get a frame.
+                let frame = stream.next().expect("Stream is dead").expect("Failed to capture a frame");
+                let mut out = vec![];
+                if let Some(buf) = image::ImageBuffer::<image::Rgb<u8>, &[u8]>::from_raw(w, h, &frame) {
+                    image::codecs::jpeg::JpegEncoder::new(&mut out)
+                        .write_image(buf.as_raw(), w, h, image::ExtendedColorType::Rgb8).unwrap();
+                } else {
+                    out = frame.to_vec();
+                }
+                // Save image.
                 let mut w_image = LAST_CAMERA_IMAGE.write();
-                *w_image = None;
-                break;
+                *w_image = Some((out, 0));
             }
-            // Get a frame.
-            let frame = stream.next().expect("Stream is dead").expect("Failed to capture a frame");
-            let mut out = vec![];
-            if let Some(buf) = image::ImageBuffer::<image::Rgb<u8>, &[u8]>::from_raw(w, h, &frame) {
-                image::codecs::jpeg::JpegEncoder::new(&mut out)
-                    .write_image(buf.as_raw(), w, h, image::ExtendedColorType::Rgb8).unwrap();
-            } else {
-                out = frame.to_vec();
-            }
-            // Save image.
-            let mut w_image = LAST_CAMERA_IMAGE.write();
-            *w_image = Some((out, 0));
         }
     }
 }
