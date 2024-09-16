@@ -16,9 +16,6 @@ path = "src/main.rs"
 name="grim"
 crate-type = ["rlib"]
 
-[profile.release]
-debug = 1
-
 [profile.release-apk]
 inherits = "release"
 strip = true
@@ -119,6 +116,7 @@ eframe = { version = "0.28.1", features = ["wgpu", "glow"] }
 arboard = "3.2.0"
 rfd = "0.14.1"
 dark-light = "1.1.1"
+interprocess = { version = "2.2.1", features = ["tokio"] }
 
 [target.'cfg(target_os = "android")'.dependencies]
 android_logger = "0.13.1"

@@ -1,4 +1,4 @@
-// Copyright 2023 The Grim Developers
+// Copyright 2024 The Grim Developers
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,21 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub mod types;
-
-mod settings;
-pub use settings::*;
-
-mod txs;
-pub use txs::*;
-
-mod messages;
-pub use messages::WalletMessages;
-
-mod transport;
-pub use transport::WalletTransport;
-
 mod content;
-pub use content::WalletContent;
+pub use content::*;
 
-mod modals;
+mod tx;
+pub use tx::*;

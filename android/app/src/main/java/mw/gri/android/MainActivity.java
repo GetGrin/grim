@@ -7,9 +7,9 @@ import android.content.*;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.net.Uri;
-import android.os.Build;
-import android.os.Bundle;
+import android.os.*;
 import android.os.Process;
+import android.provider.Settings;
 import android.system.ErrnoException;
 import android.system.Os;
 import android.util.Size;
@@ -51,8 +51,7 @@ public class MainActivity extends GameActivity {
         @Override
         public void onReceive(Context ctx, Intent i) {
             if (i.getAction().equals(STOP_APP_ACTION)) {
-                onExit();
-                Process.killProcess(Process.myPid());
+                exit();
             }
         }
     };
@@ -67,11 +66,19 @@ public class MainActivity extends GameActivity {
     private ExecutorService mCameraExecutor = null;
     private boolean mUseBackCamera = true;
 
-    private ActivityResultLauncher<Intent> mFilePickResultLauncher = null;
+    private ActivityResultLauncher<Intent> mFilePickResult = null;
+    private ActivityResultLauncher<Intent> mOpenFilePermissionsResult = null;
 
     @SuppressLint("UnspecifiedRegisterReceiverFlag")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        // Check if activity was launched to exclude from recent apps on exit.
+        if ((getIntent().getFlags() & Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS) != 0) {
+            super.onCreate(null);
+            finish();
+            return;
+        }
+
         // Clear cache on start.
         if (savedInstanceState == null) {
             Utils.deleteDirectoryContent(new File(getExternalCacheDir().getPath()), false);
@@ -91,8 +98,21 @@ public class MainActivity extends GameActivity {
         // Register receiver to finish activity from the BackgroundService.
         registerReceiver(mBroadcastReceiver, new IntentFilter(STOP_APP_ACTION));
 
-        // Register file pick result launcher.
-        mFilePickResultLauncher = registerForActivityResult(
+        // Register associated file opening result.
+        mOpenFilePermissionsResult = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(),
+                result -> {
+                    if (Build.VERSION.SDK_INT >= 30) {
+                        if (Environment.isExternalStorageManager()) {
+                            onFile();
+                        }
+                    } else if (result.getResultCode() == RESULT_OK) {
+                        onFile();
+                    }
+                }
+        );
+        // Register file pick result.
+        mFilePickResult = registerForActivityResult(
                 new ActivityResultContracts.StartActivityForResult(),
                 result -> {
                     int resultCode = result.getResultCode();
@@ -105,11 +125,11 @@ public class MainActivity extends GameActivity {
                             File file = new File(getExternalCacheDir(), name);
                             try (InputStream is = getContentResolver().openInputStream(uri);
                                  OutputStream os = new FileOutputStream(file)) {
-                                byte[] buffer = new byte[1024];
-                                int length;
-                                while ((length = is.read(buffer)) > 0) {
-                                    os.write(buffer, 0, length);
-                                }
+                                    byte[] buffer = new byte[1024];
+                                    int length;
+                                    while ((length = is.read(buffer)) > 0) {
+                                        os.write(buffer, 0, length);
+                                    }
                             } catch (Exception e) {
                                 e.printStackTrace();
                             }
@@ -124,7 +144,7 @@ public class MainActivity extends GameActivity {
         // Listener for display insets (cutouts) to pass values into native code.
         View content = getWindow().getDecorView().findViewById(android.R.id.content);
         ViewCompat.setOnApplyWindowInsetsListener(content, (v, insets) -> {
-            // Setup cutouts values.
+            // Get display cutouts.
             DisplayCutoutCompat dc = insets.getDisplayCutout();
             int cutoutTop = 0;
             int cutoutRight = 0;
@@ -140,7 +160,7 @@ public class MainActivity extends GameActivity {
             // Get display insets.
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
 
-            // Setup values to pass into native code.
+            // Pass values into native code.
             int[] values = new int[]{0, 0, 0, 0};
             values[0] = Utils.pxToDp(Integer.max(cutoutTop, systemBars.top), this);
             values[1] = Utils.pxToDp(Integer.max(cutoutRight, systemBars.right), this);
@@ -166,7 +186,60 @@ public class MainActivity extends GameActivity {
                 BackgroundService.start(this);
             }
         });
+
+        // Check if intent has data on launch.
+        if (savedInstanceState == null) {
+            onNewIntent(getIntent());
+        }
     }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        String action = intent.getAction();
+        // Check if file was open with the application.
+        if (action != null && action.equals(Intent.ACTION_VIEW)) {
+            Intent i = getIntent();
+            i.setData(intent.getData());
+            setIntent(i);
+            onFile();
+        }
+    }
+
+    // Callback when associated file was open.
+    private void onFile() {
+        Uri data = getIntent().getData();
+        if (data == null) {
+            return;
+        }
+        if (Build.VERSION.SDK_INT >= 30) {
+            if (!Environment.isExternalStorageManager()) {
+                Intent i = new Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION);
+                mOpenFilePermissionsResult.launch(i);
+                return;
+            }
+        }
+        try {
+            ParcelFileDescriptor parcelFile = getContentResolver().openFileDescriptor(data, "r");
+            FileReader fileReader = new FileReader(parcelFile.getFileDescriptor());
+            BufferedReader reader = new BufferedReader(fileReader);
+            String line;
+            StringBuilder buff = new StringBuilder();
+            while ((line = reader.readLine()) != null) {
+                buff.append(line);
+            }
+            reader.close();
+            fileReader.close();
+
+            // Provide file content into native code.
+            onData(buff.toString());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    // Pass data into native code.
+    public native void onData(String data);
 
     @Override
     public void onConfigurationChanged(Configuration newConfig) {
@@ -232,17 +305,17 @@ public class MainActivity extends GameActivity {
     // Implemented into native code to handle key code BACK event.
     public native void onBack();
 
-    // Actions on app exit.
-    private void onExit() {
-        unregisterReceiver(mBroadcastReceiver);
-        BackgroundService.stop(this);
+    // Called from native code to exit app.
+    public void exit() {
+        finishAndRemoveTask();
     }
 
     @Override
     protected void onDestroy() {
-        onExit();
+        unregisterReceiver(mBroadcastReceiver);
+        BackgroundService.stop(this);
 
-        // Kill process after 3 seconds if app was terminated from recent apps to prevent app hanging.
+        // Kill process after 3 secs if app was terminated from recent apps to prevent app hang.
         new Thread(() -> {
             try {
                 onTermination();
@@ -253,9 +326,7 @@ public class MainActivity extends GameActivity {
             }
         }).start();
 
-        // Destroy an app and kill process.
         super.onDestroy();
-        Process.killProcess(Process.myPid());
     }
 
     // Notify native code to stop activity (e.g. node) if app was terminated from recent apps.
@@ -298,18 +369,16 @@ public class MainActivity extends GameActivity {
 
     // Called from native code to start camera.
     public void startCamera() {
-        // Check permissions.
         String notificationsPermission = Manifest.permission.CAMERA;
         if (checkSelfPermission(notificationsPermission) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(new String[] { notificationsPermission }, CAMERA_PERMISSION_CODE);
         } else {
-            // Start .
             if (mCameraProviderFuture == null) {
                 mCameraProviderFuture = ProcessCameraProvider.getInstance(this);
                 mCameraProviderFuture.addListener(() -> {
                     try {
                         mCameraProvider = mCameraProviderFuture.get();
-                        // Launch camera.
+                        // Start camera.
                         openCamera();
                     } catch (Exception e) {
                         View content = findViewById(android.R.id.content);
@@ -402,7 +471,7 @@ public class MainActivity extends GameActivity {
         Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
         intent.setType("*/*");
         try {
-            mFilePickResultLauncher.launch(Intent.createChooser(intent, "Pick file"));
+            mFilePickResult.launch(Intent.createChooser(intent, "Pick file"));
         } catch (android.content.ActivityNotFoundException ex) {
             onFilePick("");
         }

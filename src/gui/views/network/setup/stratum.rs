@@ -83,7 +83,7 @@ impl Default for StratumSetup {
 
         Self {
             wallets: WalletList::default(),
-            wallets_modal: WalletsModal::new(wallet_id),
+            wallets_modal: WalletsModal::new(wallet_id, None, false),
             available_ips: NodeConfig::get_ip_addrs(),
             stratum_port_edit: port,
             stratum_port_available_edit: is_port_available,
@@ -111,10 +111,12 @@ impl ModalContainer for StratumSetup {
                 modal: &Modal,
                 cb: &dyn PlatformCallbacks) {
         match modal.id {
-            WALLET_SELECTION_MODAL => self.wallets_modal.ui(ui, modal, &self.wallets, |id| {
-                NodeConfig::save_stratum_wallet_id(id);
-                self.wallet_name = WalletConfig::name_by_id(id);
-            }),
+            WALLET_SELECTION_MODAL => {
+                self.wallets_modal.ui(ui, modal, &mut self.wallets, cb, |id, _| {
+                    NodeConfig::save_stratum_wallet_id(id);
+                    self.wallet_name = WalletConfig::name_by_id(id);
+                })
+            },
             STRATUM_PORT_MODAL => self.port_modal(ui, modal, cb),
             ATTEMPT_TIME_MODAL => self.attempt_modal(ui, modal, cb),
             MIN_SHARE_DIFF_MODAL => self.min_diff_modal(ui, modal, cb),
@@ -240,7 +242,7 @@ impl StratumSetup {
 
     /// Show wallet selection [`Modal`].
     fn show_wallets_modal(&mut self) {
-        self.wallets_modal = WalletsModal::new(NodeConfig::get_stratum_wallet_id());
+        self.wallets_modal = WalletsModal::new(NodeConfig::get_stratum_wallet_id(), None, false);
         // Show modal.
         Modal::new(WALLET_SELECTION_MODAL)
             .position(ModalPosition::Center)

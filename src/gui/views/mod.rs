@@ -36,8 +36,8 @@ pub use camera::*;
 mod qr;
 pub use qr::*;
 
-mod file;
-pub use file::*;
+mod file_pick;
+pub use file_pick::*;
 
 mod pull_to_refresh;
 pub use pull_to_refresh::*;

@@ -36,7 +36,7 @@ pub struct CommonSettings {
     new_pass_edit: String,
 
     /// Minimum confirmations number value.
-    min_confirmations_edit: String
+    min_confirmations_edit: String,
 }
 
 /// Identifier for wallet name [`Modal`].
@@ -54,25 +54,26 @@ impl Default for CommonSettings {
             wrong_pass: false,
             old_pass_edit: "".to_string(),
             new_pass_edit: "".to_string(),
-            min_confirmations_edit: "".to_string()
+            min_confirmations_edit: "".to_string(),
         }
     }
 }
 
 impl CommonSettings {
+    /// Draw common wallet settings content.
     pub fn ui(&mut self, ui: &mut egui::Ui, wallet: &mut Wallet, cb: &dyn PlatformCallbacks) {
         // Show modal content for this ui container.
         self.modal_content_ui(ui, wallet, cb);
 
         ui.vertical_centered(|ui| {
-            let wallet_name = wallet.get_config().name;
+            let config = wallet.get_config();
             // Show wallet name.
             ui.add_space(2.0);
             ui.label(RichText::new(t!("wallets.name"))
                 .size(16.0)
                 .color(Colors::gray()));
             ui.add_space(2.0);
-            ui.label(RichText::new(wallet_name.clone())
+            ui.label(RichText::new(&config.name)
                 .size(16.0)
                 .color(Colors::white_or_black(true)));
             ui.add_space(8.0);
@@ -80,7 +81,7 @@ impl CommonSettings {
             // Show wallet name setup.
             let name_text = format!("{} {}", PENCIL, t!("change"));
             View::button(ui, name_text, Colors::button(), || {
-                self.name_edit = wallet_name;
+                self.name_edit = config.name;
                 // Show wallet name modal.
                 Modal::new(NAME_EDIT_MODAL)
                     .position(ModalPosition::CenterTop)
@@ -118,10 +119,9 @@ impl CommonSettings {
             ui.add_space(6.0);
 
             // Show minimum amount of confirmations value setup.
-            let min_confirmations = wallet.get_config().min_confirmations;
-            let min_conf_text = format!("{} {}", CLOCK_COUNTDOWN, min_confirmations);
+            let min_conf_text = format!("{} {}", CLOCK_COUNTDOWN, config.min_confirmations);
             View::button(ui, min_conf_text, Colors::button(), || {
-                self.min_confirmations_edit = min_confirmations.to_string();
+                self.min_confirmations_edit = config.min_confirmations.to_string();
                 // Show minimum amount of confirmations value modal.
                 Modal::new(MIN_CONFIRMATIONS_EDIT_MODAL)
                     .position(ModalPosition::CenterTop)
@@ -131,8 +131,15 @@ impl CommonSettings {
             });
 
             ui.add_space(12.0);
+
+            // Setup ability to post wallet transactions with Dandelion.
+            View::checkbox(ui, wallet.can_use_dandelion(), t!("wallets.use_dandelion"), || {
+                wallet.update_use_dandelion(!wallet.can_use_dandelion());
+            });
+
+            ui.add_space(6.0);
             View::horizontal_line(ui, Colors::stroke());
-            ui.add_space(4.0);
+            ui.add_space(6.0);
         });
     }
 

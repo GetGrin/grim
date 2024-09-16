@@ -18,7 +18,8 @@ use grin_wallet_libwallet::Error;
 use crate::AppConfig;
 use crate::wallet::{Wallet, WalletConfig};
 
-/// Wrapper for [`Wallet`] list.
+/// [`Wallet`] list container.
+#[derive(Clone)]
 pub struct WalletList {
     /// List of wallets for [`ChainTypes::Mainnet`].
     pub main_list: Vec<Wallet>,

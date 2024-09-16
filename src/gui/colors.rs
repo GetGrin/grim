@@ -31,10 +31,14 @@ const YELLOW: Color32 = Color32::from_rgb(254, 241, 2);
 const YELLOW_DARK: Color32 = Color32::from_rgb(239, 229, 3);
 
 const GREEN: Color32 = Color32::from_rgb(0, 0x64, 0);
+const GREEN_DARK: Color32 = Color32::from_rgb(0, (0x64 as f32 * 1.3 + 0.5) as u8, 0);
 
 const RED: Color32 = Color32::from_rgb(0x8B, 0, 0);
+const RED_DARK: Color32 = Color32::from_rgb((0x8B as f32 * 1.3 + 0.5) as u8, 0, 0);
 
 const BLUE: Color32 = Color32::from_rgb(0, 0x66, 0xE4);
+const BLUE_DARK: Color32 =
+    Color32::from_rgb(0, (0x66 as f32 * 1.3 + 0.5) as u8, (0xE4 as f32 * 1.3 + 0.5) as u8);
 
 const FILL: Color32 = Color32::from_gray(244);
 const FILL_DARK: Color32 = Color32::from_gray(24);
@@ -125,7 +129,7 @@ impl Colors {
 
     pub fn green() -> Color32 {
         if use_dark() {
-            GREEN.gamma_multiply(1.3)
+            GREEN_DARK
         } else {
             GREEN
         }
@@ -133,7 +137,7 @@ impl Colors {
 
     pub fn red() -> Color32 {
         if use_dark() {
-            RED.gamma_multiply(1.3)
+            RED_DARK
         } else {
             RED
         }
@@ -141,7 +145,7 @@ impl Colors {
 
     pub fn blue() -> Color32 {
         if use_dark() {
-            BLUE.gamma_multiply(1.3)
+            BLUE_DARK
         } else {
             BLUE
         }

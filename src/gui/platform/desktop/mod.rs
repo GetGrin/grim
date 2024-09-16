@@ -13,12 +13,13 @@
 // limitations under the License.
 
 use std::fs::File;
-use std::io:: Write;
-use lazy_static::lazy_static;
-use parking_lot::RwLock;
+use std::io::Write;
+use std::thread;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
-use std::thread;
+use parking_lot::RwLock;
+use lazy_static::lazy_static;
+use egui::{UserAttentionType, ViewportCommand, WindowLevel};
 use rfd::FileDialog;
 
 use crate::gui::platform::PlatformCallbacks;
@@ -26,19 +27,30 @@ use crate::gui::platform::PlatformCallbacks;
 /// Desktop platform related actions.
 #[derive(Clone)]
 pub struct Desktop {
+    /// Context to repaint content and handle viewport commands.
+    ctx: Arc<RwLock<Option<egui::Context>>>,
+
     /// Flag to check if camera stop is needed.
     stop_camera: Arc<AtomicBool>,
-}
 
-impl Default for Desktop {
-    fn default() -> Self {
-        Self {
-            stop_camera: Arc::new(AtomicBool::new(false)),
-        }
-    }
+    /// Flag to check if attention required after window focusing.
+    attention_required: Arc<AtomicBool>,
 }
 
 impl PlatformCallbacks for Desktop {
+    fn set_context(&mut self, ctx: &egui::Context) {
+        let mut w_ctx = self.ctx.write();
+        *w_ctx = Some(ctx.clone());
+    }
+
+    fn exit(&self) {
+        let r_ctx = self.ctx.read();
+        if r_ctx.is_some() {
+            let ctx = r_ctx.as_ref().unwrap();
+            ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+        }
+    }
+
     fn show_keyboard(&self) {}
 
     fn hide_keyboard(&self) {}
@@ -119,9 +131,55 @@ impl PlatformCallbacks for Desktop {
     fn picked_file(&self) -> Option<String> {
         None
     }
+
+    fn request_user_attention(&self) {
+        let r_ctx = self.ctx.read();
+        if r_ctx.is_some() {
+            let ctx = r_ctx.as_ref().unwrap();
+            // Request attention on taskbar.
+            ctx.send_viewport_cmd(
+                ViewportCommand::RequestUserAttention(UserAttentionType::Informational)
+            );
+            // Un-minimize window.
+            if ctx.input(|i| i.viewport().minimized.unwrap_or(false)) {
+                ctx.send_viewport_cmd(ViewportCommand::Minimized(false));
+            }
+            // Focus to window.
+            if !ctx.input(|i| i.viewport().focused.unwrap_or(false)) {
+                ctx.send_viewport_cmd(ViewportCommand::WindowLevel(WindowLevel::AlwaysOnTop));
+                ctx.send_viewport_cmd(ViewportCommand::Focus);
+            }
+            ctx.request_repaint();
+        }
+        self.attention_required.store(true, Ordering::Relaxed);
+    }
+
+    fn user_attention_required(&self) -> bool {
+        self.attention_required.load(Ordering::Relaxed)
+    }
+
+    fn clear_user_attention(&self) {
+        let r_ctx = self.ctx.read();
+        if r_ctx.is_some() {
+            let ctx = r_ctx.as_ref().unwrap();
+            ctx.send_viewport_cmd(
+                ViewportCommand::RequestUserAttention(UserAttentionType::Reset)
+            );
+            ctx.send_viewport_cmd(ViewportCommand::WindowLevel(WindowLevel::Normal));
+        }
+        self.attention_required.store(false, Ordering::Relaxed);
+    }
 }
 
 impl Desktop {
+    pub fn new() -> Self {
+        Self {
+            stop_camera: Arc::new(AtomicBool::new(false)),
+            ctx: Arc::new(RwLock::new(None)),
+            attention_required: Arc::new(AtomicBool::new(false)),
+        }
+    }
+
     #[allow(dead_code)]
     #[cfg(target_os = "windows")]
     fn start_camera_capture(stop_camera: Arc<AtomicBool>) {
@@ -168,36 +226,35 @@ impl Desktop {
 
         let ctx = PlatformContext::default();
         let devices = ctx.devices().unwrap();
-        let dev = ctx.open_device(&devices[0].uri).unwrap();
+        if let Ok(dev) = ctx.open_device(&devices[0].uri) {
+            let streams = dev.streams().unwrap();
+            let stream_desc = streams[0].clone();
+            let w = stream_desc.width;
+            let h = stream_desc.height;
 
-        let streams = dev.streams().unwrap();
-        let stream_desc = streams[0].clone();
-        let w = stream_desc.width;
-        let h = stream_desc.height;
+            let mut stream = dev.start_stream(&stream_desc).unwrap();
 
-        let mut stream = dev.start_stream(&stream_desc).unwrap();
-
-        loop {
-            // Stop if camera was stopped.
-            if stop_camera.load(Ordering::Relaxed) {
-                stop_camera.store(false, Ordering::Relaxed);
-                // Clear image.
+            loop {
+                // Stop if camera was stopped.
+                if stop_camera.load(Ordering::Relaxed) {
+                    stop_camera.store(false, Ordering::Relaxed);
+                    let mut w_image = LAST_CAMERA_IMAGE.write();
+                    *w_image = None;
+                    break;
+                }
+                // Get a frame.
+                let frame = stream.next().expect("Stream is dead").expect("Failed to capture a frame");
+                let mut out = vec![];
+                if let Some(buf) = image::ImageBuffer::<image::Rgb<u8>, &[u8]>::from_raw(w, h, &frame) {
+                    image::codecs::jpeg::JpegEncoder::new(&mut out)
+                        .write_image(buf.as_raw(), w, h, image::ExtendedColorType::Rgb8).unwrap();
+                } else {
+                    out = frame.to_vec();
+                }
+                // Save image.
                 let mut w_image = LAST_CAMERA_IMAGE.write();
-                *w_image = None;
-                break;
+                *w_image = Some((out, 0));
             }
-            // Get a frame.
-            let frame = stream.next().expect("Stream is dead").expect("Failed to capture a frame");
-            let mut out = vec![];
-            if let Some(buf) = image::ImageBuffer::<image::Rgb<u8>, &[u8]>::from_raw(w, h, &frame) {
-                image::codecs::jpeg::JpegEncoder::new(&mut out)
-                    .write_image(buf.as_raw(), w, h, image::ExtendedColorType::Rgb8).unwrap();
-            } else {
-                out = frame.to_vec();
-            }
-            // Save image.
-            let mut w_image = LAST_CAMERA_IMAGE.write();
-            *w_image = Some((out, 0));
         }
     }
 }

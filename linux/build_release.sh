@@ -17,9 +17,7 @@ cd ..
 [[ $2 == "x86_64" ]] && arch+=(x86_64-unknown-linux-gnu)
 [[ $2 == "arm" ]] && arch+=(aarch64-unknown-linux-gnu)
 
-# Start release build with zig linker for cross-compilation
-cargo install cargo-zigbuild
-cargo zigbuild --release --target ${arch}
+cargo build --release --target ${arch}
 
 # Create AppImage with https://github.com/AppImage/appimagetool
 cp target/${arch}/release/grim linux/Grim.AppDir/AppRun

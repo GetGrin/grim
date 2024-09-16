@@ -18,7 +18,7 @@ use egui::scroll_area::ScrollBarVisibility;
 use crate::gui::Colors;
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Content, View};
-use crate::gui::views::wallets::settings::{CommonSettings, ConnectionSettings, RecoverySettings};
+use crate::gui::views::wallets::{CommonSettings, ConnectionSettings, RecoverySettings};
 use crate::gui::views::wallets::types::{WalletTab, WalletTabType};
 use crate::gui::views::wallets::WalletContent;
 use crate::wallet::Wallet;

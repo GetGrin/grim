@@ -29,6 +29,18 @@ fn real_main() {
         .parse_default_env()
         .init();
 
+    // Handle file path argument passing.
+    let args: Vec<_> = std::env::args().collect();
+    let mut data = None;
+    if args.len() > 1 {
+        let path = std::path::PathBuf::from(&args[1]);
+        let content = match std::fs::read_to_string(path) {
+            Ok(s) => Some(s),
+            Err(_) => Some(args[1].clone())
+        };
+        data = content
+    }
+
     // Setup callback on panic crash.
     std::panic::set_hook(Box::new(|info| {
         let backtrace = backtrace::Backtrace::new();
@@ -41,7 +53,7 @@ fn real_main() {
         // Save backtrace to file.
         let log = grim::Settings::crash_report_path();
         if log.exists() {
-            std::fs::remove_file(log.clone()).unwrap();
+            let _ = std::fs::remove_file(log.clone());
         }
         std::fs::write(log, err.as_bytes()).unwrap();
         // Setup flag to show crash after app restart.
@@ -49,19 +61,27 @@ fn real_main() {
     }));
 
     // Start GUI.
-    let _ = std::panic::catch_unwind(|| {
-        start_desktop_gui();
-    });
+    match std::panic::catch_unwind(|| {
+        if is_app_running(&data) {
+            return;
+        } else if let Some(data) = data {
+            grim::on_data(data);
+        }
+        let platform = grim::gui::platform::Desktop::new();
+        start_app_socket(platform.clone());
+        start_desktop_gui(platform);
+    }) {
+        Ok(_) => {}
+        Err(e) => println!("{:?}", e)
+    }
 }
 
-/// Start GUI with Desktop related setup.
+/// Start GUI with Desktop related setup passing data from opening.
 #[allow(dead_code)]
 #[cfg(not(target_os = "android"))]
-fn start_desktop_gui() {
+fn start_desktop_gui(platform: grim::gui::platform::Desktop) {
     use grim::AppConfig;
     use dark_light::Mode;
-
-    let platform = grim::gui::platform::Desktop::default();
 
     // Setup system theme if not set.
     if let None = AppConfig::dark_theme() {
@@ -73,12 +93,11 @@ fn start_desktop_gui() {
         AppConfig::set_dark_theme(dark);
     }
 
-    // Setup window size.
     let (width, height) = AppConfig::window_size();
-
     let mut viewport = egui::ViewportBuilder::default()
         .with_min_inner_size([AppConfig::MIN_WIDTH, AppConfig::MIN_HEIGHT])
         .with_inner_size([width, height]);
+
     // Setup an icon.
     if let Ok(icon) = eframe::icon_data::from_png_bytes(include_bytes!("../img/icon.png")) {
         viewport = viewport.with_icon(std::sync::Arc::new(icon));
@@ -90,6 +109,7 @@ fn start_desktop_gui() {
     // Setup window decorations.
     let is_mac = egui::os::OperatingSystem::from_target_os() == egui::os::OperatingSystem::Mac;
     viewport = viewport
+        .with_window_level(egui::WindowLevel::Normal)
         .with_fullsize_content_view(true)
         .with_title_shown(false)
         .with_titlebar_buttons_shown(false)
@@ -110,7 +130,8 @@ fn start_desktop_gui() {
     };
 
     // Start GUI.
-    match grim::start(options.clone(), grim::app_creator(grim::gui::App::new(platform.clone()))) {
+    let app = grim::gui::App::new(platform.clone());
+    match grim::start(options.clone(), grim::app_creator(app)) {
         Ok(_) => {}
         Err(e) => {
             if win {
@@ -118,7 +139,9 @@ fn start_desktop_gui() {
             }
             // Start with another renderer on error.
             options.renderer = eframe::Renderer::Glow;
-            match grim::start(options, grim::app_creator(grim::gui::App::new(platform))) {
+
+            let app = grim::gui::App::new(platform);
+            match grim::start(options, grim::app_creator(app)) {
                 Ok(_) => {}
                 Err(e) => {
                     panic!("{}", e);
@@ -126,4 +149,117 @@ fn start_desktop_gui() {
             }
         }
     }
+}
+
+/// Check if application is already running to pass data.
+#[allow(dead_code)]
+#[cfg(not(target_os = "android"))]
+fn is_app_running(data: &Option<String>) -> bool {
+    use tor_rtcompat::BlockOn;
+    let runtime = tor_rtcompat::tokio::TokioNativeTlsRuntime::create().unwrap();
+    let res: Result<(), Box<dyn std::error::Error>> = runtime
+        .block_on(async {
+            use interprocess::local_socket::{
+                tokio::{prelude::*, Stream},
+                GenericFilePath, GenericNamespaced
+            };
+            use tokio::{
+                io::AsyncWriteExt,
+            };
+
+            let socket_path = grim::Settings::socket_path();
+            let name = if GenericNamespaced::is_supported() {
+                grim::Settings::SOCKET_NAME.to_ns_name::<GenericNamespaced>()?
+            } else {
+                socket_path.clone().to_fs_name::<GenericFilePath>()?
+            };
+            // Connect to running application socket.
+            let conn = Stream::connect(name).await?;
+            let data = data.clone().unwrap_or("".to_string());
+            if data.is_empty() {
+                return Ok(());
+            }
+            let (rec, mut sen) = conn.split();
+
+            // Send data to socket.
+            let _ = sen.write_all(data.as_bytes()).await;
+
+            drop((rec, sen));
+            Ok(())
+        });
+    return match res {
+        Ok(_) => true,
+        Err(_) => false
+    }
+}
+
+/// Start desktop socket that handles data for single application instance.
+#[allow(dead_code)]
+#[cfg(not(target_os = "android"))]
+fn start_app_socket(platform: grim::gui::platform::Desktop) {
+    std::thread::spawn(move || {
+        use tor_rtcompat::BlockOn;
+        let runtime = tor_rtcompat::tokio::TokioNativeTlsRuntime::create().unwrap();
+        let _: Result<_, _> = runtime
+            .block_on(async {
+                use interprocess::local_socket::{
+                    tokio::{prelude::*, Stream},
+                    GenericFilePath, GenericNamespaced, Listener, ListenerOptions,
+                };
+                use std::io;
+                use tokio::{
+                    io::{AsyncBufReadExt, BufReader},
+                };
+                use grim::gui::platform::PlatformCallbacks;
+
+                // Handle incoming connection.
+                async fn handle_conn(conn: Stream)
+                                     -> io::Result<String> {
+                    let mut read = BufReader::new(&conn);
+                    let mut buffer = String::new();
+                    // Read data.
+                    let _ = read.read_line(&mut buffer).await;
+                    Ok(buffer)
+                }
+
+                let socket_path = grim::Settings::socket_path();
+                let name = if GenericNamespaced::is_supported() {
+                    grim::Settings::SOCKET_NAME.to_ns_name::<GenericNamespaced>()?
+                } else {
+                    socket_path.clone().to_fs_name::<GenericFilePath>()?
+                };
+                if socket_path.exists() {
+                    let _ = std::fs::remove_file(socket_path);
+                }
+
+                // Create listener.
+                let opts = ListenerOptions::new().name(name);
+                let listener = match opts.create_tokio() {
+                    Err(e) if e.kind() == io::ErrorKind::AddrInUse => {
+                        eprintln!("Socket file is occupied.");
+                        return Err::<Listener, io::Error>(e);
+                    }
+                    x => x?,
+                };
+
+                loop {
+                    let conn = match listener.accept().await {
+                        Ok(c) => c,
+                        Err(e) => {
+                            println!("{:?}", e);
+                            continue
+                        }
+                    };
+                    // Handle connection.
+                    let res = handle_conn(conn).await;
+                    match res {
+                        Ok(data) => {
+                            grim::on_data(data);
+                            platform.request_user_attention();
+                        },
+                        Err(_) => {}
+                    }
+                }
+            });
+    });
 }

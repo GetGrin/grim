@@ -16,8 +16,8 @@
             AllowSameVersionUpgrades = "yes"
         />
 
-        <Icon Id='ProductICO' SourceFile='wix\Product.ico'/>
-        <Property Id='ARPPRODUCTICON' Value='ProductICO' />
+        <Icon Id='Product.ico' SourceFile='wix\Product.ico'/>
+        <Property Id='ARPPRODUCTICON' Value='Product.ico' />
 
         <Directory Id="TARGETDIR" Name="SourceDir">
             <Directory Id='$(var.PlatformProgramFilesFolder)'>
@@ -28,7 +28,7 @@
                 <Component Id="ApplicationShortcutDesktop" Guid="14efa019-7ed7-4765-8263-fa5460f92495">
                     <Shortcut Id="ApplicationDesktopShortcut"
                               Name="Grim"
-                              Icon="ProductICO"
+                              Icon="Product.ico"
                               Description="GUI for Grin"
                               Target="[APPLICATIONROOTDIRECTORY]grim.exe"
                               WorkingDirectory="APPLICATIONROOTDIRECTORY"/>
@@ -55,6 +55,12 @@
             </Component>
             <Component Id="grim.exe" Guid="95444223-45BF-427A-85CA-61B035044305">
                 <File Id="grim.exe" Source="$(var.CargoTargetBinDir)\grim.exe" KeyPath="yes" Checksum="yes"/>
+                <File Id="slatepack.ico" Source="wix\Product.ico" />
+                <ProgId Id='grim.slatepack' Description='Grin Slatepack message' Icon='slatepack.ico'>
+                  <Extension Id='slatepack' ContentType='text/plain'>
+                     <Verb Id='open' Command='Open' Target='[APPLICATIONROOTDIRECTORY]grim.exe' Argument='%1' />
+                  </Extension>
+                </ProgId>
             </Component>
         </DirectoryRef>
 
@@ -64,7 +70,7 @@
                 <Shortcut Id="ApplicationStartMenuShortcut"
                           Name="Grim"
                           Description="Cross-platform GUI for Grin with focus on usability and availability to be used by anyone, anywhere."
-                          Icon="ProductICO"
+                          Icon="Product.ico"
                           Target="[#grim.exe]"
                           WorkingDirectory="APPLICATIONROOTDIRECTORY"/>
                 <RemoveFolder Id="ApplicationProgramsFolder" On="uninstall"/>

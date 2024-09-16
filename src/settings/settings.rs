@@ -48,9 +48,10 @@ pub struct Settings {
 impl Settings {
     /// Main application directory name.
     pub const MAIN_DIR_NAME: &'static str = ".grim";
-
     /// Crash report file name.
     pub const CRASH_REPORT_FILE_NAME: &'static str = "crash.log";
+    /// Application socket name.
+    pub const SOCKET_NAME: &'static str = "grim.sock";
 
     /// Initialize settings with app and node configs.
     fn init() -> Self {
@@ -139,6 +140,13 @@ impl Settings {
             let _ = fs::create_dir_all(path.clone());
         }
         path
+    }
+
+    /// Get desktop application socket path.
+    pub fn socket_path() -> PathBuf {
+        let mut socket_path = Self::base_path(None);
+        socket_path.push(Self::SOCKET_NAME);
+        socket_path
     }
 
     /// Get configuration file path from provided name and sub-directory if needed.
