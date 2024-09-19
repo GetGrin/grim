@@ -432,10 +432,4 @@ impl QrCodeContent {
         }
         Some(img_raw)
     }
-
-    /// Reset QR code image content state to default.
-    pub fn clear_state(&mut self) {
-        let mut w_create = self.qr_image_state.write();
-        *w_create = QrImageState::default();
-    }
 }

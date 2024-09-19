@@ -34,8 +34,6 @@ use crate::wallet::Wallet;
 pub struct WalletTransactionModal {
     /// Transaction identifier.
     tx_id: u32,
-    /// Identifier for [`Slate`].
-    slate_id: Option<String>,
 
     /// Response Slatepack message input value.
     response_edit: String,
@@ -66,11 +64,8 @@ impl WalletTransactionModal {
     pub fn new(wallet: &Wallet, tx: &WalletTransaction, show_finalization: bool) -> Self {
         Self {
             tx_id: tx.data.id,
-            slate_id: match tx.data.tx_slate_id {
-                None => None,
-                Some(id) => Some(id.to_string())
-            },
-            response_edit: if !tx.data.confirmed && tx.data.tx_slate_id.is_some() &&
+            response_edit: if !tx.cancelling && !tx.finalizing && !tx.data.confirmed &&
+                tx.data.tx_slate_id.is_some() &&
                 (tx.data.tx_type == TxLogEntryType::TxSent ||
                     tx.data.tx_type == TxLogEntryType::TxReceived) {
                 let mut slate = Slate::blank(1, false);
@@ -190,13 +185,9 @@ impl WalletTransactionModal {
             }
         }
 
-        // Show Slatepack message or reset QR code state if not available.
-        if !tx.finalizing && !tx.data.confirmed && !tx.cancelling &&
-            (tx.data.tx_type == TxLogEntryType::TxSent ||
-                tx.data.tx_type == TxLogEntryType::TxReceived) && !self.response_edit.is_empty() {
+        // Show Slatepack message interaction.
+        if !self.response_edit.is_empty() {
             self.message_ui(ui, tx, wallet, modal, cb);
-        } else if let Some(qr_content) = self.qr_code_content.as_mut() {
-            qr_content.clear_state();
         }
 
         if !self.finalizing {
@@ -331,11 +322,6 @@ impl WalletTransactionModal {
                   wallet: &Wallet,
                   modal: &Modal,
                   cb: &dyn PlatformCallbacks) {
-        if self.slate_id.is_none() {
-            cb.hide_keyboard();
-            modal.close();
-            return;
-        }
         ui.add_space(6.0);
 
         // Draw QR code scanner content if requested.
@@ -414,7 +400,7 @@ impl WalletTransactionModal {
                 Id::from("tx_info_message_finalize")
             } else {
                 Id::from("tx_info_message_request")
-            }.with(self.slate_id.clone().unwrap()).with(tx.data.id);
+            }.with(tx.data.id);
             View::horizontal_line(ui, Colors::item_stroke());
             ui.add_space(3.0);
             ScrollArea::vertical()
