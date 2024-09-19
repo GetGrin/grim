@@ -12,18 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::sync::Arc;
 use std::thread;
-use egui::{Align, Id, Layout, RichText, Rounding, ScrollArea};
-use egui::scroll_area::ScrollBarVisibility;
-use grin_core::core::amount_to_hr_string;
-use grin_util::ToHex;
-use grin_wallet_libwallet::{Error, Slate, SlateState, TxLogEntryType};
+use std::sync::Arc;
 use parking_lot::RwLock;
+use egui::scroll_area::ScrollBarVisibility;
+use egui::{Align, Id, Layout, RichText, Rounding, ScrollArea};
+use grin_util::ToHex;
+use grin_core::core::amount_to_hr_string;
+use grin_wallet_libwallet::{Error, Slate, SlateState, TxLogEntryType};
+
 use crate::gui::Colors;
 use crate::gui::icons::{BROOM, CHECK, CLIPBOARD_TEXT, COPY, CUBE, FILE_ARCHIVE, FILE_TEXT, HASH_STRAIGHT, PROHIBIT, QR_CODE, SCAN};
 use crate::gui::platform::PlatformCallbacks;
-
 use crate::gui::views::{CameraContent, FilePickButton, Modal, QrCodeContent, View};
 use crate::gui::views::wallets::wallet::txs::WalletTransactions;
 use crate::gui::views::wallets::wallet::types::SLATEPACK_MESSAGE_HINT;
@@ -175,6 +175,11 @@ impl WalletTransactionModal {
             if let Some(kernel) = tx.data.kernel_excess {
                 let label = format!("{} {}", FILE_ARCHIVE, t!("kernel"));
                 Self::info_item_ui(ui, kernel.0.to_hex(), label, true, cb);
+            }
+            // Show receiver address.
+            if let Some(rec) = tx.receiver() {
+                let label = format!("{} {}", CUBE, t!("network_mining.address"));
+                Self::info_item_ui(ui, rec.to_string(), label, true, cb);
             }
             // Show block height.
             if let Some(height) = tx.height {

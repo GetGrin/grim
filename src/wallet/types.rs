@@ -17,7 +17,8 @@ use std::sync::Arc;
 use grin_keychain::ExtKeychain;
 use grin_util::Mutex;
 use grin_wallet_impls::{DefaultLCProvider, HTTPNodeClient};
-use grin_wallet_libwallet::{TxLogEntry, TxLogEntryType, WalletInfo, WalletInst};
+use grin_wallet_libwallet::{SlatepackAddress, TxLogEntry, TxLogEntryType, WalletInfo, WalletInst};
+use grin_wallet_util::OnionV3Address;
 use serde_derive::{Deserialize, Serialize};
 
 /// Mnemonic phrase word.
@@ -175,5 +176,16 @@ impl WalletTransaction {
         self.from_node && !self.cancelling && !self.data.confirmed &&
             self.data.tx_type != TxLogEntryType::TxReceivedCancelled
             && self.data.tx_type != TxLogEntryType::TxSentCancelled
+    }
+
+    /// Get receiver address if payment proof was created.
+    pub fn receiver(&self) -> Option<SlatepackAddress> {
+        if let Some(proof) = &self.data.payment_proof {
+            let onion_addr = OnionV3Address::from_bytes(proof.receiver_address.to_bytes());
+            if let Ok(addr) = SlatepackAddress::try_from(onion_addr) {
+                return Some(addr);
+            }
+        }
+        None
     }
 }
