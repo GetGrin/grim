@@ -14,6 +14,3 @@
 
 mod accounts;
 pub use accounts::*;
-
-mod scan;
-pub use scan::*;

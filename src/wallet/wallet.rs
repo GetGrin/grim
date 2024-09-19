@@ -28,7 +28,6 @@ use serde_json::{json, Value};
 use grin_api::{ApiServer, Router};
 use grin_chain::SyncStatus;
 use grin_core::global;
-use grin_core::global::ChainTypes;
 use grin_keychain::{ExtKeychain, Identifier, Keychain};
 use grin_util::{Mutex, ToHex};
 use grin_util::secp::SecretKey;
@@ -46,7 +45,7 @@ use rand::Rng;
 use crate::AppConfig;
 use crate::node::{Node, NodeConfig};
 use crate::tor::Tor;
-use crate::wallet::{ConnectionsConfig, ExternalConnection, Mnemonic, WalletConfig};
+use crate::wallet::{ConnectionsConfig, Mnemonic, WalletConfig};
 use crate::wallet::store::TxHeightStore;
 use crate::wallet::types::{ConnectionMethod, WalletAccount, WalletData, WalletInstance, WalletTransaction};
 
@@ -56,9 +55,9 @@ pub struct Wallet {
     /// Wallet configuration.
     config: Arc<RwLock<WalletConfig>>,
     /// Wallet instance, initializing on wallet opening and clearing on wallet closing.
-    instance: Option<WalletInstance>,
-    /// [`WalletInstance`] external connection URL.
-    external_connection: Arc<RwLock<Option<ExternalConnection>>>,
+    instance: Arc<RwLock<Option<WalletInstance>>>,
+    /// Connection of current wallet instance.
+    connection: Arc<RwLock<ConnectionMethod>>,
 
     /// Wallet Slatepack address to receive txs at transport.
     slatepack_address: Arc<RwLock<Option<String>>>,
@@ -103,10 +102,11 @@ pub struct Wallet {
 impl Wallet {
     /// Create new [`Wallet`] instance with provided [`WalletConfig`].
     fn new(config: WalletConfig) -> Self {
+        let connection = config.connection();
         Self {
             config: Arc::new(RwLock::new(config)),
-            instance: None,
-            external_connection: Arc::new(RwLock::new(None)),
+            instance: Arc::new(RwLock::new(None)),
+            connection: Arc::new(RwLock::new(connection)),
             slatepack_address: Arc::new(RwLock::new(None)),
             sync_thread: Arc::from(RwLock::new(None)),
             foreign_api_server: Arc::new(RwLock::new(None)),
@@ -128,7 +128,7 @@ impl Wallet {
     /// Create new wallet.
     pub fn create(
         name: &String,
-        password: &String,
+        password: &ZeroingString,
         mnemonic: &Mnemonic,
         conn_method: &ConnectionMethod
     ) -> Result<Wallet, Error> {
@@ -141,7 +141,7 @@ impl Wallet {
             p.create_wallet(None,
                             Some(ZeroingString::from(mnemonic.get_phrase())),
                             mnemonic.size().entropy_size(),
-                            ZeroingString::from(password.clone()),
+                            password.clone(),
                             false,
             )?;
         }
@@ -178,16 +178,7 @@ impl Wallet {
             if let Some(conn) = ConnectionsConfig::ext_conn(id) {
                 (conn.url, conn.secret)
             } else {
-                if chain_type == ChainTypes::Mainnet {
-                    // Save default external connection if previous was deleted.
-                    let default = ExternalConnection::default_main();
-                    config.ext_conn_id = Some(default.id);
-                    config.save();
-
-                    (default.url, default.secret)
-                } else {
-                    integrated()
-                }
+                integrated()
             }
         } else {
             integrated()
@@ -223,7 +214,8 @@ impl Wallet {
 
     /// Get parent key identifier for current account.
     pub fn get_parent_key_id(&self) -> Result<Identifier, Error> {
-        let instance = self.instance.clone().unwrap();
+        let r_inst = self.instance.as_ref().read();
+        let instance = r_inst.clone().unwrap();
         let mut w_lock = instance.lock();
         let lc = w_lock.lc_provider()?;
         let w_inst = lc.wallet_inst()?;
@@ -232,7 +224,8 @@ impl Wallet {
 
     /// Get wallet [`SecretKey`] for transports.
     pub fn secret_key(&self) -> Result<SecretKey, Error> {
-        let instance = self.instance.clone().unwrap();
+        let r_inst = self.instance.as_ref().read();
+        let instance = r_inst.clone().unwrap();
         let mut w_lock = instance.lock();
         let lc = w_lock.lc_provider()?;
         let w_inst = lc.wallet_inst()?;
@@ -305,36 +298,47 @@ impl Wallet {
     }
 
     /// Update external connection identifier.
-    pub fn update_ext_conn_id(&self, id: Option<i64>) {
+    pub fn update_connection(&self, conn: &ConnectionMethod) {
         let mut w_config = self.config.write();
-        w_config.ext_conn_id = id;
+        w_config.ext_conn_id = match conn {
+            ConnectionMethod::Integrated => None,
+            ConnectionMethod::External(id, _) => Some(id.clone())
+        };
         w_config.save();
     }
 
     /// Open the wallet and start [`WalletData`] sync at separate thread.
-    pub fn open(&mut self, password: &String) -> Result<(), Error> {
+    pub fn open(&self, password: ZeroingString) -> Result<(), Error> {
         if self.is_open() {
             return Err(Error::GenericError("Already opened".to_string()));
         }
 
         // Create new wallet instance if sync thread was stopped or instance was not created.
-        if self.sync_thread.read().is_none() || self.instance.is_none() {
+        let has_instance = {
+            let r_inst = self.instance.as_ref().read();
+            r_inst.is_some()
+        };
+        if self.sync_thread.read().is_none() || !has_instance {
             let mut config = self.get_config();
-            let new_instance = Self::create_wallet_instance(&mut config)?;
-            self.instance = Some(new_instance);
-            // Setup current external connection.
+            // Setup current connection.
             {
-                let mut w_conn = self.external_connection.write();
-                *w_conn = self.get_current_ext_conn();
+                let mut w_conn = self.connection.write();
+                *w_conn = config.connection();
             }
+            let new_instance = Self::create_wallet_instance(&mut config)?;
+            let mut w_inst = self.instance.write();
+            *w_inst = Some(new_instance);
         }
 
         // Open the wallet.
         {
-            let instance = self.instance.clone().unwrap();
+            let instance = {
+                let r_inst = self.instance.as_ref().read();
+                r_inst.clone().unwrap()
+            };
             let mut wallet_lock = instance.lock();
             let lc = wallet_lock.lc_provider()?;
-            match lc.open_wallet(None, ZeroingString::from(password.clone()), false, false) {
+            match lc.open_wallet(None, password, false, false) {
                 Ok(_) => {
                     // Reset an error on opening.
                     self.set_sync_error(false);
@@ -357,7 +361,8 @@ impl Wallet {
                 }
                 Err(e) => {
                     if !self.syncing() {
-                        self.instance = None;
+                        let mut w_inst = self.instance.write();
+                        *w_inst = None;
                     }
                     return Err(e)
                 }
@@ -365,7 +370,9 @@ impl Wallet {
         }
 
         // Set slatepack address.
-        let mut api = Owner::new(self.instance.clone().unwrap(), None);
+        let r_inst = self.instance.as_ref().read();
+        let instance = r_inst.clone().unwrap();
+        let mut api = Owner::new(instance, None);
         controller::owner_single_use(None, None, Some(&mut api), |api, m| {
             let mut w_address = self.slatepack_address.write();
             *w_address = Some(api.get_slatepack_address(m, 0)?.to_string());
@@ -377,25 +384,13 @@ impl Wallet {
 
     /// Get external connection URL applied to [`WalletInstance`]
     /// after wallet opening if sync is running or get it from config.
-    pub fn get_current_ext_conn(&self) -> Option<ExternalConnection> {
+    pub fn get_current_connection(&self) -> ConnectionMethod {
         if self.sync_thread.read().is_some() {
-            let r_conn = self.external_connection.read();
+            let r_conn = self.connection.read();
             r_conn.clone()
         } else {
             let config = self.get_config();
-            if let Some(id) = config.ext_conn_id {
-                return match ConnectionsConfig::ext_conn(id) {
-                    None => {
-                        if config.chain_type == ChainTypes::Mainnet {
-                            Some(ExternalConnection::default_main())
-                        } else {
-                            None
-                        }
-                    },
-                    Some(ext_conn) => Some(ext_conn)
-                }
-            }
-            None
+            config.connection()
         }
     }
 
@@ -411,7 +406,11 @@ impl Wallet {
 
     /// Close the wallet.
     pub fn close(&self) {
-        if !self.is_open() || self.instance.is_none() {
+        let has_instance = {
+            let r_inst = self.instance.read();
+            r_inst.is_some()
+        };
+        if !self.is_open() || !has_instance {
             return;
         }
         self.closing.store(true, Ordering::Relaxed);
@@ -419,6 +418,7 @@ impl Wallet {
         // Close wallet at separate thread.
         let wallet_close = self.clone();
         let service_id = wallet_close.identifier();
+        let conn = wallet_close.connection.clone();
         thread::spawn(move || {
             // Stop running API server.
             let api_server_exists = {
@@ -431,12 +431,18 @@ impl Wallet {
             }
             // Stop running Tor service.
             Tor::stop_service(&service_id);
+
             // Close the wallet.
-            let instance = wallet_close.instance.clone().unwrap();
+            let r_inst = wallet_close.instance.as_ref().read();
+            let instance = r_inst.clone().unwrap();
             Self::close_wallet(&instance);
-            // Mark wallet as not opened.
             wallet_close.closing.store(false, Ordering::Relaxed);
             wallet_close.is_open.store(false, Ordering::Relaxed);
+            // Setup current connection.
+            {
+                let mut w_conn = conn.write();
+                *w_conn = wallet_close.get_config().connection();
+            }
             // Start sync to exit from thread.
             wallet_close.sync();
         });
@@ -451,7 +457,9 @@ impl Wallet {
 
     /// Create account into wallet.
     pub fn create_account(&self, label: &String) -> Result<(), Error> {
-        let mut api = Owner::new(self.instance.clone().unwrap(), None);
+        let r_inst = self.instance.as_ref().read();
+        let instance = r_inst.clone().unwrap();
+        let mut api = Owner::new(instance, None);
         controller::owner_single_use(None, None, Some(&mut api), |api, m| {
             api.create_account_path(m, label)?;
 
@@ -472,7 +480,9 @@ impl Wallet {
 
     /// Set active account from provided label.
     pub fn set_active_account(&self, label: &String) -> Result<(), Error> {
-        let mut api = Owner::new(self.instance.clone().unwrap(), None);
+        let r_inst = self.instance.as_ref().read();
+        let instance = r_inst.clone().unwrap();
+        let mut api = Owner::new(instance, None);
         controller::owner_single_use(None, None, Some(&mut api), |api, m| {
             api.set_active_account(m, label)?;
             // Set Slatepack address.
@@ -580,7 +590,9 @@ impl Wallet {
 
     /// Parse Slatepack message into [`Slate`].
     pub fn parse_slatepack(&self, text: &String) -> Result<Slate, grin_wallet_controller::Error> {
-        let mut api = Owner::new(self.instance.clone().unwrap(), None);
+        let r_inst = self.instance.as_ref().read();
+        let instance = r_inst.clone().unwrap();
+        let mut api = Owner::new(instance, None);
         return match parse_slatepack(&mut api, None, None, Some(text.clone())) {
             Ok(s) => Ok(s.0),
             Err(e) => Err(e)
@@ -590,7 +602,9 @@ impl Wallet {
     /// Create Slatepack message from provided slate.
     fn create_slatepack_message(&self, slate: &Slate) -> Result<String, Error> {
         let mut message = "".to_string();
-        let mut api = Owner::new(self.instance.clone().unwrap(), None);
+        let r_inst = self.instance.as_ref().read();
+        let instance = r_inst.clone().unwrap();
+        let mut api = Owner::new(instance, None);
         controller::owner_single_use(None, None, Some(&mut api), |api, m| {
             message = api.create_slatepack_message(m, &slate, Some(0), vec![])?;
             Ok(())
@@ -678,7 +692,9 @@ impl Wallet {
             selection_strategy_is_use_all: false,
             ..Default::default()
         };
-        let api = Owner::new(self.instance.clone().unwrap(), None);
+        let r_inst = self.instance.as_ref().read();
+        let instance = r_inst.clone().unwrap();
+        let api = Owner::new(instance, None);
         let slate = api.init_send_tx(None, args)?;
 
         // Lock outputs to for this transaction.
@@ -708,7 +724,8 @@ impl Wallet {
 
         // Function to cancel initialized tx in case of error.
         let cancel_tx = || {
-            let instance = self.instance.clone().unwrap();
+            let r_inst = self.instance.as_ref().read();
+            let instance = r_inst.clone().unwrap();
             let id = slate.clone().id;
             cancel_tx(instance, None, &None, None, Some(id.clone())).unwrap();
 
@@ -749,7 +766,9 @@ impl Wallet {
         let mut ret_slate = None;
         match Slate::deserialize_upgrade(&serde_json::to_string(&slate_value).unwrap()) {
             Ok(s) => {
-                let mut api = Owner::new(self.instance.clone().unwrap(), None);
+                let r_inst = self.instance.as_ref().read();
+                let instance = r_inst.clone().unwrap();
+                let mut api = Owner::new(instance, None);
                 controller::owner_single_use(None, None, Some(&mut api), |api, m| {
                     // Finalize transaction.
                     return if let Ok(slate) = api.finalize_tx(m, &s) {
@@ -791,7 +810,9 @@ impl Wallet {
             amount,
             target_slate_version: None,
         };
-        let api = Owner::new(self.instance.clone().unwrap(), None);
+        let r_inst = self.instance.as_ref().read();
+        let instance = r_inst.clone().unwrap();
+        let api = Owner::new(instance, None);
         let slate = api.issue_invoice_tx(None, args)?;
 
         // Create Slatepack message response.
@@ -815,7 +836,9 @@ impl Wallet {
                 selection_strategy_is_use_all: false,
                 ..Default::default()
             };
-            let api = Owner::new(self.instance.clone().unwrap(), None);
+            let r_inst = self.instance.as_ref().read();
+            let instance = r_inst.clone().unwrap();
+            let api = Owner::new(instance, None);
             let slate = api.process_invoice_tx(None, &slate, args)?;
             api.tx_lock_outputs(None, &slate)?;
 
@@ -834,7 +857,9 @@ impl Wallet {
     /// Handle message to receive funds, return response to sender.
     pub fn receive(&self, message: &String) -> Result<WalletTransaction, Error> {
         if let Ok(mut slate) = self.parse_slatepack(message) {
-            let api = Owner::new(self.instance.clone().unwrap(), None);
+            let r_inst = self.instance.as_ref().read();
+            let instance = r_inst.clone().unwrap();
+            let api = Owner::new(instance, None);
             controller::foreign_single_use(api.wallet_inst.clone(), None, |api| {
                 slate = api.receive_tx(&slate, Some(self.get_config().account.as_str()), None)?;
                 Ok(())
@@ -854,7 +879,9 @@ impl Wallet {
     /// Finalize transaction from provided message as sender or invoice issuer with Dandelion.
     pub fn finalize(&self, message: &String) -> Result<WalletTransaction, Error> {
         if let Ok(mut slate) = self.parse_slatepack(message) {
-            let api = Owner::new(self.instance.clone().unwrap(), None);
+            let r_inst = self.instance.as_ref().read();
+            let instance = r_inst.clone().unwrap();
+            let api = Owner::new(instance, None);
             slate = api.finalize_tx(None, &slate)?;
             // Save Slatepack message to file.
             let _ = self.create_slatepack_message(&slate)?;
@@ -874,7 +901,9 @@ impl Wallet {
     /// Post transaction to blockchain.
     fn post(&self, slate: &Slate) -> Result<WalletTransaction, Error> {
         // Post transaction to blockchain.
-        let api = Owner::new(self.instance.clone().unwrap(), None);
+        let r_inst = self.instance.as_ref().read();
+        let instance = r_inst.clone().unwrap();
+        let api = Owner::new(instance, None);
         api.post_tx(None, slate, self.can_use_dandelion())?;
 
         // Refresh wallet info.
@@ -884,7 +913,7 @@ impl Wallet {
     }
 
     /// Cancel transaction.
-    pub fn cancel(&mut self, id: u32) {
+    pub fn cancel(&self, id: u32) {
         // Setup cancelling status.
         {
             let mut w_data = self.data.write();
@@ -906,7 +935,8 @@ impl Wallet {
             if wallet.syncing() {
                 thread::sleep(Duration::from_millis(1000));
             }
-            let instance = wallet.instance.clone().unwrap();
+            let r_inst = wallet.instance.as_ref().read();
+            let instance = r_inst.clone().unwrap();
             let _ = cancel_tx(instance, None, &None, Some(id), None);
 
             // Refresh wallet info to update statuses.
@@ -914,9 +944,38 @@ impl Wallet {
         });
     }
 
+    /// Get possible transaction confirmation height from db or node.
+    fn tx_height(&self, tx: &TxLogEntry, store: &TxHeightStore) -> Result<Option<u64>, Error> {
+        let mut tx_height = None;
+        if tx.kernel_lookup_min_height.is_some() && tx.kernel_excess.is_some() && tx.confirmed {
+            if let Some(height) = store.read_tx_height(tx.id) {
+                tx_height = Some(height);
+            } else {
+                let r_inst = self.instance.as_ref().read();
+                let instance = r_inst.clone().unwrap();
+                let mut w_lock = instance.lock();
+                let w = w_lock.lc_provider()?.wallet_inst()?;
+                if let Ok(res) = w.w2n_client().get_kernel(
+                    tx.kernel_excess.as_ref().unwrap(),
+                    tx.kernel_lookup_min_height,
+                    None
+                ) {
+                    if let Some((_, h, _)) = res {
+                        tx_height = Some(h);
+                        store.write_tx_height(tx.id, h);
+                    } else {
+                        tx_height = Some(0);
+                    }
+                }
+            }
+        }
+        Ok(tx_height)
+    }
+
     /// Change wallet password.
     pub fn change_password(&self, old: String, new: String) -> Result<(), Error> {
-        let instance = self.instance.clone().unwrap();
+        let r_inst = self.instance.as_ref().read();
+        let instance = r_inst.clone().unwrap();
         let mut wallet_lock = instance.lock();
         let lc = wallet_lock.lc_provider()?;
         lc.change_password(None, ZeroingString::from(old), ZeroingString::from(new))
@@ -961,7 +1020,8 @@ impl Wallet {
 
     /// Get recovery phrase.
     pub fn get_recovery(&self, password: String) -> Result<ZeroingString, Error> {
-        let instance = self.instance.clone().unwrap();
+        let r_inst = self.instance.as_ref().read();
+        let instance = r_inst.clone().unwrap();
         let mut wallet_lock = instance.lock();
         let lc = wallet_lock.lc_provider().unwrap();
         lc.get_mnemonic(None, ZeroingString::from(password))
@@ -1041,7 +1101,7 @@ fn start_sync(wallet: Wallet) -> Thread {
         }
 
         // Check integrated node state.
-        if wallet.get_current_ext_conn().is_none() {
+        if wallet.get_current_connection() == ConnectionMethod::Integrated {
             let not_enabled = !Node::is_running() || Node::is_stopping();
             if not_enabled {
                 // Reset loading progress.
@@ -1151,7 +1211,9 @@ fn sync_wallet_data(wallet: &Wallet, from_node: bool) {
     let config = wallet.get_config();
 
     // Retrieve wallet info.
-    if let Some(instance) = &wallet.instance {
+    let r_inst = wallet.instance.as_ref().read();
+    if r_inst.is_some() {
+        let instance = r_inst.clone().unwrap();
         if let Ok(info) = retrieve_summary_info(
             instance.clone(),
             None,
@@ -1224,7 +1286,6 @@ fn sync_wallet_data(wallet: &Wallet, from_node: bool) {
                     let data = wallet.get_data().unwrap();
                     let data_txs = data.txs.unwrap_or(vec![]);
 
-                    // Create wallet txs.
                     let mut new_txs: Vec<WalletTransaction> = vec![];
                     for tx in &account_txs {
                         // Setup transaction amount.
@@ -1263,58 +1324,20 @@ fn sync_wallet_data(wallet: &Wallet, from_node: bool) {
                             false
                         };
 
-                        // Setup confirmation and cancelling status.
-                        let mut conf_height = None;
-                        let mut setup_conf_height = |t: &TxLogEntry, current_empty: bool| -> bool {
-                            if current_empty && t.kernel_lookup_min_height.is_some() &&
-                                t.kernel_excess.is_some() && t.confirmed {
-                                // Get tx height from database or from node.
-                                if let Some(height) = tx_height_store.read_tx_height(t.id) {
-                                    conf_height = Some(height);
-                                } else {
-                                    let mut w_lock = wallet.instance.as_ref().unwrap().lock();
-                                    let w = w_lock.lc_provider()
-                                        .unwrap()
-                                        .wallet_inst()
-                                        .unwrap();
-                                    if let Ok(res) = w.w2n_client().get_kernel(
-                                        t.kernel_excess.as_ref().unwrap(),
-                                        t.kernel_lookup_min_height,
-                                        None
-                                    ) {
-                                        if res.is_some() {
-                                            let h = res.unwrap().1;
-                                            conf_height = Some(h);
-                                            tx_height_store.write_tx_height(t.id, h);
-                                        } else {
-                                            conf_height = Some(0);
-                                        }
-                                    } else {
-                                        conf_height = None;
-                                    }
-                                }
-                                return true;
-                            }
-                            false
-                        };
-
+                        // Setup confirmation height and cancelling status
+                        let mut conf_height = wallet.tx_height(tx, &tx_height_store).unwrap_or(None);
                         let mut cancelling = false;
-                        if data_txs.is_empty() {
-                            setup_conf_height(tx, true);
-                        } else {
-                            for t in &data_txs {
-                                if t.data.id == tx.id {
-                                    if !setup_conf_height(tx, t.conf_height.is_none() ||
-                                        t.conf_height.unwrap() == 0) {
-                                        conf_height = t.conf_height;
-                                    }
-                                    if t.cancelling &&
-                                        tx.tx_type != TxLogEntryType::TxReceivedCancelled &&
-                                        tx.tx_type != TxLogEntryType::TxSentCancelled {
-                                        cancelling = true;
-                                    }
-                                    break;
+                        for t in &data_txs {
+                            if t.data.id == tx.id {
+                                if conf_height.is_none() {
+                                    conf_height = t.height;
                                 }
+                                if t.cancelling &&
+                                    tx.tx_type != TxLogEntryType::TxReceivedCancelled &&
+                                    tx.tx_type != TxLogEntryType::TxSentCancelled {
+                                    cancelling = true;
+                                }
+                                break;
                             }
                         }
 
@@ -1325,7 +1348,7 @@ fn sync_wallet_data(wallet: &Wallet, from_node: bool) {
                             cancelling,
                             can_finalize,
                             finalizing,
-                            conf_height,
+                            height: conf_height,
                             from_node: !fresh_sync || from_node
                         });
                     }
@@ -1391,7 +1414,8 @@ fn start_api_server(wallet: &Wallet) -> Result<(ApiServer, u16), Error> {
     let api_addr = format!("{}:{}", host, free_port);
 
     // Start Foreign API server thread.
-    let instance = wallet.instance.clone().unwrap();
+    let r_inst = wallet.instance.as_ref().read();
+    let instance = r_inst.clone().unwrap();
     let api_handler_v2 = ForeignAPIHandlerV2::new(instance,
                                                   Arc::new(Mutex::new(None)),
                                                   false,
@@ -1425,7 +1449,9 @@ fn update_accounts(wallet: &Wallet, current_height: u64, current_spendable: Opti
         let mut w_data = wallet.accounts.write();
         *w_data = accounts;
     } else {
-        let mut api = Owner::new(wallet.instance.clone().unwrap(), None);
+        let r_inst = wallet.instance.as_ref().read();
+        let instance = r_inst.clone().unwrap();
+        let mut api = Owner::new(instance, None);
         let _ = controller::owner_single_use(None, None, Some(&mut api), |api, m| {
             let mut accounts = vec![];
             for a in api.accounts(m)? {
@@ -1489,7 +1515,9 @@ fn repair_wallet(wallet: &Wallet) {
     });
 
     // Start wallet scanning.
-    let api = Owner::new(wallet.instance.clone().unwrap(), Some(info_tx));
+    let r_inst = wallet.instance.as_ref().read();
+    let instance = r_inst.clone().unwrap();
+    let api = Owner::new(instance, Some(info_tx));
     match api.scan(None, Some(1), false) {
         Ok(()) => {
             // Set sync error if scanning was not complete and wallet is open.

@@ -13,7 +13,6 @@
 // limitations under the License.
 
 use grin_core::global::ChainTypes;
-use grin_wallet_libwallet::Error;
 
 use crate::AppConfig;
 use crate::wallet::{Wallet, WalletConfig};
@@ -25,14 +24,12 @@ pub struct WalletList {
     pub main_list: Vec<Wallet>,
     /// List of wallets for [`ChainTypes::Testnet`].
     pub test_list: Vec<Wallet>,
-    /// Selected [`Wallet`] identifier.
-    pub selected_id: Option<i64>,
 }
 
 impl Default for WalletList {
     fn default() -> Self {
         let (main_list, test_list) = Self::init();
-        Self { main_list, test_list, selected_id: None }
+        Self { main_list, test_list }
     }
 }
 
@@ -85,7 +82,6 @@ impl WalletList {
 
     /// Add created [`Wallet`] to the list.
     pub fn add(&mut self, wallet: Wallet) {
-        self.selected_id = Some(wallet.get_config().id);
         let list = self.mut_list();
         list.insert(0, wallet);
     }
@@ -99,48 +95,5 @@ impl WalletList {
                 return;
             }
         }
-    }
-
-    /// Select [`Wallet`] with provided identifier.
-    pub fn select(&mut self, id: Option<i64>) {
-        self.selected_id = id;
-    }
-
-    /// Get selected [`Wallet`] name.
-    pub fn selected_name(&self) -> String {
-        for w in self.list() {
-            let config = w.get_config();
-            if Some(config.id) == self.selected_id {
-                return config.name.clone()
-            }
-        }
-        t!("wallets.unlocked")
-    }
-
-    /// Check if selected [`Wallet`] is open.
-    pub fn is_selected_open(&self) -> bool {
-        for w in self.list() {
-            let config = w.get_config();
-            if Some(config.id) == self.selected_id {
-                return w.is_open()
-            }
-        }
-        false
-    }
-
-    /// Check if current list is empty.
-    pub fn is_current_list_empty(&self) -> bool {
-        self.list().is_empty()
-    }
-
-    /// Open selected [`Wallet`].
-    pub fn open_selected(&mut self, password: &String) -> Result<(), Error> {
-        let selected_id = self.selected_id.clone();
-        for w in self.mut_list() {
-            if Some(w.get_config().id) == selected_id {
-                return w.open(password);
-            }
-        }
-        Err(Error::GenericError("Wallet is not selected".to_string()))
     }
 }

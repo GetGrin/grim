@@ -25,7 +25,7 @@ use crate::gui::views::types::{ModalContainer, ModalPosition};
 use crate::node::Node;
 use crate::{AppConfig, Settings};
 use crate::gui::icons::{CHECK, CHECK_FAT, FILE_X};
-use crate::gui::views::network::{NetworkContent, NodeSetup};
+use crate::gui::views::network::NetworkContent;
 use crate::gui::views::wallets::WalletsContent;
 
 lazy_static! {
@@ -272,14 +272,7 @@ impl Content {
     pub fn settings_modal_ui(&mut self, ui: &mut egui::Ui, modal: &Modal) {
         ui.add_space(6.0);
 
-        // Draw chain type selection.
-        NodeSetup::chain_type_ui(ui);
-
-        ui.add_space(8.0);
-        View::horizontal_line(ui, Colors::item_stroke());
-        ui.add_space(8.0);
-
-        // Draw theme selection.
+        // Show theme selection.
         Self::theme_selection_ui(ui);
 
         ui.add_space(8.0);

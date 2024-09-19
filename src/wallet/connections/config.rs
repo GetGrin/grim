@@ -38,13 +38,7 @@ impl ConnectionsConfig {
         if !path.exists() || parsed.is_err() {
             let default_config = ConnectionsConfig {
                 chain_type: *chain_type,
-                external: if chain_type == &ChainTypes::Mainnet {
-                    vec![
-                        ExternalConnection::default_main()
-                    ]
-                } else {
-                    vec![]
-                },
+                external: ExternalConnection::default(chain_type),
             };
             Settings::write_to_file(&default_config, path);
             default_config
@@ -53,11 +47,17 @@ impl ConnectionsConfig {
         }
     }
 
-    /// Save connections configuration to the file.
-    pub fn save(&self) {
-        let chain_type = AppConfig::chain_type();
-        let sub_dir = Some(chain_type.shortname());
-        Settings::write_to_file(self, Settings::config_path(Self::FILE_NAME, sub_dir));
+    /// Save connections configuration.
+    pub fn save(&mut self) {
+        // Check deleted external connections.
+        let mut config = self.clone();
+        config.external = config.external.iter()
+            .map(|c| c.clone())
+            .filter(|c| !c.deleted)
+            .collect::<Vec<ExternalConnection>>();
+
+        let sub_dir = Some(AppConfig::chain_type().shortname());
+        Settings::write_to_file(&config, Settings::config_path(Self::FILE_NAME, sub_dir));
     }
 
     /// Get [`ExternalConnection`] list.
@@ -68,29 +68,19 @@ impl ConnectionsConfig {
 
     /// Save [`ExternalConnection`] in configuration.
     pub fn add_ext_conn(conn: ExternalConnection) {
-        // Do not update default connection.
-        if conn.url == ExternalConnection::DEFAULT_MAIN_URL {
-            return;
-        }
         let mut w_config = Settings::conn_config_to_update();
-        let mut exists = false;
-        for c in w_config.external.iter_mut() {
-            // Update connection if config exists.
-            if c.id == conn.id {
-                c.url = conn.url.clone();
-                c.secret = conn.secret.clone();
-                exists = true;
-                break;
-            }
-        }
-        // Create new connection if URL not exists.
-        if !exists {
+        if let Some(pos) = w_config.external.iter().position(|c| {
+            c.id == conn.id
+        }) {
+            w_config.external.remove(pos);
+            w_config.external.insert(pos, conn);
+        } else {
             w_config.external.push(conn);
         }
         w_config.save();
     }
 
-    /// Get [`ExternalConnection`] by provided identifier.
+    /// Get external node connection with provided identifier.
     pub fn ext_conn(id: i64) -> Option<ExternalConnection> {
         let r_config = Settings::conn_config_to_read();
         for c in &r_config.external {
@@ -113,13 +103,16 @@ impl ConnectionsConfig {
         }
     }
 
-    /// Remove external node connection by provided identifier.
+    /// Remove [`ExternalConnection`] with provided identifier.
     pub fn remove_ext_conn(id: i64) {
         let mut w_config = Settings::conn_config_to_update();
-        let index = w_config.external.iter().position(|c| c.id == id);
-        if let Some(i) = index {
-            w_config.external.remove(i);
-            w_config.save();
+        if let Some(pos) = w_config.external.iter().position(|c| {
+            c.id == id
+        }) {
+            if let Some(conn) = w_config.external.get_mut(pos) {
+                conn.deleted = true;
+                w_config.save();
+            }
         }
     }
 }

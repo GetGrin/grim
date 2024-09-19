@@ -29,9 +29,6 @@ pub struct ConnectionSettings {
     /// Selected connection method.
     pub method: ConnectionMethod,
 
-    /// Current wallet external connection.
-    curr_ext_conn: Option<ExternalConnection>,
-
     /// External connection [`Modal`] content.
     ext_conn_modal: ExternalConnectionModal,
 
@@ -44,7 +41,6 @@ impl Default for ConnectionSettings {
         ExternalConnection::check_ext_conn_availability(None);
         Self {
             method: ConnectionMethod::Integrated,
-            curr_ext_conn: None,
             ext_conn_modal: ExternalConnectionModal::new(None),
             modal_ids: vec![
                 ExternalConnectionModal::WALLET_ID
@@ -74,52 +70,29 @@ impl ModalContainer for ConnectionSettings {
 impl ConnectionSettings {
     /// Draw wallet creation setup content.
     pub fn create_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
-        self.ui(ui, None, cb);
+        self.ui(ui, cb);
     }
 
     /// Draw existing wallet connection setup content.
-    pub fn wallet_ui(&mut self, ui: &mut egui::Ui, w: &mut Wallet, cb: &dyn PlatformCallbacks) {
-        // Setup connection value from provided wallet.
-        match w.get_config().ext_conn_id {
-            None => self.method = ConnectionMethod::Integrated,
-            Some(id) => self.method = ConnectionMethod::External(id)
-        }
+    pub fn wallet_ui(&mut self, ui: &mut egui::Ui, wallet: &Wallet, cb: &dyn PlatformCallbacks) {
+        self.method =  wallet.get_current_connection();
 
         // Draw setup content.
-        self.ui(ui, Some(w), cb);
+        let changed = self.ui(ui, cb);
 
-        // Setup wallet connection value after change.
-        let changed = match self.method {
-            ConnectionMethod::Integrated => {
-                let changed = w.get_current_ext_conn().is_some();
-                if changed {
-                    w.update_ext_conn_id(None);
-                }
-                changed
-            }
-            ConnectionMethod::External(id) => {
-                let changed = w.get_config().ext_conn_id != Some(id);
-                if changed {
-                    w.update_ext_conn_id(Some(id));
-                }
-                changed
-            }
-        };
-
-        // Reopen wallet if connection changed.
         if changed {
-            if !w.reopen_needed() {
-                w.set_reopen(true);
-                w.close();
+            wallet.update_connection(&self.method);
+            // Reopen wallet if connection changed.
+            if !wallet.reopen_needed() {
+                wallet.set_reopen(true);
+                wallet.close();
             }
         }
     }
 
-    /// Draw connection setup content.
-    fn ui(&mut self,
-          ui: &mut egui::Ui,
-          wallet: Option<&Wallet>,
-          cb: &dyn PlatformCallbacks) {
+    /// Draw connection setup content, returning `true` if connection was changed.
+    fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) -> bool {
+        let mut changed = false;
         // Draw modal content for current ui container.
         self.current_modal_ui(ui, cb);
 
@@ -129,14 +102,14 @@ impl ConnectionSettings {
         ui.add_space(6.0);
 
         ui.vertical_centered(|ui| {
-            // Show integrated node selection.
             ui.add_space(6.0);
+            // Show integrated node selection.
             ConnectionsContent::integrated_node_item_ui(ui, |ui| {
-                // Draw button to select integrated node if it was not selected.
                 let is_current_method = self.method == ConnectionMethod::Integrated;
                 if !is_current_method {
                     View::item_button(ui, View::item_rounding(0, 1, true), CHECK, None, || {
                         self.method = ConnectionMethod::Integrated;
+                        changed = true;
                     });
                 } else {
                     ui.add_space(14.0);
@@ -145,7 +118,6 @@ impl ConnectionSettings {
                 }
             });
 
-            // Show external connections.
             ui.add_space(8.0);
             ui.label(RichText::new(t!("wallets.ext_conn")).size(16.0).color(Colors::gray()));
             ui.add_space(6.0);
@@ -153,45 +125,58 @@ impl ConnectionSettings {
             // Show button to add new external node connection.
             let add_node_text = format!("{} {}", PLUS_CIRCLE, t!("wallets.add_node"));
             View::button(ui, add_node_text, Colors::button(), || {
-                self.show_add_ext_conn_modal(cb);
+                self.ext_conn_modal = ExternalConnectionModal::new(None);
+                Modal::new(ExternalConnectionModal::WALLET_ID)
+                    .position(ModalPosition::CenterTop)
+                    .title(t!("wallets.add_node"))
+                    .show();
+                cb.show_keyboard();
             });
             ui.add_space(4.0);
 
-            let mut ext_conn_list = ConnectionsConfig::ext_conn_list();
-
-            // Check if current external connection was deleted to show at 1st place.
-            if let Some(wallet) = wallet {
-                if let Some(conn) = wallet.get_current_ext_conn() {
-                    if ext_conn_list.iter()
-                        .filter(|c| c.id == conn.id)
-                        .collect::<Vec<&ExternalConnection>>().is_empty() {
-                        if self.curr_ext_conn.is_none() {
-                            self.curr_ext_conn = Some(conn);
-                        }
-                        ext_conn_list.insert(0, self.curr_ext_conn.as_ref().unwrap().clone());
-                    }
+            // Check if it's current method.
+            let is_current = |m: &ConnectionMethod, c: &ExternalConnection| -> Option<bool> {
+                match m {
+                    ConnectionMethod::External(id, _) => if c.deleted && *id == c.id {
+                        None
+                    } else {
+                        Some(*id == c.id)
+                    },
+                    _ => Some(false)
                 }
-            }
+            };
 
-            if !ext_conn_list.is_empty() {
+            let method = &self.method.clone();
+            let ext_conn_list = ConnectionsConfig::ext_conn_list();
+            let ext_list = ext_conn_list.iter().filter(|c| {
+                !c.deleted || is_current(method, c).unwrap_or(true)
+            }).collect::<Vec<&ExternalConnection>>();
+            let ext_size = ext_list.len();
+            if ext_size != 0 {
                 ui.add_space(8.0);
-                for (index, conn) in ext_conn_list.iter().enumerate() {
+
+                for (i, c) in ext_list.iter().enumerate() {
                     ui.horizontal_wrapped(|ui| {
                         // Draw external connection item.
-                        self.ext_conn_item_ui(ui, wallet, conn, index, ext_conn_list.len());
+                        let is_current = is_current(method, c);
+                        Self::ext_conn_item_ui(ui, c, is_current, i, ext_size, || {
+                            self.method = ConnectionMethod::External(c.id, c.url.clone());
+                            changed = true;
+                        });
                     });
                 }
             }
         });
+        changed
     }
 
     /// Draw external connection item content.
-    fn ext_conn_item_ui(&mut self,
-                        ui: &mut egui::Ui,
-                        wallet: Option<&Wallet>,
+    fn ext_conn_item_ui(ui: &mut egui::Ui,
                         conn: &ExternalConnection,
+                        is_current: Option<bool>,
                         index: usize,
-                        len: usize) {
+                        len: usize,
+                        mut on_select: impl FnMut()) {
         // Setup layout size.
         let mut rect = ui.available_rect_before_wrap();
         rect.set_height(52.0);
@@ -203,24 +188,15 @@ impl ConnectionSettings {
 
         ui.vertical(|ui| {
             ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
-                // Draw button to select connection.
-                let is_current_method = if let Some(wallet) = wallet {
-                    if let Some(cur) = wallet.get_config().ext_conn_id {
-                        cur == conn.id
-                    } else {
-                        false
-                    }
-                } else {
-                    self.method == ConnectionMethod::External(conn.id)
-                };
-                if !is_current_method {
-                    let button_rounding = View::item_rounding(index, len, true);
-                    View::item_button(ui, button_rounding, CHECK, None, || {
-                        self.method = ConnectionMethod::External(conn.id);
-                    });
-                } else {
+                if is_current.unwrap_or(true) {
                     ui.add_space(12.0);
                     ui.label(RichText::new(CHECK_FAT).size(20.0).color(Colors::green()));
+                } else {
+                    // Draw button to select connection.
+                    let button_rounding = View::item_rounding(index, len, true);
+                    View::item_button(ui, button_rounding, CHECK, None, || {
+                        on_select();
+                    });
                 }
 
                 let layout_size = ui.available_size();
@@ -235,7 +211,11 @@ impl ConnectionSettings {
                         // Setup connection status text.
                         let status_text = if let Some(available) = conn.available {
                             if available {
-                                format!("{} {}", CHECK_CIRCLE, t!("network.available"))
+                                format!("{} {}", CHECK_CIRCLE, if is_current.is_none() {
+                                    t!("transport.connected")
+                                } else {
+                                    t!("network.available")
+                                })
                             } else {
                                 format!("{} {}", X_CIRCLE, t!("network.not_available"))
                             }
@@ -248,16 +228,5 @@ impl ConnectionSettings {
                 });
             });
         });
-    }
-
-    /// Show external connection adding [`Modal`].
-    fn show_add_ext_conn_modal(&mut self, cb: &dyn PlatformCallbacks) {
-        self.ext_conn_modal = ExternalConnectionModal::new(None);
-        // Show modal.
-        Modal::new(ExternalConnectionModal::WALLET_ID)
-            .position(ModalPosition::CenterTop)
-            .title(t!("wallets.add_node"))
-            .show();
-        cb.show_keyboard();
     }
 }

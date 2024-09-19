@@ -56,7 +56,7 @@ impl WalletTab for WalletTransactions {
         WalletTabType::Txs
     }
 
-    fn ui(&mut self, ui: &mut egui::Ui, wallet: &mut Wallet, cb: &dyn PlatformCallbacks) {
+    fn ui(&mut self, ui: &mut egui::Ui, wallet: &Wallet, cb: &dyn PlatformCallbacks) {
         if WalletContent::sync_ui(ui, wallet) {
             return;
         }
@@ -100,7 +100,7 @@ impl WalletTransactions {
     /// Draw transactions content.
     fn txs_ui(&mut self,
               ui: &mut egui::Ui,
-              wallet: &mut Wallet,
+              wallet: &Wallet,
               data: &WalletData,
               cb: &dyn PlatformCallbacks) {
         let amount_conf = data.info.amount_awaiting_confirmation;
@@ -245,7 +245,7 @@ impl WalletTransactions {
     /// Draw [`Modal`] content for this ui container.
     fn modal_content_ui(&mut self,
                         ui: &mut egui::Ui,
-                        wallet: &mut Wallet,
+                        wallet: &Wallet,
                         cb: &dyn PlatformCallbacks) {
         match Modal::opened() {
             None => {}
@@ -360,8 +360,8 @@ impl WalletTransactions {
                             TxLogEntryType::TxSent | TxLogEntryType::TxReceived => {
                                 let height = data.info.last_confirmed_height;
                                 let min_conf = data.info.minimum_confirmations;
-                                if tx.conf_height.is_none() || (tx.conf_height.unwrap() != 0 &&
-                                    height - tx.conf_height.unwrap() > min_conf - 1) {
+                                if tx.height.is_none() || (tx.height.unwrap() != 0 &&
+                                    height - tx.height.unwrap() > min_conf - 1) {
                                     let (i, t) = if tx.data.tx_type == TxLogEntryType::TxSent {
                                         (ARROW_CIRCLE_UP, t!("wallets.tx_sent"))
                                     } else {
@@ -369,7 +369,7 @@ impl WalletTransactions {
                                     };
                                     format!("{} {}", i, t)
                                 } else {
-                                    let tx_height = tx.conf_height.unwrap() - 1;
+                                    let tx_height = tx.height.unwrap() - 1;
                                     let left_conf = height - tx_height;
                                     let conf_info = if tx_height != 0 && height >= tx_height &&
                                         left_conf < min_conf {
@@ -428,7 +428,7 @@ impl WalletTransactions {
     }
 
     /// Confirmation [`Modal`] to cancel transaction.
-    fn cancel_confirmation_modal(&mut self, ui: &mut egui::Ui, wallet: &mut Wallet, modal: &Modal) {
+    fn cancel_confirmation_modal(&mut self, ui: &mut egui::Ui, wallet: &Wallet, modal: &Modal) {
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             // Setup confirmation text.

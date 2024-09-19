@@ -21,23 +21,25 @@ use crate::AppConfig;
 use crate::gui::Colors;
 use crate::gui::icons::{ARROWS_CLOCKWISE, BRIDGE, CHAT_CIRCLE_TEXT, FOLDER_USER, GEAR_FINE, GRAPH, PACKAGE, POWER, SCAN, SPINNER, USERS_THREE};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Modal, Content, View};
+use crate::gui::views::{Modal, Content, View, CameraScanModal};
 use crate::gui::views::types::{ModalPosition, QrScanResult};
 use crate::gui::views::wallets::{WalletTransactions, WalletMessages, WalletTransport};
 use crate::gui::views::wallets::types::{GRIN, WalletTab, WalletTabType};
-use crate::gui::views::wallets::wallet::modals::{WalletAccountsModal, WalletScanModal};
+use crate::gui::views::wallets::wallet::modals::WalletAccountsModal;
 use crate::gui::views::wallets::wallet::WalletSettings;
 use crate::node::Node;
 use crate::wallet::{Wallet, WalletConfig};
-use crate::wallet::types::WalletData;
+use crate::wallet::types::{ConnectionMethod, WalletData};
 
-/// Selected and opened wallet content.
+/// Wallet content.
 pub struct WalletContent {
+    /// Selected and opened wallet.
+    pub wallet: Wallet,
+
     /// Wallet accounts [`Modal`] content.
     accounts_modal_content: Option<WalletAccountsModal>,
-
     /// QR code scan [`Modal`] content.
-    scan_modal_content: Option<WalletScanModal>,
+    scan_modal_content: Option<CameraScanModal>,
 
     /// Current tab content to show.
     pub current_tab: Box<dyn WalletTab>,
@@ -51,37 +53,41 @@ const QR_CODE_SCAN_MODAL: &'static str = "qr_code_scan_modal";
 
 impl WalletContent {
     /// Create new instance with optional data.
-    pub fn new(data: Option<String>) -> Self {
+    pub fn new(wallet: Wallet, data: Option<String>) -> Self {
         let mut content = Self {
+            wallet,
             accounts_modal_content: None,
             scan_modal_content: None,
             current_tab: Box::new(WalletTransactions::default()),
         };
-        // Provide data to messages.
         if data.is_some() {
-            content.current_tab = Box::new(WalletMessages::new(data));
+            content.on_data(data);
         }
         content
     }
 
+    /// Handle data from deeplink or opened file.
+    pub fn on_data(&mut self, data: Option<String>) {
+        // Provide data to messages.
+        self.current_tab = Box::new(WalletMessages::new(data));
+    }
+
     /// Draw wallet content.
-    pub fn ui(&mut self,
-              ui: &mut egui::Ui,
-              wallet: &mut Wallet,
-              cb: &dyn PlatformCallbacks) {
-        // Show modal content for this ui container.
-        self.modal_content_ui(ui, wallet, cb);
+    pub fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
+        self.modal_content_ui(ui, cb);
 
         let dual_panel = Content::is_dual_panel_mode(ui);
 
+        let wallet = &self.wallet;
         let data = wallet.get_data();
         let data_empty = data.is_none();
+        let hide_tabs = Self::block_navigation_on_sync(wallet);
 
         // Show wallet balance panel not on Settings tab with selected non-repairing
         // wallet, when there is no error and data is not empty.
         let mut show_balance = self.current_tab.get_type() != WalletTabType::Settings && !data_empty
             && !wallet.sync_error() && !wallet.is_repairing() && !wallet.is_closing();
-        if wallet.get_current_ext_conn().is_none() && !Node::is_running() {
+        if wallet.get_current_connection() == ConnectionMethod::Integrated && !Node::is_running() {
             show_balance = false;
         }
         egui::TopBottomPanel::top(Id::from("wallet_balance").with(wallet.identifier()))
@@ -117,13 +123,12 @@ impl WalletContent {
                     }
                     // Draw account info.
                     View::max_width_ui(ui, Content::SIDE_PANEL_WIDTH * 1.3, |ui| {
-                        self.account_ui(ui, wallet, data.unwrap(), cb);
+                        self.account_ui(ui, data.unwrap(), cb);
                     });
                 });
             });
 
         // Show wallet tabs panel.
-        let show_tabs = !Self::block_navigation_on_sync(wallet);
         egui::TopBottomPanel::bottom("wallet_tabs_content")
             .frame(egui::Frame {
                 fill: Colors::fill(),
@@ -135,7 +140,7 @@ impl WalletContent {
                 },
                 ..Default::default()
             })
-            .show_animated_inside(ui, show_tabs, |ui| {
+            .show_animated_inside(ui, !hide_tabs, |ui| {
                 ui.vertical_centered(|ui| {
                     // Draw wallet tabs.
                     View::max_width_ui(ui, Content::SIDE_PANEL_WIDTH * 1.3, |ui| {
@@ -162,7 +167,7 @@ impl WalletContent {
                 ..Default::default()
             })
             .show_inside(ui, |ui| {
-                self.current_tab.ui(ui, wallet, cb);
+                self.current_tab.ui(ui, &self.wallet, cb);
             });
 
         // Refresh content after 1 second for synced wallet.
@@ -173,11 +178,21 @@ impl WalletContent {
         }
     }
 
+    /// Check when to block tabs navigation on sync progress.
+    pub fn block_navigation_on_sync(wallet: &Wallet) -> bool {
+        let sync_error = wallet.sync_error();
+        let integrated_node = wallet.get_current_connection() == ConnectionMethod::Integrated;
+        let integrated_node_ready = Node::get_sync_status() == Some(SyncStatus::NoSync);
+        let sync_after_opening = wallet.get_data().is_none() && !wallet.sync_error();
+        // Block navigation if wallet is repairing and integrated node is not launching
+        // and if wallet is closing or syncing after opening when there is no data to show.
+        (wallet.is_repairing() && (integrated_node_ready || !integrated_node) && !sync_error)
+            || wallet.is_closing() || (sync_after_opening &&
+            (!integrated_node || integrated_node_ready))
+    }
+
     /// Draw [`Modal`] content for this ui container.
-    fn modal_content_ui(&mut self,
-                        ui: &mut egui::Ui,
-                        wallet: &Wallet,
-                        cb: &dyn PlatformCallbacks) {
+    fn modal_content_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         match Modal::opened() {
             None => {}
             Some(id) => {
@@ -185,29 +200,30 @@ impl WalletContent {
                     ACCOUNT_LIST_MODAL => {
                         if let Some(content) = self.accounts_modal_content.as_mut() {
                             Modal::ui(ui.ctx(), |ui, modal| {
-                                content.ui(ui, wallet, modal, cb);
+                                content.ui(ui, &self.wallet, modal, cb);
                             });
                         }
                     }
                     QR_CODE_SCAN_MODAL => {
+                        let mut success = false;
                         if let Some(content) = self.scan_modal_content.as_mut() {
                             Modal::ui(ui.ctx(), |ui, modal| {
-                                content.ui(ui, wallet, modal, cb, |result| {
+                                content.ui(ui, modal, cb, |result| {
                                     match result {
                                         QrScanResult::Slatepack(message) => {
-                                            modal.close();
+                                            success = true;
                                             let msg = Some(message.to_string());
                                             let messages = WalletMessages::new(msg);
                                             self.current_tab = Box::new(messages);
                                             return;
                                         }
                                         QrScanResult::Address(receiver) => {
-                                            let balance = wallet.get_data()
+                                            success = true;
+                                            let balance = self.wallet.get_data()
                                                 .unwrap()
                                                 .info
                                                 .amount_currently_spendable;
                                             if balance > 0 {
-                                                modal.close();
                                                 let mut transport = WalletTransport::default();
                                                 let rec = Some(receiver.to_string());
                                                 transport.show_send_tor_modal(cb, rec);
@@ -217,8 +233,14 @@ impl WalletContent {
                                         }
                                         _ => {}
                                     }
+                                    if success {
+                                        modal.close();
+                                    }
                                 });
                             });
+                        }
+                        if success {
+                            self.scan_modal_content = None;
                         }
                     }
                     _ => {}
@@ -230,7 +252,6 @@ impl WalletContent {
     /// Draw wallet account content.
     fn account_ui(&mut self,
                   ui: &mut egui::Ui,
-                  wallet: &Wallet,
                   data: WalletData,
                   cb: &dyn PlatformCallbacks) {
         let mut rect = ui.available_rect_before_wrap();
@@ -240,10 +261,9 @@ impl WalletContent {
         ui.painter().rect(rect, rounding, Colors::button(), View::hover_stroke());
 
         ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
-            // Draw button to scan QR code.
+            // Draw button to show QR code scanner.
             View::item_button(ui, View::item_rounding(0, 2, true), SCAN, None, || {
-                self.scan_modal_content = Some(WalletScanModal::default());
-                // Show QR code scan modal.
+                self.scan_modal_content = Some(CameraScanModal::default());
                 Modal::new(QR_CODE_SCAN_MODAL)
                     .position(ModalPosition::CenterTop)
                     .title(t!("scan_qr"))
@@ -254,8 +274,9 @@ impl WalletContent {
 
             // Draw button to show list of accounts.
             View::item_button(ui, View::item_rounding(1, 3, true), USERS_THREE, None, || {
-                self.accounts_modal_content = Some(WalletAccountsModal::new(wallet.accounts()));
-                // Show account list modal.
+                self.accounts_modal_content = Some(
+                    WalletAccountsModal::new(self.wallet.accounts())
+                );
                 Modal::new(ACCOUNT_LIST_MODAL)
                     .position(ModalPosition::CenterTop)
                     .title(t!("wallets.accounts"))
@@ -279,7 +300,7 @@ impl WalletContent {
                     ui.add_space(-2.0);
 
                     // Show account label.
-                    let account = wallet.get_config().account;
+                    let account = self.wallet.get_config().account;
                     let default_acc_label = WalletConfig::DEFAULT_ACCOUNT_LABEL.to_string();
                     let acc_label = if account == default_acc_label {
                         t!("wallets.default_account")
@@ -290,15 +311,15 @@ impl WalletContent {
                     View::ellipsize_text(ui, acc_text, 15.0, Colors::text(false));
 
                     // Show confirmed height or sync progress.
-                    let status_text = if !wallet.syncing() {
+                    let status_text = if !self.wallet.syncing() {
                         format!("{} {}", PACKAGE, data.info.last_confirmed_height)
                     } else {
-                        let info_progress = wallet.info_sync_progress();
+                        let info_progress = self.wallet.info_sync_progress();
                         if info_progress == 100 || info_progress == 0 {
                             format!("{} {}", SPINNER, t!("wallets.wallet_loading"))
                         } else {
-                            if wallet.is_repairing() {
-                                let rep_progress = wallet.repairing_progress();
+                            if self.wallet.is_repairing() {
+                                let rep_progress = self.wallet.repairing_progress();
                                 if rep_progress == 0 {
                                     format!("{} {}", SPINNER, t!("wallets.wallet_checking"))
                                 } else {
@@ -315,7 +336,11 @@ impl WalletContent {
                             }
                         }
                     };
-                    View::animate_text(ui, status_text, 15.0, Colors::gray(), wallet.syncing());
+                    View::animate_text(ui,
+                                       status_text,
+                                       15.0,
+                                       Colors::gray(),
+                                       self.wallet.syncing());
                 })
             });
         });
@@ -367,7 +392,7 @@ impl WalletContent {
         } else if wallet.is_closing() {
             Self::sync_progress_ui(ui, wallet);
             return true;
-        } else if wallet.get_current_ext_conn().is_none() {
+        } else if wallet.get_current_connection() == ConnectionMethod::Integrated {
             if !Node::is_running() || Node::is_stopping() {
                 View::center_content(ui, 108.0, |ui| {
                     View::max_width_ui(ui, Content::SIDE_PANEL_WIDTH * 1.5, |ui| {
@@ -418,19 +443,6 @@ impl WalletContent {
         });
     }
 
-    /// Check when to block tabs navigation on sync progress.
-    pub fn block_navigation_on_sync(wallet: &Wallet) -> bool {
-        let sync_error = wallet.sync_error();
-        let integrated_node = wallet.get_current_ext_conn().is_none();
-        let integrated_node_ready = Node::get_sync_status() == Some(SyncStatus::NoSync);
-        let sync_after_opening = wallet.get_data().is_none() && !wallet.sync_error();
-        // Block navigation if wallet is repairing and integrated node is not launching
-        // and if wallet is closing or syncing after opening when there is no data to show.
-        (wallet.is_repairing() && (integrated_node_ready || !integrated_node) && !sync_error)
-            || wallet.is_closing() || (sync_after_opening &&
-            (!integrated_node || integrated_node_ready))
-    }
-
     /// Draw wallet sync progress content.
     pub fn sync_progress_ui(ui: &mut egui::Ui, wallet: &Wallet) {
         View::center_content(ui, 162.0, |ui| {
@@ -439,13 +451,13 @@ impl WalletContent {
                 ui.add_space(18.0);
                 // Setup sync progress text.
                 let text = {
-                    let integrated_node = wallet.get_current_ext_conn().is_none();
-                    let integrated_node_ready = Node::get_sync_status() == Some(SyncStatus::NoSync);
+                    let int_node = wallet.get_current_connection() == ConnectionMethod::Integrated;
+                    let int_ready = Node::get_sync_status() == Some(SyncStatus::NoSync);
                     let info_progress = wallet.info_sync_progress();
 
                     if wallet.is_closing() {
                         t!("wallets.wallet_closing")
-                    } else if integrated_node && !integrated_node_ready {
+                    } else if int_node && !int_ready {
                         t!("wallets.node_loading", "settings" => GEAR_FINE)
                     } else if wallet.is_repairing() {
                         let repair_progress = wallet.repairing_progress();

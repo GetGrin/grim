@@ -47,7 +47,7 @@ impl WalletTab for WalletTransport {
 
     fn ui(&mut self,
           ui: &mut egui::Ui,
-          wallet: &mut Wallet,
+          wallet: &Wallet,
           cb: &dyn PlatformCallbacks) {
         if WalletContent::sync_ui(ui, wallet) {
             return;
@@ -106,7 +106,7 @@ impl Default for WalletTransport {
 
 impl WalletTransport {
     /// Draw wallet transport content.
-    pub fn ui(&mut self, ui: &mut egui::Ui, wallet: &mut Wallet, cb: &dyn PlatformCallbacks) {
+    pub fn ui(&mut self, ui: &mut egui::Ui, wallet: &Wallet, cb: &dyn PlatformCallbacks) {
         ui.add_space(3.0);
         ui.label(RichText::new(t!("transport.desc"))
             .size(16.0)
@@ -120,7 +120,7 @@ impl WalletTransport {
     /// Draw [`Modal`] content for this ui container.
     fn modal_content_ui(&mut self,
                         ui: &mut egui::Ui,
-                        wallet: &mut Wallet,
+                        wallet: &Wallet,
                         cb: &dyn PlatformCallbacks) {
         match Modal::opened() {
             None => {}
@@ -152,7 +152,7 @@ impl WalletTransport {
     }
 
     /// Draw Tor transport content.
-    fn tor_ui(&mut self, ui: &mut egui::Ui, wallet: &mut Wallet, cb: &dyn PlatformCallbacks) {
+    fn tor_ui(&mut self, ui: &mut egui::Ui, wallet: &Wallet, cb: &dyn PlatformCallbacks) {
         let data = wallet.get_data().unwrap();
 
         // Draw header content.

@@ -430,14 +430,4 @@ impl CameraContent {
         }
         None
     }
-
-    /// Reset camera content state to default.
-    pub fn clear_state(&mut self) {
-        // Clear QR code scanning state.
-        let mut w_scan = self.qr_scan_state.write();
-        *w_scan = QrScanState::default();
-        // Clear UR data.
-        let mut w_data = self.ur_data.write();
-        *w_data = None;
-    }
 }

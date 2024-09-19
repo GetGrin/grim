@@ -22,27 +22,24 @@ use crate::gui::views::{Modal, View};
 use crate::gui::views::network::ConnectionsContent;
 use crate::gui::views::network::modals::ExternalConnectionModal;
 use crate::wallet::{ConnectionsConfig, ExternalConnection};
+use crate::wallet::types::ConnectionMethod;
 
-/// Wallet connection [`Modal`] content.
+/// Wallet connection selection [`Modal`] content.
 pub struct WalletConnectionModal {
-    /// Current external connection.
-    pub ext_conn: Option<ExternalConnection>,
+    /// Current connection method.
+    pub conn: ConnectionMethod,
 
-    /// Flag to show connection creation.
-    show_conn_creation: bool,
-
-    /// External connection creation content.
-    add_ext_conn_content: ExternalConnectionModal
+    /// External connection content.
+    ext_conn_content: Option<ExternalConnectionModal>
 }
 
 impl WalletConnectionModal {
     /// Create from provided wallet connection.
-    pub fn new(ext_conn: Option<ExternalConnection>) -> Self {
+    pub fn new(conn: ConnectionMethod) -> Self {
         ExternalConnection::check_ext_conn_availability(None);
         Self {
-            ext_conn,
-            show_conn_creation: false,
-            add_ext_conn_content: ExternalConnectionModal::new(None),
+            conn,
+            ext_conn_content: None,
         }
     }
 
@@ -51,16 +48,16 @@ impl WalletConnectionModal {
               ui: &mut egui::Ui,
               modal: &Modal,
               cb: &dyn PlatformCallbacks,
-              on_select: impl Fn(Option<i64>)) {
-        ui.add_space(4.0);
-
-        // Draw external connection creation content.
-        if self.show_conn_creation {
-            self.add_ext_conn_content.ui(ui, cb, modal, |conn| {
-                on_select(Some(conn.id));
+              on_select: impl Fn(ConnectionMethod)) {
+        // Draw external connection content.
+        if let Some(ext_content) = self.ext_conn_content.as_mut() {
+            ext_content.ui(ui, cb, modal, |conn| {
+                on_select(ConnectionMethod::External(conn.id, conn.url));
             });
             return;
         }
+
+        ui.add_space(4.0);
 
         let ext_conn_list = ConnectionsConfig::ext_conn_list();
         ScrollArea::vertical()
@@ -77,52 +74,54 @@ impl WalletConnectionModal {
 
                 // Show integrated node selection.
                 ConnectionsContent::integrated_node_item_ui(ui, |ui| {
-                    let is_current_method = self.ext_conn.is_none();
-                    if !is_current_method {
-                        View::item_button(ui, View::item_rounding(0, 1, true), CHECK, None, || {
-                            self.ext_conn = None;
-                            on_select(None);
-                            modal.close();
-                        });
-                    } else {
-                        ui.add_space(14.0);
-                        ui.label(RichText::new(CHECK_FAT).size(20.0).color(Colors::green()));
-                        ui.add_space(14.0);
+                    match self.conn {
+                        ConnectionMethod::Integrated => {
+                            ui.add_space(14.0);
+                            ui.label(RichText::new(CHECK_FAT).size(20.0).color(Colors::green()));
+                            ui.add_space(14.0);
+                        }
+                        _ => {
+                            View::item_button(ui, View::item_rounding(0, 1, true), CHECK, None, || {
+                                on_select(ConnectionMethod::Integrated);
+                                modal.close();
+                            });
+                        }
                     }
                 });
 
-                // Show button to add new external node connection.
                 ui.add_space(8.0);
                 ui.vertical_centered(|ui| {
                     ui.label(RichText::new(t!("wallets.ext_conn"))
                         .size(16.0)
                         .color(Colors::gray()));
                     ui.add_space(6.0);
+                    // Show button to add new external node connection.
                     let add_node_text = format!("{} {}", PLUS_CIRCLE, t!("wallets.add_node"));
                     View::button(ui, add_node_text, Colors::button(), || {
-                        self.show_conn_creation = true;
+                        self.ext_conn_content = Some(ExternalConnectionModal::new(None));
                     });
                 });
                 ui.add_space(4.0);
 
                 if !ext_conn_list.is_empty() {
                     ui.add_space(8.0);
-                    for (index, conn) in ext_conn_list.iter().enumerate() {
+                    for (index, conn) in ext_conn_list.iter().filter(|c| !c.deleted).enumerate() {
+                        if conn.deleted {
+                            continue;
+                        }
                         ui.horizontal_wrapped(|ui| {
-                            // Draw external connection item.
                             let len = ext_conn_list.len();
                             ConnectionsContent::ext_conn_item_ui(ui, conn, index, len, |ui| {
-                                // Draw button to select connection.
-                                let is_current_method = if let Some(c) = self.ext_conn.as_ref() {
-                                    c.id == conn.id
-                                } else {
-                                    false
+                                let current_ext_conn = match self.conn {
+                                    ConnectionMethod::Integrated => false,
+                                    ConnectionMethod::External(id, _) => id == conn.id
                                 };
-                                if !is_current_method {
+                                if !current_ext_conn {
                                     let button_rounding = View::item_rounding(index, len, true);
                                     View::item_button(ui, button_rounding, CHECK, None, || {
-                                        self.ext_conn = Some(conn.clone());
-                                        on_select(Some(conn.id));
+                                        on_select(
+                                            ConnectionMethod::External(conn.id, conn.url.clone())
+                                        );
                                         modal.close();
                                     });
                                 } else {

@@ -112,7 +112,8 @@ impl ModalContainer for StratumSetup {
                 cb: &dyn PlatformCallbacks) {
         match modal.id {
             WALLET_SELECTION_MODAL => {
-                self.wallets_modal.ui(ui, modal, &mut self.wallets, cb, |id, _| {
+                self.wallets_modal.ui(ui, modal, &mut self.wallets, cb, |wallet, _| {
+                    let id = wallet.get_config().id;
                     NodeConfig::save_stratum_wallet_id(id);
                     self.wallet_name = WalletConfig::name_by_id(id);
                 })

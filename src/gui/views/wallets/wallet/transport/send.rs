@@ -74,7 +74,7 @@ impl TransportSendModal {
     /// Draw [`Modal`] content.
     pub fn ui(&mut self,
               ui: &mut egui::Ui,
-              wallet: &mut Wallet,
+              wallet: &Wallet,
               modal: &Modal,
               cb: &dyn PlatformCallbacks) {
         // Draw transaction information on request result.

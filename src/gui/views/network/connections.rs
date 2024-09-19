@@ -103,23 +103,20 @@ impl ConnectionsContent {
         ui.add_space(4.0);
 
         let ext_conn_list = ConnectionsConfig::ext_conn_list();
-        if !ext_conn_list.is_empty() {
+        let ext_conn_size = ext_conn_list.len();
+        if ext_conn_size != 0 {
             ui.add_space(8.0);
-            for (index, conn) in ext_conn_list.iter().enumerate() {
+            for (index, conn) in ext_conn_list.iter().filter(|c| !c.deleted).enumerate() {
                 ui.horizontal_wrapped(|ui| {
                     // Draw connection list item.
-                    let len = ext_conn_list.len();
-                    Self::ext_conn_item_ui(ui, conn, index, len, |ui| {
-                        // Draw buttons for non-default connections.
-                        if conn.url != ExternalConnection::DEFAULT_MAIN_URL {
-                            let button_rounding = View::item_rounding(index, len, true);
-                            View::item_button(ui, button_rounding, TRASH, None, || {
-                                ConnectionsConfig::remove_ext_conn(conn.id);
-                            });
-                            View::item_button(ui, Rounding::default(), PENCIL, None, || {
-                                self.show_add_ext_conn_modal(Some(conn.clone()), cb);
-                            });
-                        }
+                    Self::ext_conn_item_ui(ui, conn, index, ext_conn_size, |ui| {
+                        let button_rounding = View::item_rounding(index, ext_conn_size, true);
+                        View::item_button(ui, button_rounding, TRASH, None, || {
+                            ConnectionsConfig::remove_ext_conn(conn.id);
+                        });
+                        View::item_button(ui, Rounding::default(), PENCIL, None, || {
+                            self.show_add_ext_conn_modal(Some(conn.clone()), cb);
+                        });
                     });
                 });
             }

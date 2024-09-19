@@ -50,7 +50,7 @@ impl WalletTab for WalletSettings {
 
     fn ui(&mut self,
           ui: &mut egui::Ui,
-          wallet: &mut Wallet,
+          wallet: &Wallet,
           cb: &dyn PlatformCallbacks) {
         // Show loading progress if navigation is blocked.
         if WalletContent::block_navigation_on_sync(wallet) {

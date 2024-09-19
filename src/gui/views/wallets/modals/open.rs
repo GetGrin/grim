@@ -13,15 +13,19 @@
 // limitations under the License.
 
 use egui::{Id, RichText};
+use grin_util::ZeroingString;
 
 use crate::gui::Colors;
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, View};
 use crate::gui::views::types::TextEditOptions;
-use crate::wallet::WalletList;
+use crate::wallet::Wallet;
 
 /// Wallet opening [`Modal`] content.
 pub struct OpenWalletModal {
+    /// Wallet to open.
+    wallet: Wallet,
+
     /// Password to open wallet.
     pass_edit: String,
     /// Flag to check if wrong password was entered.
@@ -33,8 +37,9 @@ pub struct OpenWalletModal {
 
 impl OpenWalletModal {
     /// Create new content instance.
-    pub fn new(data: Option<String>) -> Self {
+    pub fn new(wallet: Wallet, data: Option<String>) -> Self {
         Self {
+            wallet,
             pass_edit: "".to_string(),
             wrong_pass: false,
             data,
@@ -44,9 +49,8 @@ impl OpenWalletModal {
     pub fn ui(&mut self,
               ui: &mut egui::Ui,
               modal: &Modal,
-              wallets: &mut WalletList,
               cb: &dyn PlatformCallbacks,
-              mut on_continue: impl FnMut(Option<String>)) {
+              mut on_continue: impl FnMut(Wallet, Option<String>)) {
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("wallets.pass"))
@@ -90,18 +94,16 @@ impl OpenWalletModal {
                 columns[1].vertical_centered_justified(|ui| {
                     // Callback for button to continue.
                     let mut on_continue = || {
-                        if self.pass_edit.is_empty() {
+                        let pass = self.pass_edit.clone();
+                        if pass.is_empty() {
                             return;
                         }
-                        match wallets.open_selected(&self.pass_edit) {
+                        match self.wallet.open(ZeroingString::from(pass)) {
                             Ok(_) => {
-                                // Clear values.
                                 self.pass_edit = "".to_string();
-                                self.wrong_pass = false;
-                                // Close modal.
                                 cb.hide_keyboard();
                                 modal.close();
-                                on_continue(self.data.clone());
+                                on_continue(self.wallet.clone(), self.data.clone());
                             }
                             Err(_) => self.wrong_pass = true
                         }

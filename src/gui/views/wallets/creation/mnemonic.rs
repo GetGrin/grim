@@ -17,8 +17,8 @@ use egui::{Id, RichText};
 use crate::gui::Colors;
 use crate::gui::icons::PENCIL;
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{CameraContent, Modal, Content, View};
-use crate::gui::views::types::{ModalContainer, ModalPosition, QrScanResult, TextEditOptions};
+use crate::gui::views::{Modal, Content, View};
+use crate::gui::views::types::{ModalContainer, ModalPosition, TextEditOptions};
 use crate::wallet::Mnemonic;
 use crate::wallet::types::{PhraseMode, PhraseSize, PhraseWord};
 
@@ -34,20 +34,12 @@ pub struct MnemonicSetup {
     /// Flag to check if entered word is valid at [`Modal`].
     valid_word_edit: bool,
 
-    /// Camera content for QR scan [`Modal`].
-    camera_content: CameraContent,
-    /// Flag to check if recovery phrase was found at QR code scanning [`Modal`].
-    scan_phrase_not_found: Option<bool>,
-
     /// [`Modal`] identifiers allowed at this ui container.
     modal_ids: Vec<&'static str>
 }
 
 /// Identifier for word input [`Modal`].
 pub const WORD_INPUT_MODAL: &'static str = "word_input_modal";
-
-/// Identifier for QR code recovery phrase scan [`Modal`].
-const QR_CODE_PHRASE_SCAN_MODAL: &'static str = "qr_code_rec_phrase_scan_modal";
 
 impl Default for MnemonicSetup {
     fn default() -> Self {
@@ -56,11 +48,8 @@ impl Default for MnemonicSetup {
             word_index_edit: 0,
             word_edit: String::from(""),
             valid_word_edit: true,
-            camera_content: CameraContent::default(),
-            scan_phrase_not_found: None,
             modal_ids: vec![
-                WORD_INPUT_MODAL,
-                QR_CODE_PHRASE_SCAN_MODAL
+                WORD_INPUT_MODAL
             ]
         }
     }
@@ -77,7 +66,6 @@ impl ModalContainer for MnemonicSetup {
                 cb: &dyn PlatformCallbacks) {
         match modal.id {
             WORD_INPUT_MODAL => self.word_modal_ui(ui, modal, cb),
-            QR_CODE_PHRASE_SCAN_MODAL => self.scan_qr_modal_ui(ui, modal, cb),
             _ => {}
         }
     }
@@ -324,85 +312,6 @@ impl MnemonicSetup {
             });
             ui.add_space(6.0);
         });
-    }
-
-    /// Show QR code recovery phrase scanner [`Modal`].
-    pub fn show_qr_scan_modal(&mut self, cb: &dyn PlatformCallbacks) {
-        self.scan_phrase_not_found = None;
-        // Show QR code scan modal.
-        Modal::new(QR_CODE_PHRASE_SCAN_MODAL)
-            .position(ModalPosition::CenterTop)
-            .title(t!("scan_qr"))
-            .closeable(false)
-            .show();
-        cb.start_camera();
-    }
-
-    /// Draw QR code scan [`Modal`] content.
-    fn scan_qr_modal_ui(&mut self,
-                        ui: &mut egui::Ui,
-                        modal: &Modal,
-                        cb: &dyn PlatformCallbacks) {
-        // Show scan result if exists or show camera content while scanning.
-        if let Some(_) = &self.scan_phrase_not_found {
-            ui.add_space(6.0);
-            ui.vertical_centered(|ui| {
-                ui.label(RichText::new(t!("wallets.rec_phrase_not_found"))
-                    .size(17.0)
-                    .color(Colors::red()));
-            });
-            ui.add_space(6.0);
-        } else if let Some(result) = self.camera_content.qr_scan_result() {
-            cb.stop_camera();
-            self.camera_content.clear_state();
-            match &result {
-                QrScanResult::Text(text) => {
-                    self.mnemonic.import(text);
-                    if self.mnemonic.valid() {
-                        modal.close();
-                        return;
-                    }
-                }
-                _ => {}
-            }
-
-            // Set an error when found phrase was not valid.
-            self.scan_phrase_not_found = Some(true);
-            Modal::set_title(t!("scan_result"));
-        } else {
-            ui.add_space(6.0);
-            self.camera_content.ui(ui, cb);
-            ui.add_space(6.0);
-        }
-
-        if self.scan_phrase_not_found.is_some() {
-            // Setup spacing between buttons.
-            ui.spacing_mut().item_spacing = egui::Vec2::new(8.0, 0.0);
-
-            ui.columns(2, |columns| {
-                columns[0].vertical_centered_justified(|ui| {
-                    View::button(ui, t!("close"), Colors::white_or_black(false), || {
-                        self.scan_phrase_not_found = None;
-                        modal.close();
-                    });
-                });
-                columns[1].vertical_centered_justified(|ui| {
-                    View::button(ui, t!("repeat"), Colors::white_or_black(false), || {
-                        Modal::set_title(t!("scan_qr"));
-                        self.scan_phrase_not_found = None;
-                        cb.start_camera();
-                    });
-                });
-            });
-        } else {
-            ui.vertical_centered_justified(|ui| {
-                View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
-                    cb.stop_camera();
-                    modal.close();
-                });
-            });
-        }
-        ui.add_space(6.0);
     }
 }
 

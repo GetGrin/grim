@@ -21,13 +21,14 @@ use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, View};
 use crate::gui::views::types::ModalPosition;
 use crate::gui::views::wallets::modals::OpenWalletModal;
-use crate::gui::views::wallets::wallet::types::status_text;
+use crate::gui::views::wallets::wallet::types::wallet_status_text;
 use crate::wallet::{Wallet, WalletList};
+use crate::wallet::types::ConnectionMethod;
 
 /// Wallet list [`Modal`] content
 pub struct WalletsModal {
     /// Selected wallet id.
-    selected: Option<i64>,
+    selected_id: Option<i64>,
 
     /// Optional data to pass after wallet selection.
     data: Option<String>,
@@ -40,24 +41,21 @@ pub struct WalletsModal {
 
 impl WalletsModal {
     /// Create new content instance.
-    pub fn new(selected: Option<i64>, data: Option<String>, can_open: bool) -> Self {
-        Self { selected, data, can_open, open_wallet_content: None }
+    pub fn new(selected_id: Option<i64>, data: Option<String>, can_open: bool) -> Self {
+        Self { selected_id, data, can_open, open_wallet_content: None }
     }
 
     /// Draw content.
     pub fn ui(&mut self,
               ui: &mut egui::Ui,
               modal: &Modal,
-              wallets: &mut WalletList,
+              wallets: &WalletList,
               cb: &dyn PlatformCallbacks,
-              mut on_select: impl FnMut(i64, Option<String>)) {
-        // Draw wallet opening content if requested.
+              mut on_select: impl FnMut(Wallet, Option<String>)) {
+        // Draw wallet opening modal content.
         if let Some(open_content) = self.open_wallet_content.as_mut() {
-            open_content.ui(ui, modal, wallets, cb, |data| {
-                modal.close();
-                if let Some(id) = self.selected {
-                    on_select(id, data);
-                }
+            open_content.ui(ui, modal, cb, |wallet, data| {
+                on_select(wallet, data);
                 self.data = None;
             });
             return;
@@ -73,11 +71,11 @@ impl WalletsModal {
                 ui.add_space(2.0);
                 ui.vertical_centered(|ui| {
                     let data = self.data.clone();
-                    for wallet in wallets.clone().list() {
+                    for wallet in wallets.list() {
                         // Draw wallet list item.
-                        self.wallet_item_ui(ui, wallet, wallets, |id| {
+                        self.wallet_item_ui(ui, wallet, || {
                             modal.close();
-                            on_select(id, data.clone());
+                            on_select(wallet.clone(), data.clone());
                         });
                         ui.add_space(5.0);
                     }
@@ -102,8 +100,7 @@ impl WalletsModal {
     fn wallet_item_ui(&mut self,
                       ui: &mut egui::Ui,
                       wallet: &Wallet,
-                      wallets: &mut WalletList,
-                      mut select: impl FnMut(i64)) {
+                      on_select: impl FnOnce()) {
         let config = wallet.get_config();
         let id = config.id;
 
@@ -122,24 +119,24 @@ impl WalletsModal {
                     FOLDER_OPEN
                 };
                 View::item_button(ui, View::item_rounding(0, 1, true), icon, None, || {
-                    wallets.select(Some(id));
                     if wallet.is_open() {
-                        select(id);
+                        on_select();
                     } else {
-                        self.selected = wallets.selected_id;
                         Modal::change_position(ModalPosition::CenterTop);
-                        self.open_wallet_content = Some(OpenWalletModal::new(self.data.clone()));
+                        self.open_wallet_content = Some(
+                            OpenWalletModal::new(wallet.clone(), self.data.clone())
+                        );
                     }
                 });
             } else {
                 // Draw button to select wallet.
-                let current = self.selected.unwrap_or(0) == id;
+                let current = self.selected_id.unwrap_or(0) == id;
                 if current {
                     ui.add_space(12.0);
                     ui.label(RichText::new(CHECK_FAT).size(20.0).color(Colors::green()));
                 } else {
                     View::item_button(ui, View::item_rounding(0, 1, true), CHECK, None, || {
-                        select(id);
+                        on_select();
                     });
                 }
             }
@@ -156,17 +153,19 @@ impl WalletsModal {
                     });
 
                     // Show wallet connection text.
-                    let conn = if let Some(conn) = wallet.get_current_ext_conn() {
-                        format!("{} {}", GLOBE_SIMPLE, conn.url)
-                    } else {
-                        format!("{} {}", COMPUTER_TOWER, t!("network.node"))
+                    let connection = wallet.get_current_connection();
+                    let conn_text = match connection {
+                        ConnectionMethod::Integrated => {
+                            format!("{} {}", COMPUTER_TOWER, t!("network.node"))
+                        }
+                        ConnectionMethod::External(_, url) => format!("{} {}", GLOBE_SIMPLE, url)
                     };
-                    View::ellipsize_text(ui, conn, 15.0, Colors::text(false));
+                    ui.label(RichText::new(conn_text).size(15.0).color(Colors::text(false)));
                     ui.add_space(1.0);
 
                     // Show wallet API text or open status.
                     if self.can_open {
-                        ui.label(RichText::new(status_text(wallet))
+                        ui.label(RichText::new(wallet_status_text(wallet))
                             .size(15.0)
                             .color(Colors::gray()));
                     } else {

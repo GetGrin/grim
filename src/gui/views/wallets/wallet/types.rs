@@ -26,7 +26,7 @@ pub trait WalletTab {
     fn get_type(&self) -> WalletTabType;
     fn ui(&mut self,
           ui: &mut egui::Ui,
-          wallet: &mut Wallet,
+          wallet: &Wallet,
           cb: &dyn PlatformCallbacks);
 }
 
@@ -52,7 +52,7 @@ impl WalletTabType {
 }
 
 /// Get wallet status text.
-pub fn status_text(wallet: &Wallet) -> String {
+pub fn wallet_status_text(wallet: &Wallet) -> String {
     if wallet.is_open() {
         if wallet.sync_error() {
             format!("{} {}", WARNING_CIRCLE, t!("error"))

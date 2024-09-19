@@ -18,6 +18,7 @@ use grin_keychain::ExtKeychain;
 use grin_util::Mutex;
 use grin_wallet_impls::{DefaultLCProvider, HTTPNodeClient};
 use grin_wallet_libwallet::{TxLogEntry, TxLogEntryType, WalletInfo, WalletInst};
+use serde_derive::{Deserialize, Serialize};
 
 /// Mnemonic phrase word.
 #[derive(Clone)]
@@ -107,12 +108,12 @@ impl PhraseSize {
 }
 
 /// Wallet connection method.
-#[derive(PartialEq)]
+#[derive(Serialize, Deserialize, Clone, PartialEq)]
 pub enum ConnectionMethod {
     /// Integrated node.
     Integrated,
-    /// External node, contains connection identifier.
-    External(i64)
+    /// External node, contains connection identifier and URL.
+    External(i64, String)
 }
 
 /// Wallet instance type.
@@ -162,8 +163,8 @@ pub struct WalletTransaction {
     pub can_finalize: bool,
     /// Flag to check if transaction is finalizing.
     pub finalizing: bool,
-    /// Block height when tx was confirmed.
-    pub conf_height: Option<u64>,
+    /// Block height where tx was included.
+    pub height: Option<u64>,
     /// Flag to check if tx was received after sync from node.
     pub from_node: bool,
 }

@@ -273,20 +273,21 @@ impl<Platform: PlatformCallbacks> App<Platform> {
 
         // Paint the title.
         let dual_wallets_panel =
-            ui.available_width() >= (Content::SIDE_PANEL_WIDTH * 3.0) + View::get_right_inset();
-        let wallet_panel_opened = self.content.wallets.wallet_panel_opened();
-        let hide_app_name = if dual_wallets_panel {
-            !wallet_panel_opened || (AppConfig::show_wallets_at_dual_panel() &&
-                self.content.wallets.showing_wallet() && !self.content.wallets.creating_wallet())
+            ui.available_width() >= (Content::SIDE_PANEL_WIDTH * 3.0)
+                + View::get_right_inset() + View::get_left_inset();
+        let wallet_panel_opened = self.content.wallets.showing_wallet();
+        let show_app_name = if dual_wallets_panel {
+            wallet_panel_opened && !AppConfig::show_wallets_at_dual_panel()
         } else if Content::is_dual_panel_mode(ui) {
-            !wallet_panel_opened
+            wallet_panel_opened
         } else {
-            !Content::is_network_panel_open() && !wallet_panel_opened
+            Content::is_network_panel_open() || wallet_panel_opened
         };
-        let title_text = if hide_app_name {
-            "ツ".to_string()
-        } else {
+        let creating_wallet = self.content.wallets.creating_wallet();
+        let title_text = if creating_wallet || show_app_name {
             format!("Grim {}", crate::VERSION)
+        } else {
+            "ツ".to_string()
         };
         painter.text(
             title_rect.center(),

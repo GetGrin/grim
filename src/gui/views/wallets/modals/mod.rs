@@ -20,3 +20,6 @@ pub use wallets::*;
 
 mod open;
 pub use open::*;
+
+mod add;
+pub use add::*;

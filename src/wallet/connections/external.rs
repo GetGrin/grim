@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use grin_core::global::ChainTypes;
 use grin_util::to_base64;
 use serde_derive::{Deserialize, Serialize};
 
@@ -28,23 +29,53 @@ pub struct ExternalConnection {
     pub secret: Option<String>,
 
     /// Flag to check if server is available.
-    #[serde(skip_serializing)]
-    pub available: Option<bool>
+    #[serde(skip_serializing, skip_deserializing)]
+    pub available: Option<bool>,
+
+    /// Flag to check if connection was deleted.
+    #[serde(skip_serializing, skip_deserializing)]
+    pub deleted: bool
 }
 
-impl ExternalConnection {
-    /// Default external node URL for main network.
-    pub const DEFAULT_MAIN_URL: &'static str = "https://grinnode.live:3413";
+/// Default external node URL for main network.
+const DEFAULT_MAIN_URLS: [&'static str; 2] = [
+        "https://grincoin.org",
+        "https://grinnode.live:3413"
+    ];
 
-    /// Create default external connection.
-    pub fn default_main() -> Self {
-        Self { id: 1, url: Self::DEFAULT_MAIN_URL.to_string(), secret: None, available: None }
+/// Default external node URL for main network.
+const DEFAULT_TEST_URLS: [&'static str; 1] = [
+        "https://testnet.grincoin.org"
+    ];
+
+impl ExternalConnection {
+    /// Get default connections for provided chain type.
+    pub fn default(chain_type: &ChainTypes) -> Vec<ExternalConnection> {
+        let urls = match chain_type {
+            ChainTypes::Mainnet => DEFAULT_MAIN_URLS.to_vec(),
+            _ => DEFAULT_TEST_URLS.to_vec()
+        };
+        urls.iter().enumerate().map(|(index, url)| {
+            ExternalConnection {
+                id: index as i64,
+                url: url.to_string(),
+                secret: None,
+                available: None,
+                deleted: false,
+            }
+        }).collect::<Vec<ExternalConnection>>()
     }
 
     /// Create new external connection.
     pub fn new(url: String, secret: Option<String>) -> Self {
         let id = chrono::Utc::now().timestamp();
-        Self { id, url, secret, available: None }
+        Self {
+            id,
+            url,
+            secret,
+            available: None,
+            deleted: false
+        }
     }
 
     /// Check connection availability.

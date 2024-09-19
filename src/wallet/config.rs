@@ -22,6 +22,7 @@ use rand::Rng;
 use serde_derive::{Deserialize, Serialize};
 
 use crate::{AppConfig, Settings};
+use crate::wallet::ConnectionsConfig;
 use crate::wallet::types::ConnectionMethod;
 
 /// Wallet configuration.
@@ -75,7 +76,7 @@ impl WalletConfig {
             name,
             ext_conn_id: match conn_method {
                 ConnectionMethod::Integrated => None,
-                ConnectionMethod::External(id) => Some(*id)
+                ConnectionMethod::External(id, _) => Some(*id)
             },
             min_confirmations: MIN_CONFIRMATIONS_DEFAULT,
             use_dandelion: Some(true),
@@ -114,6 +115,18 @@ impl WalletConfig {
             return cfg.api_port;
         }
         None
+    }
+
+    /// Get wallet connection method.
+    pub fn connection(&self) -> ConnectionMethod {
+        if let Some(ext_conn_id) = self.ext_conn_id {
+            if let Some(conn) = ConnectionsConfig::ext_conn(ext_conn_id) {
+                if !conn.deleted {
+                    return ConnectionMethod::External(conn.id, conn.url);
+                }
+            }
+        }
+        ConnectionMethod::Integrated
     }
 
     /// Save wallet config.

@@ -22,6 +22,7 @@ use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, View};
 use crate::gui::views::types::{ModalPosition, TextEditOptions};
 use crate::node::Node;
+use crate::wallet::types::ConnectionMethod;
 use crate::wallet::Wallet;
 
 /// Wallet recovery settings content.
@@ -51,7 +52,7 @@ impl Default for RecoverySettings {
 }
 
 impl RecoverySettings {
-    pub fn ui(&mut self, ui: &mut egui::Ui, wallet: &mut Wallet, cb: &dyn PlatformCallbacks) {
+    pub fn ui(&mut self, ui: &mut egui::Ui, wallet: &Wallet, cb: &dyn PlatformCallbacks) {
         // Show modal content for this ui container.
         self.modal_content_ui(ui, wallet, cb);
 
@@ -63,7 +64,7 @@ impl RecoverySettings {
         ui.add_space(4.0);
 
         ui.vertical_centered(|ui| {
-            let integrated_node = wallet.get_current_ext_conn().is_none();
+            let integrated_node = wallet.get_current_connection() == ConnectionMethod::Integrated;
             let integrated_node_ready = Node::get_sync_status() == Some(SyncStatus::NoSync);
             if wallet.sync_error() || (integrated_node && !integrated_node_ready) {
                 ui.add_space(2.0);
@@ -136,7 +137,7 @@ impl RecoverySettings {
     /// Draw [`Modal`] content for this ui container.
     fn modal_content_ui(&mut self,
                         ui: &mut egui::Ui,
-                        wallet: &mut Wallet,
+                        wallet: &Wallet,
                         cb: &dyn PlatformCallbacks) {
         match Modal::opened() {
             None => {}
@@ -175,7 +176,7 @@ impl RecoverySettings {
     /// Draw recovery phrase [`Modal`] content.
     fn recovery_phrase_modal_ui(&mut self,
                                 ui: &mut egui::Ui,
-                                wallet: &mut Wallet,
+                                wallet: &Wallet,
                                 modal: &Modal,
                                 cb: &dyn PlatformCallbacks) {
         ui.add_space(6.0);
@@ -260,7 +261,7 @@ impl RecoverySettings {
     /// Draw wallet deletion [`Modal`] content.
     fn deletion_modal_ui(&mut self,
                          ui: &mut egui::Ui,
-                         wallet: &mut Wallet,
+                         wallet: &Wallet,
                          modal: &Modal) {
         ui.add_space(8.0);
         ui.vertical_centered(|ui| {

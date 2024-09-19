@@ -21,7 +21,7 @@ use grin_util::ToHex;
 use grin_wallet_libwallet::{Error, Slate, SlateState, TxLogEntryType};
 use parking_lot::RwLock;
 use crate::gui::Colors;
-use crate::gui::icons::{BROOM, CHECK, CLIPBOARD_TEXT, COPY, FILE_ARCHIVE, FILE_TEXT, HASH_STRAIGHT, PROHIBIT, QR_CODE, SCAN};
+use crate::gui::icons::{BROOM, CHECK, CLIPBOARD_TEXT, COPY, CUBE, FILE_ARCHIVE, FILE_TEXT, HASH_STRAIGHT, PROHIBIT, QR_CODE, SCAN};
 use crate::gui::platform::PlatformCallbacks;
 
 use crate::gui::views::{CameraContent, FilePickButton, Modal, QrCodeContent, View};
@@ -106,7 +106,7 @@ impl WalletTransactionModal {
     /// Draw [`Modal`] content.
     pub fn ui(&mut self,
               ui: &mut egui::Ui,
-              wallet: &mut Wallet,
+              wallet: &Wallet,
               modal: &Modal,
               cb: &dyn PlatformCallbacks) {
         // Check values and setup transaction data.
@@ -171,15 +171,22 @@ impl WalletTransactionModal {
                 }
             });
 
-            // Show transaction ID info.
+            // Show identifier.
             if let Some(id) = tx.data.tx_slate_id {
                 let label = format!("{} {}", HASH_STRAIGHT, t!("id"));
                 Self::info_item_ui(ui, id.to_string(), label, true, cb);
             }
-            // Show transaction kernel info.
+            // Show kernel.
             if let Some(kernel) = tx.data.kernel_excess {
                 let label = format!("{} {}", FILE_ARCHIVE, t!("kernel"));
                 Self::info_item_ui(ui, kernel.0.to_hex(), label, true, cb);
+            }
+            // Show block height.
+            if let Some(height) = tx.height {
+                if height != 0 {
+                    let label = format!("{} {}", CUBE, t!("network_node.block"));
+                    Self::info_item_ui(ui, height.to_string(), label, true, cb);
+                }
             }
         }
 
@@ -335,7 +342,6 @@ impl WalletTransactionModal {
         if let Some(qr_scan_content) = self.qr_scan_content.as_mut() {
             if let Some(result) = qr_scan_content.qr_scan_result() {
                 cb.stop_camera();
-                qr_scan_content.clear_state();
 
                 // Setup value to finalization input field.
                 self.finalize_edit = result.text();

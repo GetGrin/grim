@@ -61,7 +61,7 @@ impl Default for CommonSettings {
 
 impl CommonSettings {
     /// Draw common wallet settings content.
-    pub fn ui(&mut self, ui: &mut egui::Ui, wallet: &mut Wallet, cb: &dyn PlatformCallbacks) {
+    pub fn ui(&mut self, ui: &mut egui::Ui, wallet: &Wallet, cb: &dyn PlatformCallbacks) {
         // Show modal content for this ui container.
         self.modal_content_ui(ui, wallet, cb);
 
@@ -146,7 +146,7 @@ impl CommonSettings {
     /// Draw [`Modal`] content for this ui container.
     fn modal_content_ui(&mut self,
                         ui: &mut egui::Ui,
-                        wallet: &mut Wallet,
+                        wallet: &Wallet,
                         cb: &dyn PlatformCallbacks) {
         match Modal::opened() {
             None => {}
@@ -176,7 +176,7 @@ impl CommonSettings {
     /// Draw wallet name [`Modal`] content.
     fn name_modal_ui(&mut self,
                      ui: &mut egui::Ui,
-                     wallet: &mut Wallet,
+                     wallet: &Wallet,
                      modal: &Modal,
                      cb: &dyn PlatformCallbacks) {
         ui.add_space(6.0);
@@ -230,7 +230,7 @@ impl CommonSettings {
     /// Draw wallet pass [`Modal`] content.
     fn pass_modal_ui(&mut self,
                      ui: &mut egui::Ui,
-                     wallet: &mut Wallet,
+                     wallet: &Wallet,
                      modal: &Modal,
                      cb: &dyn PlatformCallbacks) {
         let wallet_id = wallet.get_config().id;
@@ -328,7 +328,7 @@ impl CommonSettings {
     /// Draw wallet name [`Modal`] content.
     fn min_conf_modal_ui(&mut self,
                          ui: &mut egui::Ui,
-                         wallet: &mut Wallet,
+                         wallet: &Wallet,
                          modal: &Modal,
                          cb: &dyn PlatformCallbacks) {
         ui.add_space(6.0);

@@ -62,7 +62,7 @@ impl MessageRequestModal {
     /// Draw [`Modal`] content.
     pub fn ui(&mut self,
               ui: &mut egui::Ui,
-              wallet: &mut Wallet,
+              wallet: &Wallet,
               modal: &Modal,
               cb: &dyn PlatformCallbacks) {
         // Draw transaction information on request result.
@@ -147,7 +147,7 @@ impl MessageRequestModal {
     /// Draw amount input content.
     fn amount_input_ui(&mut self,
                        ui: &mut egui::Ui,
-                       wallet: &mut Wallet,
+                       wallet: &Wallet,
                        modal: &Modal,
                        cb: &dyn PlatformCallbacks) {
         ui.vertical_centered(|ui| {
@@ -211,7 +211,7 @@ impl MessageRequestModal {
     }
 
     /// Draw loading request content.
-    fn loading_request_ui(&mut self, ui: &mut egui::Ui, wallet: &mut Wallet, modal: &Modal) {
+    fn loading_request_ui(&mut self, ui: &mut egui::Ui, wallet: &Wallet, modal: &Modal) {
         ui.add_space(34.0);
         ui.vertical_centered(|ui| {
             View::big_loading_spinner(ui);

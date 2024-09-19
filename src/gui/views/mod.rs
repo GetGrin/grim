@@ -41,3 +41,6 @@ pub use file_pick::*;
 
 mod pull_to_refresh;
 pub use pull_to_refresh::*;
+
+mod scan;
+pub use scan::*;

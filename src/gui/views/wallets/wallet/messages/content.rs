@@ -74,7 +74,7 @@ impl WalletTab for WalletMessages {
         WalletTabType::Messages
     }
 
-    fn ui(&mut self, ui: &mut egui::Ui, wallet: &mut Wallet, cb: &dyn PlatformCallbacks) {
+    fn ui(&mut self, ui: &mut egui::Ui, wallet: &Wallet, cb: &dyn PlatformCallbacks) {
         if WalletContent::sync_ui(ui, wallet) {
             return;
         }
@@ -130,7 +130,7 @@ impl WalletMessages {
     /// Draw manual wallet transaction interaction content.
     pub fn ui(&mut self,
               ui: &mut egui::Ui,
-              wallet: &mut Wallet,
+              wallet: &Wallet,
               cb: &dyn PlatformCallbacks) {
         if self.first_draw {
             // Parse provided message on first draw.
@@ -158,7 +158,7 @@ impl WalletMessages {
     /// Draw [`Modal`] content for this ui container.
     fn modal_content_ui(&mut self,
                         ui: &mut egui::Ui,
-                        wallet: &mut Wallet,
+                        wallet: &Wallet,
                         cb: &dyn PlatformCallbacks) {
         match Modal::opened() {
             None => {}
@@ -244,7 +244,7 @@ impl WalletMessages {
     /// Draw Slatepack message input content.
     fn input_slatepack_ui(&mut self,
                           ui: &mut egui::Ui,
-                          wallet: &mut Wallet,
+                          wallet: &Wallet,
                           cb: &dyn PlatformCallbacks) {
         // Setup description text.
         if !self.message_error.is_empty() {
@@ -524,7 +524,6 @@ impl WalletMessages {
             return;
         } else if let Some(result) = self.message_camera_content.qr_scan_result() {
             cb.stop_camera();
-            self.message_camera_content.clear_state();
             match &result {
                 QrScanResult::Slatepack(text) => {
                     self.message_edit = text.to_string();
