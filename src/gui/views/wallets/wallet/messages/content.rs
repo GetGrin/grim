@@ -23,7 +23,7 @@ use parking_lot::RwLock;
 use crate::gui::Colors;
 use crate::gui::icons::{BROOM, CLIPBOARD_TEXT, DOWNLOAD_SIMPLE, SCAN, UPLOAD_SIMPLE};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{FilePickButton, Modal, Content, View, CameraContent};
+use crate::gui::views::{FilePickButton, Modal, Content, View, CameraScanModal};
 use crate::gui::views::types::{ModalPosition, QrScanResult};
 use crate::gui::views::wallets::wallet::messages::request::MessageRequestModal;
 use crate::gui::views::wallets::wallet::types::{SLATEPACK_MESSAGE_HINT, WalletTab, WalletTabType};
@@ -36,6 +36,12 @@ pub struct WalletMessages {
     /// Flag to check if it's first content draw.
     first_draw: bool,
 
+    /// Invoice or sending request creation [`Modal`] content.
+    request_modal_content: Option<MessageRequestModal>,
+
+    /// Wallet transaction [`Modal`] content.
+    tx_info_content: Option<WalletTransactionModal>,
+
     /// Slatepacks message input text.
     message_edit: String,
     /// Flag to check if message request is loading.
@@ -45,29 +51,21 @@ pub struct WalletMessages {
     /// Parsed message result.
     message_result: Arc<RwLock<Option<(Slate, Result<WalletTransaction, Error>)>>>,
 
-    /// Wallet transaction [`Modal`] content.
-    tx_info_content: Option<WalletTransactionModal>,
-
-    /// Invoice or sending request creation [`Modal`] content.
-    request_modal_content: Option<MessageRequestModal>,
-
-    /// Camera content for Slatepack message QR code scanning [`Modal`].
-    message_camera_content: CameraContent,
-    /// Flag to check if there is an error on scanning Slatepack message QR code at [`Modal`].
-    message_scan_error: bool,
+    /// QR code scanner [`Modal`] content.
+    scan_modal_content: Option<CameraScanModal>,
 
     /// Button to parse picked file content.
     file_pick_button: FilePickButton,
 }
 
 /// Identifier for amount input [`Modal`] to create invoice or sending request.
-const REQUEST_MODAL: &'static str = "messages_request";
+const REQUEST_MODAL: &'static str = "messages_request_modal";
 
 /// Identifier for [`Modal`] modal to show transaction information.
-const TX_INFO_MODAL: &'static str = "messages_tx_info";
+const TX_INFO_MODAL: &'static str = "messages_tx_info_modal";
 
 /// Identifier for [`Modal`] to scan Slatepack message from QR code.
-const SCAN_QR_MESSAGE_MODAL: &'static str = "qr_slatepack_message_scan_modal";
+const SCAN_QR_MODAL: &'static str = "messages_scan_qr_modal";
 
 impl WalletTab for WalletMessages {
     fn get_type(&self) -> WalletTabType {
@@ -121,9 +119,8 @@ impl WalletMessages {
             message_result: Arc::new(Default::default()),
             tx_info_content: None,
             request_modal_content: None,
-            message_camera_content: Default::default(),
-            message_scan_error: false,
             file_pick_button: FilePickButton::default(),
+            scan_modal_content: None,
         }
     }
 
@@ -178,10 +175,29 @@ impl WalletMessages {
                             });
                         }
                     }
-                    SCAN_QR_MESSAGE_MODAL => {
-                        Modal::ui(ui.ctx(), |ui, modal| {
-                            self.qr_message_scan_modal_ui(ui, modal, wallet, cb);
-                        });
+                    SCAN_QR_MODAL => {
+                        let mut result = None;
+                        if let Some(content) = self.scan_modal_content.as_mut() {
+                            Modal::ui(ui.ctx(), |ui, modal| {
+                                content.ui(ui, modal, cb, |res| {
+                                    result = Some(res.clone());
+                                    modal.close();
+                                });
+                            });
+                        }
+                        if let Some(res) = result {
+                            self.scan_modal_content = None;
+                            match &res {
+                                QrScanResult::Slatepack(text) => {
+                                    self.message_edit = text.to_string();
+                                    self.parse_message(wallet);
+                                }
+                                _ => {
+                                    self.message_edit = res.text();
+                                    self.message_error = t!("wallets.parse_slatepack_err");
+                                }
+                            }
+                        }
                     }
                     _ => {}
                 }
@@ -360,12 +376,18 @@ impl WalletMessages {
 
             ui.columns(2, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
-                    // Draw button to scan Slatepack message QR code.
                     let scan_text = format!("{} {}", SCAN, t!("scan"));
                     View::button(ui, scan_text, Colors::button(), || {
                         self.message_edit.clear();
                         self.message_error.clear();
-                        self.show_qr_message_scan_modal(cb);
+                        self.scan_modal_content = Some(CameraScanModal::default());
+                        // Show QR code scan modal.
+                        Modal::new(SCAN_QR_MODAL)
+                            .position(ModalPosition::CenterTop)
+                            .title(t!("scan_qr"))
+                            .closeable(false)
+                            .show();
+                        cb.start_camera();
                     });
                 });
                 columns[1].vertical_centered_justified(|ui| {
@@ -472,80 +494,5 @@ impl WalletMessages {
         } else {
             self.message_error = t!("wallets.parse_slatepack_err");
         }
-    }
-
-    /// Show QR code Slatepack message scanner [`Modal`].
-    pub fn show_qr_message_scan_modal(&mut self, cb: &dyn PlatformCallbacks) {
-        self.message_scan_error = false;
-        // Show QR code scan modal.
-        Modal::new(SCAN_QR_MESSAGE_MODAL)
-            .position(ModalPosition::CenterTop)
-            .title(t!("scan_qr"))
-            .closeable(false)
-            .show();
-        cb.start_camera();
-    }
-
-    /// Draw QR code scanner [`Modal`] content.
-    fn qr_message_scan_modal_ui(&mut self,
-                                ui: &mut egui::Ui,
-                                modal: &Modal,
-                                wallet: &Wallet,
-                                cb: &dyn PlatformCallbacks) {
-        if self.message_scan_error {
-            ui.add_space(6.0);
-            ui.vertical_centered(|ui| {
-                let err_text = format!("{}", t!("wallets.parse_slatepack_err")).replace(":", ".");
-                ui.label(RichText::new(err_text)
-                    .size(17.0)
-                    .color(Colors::red()));
-            });
-            ui.add_space(12.0);
-
-            // Setup spacing between buttons.
-            ui.spacing_mut().item_spacing = egui::Vec2::new(8.0, 0.0);
-
-            ui.columns(2, |columns| {
-                columns[0].vertical_centered_justified(|ui| {
-                    View::button(ui, t!("close"), Colors::white_or_black(false), || {
-                        self.message_scan_error = false;
-                        modal.close();
-                    });
-                });
-                columns[1].vertical_centered_justified(|ui| {
-                    View::button(ui, t!("repeat"), Colors::white_or_black(false), || {
-                        Modal::set_title(t!("scan_qr"));
-                        self.message_scan_error = false;
-                        cb.start_camera();
-                    });
-                });
-            });
-            ui.add_space(6.0);
-            return;
-        } else if let Some(result) = self.message_camera_content.qr_scan_result() {
-            cb.stop_camera();
-            match &result {
-                QrScanResult::Slatepack(text) => {
-                    self.message_edit = text.to_string();
-                    self.parse_message(wallet);
-                    modal.close();
-                }
-                _ => {
-                    self.message_scan_error = true;
-                }
-            }
-        } else {
-            ui.add_space(6.0);
-            self.message_camera_content.ui(ui, cb);
-            ui.add_space(8.0);
-        }
-
-        ui.vertical_centered_justified(|ui| {
-            View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
-                cb.stop_camera();
-                modal.close();
-            });
-        });
-        ui.add_space(6.0);
     }
 }
