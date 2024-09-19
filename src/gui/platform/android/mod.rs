@@ -144,7 +144,7 @@ impl PlatformCallbacks for Android {
         let default_cache = OsString::from(dirs::cache_dir().unwrap());
         let mut file = PathBuf::from(env::var_os("XDG_CACHE_HOME").unwrap_or(default_cache));
         // File path for Android provider.
-        file.push("images");
+        file.push("share");
         if !file.exists() {
             std::fs::create_dir(file.clone())?;
         }
@@ -159,7 +159,7 @@ impl PlatformCallbacks for Android {
         let vm = unsafe { jni::JavaVM::from_raw(self.android_app.vm_as_ptr() as _) }.unwrap();
         let env = vm.attach_current_thread().unwrap();
         let arg_value = env.new_string(file.to_str().unwrap()).unwrap();
-        let _ = self.call_java_method("shareImage",
+        let _ = self.call_java_method("shareData",
                                       "(Ljava/lang/String;)V",
                                       &[JValue::Object(&JObject::from(arg_value))]);
         Ok(())

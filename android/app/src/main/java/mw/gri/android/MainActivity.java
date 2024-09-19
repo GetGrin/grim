@@ -450,14 +450,14 @@ public class MainActivity extends GameActivity {
     // Pass image from camera into native code.
     public native void onCameraImage(byte[] buff, int rotation);
 
-    // Called from native code to share image from provided path.
-    public void shareImage(String path) {
+    // Called from native code to share data from provided path.
+    public void shareData(String path) {
         File file = new File(path);
         Uri uri = FileProvider.getUriForFile(this, "mw.gri.android.fileprovider", file);
         Intent intent = new Intent(Intent.ACTION_SEND);
         intent.putExtra(Intent.EXTRA_STREAM, uri);
-        intent.setType("image/*");
-        startActivity(Intent.createChooser(intent, "Share image"));
+        intent.setType("*/*");
+        startActivity(Intent.createChooser(intent, "Share data"));
     }
 
     // Called from native code to check if device is using dark theme.
