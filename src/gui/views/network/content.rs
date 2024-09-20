@@ -24,7 +24,7 @@ use crate::gui::views::{Content, TitlePanel, View};
 use crate::gui::views::network::{ConnectionsContent, NetworkMetrics, NetworkMining, NetworkNode, NetworkSettings};
 use crate::gui::views::network::types::{NetworkTab, NetworkTabType};
 use crate::gui::views::types::{TitleContentType, TitleType};
-use crate::node::{Node, NodeError};
+use crate::node::{Node, NodeConfig, NodeError};
 use crate::wallet::ExternalConnection;
 
 /// Network content.
@@ -312,6 +312,14 @@ impl NetworkContent {
                         .size(16.0)
                         .color(Colors::red())
                     );
+                    ui.add_space(8.0);
+                    let btn_txt = format!("{} {}",
+                                          ARROWS_COUNTER_CLOCKWISE,
+                                          t!("network_settings.reset"));
+                    View::action_button(ui, btn_txt, || {
+                        NodeConfig::reset_to_default();
+                        Node::start();
+                    });
                     ui.add_space(2.0);
                 });
             }
