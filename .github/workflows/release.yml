@@ -37,7 +37,7 @@ jobs:
           ./appimagetool-x86_64.AppImage linux/Grim.AppDir target/x86_64-unknown-linux-gnu/release/grim-${{ github.ref_name }}-linux-x86_64.AppImage
       - name: Checksum AppImage x86
         uses: qlrd/sha256sum-action@v1.0.0
-        id: hashing
+        id: hashing_linux_appimage_x86
         with:
           working-directory: target/x86_64-unknown-linux-gnu/release
           file: grim-${{ github.ref_name }}-linux-x86_64.AppImage
@@ -48,7 +48,7 @@ jobs:
           ./appimagetool-x86_64.AppImage linux/Grim.AppDir target/aarch64-unknown-linux-gnu/release/grim-${{ github.ref_name }}-linux-arm.AppImage
       - name: Checksum AppImage ARM
         uses: qlrd/sha256sum-action@v1.0.0
-        id: hashing
+        id: hashing_linux_appimage_arm
         with:
           working-directory: target/aarch64-unknown-linux-gnu/release
           file: grim-${{ github.ref_name }}-linux-arm.AppImage
@@ -79,7 +79,7 @@ jobs:
           dest: target/release/grim-${{ github.ref_name }}-win-x86_64.zip
       - name: Checksum release
         uses: qlrd/sha256sum-action@v1.0.0
-        id: hashing
+        id: hashing_windows_x86
         with:
           working-directory: target/release
           file: grim-${{ github.ref_name }}-win-x86_64.zip
@@ -90,7 +90,7 @@ jobs:
         run: cargo wix -p grim -o ./target/wix/grim-${{ github.ref_name }}-win-x86_64.msi --nocapture
       - name: Checksum Release x86
         uses: qlrd/sha256sum-action@v1.0.0
-        id: hashing
+        id: hashing_windows_msi_x86
         with:
           working-directory: target/wix
           file: grim-${{ github.ref_name }}-win-x86_64.msi
@@ -131,7 +131,7 @@ jobs:
           cd ..
       - name: Checksum Release x86
         uses: qlrd/sha256sum-action@v1.0.0
-        id: hashing
+        id: hashing_macos_x86
         with:
           working-directory: target/x86_64-apple-darwin/release
           file: grim-${{ github.ref_name }}-macos-x86_64.zip
@@ -149,7 +149,7 @@ jobs:
           cd ..
       - name: Checksum Release ARM
         uses: qlrd/sha256sum-action@v1.0.0
-        id: hashing
+        id: hashing_macos_arm
         with:
           working-directory: target/aarch64-apple-darwin/release
           file: grim-${{ github.ref_name }}-macos-arm.zip
@@ -168,7 +168,7 @@ jobs:
           cd ..
       - name: Checksum Release Universal
         uses: qlrd/sha256sum-action@v1.0.0
-        id: hashing
+        id: hashing_macos_universal
         with:
           working-directory: target/universal2-apple-darwin/release
           file: grim-${{ github.ref_name }}-macos-universal.zip
