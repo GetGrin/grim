@@ -125,13 +125,26 @@ impl WalletTransactionModal {
         if self.qr_code_content.is_none() && self.qr_scan_content.is_none() {
             ui.add_space(6.0);
 
-            // Show transaction amount status and time.
             let r = View::item_rounding(0, 2, false);
             let mut rect = ui.available_rect_before_wrap();
             rect.set_height(WalletTransactions::TX_ITEM_HEIGHT);
+            // Show transaction amount status and time.
             WalletTransactions::tx_item_ui(ui, tx, rect, r, &data, |ui| {
-                // Do not show buttons on finalizing.
                 if self.finalizing {
+                    return;
+                }
+                // Show block height or buttons.
+                if let Some(h) = tx.height {
+                    if h != 0 {
+                        ui.add_space(6.0);
+                        let height = format!("{} {}", CUBE, h.to_string());
+                        ui.with_layout(Layout::bottom_up(Align::Max), |ui| {
+                            ui.add_space(3.0);
+                            ui.label(RichText::new(height)
+                                .size(15.0)
+                                .color(Colors::text(false)));
+                        });
+                    }
                     return;
                 }
 
@@ -180,13 +193,6 @@ impl WalletTransactionModal {
             if let Some(rec) = tx.receiver() {
                 let label = format!("{} {}", CUBE, t!("network_mining.address"));
                 Self::info_item_ui(ui, rec.to_string(), label, true, cb);
-            }
-            // Show block height.
-            if let Some(height) = tx.height {
-                if height != 0 {
-                    let label = format!("{} {}", CUBE, t!("network_node.block"));
-                    Self::info_item_ui(ui, height.to_string(), label, true, cb);
-                }
             }
         }
 
