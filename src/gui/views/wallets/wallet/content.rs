@@ -28,7 +28,7 @@ use crate::gui::views::wallets::types::{GRIN, WalletTab, WalletTabType};
 use crate::gui::views::wallets::wallet::modals::WalletAccountsModal;
 use crate::gui::views::wallets::wallet::WalletSettings;
 use crate::node::Node;
-use crate::wallet::{Wallet, WalletConfig};
+use crate::wallet::{ExternalConnection, Wallet, WalletConfig};
 use crate::wallet::types::{ConnectionMethod, WalletData};
 
 /// Wallet content.
@@ -358,25 +358,26 @@ impl WalletContent {
             let current_type = self.current_tab.get_type();
             ui.columns(4, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
-                    View::tab_button(ui, GRAPH, current_type == WalletTabType::Txs, || {
+                    View::tab_button(ui, GRAPH, current_type == WalletTabType::Txs, |_| {
                         self.current_tab = Box::new(WalletTransactions::default());
                     });
                 });
                 columns[1].vertical_centered_justified(|ui| {
                     let is_messages = current_type == WalletTabType::Messages;
-                    View::tab_button(ui, CHAT_CIRCLE_TEXT, is_messages, || {
+                    View::tab_button(ui, CHAT_CIRCLE_TEXT, is_messages, |_| {
                         self.current_tab = Box::new(
                             WalletMessages::new(None)
                         );
                     });
                 });
                 columns[2].vertical_centered_justified(|ui| {
-                    View::tab_button(ui, BRIDGE, current_type == WalletTabType::Transport, || {
+                    View::tab_button(ui, BRIDGE, current_type == WalletTabType::Transport, |_| {
                         self.current_tab = Box::new(WalletTransport::default());
                     });
                 });
                 columns[3].vertical_centered_justified(|ui| {
-                    View::tab_button(ui, GEAR_FINE, current_type == WalletTabType::Settings, || {
+                    View::tab_button(ui, GEAR_FINE, current_type == WalletTabType::Settings, |ui| {
+                        ExternalConnection::check(None, ui.ctx());
                         self.current_tab = Box::new(WalletSettings::default());
                     });
                 });

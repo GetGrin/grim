@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::time::Duration;
 use egui::{Id, Margin, RichText, ScrollArea};
 use egui::scroll_area::ScrollBarVisibility;
 
@@ -149,8 +148,6 @@ impl NetworkContent {
         // Redraw after delay.
         if Node::is_running() {
             ui.ctx().request_repaint_after(Node::STATS_UPDATE_DELAY);
-        } else if show_connections {
-            ui.ctx().request_repaint_after(Duration::from_millis(1000));
         }
     }
 
@@ -166,22 +163,22 @@ impl NetworkContent {
             let current_type = self.node_tab_content.get_type();
             ui.columns(4, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
-                    View::tab_button(ui, DATABASE, current_type == NetworkTabType::Node, || {
+                    View::tab_button(ui, DATABASE, current_type == NetworkTabType::Node, |_| {
                         self.node_tab_content = Box::new(NetworkNode::default());
                     });
                 });
                 columns[1].vertical_centered_justified(|ui| {
-                    View::tab_button(ui, GAUGE, current_type == NetworkTabType::Metrics, || {
+                    View::tab_button(ui, GAUGE, current_type == NetworkTabType::Metrics, |_| {
                         self.node_tab_content = Box::new(NetworkMetrics::default());
                     });
                 });
                 columns[2].vertical_centered_justified(|ui| {
-                    View::tab_button(ui, FACTORY, current_type == NetworkTabType::Mining, || {
+                    View::tab_button(ui, FACTORY, current_type == NetworkTabType::Mining, |_| {
                         self.node_tab_content = Box::new(NetworkMining::default());
                     });
                 });
                 columns[3].vertical_centered_justified(|ui| {
-                    View::tab_button(ui, FADERS, current_type == NetworkTabType::Settings, || {
+                    View::tab_button(ui, FADERS, current_type == NetworkTabType::Settings, |_| {
                         self.node_tab_content = Box::new(NetworkSettings::default());
                     });
                 });
@@ -204,10 +201,10 @@ impl NetworkContent {
         // Draw title panel.
         TitlePanel::new(Id::from("network_title_panel")).ui(TitleType::Single(title_content), |ui| {
             if !show_connections {
-                View::title_button_big(ui, DOTS_THREE_OUTLINE_VERTICAL, |_| {
+                View::title_button_big(ui, DOTS_THREE_OUTLINE_VERTICAL, |ui| {
                     AppConfig::toggle_show_connections_network_panel();
                     if AppConfig::show_connections_network_panel() {
-                        ExternalConnection::check_ext_conn_availability(None);
+                        ExternalConnection::check(None, ui.ctx());
                     }
                 });
             }

@@ -78,70 +78,67 @@ impl ExternalConnection {
         }
     }
 
-    /// Check connection availability.
-    fn check_conn_availability(&self) {
-        let conn = self.clone();
-        ConnectionsConfig::update_ext_conn_status(conn.id, None);
-        std::thread::spawn(move || {
-            tokio::runtime::Builder::new_multi_thread()
-                .enable_all()
-                .build()
-                .unwrap()
-                .block_on(async {
-                    let url = url::Url::parse(conn.url.as_str()).unwrap();
-                    if let Ok(_) = url.socket_addrs(|| None) {
-                        let addr = format!("{}v2/foreign", url.to_string());
-                        // Setup http client.
-                        let client = hyper::Client::builder()
-                            .build::<_, hyper::Body>(hyper_tls::HttpsConnector::new());
-                        let mut req_setup = hyper::Request::builder()
-                            .method(hyper::Method::POST)
-                            .uri(addr.clone());
-                        // Setup secret key auth.
-                        if let Some(key) = conn.secret {
-                            let basic_auth = format!(
-                                "Basic {}",
-                                to_base64(&format!("grin:{}", key))
-                            );
-                            req_setup = req_setup
-                                .header(hyper::header::AUTHORIZATION, basic_auth.clone());
-                        }
-                        let req = req_setup.body(hyper::Body::from(
-                            r#"{"id":1,"jsonrpc":"2.0","method":"get_version","params":{} }"#)
-                        ).unwrap();
-                        // Send request.
-                        match client.request(req).await {
-                            Ok(res) => {
-                                let status = res.status().as_u16();
-                                // Available on 200 HTTP status code.
-                                if status == 200 {
-                                    ConnectionsConfig::update_ext_conn_status(conn.id, Some(true));
-                                } else {
-                                    ConnectionsConfig::update_ext_conn_status(conn.id, Some(false));
-                                }
-                            }
-                            Err(_) => {
-                                ConnectionsConfig::update_ext_conn_status(conn.id, Some(false));
-                            }
-                        }
-                    } else {
-                        ConnectionsConfig::update_ext_conn_status(conn.id, Some(false));
-                    }
-                });
-        });
-    }
-
     /// Check external connections availability.
-    pub fn check_ext_conn_availability(id: Option<i64>) {
+    pub fn check(id: Option<i64>, ui_ctx: &egui::Context) {
         let conn_list = ConnectionsConfig::ext_conn_list();
         for conn in conn_list {
             if let Some(id) = id {
                 if id == conn.id {
-                    conn.check_conn_availability();
+                    check_ext_conn(&conn, ui_ctx);
                 }
             } else {
-                conn.check_conn_availability();
+                check_ext_conn(&conn, ui_ctx);
             }
         }
     }
+}
+
+/// Check connection availability.
+fn check_ext_conn(conn: &ExternalConnection, ui_ctx: &egui::Context) {
+    let conn = conn.clone();
+    let ui_ctx = ui_ctx.clone();
+    ConnectionsConfig::update_ext_conn_status(conn.id, None);
+    std::thread::spawn(move || {
+        tokio::runtime::Builder::new_multi_thread()
+            .enable_all()
+            .build()
+            .unwrap()
+            .block_on(async {
+                let url = url::Url::parse(conn.url.as_str()).unwrap();
+                if let Ok(_) = url.socket_addrs(|| None) {
+                    let addr = format!("{}v2/foreign", url.to_string());
+                    // Setup http client.
+                    let client = hyper::Client::builder()
+                        .build::<_, hyper::Body>(hyper_tls::HttpsConnector::new());
+                    let mut req_setup = hyper::Request::builder()
+                        .method(hyper::Method::POST)
+                        .uri(addr.clone());
+                    // Setup secret key auth.
+                    if let Some(key) = conn.secret {
+                        let basic_auth = format!(
+                            "Basic {}",
+                            to_base64(&format!("grin:{}", key))
+                        );
+                        req_setup = req_setup
+                            .header(hyper::header::AUTHORIZATION, basic_auth.clone());
+                    }
+                    let req = req_setup.body(hyper::Body::from(
+                        r#"{"id":1,"jsonrpc":"2.0","method":"get_version","params":{} }"#)
+                    ).unwrap();
+                    // Send request.
+                    match client.request(req).await {
+                        Ok(res) => {
+                            let status = res.status().as_u16();
+                            // Available on 200 HTTP status code.
+                            ConnectionsConfig::update_ext_conn_status(conn.id, Some(status == 200));
+                        }
+                        Err(_) => ConnectionsConfig::update_ext_conn_status(conn.id, Some(false))
+                    }
+                } else {
+                    ConnectionsConfig::update_ext_conn_status(conn.id, Some(false));
+                }
+                // Repaint ui on change.
+                ui_ctx.request_repaint();
+            });
+    });
 }

@@ -21,7 +21,7 @@ use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, View};
 use crate::gui::views::network::ConnectionsContent;
 use crate::gui::views::network::modals::ExternalConnectionModal;
-use crate::wallet::{ConnectionsConfig, ExternalConnection};
+use crate::wallet::ConnectionsConfig;
 use crate::wallet::types::ConnectionMethod;
 
 /// Wallet connection selection [`Modal`] content.
@@ -36,7 +36,6 @@ pub struct WalletConnectionModal {
 impl WalletConnectionModal {
     /// Create from provided wallet connection.
     pub fn new(conn: ConnectionMethod) -> Self {
-        ExternalConnection::check_ext_conn_availability(None);
         Self {
             conn,
             ext_conn_content: None,

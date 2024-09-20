@@ -217,7 +217,10 @@ impl View {
     pub const TAB_ITEMS_PADDING: f32 = 5.0;
 
     /// Tab button with white background fill color, contains only icon.
-    pub fn tab_button(ui: &mut egui::Ui, icon: &str, active: bool, action: impl FnOnce()) {
+    pub fn tab_button(ui: &mut egui::Ui,
+                      icon: &str,
+                      active: bool,
+                      action: impl FnOnce(&mut egui::Ui)) {
         ui.scope(|ui| {
             let text_color = match active {
                 true => Colors::title(false),
@@ -245,7 +248,7 @@ impl View {
             let br = button.ui(ui).on_hover_cursor(CursorIcon::PointingHand);
             br.surrender_focus();
             if Self::touched(ui, br) {
-                (action)();
+                (action)(ui);
             }
         });
     }
@@ -277,6 +280,18 @@ impl View {
         let br = Self::button_resp(ui, text, text_color, fill);
         if Self::touched(ui, br) {
             (action)();
+        }
+    }
+
+    /// Draw [`Button`] with specified background fill color and text color.
+    pub fn colored_text_button_ui(ui: &mut egui::Ui,
+                                  text: String,
+                                  text_color: Color32,
+                                  fill: Color32,
+                                  action: impl FnOnce(&mut egui::Ui)) {
+        let br = Self::button_resp(ui, text, text_color, fill);
+        if Self::touched(ui, br) {
+            (action)(ui);
         }
     }
 

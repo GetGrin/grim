@@ -315,7 +315,7 @@ impl WalletCreation {
         };
 
         // Show next step button.
-        View::colored_text_button(ui, next_text.to_uppercase(), text_color, bg_color, || {
+        View::colored_text_button_ui(ui, next_text.to_uppercase(), text_color, bg_color, |ui| {
             self.step = match self.step {
                 Step::EnterMnemonic => {
                     if self.mnemonic_setup.mnemonic.mode() == PhraseMode::Generate {
@@ -349,7 +349,7 @@ impl WalletCreation {
 
             // Check external connections availability on connection setup.
             if self.step == Step::SetupConnection {
-                ExternalConnection::check_ext_conn_availability(None);
+                ExternalConnection::check(None, ui.ctx());
             }
         });
     }
@@ -361,7 +361,7 @@ impl WalletCreation {
             Step::ConfirmMnemonic => self.mnemonic_setup.confirm_ui(ui, cb),
             Step::SetupConnection => {
                 // Redraw if node is running.
-                if Node::is_running() {
+                if Node::is_running() && !Content::is_dual_panel_mode(ui) {
                     ui.ctx().request_repaint_after(Node::STATS_UPDATE_DELAY);
                 }
                 self.network_setup.create_ui(ui, cb)

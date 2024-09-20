@@ -119,7 +119,7 @@ impl ExternalConnectionModal {
                 });
                 columns[1].vertical_centered_justified(|ui| {
                     // Add connection button callback.
-                    let mut on_add = || {
+                    let mut on_add = |ui: &mut egui::Ui| {
                         if !self.ext_node_url_edit.starts_with("http") {
                             self.ext_node_url_edit = format!("http://{}", self.ext_node_url_edit)
                         }
@@ -139,7 +139,7 @@ impl ExternalConnectionModal {
                                 ext_conn.id = id;
                             }
                             ConnectionsConfig::add_ext_conn(ext_conn.clone());
-                            ExternalConnection::check_ext_conn_availability(Some(ext_conn.id));
+                            ExternalConnection::check(Some(ext_conn.id), ui.ctx());
                             on_save(ext_conn);
 
                             // Close modal.
@@ -150,10 +150,17 @@ impl ExternalConnectionModal {
                             modal.close();
                         }
                     };
+
+                    // Handle Enter key press.
+                    let mut enter = false;
                     View::on_enter_key(ui, || {
-                        (on_add)();
+                        enter = true;
                     });
-                    View::button(ui, if self.ext_conn_id.is_some() {
+                    if enter {
+                        (on_add)(ui);
+                    }
+
+                    View::button_ui(ui, if self.ext_conn_id.is_some() {
                         t!("modal.save")
                     } else {
                         t!("modal.add")

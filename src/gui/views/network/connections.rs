@@ -36,7 +36,6 @@ pub struct ConnectionsContent {
 
 impl Default for ConnectionsContent {
     fn default() -> Self {
-        ExternalConnection::check_ext_conn_availability(None);
         Self {
             ext_conn_modal: ExternalConnectionModal::new(None),
             modal_ids: vec![
@@ -78,7 +77,7 @@ impl ConnectionsContent {
 
         // Check connections availability.
         if saved_chain_type != AppConfig::chain_type() {
-            ExternalConnection::check_ext_conn_availability(None);
+            ExternalConnection::check(None, ui.ctx());
         }
 
         // Show integrated node info content.

@@ -23,6 +23,7 @@ use crate::gui::Colors;
 use crate::gui::icons::{ARROWS_IN, ARROWS_OUT, CARET_DOWN, MOON, SUN, X};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Content, TitlePanel, View};
+use crate::wallet::ExternalConnection;
 
 lazy_static! {
     /// State to check if platform Back button was pressed.
@@ -56,11 +57,15 @@ impl<Platform: PlatformCallbacks> App<Platform> {
 
     /// Draw application content.
     pub fn ui(&mut self, ctx: &Context) {
-        // Set platform context on first draw.
         if self.first_draw {
+            // Set platform context.
             if View::is_desktop() {
                 self.platform.set_context(ctx);
             }
+
+            // Check external connections availability.
+            ExternalConnection::check(None, ctx);
+
             self.first_draw = false;
         }
 

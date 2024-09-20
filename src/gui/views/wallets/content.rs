@@ -27,7 +27,7 @@ use crate::gui::views::wallets::modals::{AddWalletModal, OpenWalletModal, Wallet
 use crate::gui::views::wallets::types::WalletTabType;
 use crate::gui::views::wallets::wallet::types::wallet_status_text;
 use crate::gui::views::wallets::WalletContent;
-use crate::wallet::{Wallet, WalletList};
+use crate::wallet::{ExternalConnection, Wallet, WalletList};
 use crate::wallet::types::ConnectionMethod;
 
 /// Wallets content.
@@ -199,7 +199,7 @@ impl WalletsContent {
 
                     ui.vertical_centered(|ui| {
                         let pressed = Modal::opened() == Some(ADD_WALLET_MODAL);
-                        View::tab_button(ui, PLUS, pressed, || {
+                        View::tab_button(ui, PLUS, pressed, |_| {
                             self.show_add_wallet_modal(cb);
                         });
                     });
@@ -224,7 +224,7 @@ impl WalletsContent {
                     ..Default::default()
                 })
                 .show_inside(ui, |ui| {
-                    if !list_hidden && !dual_panel {
+                    if !list_hidden && !dual_panel && !showing_wallet && !creating_wallet {
                         ui.ctx().request_repaint_after(Duration::from_millis(1000));
                     }
                     // Show wallet list.
@@ -518,12 +518,24 @@ impl WalletsContent {
                 View::item_button(ui, View::item_rounding(0, 1, true), FOLDER_OPEN, None, || {
                     self.show_opening_modal(wallet.clone(), None, cb);
                 });
-                // Show button to select connection if not syncing.
                 if !wallet.syncing() {
+                    let mut show_selection = false;
                     View::item_button(ui, Rounding::default(), GLOBE, None, || {
                         self.wallet_content = Some(WalletContent::new(wallet.clone(), None));
-                        self.show_connection_selection_modal(wallet);
+                        self.conn_selection_content = Some(
+                            WalletConnectionModal::new(wallet.get_current_connection())
+                        );
+                        // Show connection selection modal.
+                        Modal::new(SELECT_CONNECTION_MODAL)
+                            .position(ModalPosition::CenterTop)
+                            .title(t!("wallets.conn_method"))
+                            .show();
+                        show_selection = true;
                     });
+                    if show_selection {
+                        self.conn_selection_content = None;
+                        ExternalConnection::check(None, ui.ctx());
+                    }
                 }
             } else {
                 if !current {
@@ -577,17 +589,6 @@ impl WalletsContent {
                 });
             });
         });
-    }
-
-    /// Show [`Modal`] to select connection for the wallet.
-    fn show_connection_selection_modal(&mut self, wallet: &Wallet) {
-        let ext_conn = wallet.get_current_connection();
-        self.conn_selection_content = Some(WalletConnectionModal::new(ext_conn));
-        // Show modal.
-        Modal::new(SELECT_CONNECTION_MODAL)
-            .position(ModalPosition::CenterTop)
-            .title(t!("wallets.conn_method"))
-            .show();
     }
 
     /// Show [`Modal`] to select and open wallet.

@@ -38,7 +38,6 @@ pub struct ConnectionSettings {
 
 impl Default for ConnectionSettings {
     fn default() -> Self {
-        ExternalConnection::check_ext_conn_availability(None);
         Self {
             method: ConnectionMethod::Integrated,
             ext_conn_modal: ExternalConnectionModal::new(None),
