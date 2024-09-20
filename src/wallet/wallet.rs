@@ -461,19 +461,19 @@ impl Wallet {
         let instance = r_inst.clone().unwrap();
         let mut api = Owner::new(instance, None);
         controller::owner_single_use(None, None, Some(&mut api), |api, m| {
-            api.create_account_path(m, label)?;
-
-            // Update account list at separate thread.
-            if let Some(data) = self.get_data() {
-                let last_height = data.info.last_confirmed_height;
-                let wallet = self.clone();
-                thread::spawn(move || {
-                    update_accounts(&wallet, last_height, None);
+            let id = api.create_account_path(m, label)?;
+            if self.get_data().is_none() {
+                return Err(Error::GenericError("No wallet data".to_string()));
+            }
+            let current_height = self.get_data().unwrap().info.last_confirmed_height;
+            if let Some(spendable_amount) = self.account_balance(current_height, api, m) {
+                let mut w_data = self.accounts.write();
+                w_data.push(WalletAccount {
+                    spendable_amount,
+                    label: label.clone(),
+                    path: id.to_bip_32_string(),
                 });
             }
-
-            // Refresh wallet info.
-            sync_wallet_data(&self, false);
             Ok(())
         })
     }
@@ -510,6 +510,30 @@ impl Wallet {
         // Sync wallet data.
         self.sync();
         Ok(())
+    }
+
+    /// Calculate current account balance.
+    fn account_balance(
+        &self,
+        current_height: u64,
+        o: &mut Owner<DefaultLCProvider<HTTPNodeClient, ExtKeychain>, HTTPNodeClient, ExtKeychain>,
+        m: Option<&SecretKey>)
+        -> Option<u64> {
+        if let Ok(outputs) = o.retrieve_outputs(m, false, false, None) {
+            let mut spendable = 0;
+            let min_confirmations = self.get_config().min_confirmations;
+            for out_mapping in outputs.1 {
+                let out = out_mapping.output;
+                if out.status == grin_wallet_libwallet::OutputStatus::Unspent {
+                    if !out.is_coinbase || out.lock_height <= current_height
+                        || out.num_confirmations(current_height) >= min_confirmations {
+                        spendable += out.value;
+                    }
+                }
+            }
+            return Some(spendable);
+        }
+        None
     }
 
     /// Get list of accounts for the wallet.
@@ -682,14 +706,15 @@ impl Wallet {
     }
 
     /// Initialize a transaction to send amount, return request for funds receiver.
-    pub fn send(&self, amount: u64) -> Result<WalletTransaction, Error> {
+    pub fn send(&self, amount: u64, receiver: Option<SlatepackAddress>) -> Result<WalletTransaction, Error> {
         let config = self.get_config();
         let args = InitTxArgs {
+            payment_proof_recipient_address: receiver,
             src_acct_name: Some(config.account),
             amount,
             minimum_confirmations: config.min_confirmations,
             num_change_outputs: 1,
-            selection_strategy_is_use_all: false,
+            selection_strategy_is_use_all: true,
             ..Default::default()
         };
         let r_inst = self.instance.as_ref().read();
@@ -715,7 +740,7 @@ impl Wallet {
                           amount: u64,
                           addr: &SlatepackAddress) -> Result<WalletTransaction, Error> {
         // Initialize transaction.
-        let tx = self.send(amount)?;
+        let tx = self.send(amount, Some(addr.clone()))?;
         let slate_res = self.read_slate_by_tx(&tx);
         if slate_res.is_none() {
             return Err(Error::GenericError("Slate not found".to_string()));
@@ -727,10 +752,9 @@ impl Wallet {
             let r_inst = self.instance.as_ref().read();
             let instance = r_inst.clone().unwrap();
             let id = slate.clone().id;
-            cancel_tx(instance, None, &None, None, Some(id.clone())).unwrap();
-
-            // Refresh wallet info to update statuses.
-            sync_wallet_data(&self, false);
+            if cancel_tx(instance, None, &None, None, Some(id.clone())).is_ok() {
+                sync_wallet_data(&self, false);
+            }
         };
 
         // Initialize parameters.
@@ -833,7 +857,7 @@ impl Wallet {
                 src_acct_name: None,
                 amount: slate.amount,
                 minimum_confirmations: config.min_confirmations,
-                selection_strategy_is_use_all: false,
+                selection_strategy_is_use_all: true,
                 ..Default::default()
             };
             let r_inst = self.instance.as_ref().read();
@@ -937,10 +961,9 @@ impl Wallet {
             }
             let r_inst = wallet.instance.as_ref().read();
             let instance = r_inst.clone().unwrap();
-            let _ = cancel_tx(instance, None, &None, Some(id), None);
-
-            // Refresh wallet info to update statuses.
-            sync_wallet_data(&wallet, false);
+            if cancel_tx(instance, None, &None, Some(id), None).is_ok() {
+                sync_wallet_data(&wallet, false);
+            }
         });
     }
 
@@ -1437,12 +1460,11 @@ fn start_api_server(wallet: &Wallet) -> Result<(ApiServer, u16), Error> {
 
 /// Update wallet accounts data.
 fn update_accounts(wallet: &Wallet, current_height: u64, current_spendable: Option<u64>) {
-    // Update only current account if list is not empty.
-    if current_spendable.is_some() {
+    if let Some(spendable) = current_spendable {
         let mut accounts = wallet.accounts.read().clone();
         for a in accounts.iter_mut() {
             if a.label == wallet.get_config().account {
-                a.spendable_amount = current_spendable.unwrap();
+                a.spendable_amount = spendable;
             }
         }
         // Save accounts data.
@@ -1456,26 +1478,14 @@ fn update_accounts(wallet: &Wallet, current_height: u64, current_spendable: Opti
             let mut accounts = vec![];
             for a in api.accounts(m)? {
                 api.set_active_account(m, a.label.as_str())?;
-                // Calculate wallet account balance.
-                let outputs = api.retrieve_outputs(m, true, false, None)?;
-                let min_confirmations = wallet.get_config().min_confirmations;
-                let mut spendable_amount = 0;
-                for out_mapping in outputs.1 {
-                    let out = out_mapping.output;
-                    if out.status == grin_wallet_libwallet::OutputStatus::Unspent {
-                        if !out.is_coinbase || out.lock_height <= current_height
-                            || out.num_confirmations(current_height) >= min_confirmations {
-                            spendable_amount += out.value;
-                        }
-                    }
+                // Calculate account balance.
+                if let Some(spendable_amount) = wallet.account_balance(current_height, api, m) {
+                    accounts.push(WalletAccount {
+                        spendable_amount,
+                        label: a.label,
+                        path: a.path.to_bip_32_string(),
+                    });
                 }
-
-                // Add account to list.
-                accounts.push(WalletAccount {
-                    spendable_amount,
-                    label: a.label,
-                    path: a.path.to_bip_32_string(),
-                });
             }
             // Sort in reverse.
             accounts.reverse();

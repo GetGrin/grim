@@ -125,7 +125,7 @@ impl MessageRequestModal {
                             let res = if invoice {
                                 wallet.issue_invoice(a)
                             } else {
-                                wallet.send(a)
+                                wallet.send(a, None)
                             };
                             let mut w_result = result.write();
                             *w_result = Some(res);
