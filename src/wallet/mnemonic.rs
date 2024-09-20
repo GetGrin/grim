@@ -195,6 +195,7 @@ impl Mnemonic {
             // Setup phrase size.
             let confirm = self.mode == PhraseMode::Generate;
             if !confirm {
+                self.words = Self::empty_words(&size);
                 self.size = size;
             } else if self.size != size {
                 return;
