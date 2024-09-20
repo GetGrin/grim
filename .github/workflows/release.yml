@@ -104,6 +104,8 @@ jobs:
         uses: goto-bus-stop/setup-zig@v2
         with:
           version: 0.12.1
+      - name: Install coreutils
+        run: brew install coreutils
       - name: Install cargo-zigbuild
         run: cargo install cargo-zigbuild
       - name: Release x86
