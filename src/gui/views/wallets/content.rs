@@ -533,7 +533,6 @@ impl WalletsContent {
                         show_selection = true;
                     });
                     if show_selection {
-                        self.conn_selection_content = None;
                         ExternalConnection::check(None, ui.ctx());
                     }
                 }
