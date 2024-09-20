@@ -110,7 +110,6 @@ jobs:
         run: |
           rustup target add x86_64-apple-darwin
           cargo zigbuild --release --target x86_64-apple-darwin
-          mkdir macos/Grim.app/Contents/MacOS
           yes | cp -rf target/x86_64-apple-darwin/release/grim macos/Grim.app/Contents/MacOS
       - name: Archive x86
         run: |
