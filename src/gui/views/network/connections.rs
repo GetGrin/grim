@@ -16,7 +16,7 @@ use egui::{Align, Layout, RichText, Rounding};
 
 use crate::AppConfig;
 use crate::gui::Colors;
-use crate::gui::icons::{CARET_RIGHT, CHECK_CIRCLE, COMPUTER_TOWER, DOTS_THREE_CIRCLE, GLOBE_SIMPLE, PENCIL, PLUS_CIRCLE, POWER, TRASH, X_CIRCLE};
+use crate::gui::icons::{CARET_RIGHT, CHECK_CIRCLE, COMPUTER_TOWER, DOTS_THREE_CIRCLE, GLOBE_SIMPLE, PENCIL, PLUS_CIRCLE, POWER, TRASH, WARNING_CIRCLE, X_CIRCLE};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, View};
 use crate::gui::views::network::modals::ExternalConnectionModal;
@@ -135,16 +135,17 @@ impl ConnectionsContent {
             // Draw custom button.
             custom_button(ui);
 
-            if !Node::is_running() {
-                // Draw button to start integrated node.
-                View::item_button(ui, Rounding::default(), POWER, Some(Colors::green()), || {
-                    Node::start();
-                });
-            } else if !Node::is_starting() && !Node::is_stopping() && !Node::is_restarting() {
-                // Draw button to stop integrated node.
-                View::item_button(ui, Rounding::default(), POWER, Some(Colors::red()), || {
-                    Node::stop(false);
-                });
+            // Draw buttons to start/stop node.
+            if Node::get_error().is_none() {
+                if !Node::is_running() {
+                    View::item_button(ui, Rounding::default(), POWER, Some(Colors::green()), || {
+                        Node::start();
+                    });
+                } else if !Node::is_starting() && !Node::is_stopping() && !Node::is_restarting() {
+                    View::item_button(ui, Rounding::default(), POWER, Some(Colors::red()), || {
+                        Node::stop(false);
+                    });
+                }
             }
 
             let layout_size = ui.available_size();
@@ -160,14 +161,21 @@ impl ConnectionsContent {
                     });
 
                     // Setup node status text.
-                    let status_icon = if !Node::is_running() {
+                    let has_error = Node::get_error().is_some();
+                    let status_icon = if has_error {
+                        WARNING_CIRCLE
+                    } else if !Node::is_running() {
                         X_CIRCLE
                     } else if Node::not_syncing() {
                         CHECK_CIRCLE
                     } else {
                         DOTS_THREE_CIRCLE
                     };
-                    let status_text = format!("{} {}", status_icon, Node::get_sync_status_text());
+                    let status_text = format!("{} {}", status_icon, if has_error {
+                        t!("error")
+                    } else {
+                        Node::get_sync_status_text()
+                    });
                     View::ellipsize_text(ui, status_text, 15.0, Colors::text(false));
                     ui.add_space(1.0);
 
