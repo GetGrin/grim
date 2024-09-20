@@ -77,6 +77,8 @@ fn real_main() {
 }
 
 /// Get panic message from crash payload.
+#[allow(dead_code)]
+#[cfg(not(target_os = "android"))]
 fn panic_info_message<'pi>(panic_info: &'pi std::panic::PanicInfo<'_>) -> &'pi str {
     let payload = panic_info.payload();
     // taken from: https://github.com/rust-lang/rust/blob/4b9f4b221b92193c7e95b1beb502c6eb32c3b613/library/std/src/panicking.rs#L194-L200
