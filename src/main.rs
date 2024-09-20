@@ -48,7 +48,7 @@ fn real_main() {
         let time = grim::gui::views::View::format_time(chrono::Utc::now().timestamp());
         let target = egui::os::OperatingSystem::from_target_os();
         let ver = grim::VERSION;
-        let msg = panic_message::panic_info_message(info);
+        let msg = panic_info_message(info);
         let err = format!("{} - {:?} - v{}\n\n{}\n\n{:?}", time, target, ver, msg, backtrace);
         // Save backtrace to file.
         let log = grim::Settings::crash_report_path();
@@ -73,6 +73,20 @@ fn real_main() {
     }) {
         Ok(_) => {}
         Err(e) => println!("{:?}", e)
+    }
+}
+
+/// Get panic message from crash payload.
+fn panic_info_message<'pi>(panic_info: &'pi std::panic::PanicInfo<'_>) -> &'pi str {
+    let payload = panic_info.payload();
+    // taken from: https://github.com/rust-lang/rust/blob/4b9f4b221b92193c7e95b1beb502c6eb32c3b613/library/std/src/panicking.rs#L194-L200
+    match payload.downcast_ref::<&'static str>() {
+        Some(msg) => *msg,
+        None => match payload.downcast_ref::<String>() {
+            Some(msg) => msg.as_str(),
+            // Copy what rustc does in the default panic handler
+            None => "Box<dyn Any>",
+        },
     }
 }
 

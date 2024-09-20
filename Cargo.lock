@@ -3847,7 +3847,6 @@ dependencies = [
  "nokhwa",
  "openpnp_capture_sys",
  "openssl-sys",
- "panic-message",
  "parking_lot 0.12.3",
  "qrcode",
  "qrcodegen",
@@ -6586,12 +6585,6 @@ dependencies = [
  "rand_core 0.6.4",
  "sha2 0.10.8",
 ]
-
-[[package]]
-name = "panic-message"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "384e52fd8fbd4cbe3c317e8216260c21a0f9134de108cea8a4dd4e7e152c472d"
 
 [[package]]
 name = "parking"
