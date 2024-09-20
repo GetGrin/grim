@@ -127,7 +127,7 @@ impl RecoverySettings {
             View::colored_text_button(ui, delete_text, Colors::red(), Colors::button(), || {
                 Modal::new(DELETE_CONFIRMATION_MODAL)
                     .position(ModalPosition::Center)
-                    .title(t!("modal.confirmation"))
+                    .title(t!("confirmation"))
                     .show();
             });
             ui.add_space(8.0);

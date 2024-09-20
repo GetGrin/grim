@@ -28,6 +28,7 @@ light: Isik
 choose_file: Dosya seçin
 crash_report: Ariza Raporu
 crash_report_warning: Uygulama beklenmedik bir sekilde kapandi son kez, kilitlenme raporunu gelistiricilerle paylasabilirsiniz.
+confirmation: Onay
 wallets:
   await_conf_amount: Onay bekleniyor
   await_fin_amount: Tamamlanma bekleniyor
@@ -287,7 +288,6 @@ network_settings:
 modal:
   cancel: Iptal
   save: Kaydet
-  confirmation: Onay
   add: Ekle
 modal_exit:
   description: Uygulamadan cikmak için exit, emin misiniz?

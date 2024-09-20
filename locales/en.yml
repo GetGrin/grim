@@ -28,6 +28,7 @@ light: Light
 choose_file: Choose file
 crash_report: Crash report
 crash_report_warning: Application closed unexpectedly last time, you can share crash report with developers.
+confirmation: Confirmation
 wallets:
   await_conf_amount: Awaiting confirmation
   await_fin_amount: Awaiting finalization
@@ -287,7 +288,6 @@ network_settings:
 modal:
   cancel: Cancel
   save: Save
-  confirmation: Confirmation
   add: Add
 modal_exit:
   description: Are you sure you want to quit the application?

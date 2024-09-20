@@ -212,7 +212,7 @@ fn reset_settings_ui(ui: &mut egui::Ui) {
             // Show modal to confirm settings reset.
             Modal::new(RESET_SETTINGS_MODAL)
                 .position(ModalPosition::Center)
-                .title(t!("modal.confirmation"))
+                .title(t!("confirmation"))
                 .show();
         });
 

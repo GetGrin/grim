@@ -28,6 +28,7 @@ light: Светлая
 choose_file: Выбрать файл
 crash_report: Отчёт о сбое
 crash_report_warning: В прошлый раз приложение неожиданно закрылось, вы можете поделиться отчетом о сбое с разработчиками.
+confirmation: Подтверждение
 wallets:
   await_conf_amount: Ожидает подтверждения
   await_fin_amount: Ожидает завершения
@@ -287,7 +288,6 @@ network_settings:
 modal:
   cancel: Отмена
   save: Сохранить
-  confirmation: Подтверждение
   add: Добавить
 modal_exit:
   description: Вы уверены, что хотите выйти из приложения?

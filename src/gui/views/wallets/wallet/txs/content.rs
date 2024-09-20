@@ -223,7 +223,7 @@ impl WalletTransactions {
                                             // Show transaction cancellation confirmation modal.
                                             Modal::new(CANCEL_TX_CONFIRMATION_MODAL)
                                                 .position(ModalPosition::Center)
-                                                .title(t!("modal.confirmation"))
+                                                .title(t!("confirmation"))
                                                 .show();
                                         });
                                     }

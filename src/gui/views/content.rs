@@ -201,7 +201,7 @@ impl Content {
     /// Show exit confirmation [`Modal`].
     pub fn show_exit_modal() {
         Modal::new(Self::EXIT_CONFIRMATION_MODAL)
-            .title(t!("modal.confirmation"))
+            .title(t!("confirmation"))
             .show();
     }
 
