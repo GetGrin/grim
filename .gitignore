@@ -4,6 +4,8 @@ android/local.properties
 android/keystore
 android/keystore.asc
 android/keystore.properties
+android/*.apk
+android/*sha256sum.txt
 /.idea
 .DS_Store
 /captures
