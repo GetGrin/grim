@@ -340,11 +340,9 @@ impl WalletMessages {
                     }
                     Err(err) => {
                         match err {
-                            // Set already canceled transaction error message.
                             Error::TransactionWasCancelled {..} => {
                                 self.message_error = t!("wallets.resp_canceled_err");
                             }
-                            // Set an error when there is not enough funds to pay.
                             Error::NotEnoughFunds {..} => {
                                 let m = t!(
                                     "wallets.pay_balance_error",
@@ -352,15 +350,26 @@ impl WalletMessages {
                                 );
                                 self.message_error = m;
                             }
-                            // Set default error message.
                             _ => {
-                                let finalize = slate.state == SlateState::Standard2 ||
-                                    slate.state == SlateState::Invoice2;
-                                self.message_error = if finalize {
-                                    t!("wallets.finalize_slatepack_err")
+                                // Show tx modal or show default error message.
+                                if let Some(tx) = wallet.tx_by_slate(&slate).as_ref() {
+                                    self.message_edit.clear();
+                                    self.tx_info_content = Some(
+                                        WalletTransactionModal::new(wallet, tx, false)
+                                    );
+                                    Modal::new(TX_INFO_MODAL)
+                                        .position(ModalPosition::CenterTop)
+                                        .title(t!("wallets.tx"))
+                                        .show();
                                 } else {
-                                    t!("wallets.resp_slatepack_err")
-                                };
+                                    let finalize = slate.state == SlateState::Standard2 ||
+                                        slate.state == SlateState::Invoice2;
+                                    self.message_error = if finalize {
+                                        t!("wallets.finalize_slatepack_err")
+                                    } else {
+                                        t!("wallets.resp_slatepack_err")
+                                    };
+                                }
                             }
                         }
                     }
@@ -455,10 +464,8 @@ impl WalletMessages {
                         .position(ModalPosition::CenterTop)
                         .title(t!("wallets.tx"))
                         .show();
-                } else {
-                    self.message_error = t!("wallets.parse_slatepack_err");
+                    return;
                 }
-                return;
             }
 
             // Create response or finalize at separate thread.
