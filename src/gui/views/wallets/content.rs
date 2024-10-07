@@ -304,23 +304,16 @@ impl WalletsContent {
         if !Content::is_dual_panel_mode(ui) && Content::is_network_panel_open() {
             Content::toggle_network_panel();
         }
-        // Pass data to opened selected wallet or show wallets selection.
-        if self.wallet_content.is_some() {
-            if self.showing_wallet() {
-                if wallets_size == 1 {
-                    let wallet_content = self.wallet_content.as_mut().unwrap();
-                    wallet_content.on_data(data);
-                } else {
-                    self.show_wallet_selection_modal(data);
-                }
+        // Pass data to single wallet or show wallets selection.
+        if wallets_size == 1 {
+            let w = self.wallets.list()[0].clone();
+            if w.is_open() {
+                self.wallet_content = Some(WalletContent::new(w, data));
             } else {
-                if wallets_size == 1 {
-                    let wallet_content = self.wallet_content.as_ref().unwrap();
-                    self.show_opening_modal(wallet_content.wallet.clone(), data, cb);
-                } else {
-                    self.show_wallet_selection_modal(data);
-                }
+                self.show_opening_modal(w, data, cb);
             }
+        } else {
+            self.show_wallet_selection_modal(data);
         }
     }
 
