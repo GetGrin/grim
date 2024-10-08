@@ -13,15 +13,17 @@
 // limitations under the License.
 
 use std::fs::{self, File};
+use std::io;
 use std::io::Write;
 use std::path::PathBuf;
 use std::sync::Arc;
+use egui::os::OperatingSystem;
 use lazy_static::lazy_static;
 use parking_lot::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
-
 use grin_config::ConfigError;
+use interprocess::local_socket::{GenericFilePath, GenericNamespaced, Name, NameType, ToFsName, ToNsName};
 
 use crate::node::NodeConfig;
 use crate::settings::AppConfig;
@@ -127,10 +129,7 @@ impl Settings {
     /// Get base directory path for configuration.
     pub fn base_path(sub_dir: Option<String>) -> PathBuf {
         // Check if dir exists.
-        let mut path = match dirs::home_dir() {
-            Some(p) => p,
-            None => PathBuf::new(),
-        };
+        let mut path = dirs::home_dir().unwrap_or_else(|| PathBuf::new());
         path.push(Self::MAIN_DIR_NAME);
         if sub_dir.is_some() {
             path.push(sub_dir.unwrap());
@@ -149,18 +148,37 @@ impl Settings {
         socket_path
     }
 
-    /// Get configuration file path from provided name and sub-directory if needed.
+    /// Get desktop application socket name from provided path.
+    pub fn socket_name(path: &PathBuf) -> io::Result<Name> {
+        let name = if OperatingSystem::Mac != OperatingSystem::from_target_os() &&
+            GenericNamespaced::is_supported() {
+            Self::SOCKET_NAME.to_ns_name::<GenericNamespaced>()?
+        } else {
+            path.clone().to_fs_name::<GenericFilePath>()?
+        };
+        Ok(name)
+    }
+
+    /// Get configuration file path from provided name and subdirectory if needed.
     pub fn config_path(config_name: &str, sub_dir: Option<String>) -> PathBuf {
         let mut path = Self::base_path(sub_dir);
         path.push(config_name);
         path
     }
 
-    /// Get configuration file path from provided name and sub-directory if needed.
+    /// Get configuration file path from provided name and subdirectory if needed.
     pub fn crash_report_path() -> PathBuf {
         let mut path = Self::base_path(None);
         path.push(Self::CRASH_REPORT_FILE_NAME);
         path
+    }
+
+    /// Delete crash report file.
+    pub fn delete_crash_report() {
+        let log = Self::crash_report_path();
+        if log.exists() {
+            let _ = fs::remove_file(log.clone());
+        }
     }
 
     /// Read configuration from the file.

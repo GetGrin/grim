@@ -138,7 +138,7 @@ impl Content {
 
         if self.first_draw {
             // Show crash report if needed.
-            if AppConfig::show_crash() {
+            if Settings::crash_report_path().exists() {
                 Modal::new(Self::CRASH_REPORT_MODAL)
                     .closeable(false)
                     .position(ModalPosition::Center)
@@ -415,10 +415,10 @@ impl Content {
             let text = format!("{} {}", FILE_X, t!("share"));
             View::colored_text_button(ui, text, Colors::blue(), Colors::white_or_black(false), || {
                 if let Ok(data) = fs::read_to_string(Settings::crash_report_path()) {
-                    cb.share_data(Settings::CRASH_REPORT_FILE_NAME.to_string(),
-                                  data.as_bytes().to_vec()).unwrap_or_default()
+                    let name = Settings::CRASH_REPORT_FILE_NAME.to_string();
+                    let _ = cb.share_data(name, data.as_bytes().to_vec());
                 }
-                AppConfig::set_show_crash(false);
+                Settings::delete_crash_report();
                 modal.close();
             });
         });
@@ -427,7 +427,7 @@ impl Content {
         ui.add_space(8.0);
         ui.vertical_centered_justified(|ui| {
             View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
-                AppConfig::set_show_crash(false);
+                Settings::delete_crash_report();
                 modal.close();
             });
         });

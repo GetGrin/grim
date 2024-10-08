@@ -43,25 +43,39 @@ fn real_main() {
 
     // Setup callback on panic crash.
     std::panic::set_hook(Box::new(|info| {
-        let backtrace = backtrace::Backtrace::new();
         // Format error.
+        let backtrace = backtrace::Backtrace::new();
         let time = grim::gui::views::View::format_time(chrono::Utc::now().timestamp());
-        let target = egui::os::OperatingSystem::from_target_os();
+        let os = egui::os::OperatingSystem::from_target_os();
         let ver = grim::VERSION;
         let msg = panic_info_message(info);
-        let err = format!("{} - {:?} - v{}\n\n{}\n\n{:?}", time, target, ver, msg, backtrace);
+        let loc = if let Some(location) = info.location() {
+            format!("{}:{}:{}", location.file(), location.line(), location.column())
+        } else {
+            "no location found.".parse().unwrap()
+        };
+        let err = format!("{} - {:?} - v{}\n{}\n{}\n\n{:?}", time, os, ver, msg, loc, backtrace);
         // Save backtrace to file.
         let log = grim::Settings::crash_report_path();
         if log.exists() {
-            let _ = std::fs::remove_file(log.clone());
+            use std::io::{Seek, SeekFrom, Write};
+            let mut file = std::fs::OpenOptions::new()
+                .write(true)
+                .append(true)
+                .open(log)
+                .unwrap();
+            if file.seek(SeekFrom::End(0)).is_ok() {
+                file.write(err.as_bytes()).unwrap_or_default();
+            }
+        } else {
+            std::fs::write(log, err.as_bytes()).unwrap_or_default();
         }
-        std::fs::write(log, err.as_bytes()).unwrap();
-        // Setup flag to show crash after app restart.
-        grim::AppConfig::set_show_crash(true);
+        // Print message error.
+        println!("{}\n{}", msg, loc);
     }));
 
     // Start GUI.
-    match std::panic::catch_unwind(|| {
+    let _ = std::panic::catch_unwind(|| {
         if is_app_running(&data) {
             return;
         } else if let Some(data) = data {
@@ -70,16 +84,13 @@ fn real_main() {
         let platform = grim::gui::platform::Desktop::new();
         start_app_socket(platform.clone());
         start_desktop_gui(platform);
-    }) {
-        Ok(_) => {}
-        Err(e) => println!("{:?}", e)
-    }
+    });
 }
 
 /// Get panic message from crash payload.
 #[allow(dead_code)]
 #[cfg(not(target_os = "android"))]
-fn panic_info_message<'pi>(panic_info: &'pi std::panic::PanicInfo<'_>) -> &'pi str {
+fn panic_info_message<'pi>(panic_info: &'pi std::panic::PanicHookInfo<'_>) -> &'pi str {
     let payload = panic_info.payload();
     // taken from: https://github.com/rust-lang/rust/blob/4b9f4b221b92193c7e95b1beb502c6eb32c3b613/library/std/src/panicking.rs#L194-L200
     match payload.downcast_ref::<&'static str>() {
@@ -114,7 +125,7 @@ fn start_desktop_gui(platform: grim::gui::platform::Desktop) {
         .with_min_inner_size([AppConfig::MIN_WIDTH, AppConfig::MIN_HEIGHT])
         .with_inner_size([width, height]);
 
-    // Setup an icon.
+    // Setup icon.
     if let Ok(icon) = eframe::icon_data::from_png_bytes(include_bytes!("../img/icon.png")) {
         viewport = viewport.with_icon(std::sync::Arc::new(icon));
     }
@@ -176,19 +187,15 @@ fn is_app_running(data: &Option<String>) -> bool {
     let res: Result<(), Box<dyn std::error::Error>> = runtime
         .block_on(async {
             use interprocess::local_socket::{
-                tokio::{prelude::*, Stream},
-                GenericFilePath, GenericNamespaced
+                tokio::{prelude::*, Stream}
             };
             use tokio::{
                 io::AsyncWriteExt,
             };
 
             let socket_path = grim::Settings::socket_path();
-            let name = if GenericNamespaced::is_supported() {
-                grim::Settings::SOCKET_NAME.to_ns_name::<GenericNamespaced>()?
-            } else {
-                socket_path.clone().to_fs_name::<GenericFilePath>()?
-            };
+            let name = grim::Settings::socket_name(&socket_path)?;
+
             // Connect to running application socket.
             let conn = Stream::connect(name).await?;
             let data = data.clone().unwrap_or("".to_string());
@@ -203,7 +210,7 @@ fn is_app_running(data: &Option<String>) -> bool {
             drop((rec, sen));
             Ok(())
         });
-    return match res {
+    match res {
         Ok(_) => true,
         Err(_) => false
     }
@@ -220,7 +227,7 @@ fn start_app_socket(platform: grim::gui::platform::Desktop) {
             .block_on(async {
                 use interprocess::local_socket::{
                     tokio::{prelude::*, Stream},
-                    GenericFilePath, GenericNamespaced, Listener, ListenerOptions,
+                    Listener, ListenerOptions,
                 };
                 use std::io;
                 use tokio::{
@@ -238,15 +245,12 @@ fn start_app_socket(platform: grim::gui::platform::Desktop) {
                     Ok(buffer)
                 }
 
+                // Setup socket name.
                 let socket_path = grim::Settings::socket_path();
-                let name = if GenericNamespaced::is_supported() {
-                    grim::Settings::SOCKET_NAME.to_ns_name::<GenericNamespaced>()?
-                } else {
-                    socket_path.clone().to_fs_name::<GenericFilePath>()?
-                };
                 if socket_path.exists() {
-                    let _ = std::fs::remove_file(socket_path);
+                    let _ = std::fs::remove_file(&socket_path);
                 }
+                let name = grim::Settings::socket_name(&socket_path)?;
 
                 // Create listener.
                 let opts = ListenerOptions::new().name(name);
