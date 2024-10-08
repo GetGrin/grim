@@ -98,15 +98,15 @@ tls-api-native-tls = "0.9.0"
 tokio-old = {version = "0.2", features = ["full"], package = "tokio" }
 tokio-util-old = { version = "0.2", features = ["codec"], package = "tokio-util" }
 
-[target.'cfg(all(not(target_os = "windows"), not(target_os = "android")))'.dependencies]
-eye = { version = "0.5.0", default-features = false }
+[target.'cfg(target_os = "linux")'.dependencies]
+nokhwa = { version = "0.10.4", default-features = false, features = ["input-native"] }
 
 [target.'cfg(target_os = "windows")'.dependencies]
 nokhwa = { version = "0.10.4", default-features = false, features = ["input-msmf"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
+nokhwa = { version = "0.10.4", default-features = false, features = ["input-native"] }
 tls-api-openssl = "0.9.0"
-openpnp_capture_sys = "0.4.0"
 
 [target.'cfg(not(target_os = "android"))'.dependencies]
 env_logger = "0.11.3"
@@ -128,5 +128,3 @@ eframe = { version = "0.28.1", features = ["wgpu", "android-game-activity"] }
 [patch.crates-io]
 ### patch grin store
 #grin_store = { path = "../grin-store" }
-### fix cross-compilation support for macos
-openpnp_capture_sys = { git = "https://github.com/ardocrat/openpnp-capture-rs", branch = "cross_compilation_support" }

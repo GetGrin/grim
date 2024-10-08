@@ -67,6 +67,7 @@ impl CameraContent {
                     270 => img.rotate270(),
                     _ => img
                 };
+                img = img.fliph();
                 // Convert to ColorImage to add at content.
                 let color_img = match &img {
                     DynamicImage::ImageRgb8(image) => {
