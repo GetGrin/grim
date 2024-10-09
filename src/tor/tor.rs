@@ -24,7 +24,6 @@ use std::time::Duration;
 
 use arti_client::config::{CfgPath, TorClientConfigBuilder};
 use arti_client::{TorClient, TorClientConfig};
-use arti_hyper::ArtiHttpConnector;
 use curve25519_dalek::digest::Digest;
 use ed25519_dalek::hazmat::ExpandedSecretKey;
 use fs_mistrust::Mistrust;
@@ -56,7 +55,7 @@ use tor_rtcompat::Runtime;
 use tls_api_native_tls::TlsConnector;
 #[cfg(all(target_vendor = "apple", target_arch = "aarch64"))]
 use tls_api_openssl::TlsConnector;
-
+use crate::tor::http::ArtiHttpConnector;
 use crate::tor::TorConfig;
 
 lazy_static! {
@@ -314,8 +313,8 @@ impl Tor {
                                                 let mut w_services =
                                                     TOR_SERVER_STATE.starting_services.write();
                                                 w_services.remove(&service_id);
-                                                // Check again after 15 seconds.
-                                                Duration::from_millis(15000)
+                                                // Check again after 50 seconds.
+                                                Duration::from_millis(50000)
                                             }
                                             Err(_) => {
                                                 // Restart service on 3rd error.
@@ -409,10 +408,10 @@ impl Tor {
         hs_nickname: &HsNickname,
     ) -> tor_keymgr::Result<()> {
         let arti_store =
-            ArtiNativeKeystore::from_path_and_mistrust(TorConfig::keystore_path(), &mistrust)?;
+            ArtiNativeKeystore::from_path_and_mistrust(TorConfig::keystore_path(), mistrust)?;
 
         let key_manager = KeyMgrBuilder::default()
-            .default_store(Box::new(arti_store))
+            .primary_store(Box::new(arti_store))
             .build()
             .unwrap();
 
@@ -427,13 +426,15 @@ impl Tor {
         key_manager.insert(
             HsIdKey::from(expanded_kp.public().clone()),
             &HsIdPublicKeySpecifier::new(hs_nickname.clone()),
-            KeystoreSelector::Default,
+            KeystoreSelector::Primary,
+            true
         )?;
 
         key_manager.insert(
             HsIdKeypair::from(expanded_kp),
             &HsIdKeypairSpecifier::new(hs_nickname.clone()),
-            KeystoreSelector::Default,
+            KeystoreSelector::Primary,
+            true
         )?;
         Ok(())
     }
@@ -444,7 +445,7 @@ impl Tor {
             builder.bridges().bridges().push(bridge);
         }
 
-        // Now configure an snowflake transport. (Requires the "pt-client" feature)
+        // Now configure a snowflake transport. (Requires the "pt-client" feature)
         let mut transport = TransportConfigBuilder::default();
         transport
             .protocols(vec!["snowflake".parse().unwrap()])

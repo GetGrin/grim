@@ -20,3 +20,5 @@ pub use tor::Tor;
 
 mod types;
 pub use types::*;
+
+mod http;
