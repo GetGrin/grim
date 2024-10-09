@@ -99,13 +99,13 @@ tokio-old = {version = "0.2", features = ["full"], package = "tokio" }
 tokio-util-old = { version = "0.2", features = ["codec"], package = "tokio-util" }
 
 [target.'cfg(target_os = "linux")'.dependencies]
-nokhwa = { version = "0.10.4", default-features = false, features = ["input-native"] }
+nokhwa = { version = "0.10.4", default-features = false, features = ["input-v4l"] }
 
 [target.'cfg(target_os = "windows")'.dependencies]
 nokhwa = { version = "0.10.4", default-features = false, features = ["input-msmf"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
-nokhwa = { version = "0.10.4", default-features = false, features = ["input-native"] }
+nokhwa = { version = "0.10.4", default-features = false, features = ["flume", "input-avfoundation"] }
 tls-api-openssl = "0.9.0"
 
 [target.'cfg(not(target_os = "android"))'.dependencies]
