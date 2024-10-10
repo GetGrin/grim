@@ -505,46 +505,34 @@ impl NodeConfig {
     }
 
     /// Get API secret text.
-    pub fn get_api_secret() -> Option<String> {
+    pub fn get_api_secret(foreign: bool) -> Option<String> {
         let r_config = Settings::node_config_to_read();
-        let api_secret_path = r_config
-            .node
-            .server
-            .api_secret_path
-            .clone();
-        return if let Some(secret_path) = api_secret_path {
-            let api_secret_file = File::open(secret_path).unwrap();
-            let buf_reader = BufReader::new(api_secret_file);
-            let mut lines_iter = buf_reader.lines();
-            let first_line = lines_iter.next().unwrap();
-            Some(first_line.unwrap())
+        let api_secret_path = if foreign {
+            &r_config
+                .node
+                .server
+                .foreign_api_secret_path
         } else {
-            None
-        };
+            &r_config
+                .node
+                .server
+                .api_secret_path
+        }.clone();
+        if let Some(secret_path) = api_secret_path {
+            if let Ok(file) = File::open(secret_path) {
+                let buf_reader = BufReader::new(file);
+                let mut lines_iter = buf_reader.lines();
+                if let Some(Ok(line)) = lines_iter.next() {
+                    return Some(line);
+                }
+            }
+        }
+        None
     }
 
     /// Save API secret text.
     pub fn save_api_secret(api_secret: &String) {
         Self::save_secret(api_secret, API_SECRET_FILE_NAME);
-    }
-
-    /// Get Foreign API secret text.
-    pub fn get_foreign_api_secret() -> Option<String> {
-        let r_config = Settings::node_config_to_read();
-        let foreign_secret_path = r_config
-            .node
-            .server
-            .foreign_api_secret_path
-            .clone();
-        return if let Some(secret_path) = foreign_secret_path {
-            let foreign_secret_file = File::open(secret_path).unwrap();
-            let buf_reader = BufReader::new(foreign_secret_file);
-            let mut lines_iter = buf_reader.lines();
-            let first_line = lines_iter.next().unwrap();
-            Some(first_line.unwrap())
-        } else {
-            None
-        };
     }
 
     /// Update Foreign API secret.

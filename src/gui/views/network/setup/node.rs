@@ -356,8 +356,8 @@ impl NodeSetup {
         ui.add_space(6.0);
 
         let secret_value = match modal_id {
-            API_SECRET_MODAL => NodeConfig::get_api_secret(),
-            _ => NodeConfig::get_foreign_api_secret()
+            API_SECRET_MODAL => NodeConfig::get_api_secret(false),
+            _ => NodeConfig::get_api_secret(true)
         };
 
         let secret_text = if secret_value.is_some() {

@@ -171,7 +171,7 @@ impl Wallet {
         // Setup node client.
         let integrated = || {
             let api_url = format!("http://{}", NodeConfig::get_api_address());
-            let api_secret = NodeConfig::get_foreign_api_secret();
+            let api_secret = NodeConfig::get_api_secret(true);
             (api_url, api_secret)
         };
         let (node_api_url, node_secret) = if let Some(id) = config.ext_conn_id {
