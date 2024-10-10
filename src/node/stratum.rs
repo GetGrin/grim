@@ -716,7 +716,7 @@ fn accept_connections(listen_addr: SocketAddr,
     let mut rt = Runtime::new().unwrap();
     let (task, handle) = abortable(task);
     rt.spawn(check_stop_state(stop_state, handle));
-    rt.block_on(task).unwrap();
+    rt.block_on(task).unwrap_or_default();
 }
 
 async fn check_stop_state(stop_state: Arc<StratumStopState>, handle: AbortHandle) {
