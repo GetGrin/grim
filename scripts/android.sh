@@ -20,8 +20,8 @@ if [[ $1 == "build" ]]; then
 fi
 
 # Setup build directory
-BASEDIR=$(cd $(dirname $0) && pwd)
-cd ${BASEDIR}
+BASEDIR=$(cd "$(dirname "$0")" && pwd)
+cd "${BASEDIR}" || exit 1
 cd ..
 
 # Install platforms and tools
@@ -34,30 +34,32 @@ success=1
 
 ### Build native code
 function build_lib() {
-  [[ $1 == "v7" ]] && arch=(armeabi-v7a)
-  [[ $1 == "v8" ]] && arch=(arm64-v8a)
-  [[ $1 == "x86" ]] && arch=(x86_64)
+  [[ $1 == "v7" ]] && arch=armeabi-v7a
+  [[ $1 == "v8" ]] && arch=arm64-v8a
+  [[ $1 == "x86" ]] && arch=x86_64
 
   sed -i -e 's/"rlib"/"cdylib","rlib"/g' Cargo.toml
 
   # Fix for https://stackoverflow.com/questions/57193895/error-use-of-undeclared-identifier-pthread-mutex-robust-cargo-build-liblmdb-s
-  export CPPFLAGS="-DMDB_USE_ROBUST=0" && export CFLAGS="-DMDB_USE_ROBUST=0"
-  cargo ndk -t ${arch} build --profile release-apk
-  unset CPPFLAGS && unset CFLAGS
-  cargo ndk -t ${arch} -o android/app/src/main/jniLibs build --profile release-apk
+  # Uncomment lines below for the 1st build:
+  #export CPPFLAGS="-DMDB_USE_ROBUST=0" && export CFLAGS="-DMDB_USE_ROBUST=0"
+  #cargo ndk -t ${arch} build --profile release-apk
+  #unset CPPFLAGS && unset CFLAGS
+  cargo ndk -t "${arch}" -o android/app/src/main/jniLibs build --profile release-apk
   if [ $? -eq 0 ]
   then
     success=1
   fi
 
   sed -i -e 's/"cdylib","rlib"/"rlib"/g' Cargo.toml
+  rm -f Cargo.toml-e
 }
 
 ### Build application
 function build_apk() {
   version=$(grep -m 1 -Po 'version = "\K[^"]*' Cargo.toml)
 
-  cd android
+  cd android || exit 1
   ./gradlew clean
   # Build signed apk if keystore exists
   if [ ! -f keystore.properties ]; then
@@ -72,22 +74,22 @@ function build_apk() {
     # Launch application at all connected devices.
     for SERIAL in $(adb devices | grep -v List | cut -f 1);
       do
-        adb -s $SERIAL install ${apk_path}
+        adb -s "$SERIAL" install ${apk_path}
         sleep 1s
-        adb -s $SERIAL shell am start -n mw.gri.android/.MainActivity;
+        adb -s "$SERIAL" shell am start -n mw.gri.android/.MainActivity;
     done
   else
     # Setup release file name
     name=grim-${version}-android-$1.apk
     [[ $1 == "arm" ]] && name=grim-${version}-android.apk
-    rm -rf ${name}
-    mv ${apk_path} ${name}
+    rm -f "${name}"
+    mv ${apk_path} "${name}"
 
     # Calculate checksum
     checksum=grim-${version}-android-$1-sha256sum.txt
     [[ $1 == "arm" ]] && checksum=grim-${version}-android-sha256sum.txt
-    rm -rf ${checksum}
-    sha256sum ${name} > ${checksum}
+    rm -f "${checksum}"
+    sha256sum "${name}" > "${checksum}"
   fi
 
   cd ..
@@ -96,7 +98,7 @@ function build_apk() {
 rm -rf android/app/src/main/jniLibs/*
 
 if [[ $1 == "build" ]]; then
-  build_lib $2
+  build_lib "$2"
   [ $success -eq 1 ] && build_apk
 else
   rm -rf target/release-apk
