@@ -49,6 +49,8 @@ function build_lib() {
   if [ $? -eq 0 ]
   then
     success=1
+  else
+    success=0
   fi
 
   sed -i -e 's/"cdylib","rlib"/"rlib"/g' Cargo.toml
