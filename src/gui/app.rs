@@ -14,7 +14,7 @@
 
 use std::sync::atomic::{AtomicBool, Ordering};
 use lazy_static::lazy_static;
-use egui::{Align, Context, CursorIcon, Layout, Modifiers, Rect, ResizeDirection, Rounding, Stroke, ViewportCommand};
+use egui::{Align, Context, CursorIcon, Layout, Modifiers, Rect, ResizeDirection, Rounding, Stroke, UiBuilder, ViewportCommand};
 use egui::epaint::{RectShape};
 use egui::os::OperatingSystem;
 
@@ -22,7 +22,7 @@ use crate::AppConfig;
 use crate::gui::Colors;
 use crate::gui::icons::{ARROWS_IN, ARROWS_OUT, CARET_DOWN, MOON, SUN, X};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Content, TitlePanel, View};
+use crate::gui::views::{Content, Modal, TitlePanel, View};
 use crate::wallet::ExternalConnection;
 
 lazy_static! {
@@ -32,17 +32,14 @@ lazy_static! {
 
 /// Implements ui entry point and contains platform-specific callbacks.
 pub struct App<Platform> {
-    /// Platform specific callbacks handler.
+    /// Handles platform-specific functionality.
     pub platform: Platform,
-
     /// Main content.
     content: Content,
-
     /// Last window resize direction.
     resize_direction: Option<ResizeDirection>,
-
     /// Flag to check if it's first draw.
-    first_draw: bool,
+    first_draw: bool
 }
 
 impl<Platform: PlatformCallbacks> App<Platform> {
@@ -55,24 +52,29 @@ impl<Platform: PlatformCallbacks> App<Platform> {
         }
     }
 
+    /// Called of first content draw.
+    fn on_first_draw(&mut self, ctx: &Context) {
+        // Set platform context.
+        if View::is_desktop() {
+            self.platform.set_context(ctx);
+        }
+        // Check connections availability.
+        ExternalConnection::check(None, ctx);
+        // Setup visuals.
+        crate::setup_visuals(ctx);
+    }
+
     /// Draw application content.
     pub fn ui(&mut self, ctx: &Context) {
         if self.first_draw {
-            // Set platform context.
-            if View::is_desktop() {
-                self.platform.set_context(ctx);
-            }
-
-            // Check external connections availability.
-            ExternalConnection::check(None, ctx);
-
+            self.on_first_draw(ctx);
             self.first_draw = false;
         }
 
         // Handle Esc keyboard key event and platform Back button key event.
         let back_pressed = BACK_BUTTON_PRESSED.load(Ordering::Relaxed);
         if back_pressed || ctx.input_mut(|i| i.consume_key(Modifiers::NONE, egui::Key::Escape)) {
-            self.content.on_back();
+            self.content.on_back(&self.platform);
             if back_pressed {
                 BACK_BUTTON_PRESSED.store(false, Ordering::Relaxed);
             }
@@ -97,21 +99,26 @@ impl<Platform: PlatformCallbacks> App<Platform> {
             }
         }
 
-        // Show main content with custom frame on desktop.
+        // Show main content.
         egui::CentralPanel::default()
             .frame(egui::Frame {
                 ..Default::default()
             })
             .show(ctx, |ui| {
-                let is_mac_os = OperatingSystem::from_target_os() == OperatingSystem::Mac;
-                if View::is_desktop() && !is_mac_os {
-                    self.desktop_window_ui(ui);
-                } else {
-                    if is_mac_os {
-                        self.window_title_ui(ui);
+                if View::is_desktop() {
+                    let is_fullscreen = ui.ctx().input(|i| {
+                        i.viewport().fullscreen.unwrap_or(false)
+                    });
+                    if OperatingSystem::from_target_os() != OperatingSystem::Mac {
+                        self.desktop_window_ui(ui, is_fullscreen);
+                    } else {
+                        self.window_title_ui(ui, is_fullscreen);
                         ui.add_space(-1.0);
+                        Self::title_panel_bg(ui, is_fullscreen);
+                        self.content.ui(ui, &self.platform);
                     }
-                    self.content.ui(ui, &self.platform);
+                } else {
+                    self.mobile_window_ui(ui);
                 }
 
                 // Provide incoming data to wallets.
@@ -129,57 +136,29 @@ impl<Platform: PlatformCallbacks> App<Platform> {
         }
     }
 
-    /// Draw custom resizeable window content.
-    fn desktop_window_ui(&mut self, ui: &mut egui::Ui) {
-        let is_fullscreen = ui.ctx().input(|i| {
-            i.viewport().fullscreen.unwrap_or(false)
-        });
+    /// Draw mobile platform window content.
+    fn mobile_window_ui(&mut self, ui: &mut egui::Ui) {
+        Self::title_panel_bg(ui, false);
+        self.content.ui(ui, &self.platform);
+    }
 
-        let title_stroke_rect = {
+    /// Draw desktop platform window content.
+    fn desktop_window_ui(&mut self, ui: &mut egui::Ui, is_fullscreen: bool) {
+        Self::title_panel_bg(ui, is_fullscreen);
+
+        let content_bg_rect = {
             let mut rect = ui.max_rect();
             if !is_fullscreen {
                 rect = rect.shrink(Content::WINDOW_FRAME_MARGIN);
             }
-            rect.max.y = if !is_fullscreen {
-                Content::WINDOW_FRAME_MARGIN
-            } else {
-                0.0
-            } + Content::WINDOW_TITLE_HEIGHT + TitlePanel::DEFAULT_HEIGHT + 0.5;
-            rect
-        };
-        let title_stroke = RectShape {
-            rect: title_stroke_rect,
-            rounding: Rounding {
-                nw: 8.0,
-                ne: 8.0,
-                sw: 0.0,
-                se: 0.0,
-            },
-            fill: Colors::yellow(),
-            stroke: Stroke {
-                width: 1.0,
-                color: egui::Color32::from_gray(200)
-            },
-            blur_width: 0.0,
-            fill_texture_id: Default::default(),
-            uv: Rect::ZERO
-        };
-        // Draw title stroke.
-        ui.painter().add(title_stroke);
-
-        let content_stroke_rect = {
-            let mut rect = ui.max_rect();
-            if !is_fullscreen {
-                rect = rect.shrink(Content::WINDOW_FRAME_MARGIN);
-            }
-            let top = Content::WINDOW_TITLE_HEIGHT + TitlePanel::DEFAULT_HEIGHT + 0.5;
+            let top = Content::WINDOW_TITLE_HEIGHT + TitlePanel::HEIGHT + 0.5;
             rect.min += egui::vec2(0.0, top);
             rect
         };
-        let content_stroke = RectShape {
-            rect: content_stroke_rect,
+        let content_bg = RectShape {
+            rect: content_bg_rect,
             rounding: Rounding::ZERO,
-            fill: Colors::fill(),
+            fill: Colors::fill_lite(),
             stroke: Stroke {
                 width: 1.0,
                 color: Colors::stroke()
@@ -188,17 +167,28 @@ impl<Platform: PlatformCallbacks> App<Platform> {
             fill_texture_id: Default::default(),
             uv: Rect::ZERO
         };
-        // Draw content stroke.
-        ui.painter().add(content_stroke);
+        // Draw content background.
+        ui.painter().add(content_bg);
 
-        // Draw window content.
         let mut content_rect = ui.max_rect();
         if !is_fullscreen {
             content_rect = content_rect.shrink(Content::WINDOW_FRAME_MARGIN);
         }
-        ui.allocate_ui_at_rect(content_rect, |ui| {
-            self.window_title_ui(ui);
-            self.window_content(ui);
+        // Draw window content.
+        ui.allocate_new_ui(UiBuilder::new().max_rect(content_rect), |ui| {
+            // Draw window title.
+            self.window_title_ui(ui, is_fullscreen);
+
+            let content_rect = {
+                let mut rect = ui.max_rect();
+                rect.min.y += Content::WINDOW_TITLE_HEIGHT;
+                rect
+            };
+            // Draw main content.
+            let mut content_ui = ui.new_child(UiBuilder::new()
+                .max_rect(content_rect)
+                .layout(*ui.layout()));
+            self.content.ui(&mut content_ui, &self.platform);
         });
 
         // Setup resize areas.
@@ -214,20 +204,26 @@ impl<Platform: PlatformCallbacks> App<Platform> {
         }
     }
 
-    /// Draw window content for desktop.
-    fn window_content(&mut self, ui: &mut egui::Ui) {
-        let content_rect = {
+    /// Draw title panel background.
+    fn title_panel_bg(ui: &mut egui::Ui, is_fullscreen: bool) {
+        let title_rect = {
             let mut rect = ui.max_rect();
-            rect.min.y += Content::WINDOW_TITLE_HEIGHT;
+            if View::is_desktop() {
+                let is_mac = OperatingSystem::from_target_os() == OperatingSystem::Mac;
+                if !is_mac && !is_fullscreen {
+                    rect = rect.shrink(Content::WINDOW_FRAME_MARGIN)
+                }
+                rect.min.y += Content::WINDOW_TITLE_HEIGHT;
+            }
+            rect.max.y = rect.min.y + View::get_top_inset() + TitlePanel::HEIGHT;
             rect
         };
-        // Draw main content.
-        let mut content_ui = ui.child_ui(content_rect, *ui.layout(), None);
-        self.content.ui(&mut content_ui, &self.platform);
+        let title_bg = RectShape::filled(title_rect, Rounding::ZERO, Colors::yellow());
+        ui.painter().add(title_bg);
     }
 
     /// Draw custom window title content.
-    fn window_title_ui(&self, ui: &mut egui::Ui) {
+    fn window_title_ui(&self, ui: &mut egui::Ui, is_fullscreen: bool) {
         let content_rect = ui.max_rect();
 
         let title_rect = {
@@ -236,35 +232,26 @@ impl<Platform: PlatformCallbacks> App<Platform> {
             rect
         };
 
-        let is_fullscreen = ui.ctx().input(|i| {
-            i.viewport().fullscreen.unwrap_or(false)
-        });
-
-        let window_title_bg = RectShape {
-            rect: title_rect,
-            rounding: if is_fullscreen {
-                Rounding::ZERO
-            } else {
-                Rounding {
-                    nw: 8.0,
-                    ne: 8.0,
-                    sw: 0.0,
-                    se: 0.0,
-                }
-            },
-            fill: Colors::yellow_dark(),
-            stroke: Stroke::NONE,
-            blur_width: 0.0,
-            fill_texture_id: Default::default(),
-            uv: Rect::ZERO
-        };
+        let is_mac = OperatingSystem::from_target_os() == OperatingSystem::Mac;
+        let window_title_bg = RectShape::filled(title_rect, if is_fullscreen || is_mac {
+            Rounding::ZERO
+        } else {
+            Rounding {
+                nw: 8.0,
+                ne: 8.0,
+                sw: 0.0,
+                se: 0.0,
+            }
+        }, Colors::yellow_dark());
         // Draw title background.
         ui.painter().add(window_title_bg);
 
         let painter = ui.painter();
 
         let interact_rect = {
-            let mut rect = title_rect;
+            let mut rect = title_rect.clone();
+            rect.max.x -= 128.0;
+            rect.min.x += 85.0;
             if !is_fullscreen {
                 rect.min.y += Content::WINDOW_FRAME_MARGIN;
             }
@@ -273,8 +260,12 @@ impl<Platform: PlatformCallbacks> App<Platform> {
         let title_resp = ui.interact(
             interact_rect,
             egui::Id::new("window_title"),
-            egui::Sense::click_and_drag(),
+            egui::Sense::drag(),
         );
+        // Interact with the window title (drag to move window):
+        if !is_fullscreen && title_resp.drag_started_by(egui::PointerButton::Primary) {
+            ui.ctx().send_viewport_cmd(ViewportCommand::StartDrag);
+        }
 
         // Paint the title.
         let dual_wallets_panel =
@@ -283,7 +274,7 @@ impl<Platform: PlatformCallbacks> App<Platform> {
         let wallet_panel_opened = self.content.wallets.showing_wallet();
         let show_app_name = if dual_wallets_panel {
             wallet_panel_opened && !AppConfig::show_wallets_at_dual_panel()
-        } else if Content::is_dual_panel_mode(ui) {
+        } else if Content::is_dual_panel_mode(ui.ctx()) {
             wallet_panel_opened
         } else {
             Content::is_network_panel_open() || wallet_panel_opened
@@ -302,20 +293,13 @@ impl<Platform: PlatformCallbacks> App<Platform> {
             Colors::title(true),
         );
 
-        // Interact with the window title (drag to move window):
-        if !is_fullscreen && title_resp.double_clicked() {
-            ui.ctx().send_viewport_cmd(ViewportCommand::Fullscreen(!is_fullscreen));
-        }
-
-        if !is_fullscreen && title_resp.drag_started_by(egui::PointerButton::Primary) {
-            ui.ctx().send_viewport_cmd(ViewportCommand::StartDrag);
-        }
-
-        ui.allocate_ui_at_rect(title_rect, |ui| {
+        ui.allocate_new_ui(UiBuilder::new().max_rect(title_rect), |ui| {
             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                 // Draw button to close window.
                 View::title_button_small(ui, X, |_| {
-                    Content::show_exit_modal();
+                    if Modal::opened().is_none() || Modal::opened_closeable() {
+                        Content::show_exit_modal();
+                    }
                 });
 
                 // Draw fullscreen button.
@@ -427,16 +411,7 @@ impl<Platform: PlatformCallbacks> eframe::App for App<Platform> {
     }
 
     fn clear_color(&self, _visuals: &egui::Visuals) -> [f32; 4] {
-        if View::is_desktop() {
-            let is_mac_os = OperatingSystem::from_target_os() == OperatingSystem::Mac;
-            if is_mac_os {
-                Colors::fill().to_normalized_gamma_f32()
-            } else {
-                egui::Rgba::TRANSPARENT.to_array()
-            }
-        } else {
-            Colors::fill().to_normalized_gamma_f32()
-        }
+        Colors::fill_lite().to_normalized_gamma_f32()
     }
 }
 

@@ -46,8 +46,8 @@ grin_wallet_util = "5.3.3"
 grin_wallet_controller = "5.3.3"
 
 ## ui
-egui = { version = "0.28.1", default-features = false }
-egui_extras = { version = "0.28.1", features = ["image", "svg"] }
+egui = { version = "0.29.1", default-features = false }
+egui_extras = { version = "0.29.1", features = ["image", "svg"] }
 rust-i18n = "2.3.1"
 
 ## other
@@ -112,21 +112,23 @@ tls-api-openssl = "0.9.0"
 
 [target.'cfg(not(target_os = "android"))'.dependencies]
 env_logger = "0.11.3"
-winit = { version = "0.29.15" }
-eframe = { version = "0.28.1", features = ["wgpu", "glow"] }
+winit = { version = "0.30.5" }
+eframe = { version = "0.29.1", features = ["wgpu", "glow"] }
 arboard = "3.2.0"
 rfd = "0.15.0"
-dark-light = "1.1.1"
 interprocess = { version = "2.2.1", features = ["tokio"] }
 
 [target.'cfg(target_os = "android")'.dependencies]
 android_logger = "0.14.1"
 jni = "0.21.1"
+wgpu = "22.1.0"
 android-activity = { version = "0.6.0", features = ["game-activity"] }
-wgpu = "0.20.1"
-winit = { version = "0.29.15", features = ["android-game-activity"] }
-eframe = { version = "0.28.1", features = ["wgpu", "android-game-activity"] }
+winit = { version = "0.30.5", features = ["android-game-activity"] }
+eframe = { version = "0.29.1", features = ["wgpu", "android-game-activity"] }
 
-#[patch.crates-io]
+[patch.crates-io]
+egui_extras = { git = "https://github.com/emilk/egui", rev = "23728e145ec52bd1193f6f0123973763de4dbb3d" }
+egui = { git = "https://github.com/emilk/egui", rev = "23728e145ec52bd1193f6f0123973763de4dbb3d" }
+eframe = { git = "https://github.com/emilk/egui", rev = "23728e145ec52bd1193f6f0123973763de4dbb3d" }
 ### patch grin store
 #grin_store = { path = "../grin-store" }

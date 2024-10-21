@@ -52,6 +52,11 @@ pub struct Content {
     allowed_modal_ids: Vec<&'static str>
 }
 
+/// Identifier for integrated node warning [`Modal`] on Android.
+const ANDROID_INTEGRATED_NODE_WARNING_MODAL: &'static str = "android_node_warning_modal";
+/// Identifier for crash report [`Modal`].
+const CRASH_REPORT_MODAL: &'static str = "crash_report_modal";
+
 impl Default for Content {
     fn default() -> Self {
         // Exit from eframe only for non-mobile platforms.
@@ -66,8 +71,8 @@ impl Default for Content {
             allowed_modal_ids: vec![
                 Self::EXIT_CONFIRMATION_MODAL,
                 Self::SETTINGS_MODAL,
-                Self::ANDROID_INTEGRATED_NODE_WARNING_MODAL,
-                Self::CRASH_REPORT_MODAL
+                ANDROID_INTEGRATED_NODE_WARNING_MODAL,
+                CRASH_REPORT_MODAL
             ],
         }
     }
@@ -85,8 +90,8 @@ impl ModalContainer for Content {
         match modal.id {
             Self::EXIT_CONFIRMATION_MODAL => self.exit_modal_content(ui, modal, cb),
             Self::SETTINGS_MODAL => self.settings_modal_ui(ui, modal),
-            Self::ANDROID_INTEGRATED_NODE_WARNING_MODAL => self.android_warning_modal_ui(ui, modal),
-            Self::CRASH_REPORT_MODAL => self.crash_report_modal_ui(ui, modal, cb),
+            ANDROID_INTEGRATED_NODE_WARNING_MODAL => self.android_warning_modal_ui(ui, modal),
+            CRASH_REPORT_MODAL => self.crash_report_modal_ui(ui, modal, cb),
             _ => {}
         }
     }
@@ -97,10 +102,6 @@ impl Content {
     pub const EXIT_CONFIRMATION_MODAL: &'static str = "exit_confirmation_modal";
     /// Identifier for wallet opening [`Modal`].
     pub const SETTINGS_MODAL: &'static str = "settings_modal";
-    /// Identifier for integrated node warning [`Modal`] on Android.
-    const ANDROID_INTEGRATED_NODE_WARNING_MODAL: &'static str = "android_node_warning_modal";
-    /// Identifier for crash report [`Modal`].
-    const CRASH_REPORT_MODAL: &'static str = "crash_report_modal";
 
     /// Default width of side panel at application UI.
     pub const SIDE_PANEL_WIDTH: f32 = 400.0;
@@ -110,11 +111,10 @@ impl Content {
     pub const WINDOW_FRAME_MARGIN: f32 = 6.0;
 
     pub fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
-        // Draw modal content for current ui container.
         self.current_modal_ui(ui, cb);
 
-        let dual_panel = Self::is_dual_panel_mode(ui);
-        let (is_panel_open, panel_width) = Self::network_panel_state_width(ui, dual_panel);
+        let dual_panel = Self::is_dual_panel_mode(ui.ctx());
+        let (is_panel_open, panel_width) = network_panel_state_width(ui.ctx(), dual_panel);
 
         // Show network content.
         egui::SidePanel::left("network_panel")
@@ -137,48 +137,26 @@ impl Content {
             });
 
         if self.first_draw {
-            // Show crash report if needed.
+            // Show crash report or integrated node Android warning.
             if Settings::crash_report_path().exists() {
-                Modal::new(Self::CRASH_REPORT_MODAL)
+                Modal::new(CRASH_REPORT_MODAL)
                     .closeable(false)
                     .position(ModalPosition::Center)
                     .title(t!("crash_report"))
                     .show();
-            } else {
-                // Show integrated node warning on Android if needed.
-                if OperatingSystem::from_target_os() == OperatingSystem::Android &&
+            } else if OperatingSystem::from_target_os() == OperatingSystem::Android &&
                     AppConfig::android_integrated_node_warning_needed() {
-                    Modal::new(Self::ANDROID_INTEGRATED_NODE_WARNING_MODAL)
+                    Modal::new(ANDROID_INTEGRATED_NODE_WARNING_MODAL)
                         .title(t!("network.node"))
                         .show();
-                }
             }
             self.first_draw = false;
         }
     }
 
-    /// Get [`NetworkContent`] panel state and width.
-    fn network_panel_state_width(ui: &mut egui::Ui, dual_panel: bool) -> (bool, f32) {
-        let is_panel_open = dual_panel || Self::is_network_panel_open();
-        let panel_width = if dual_panel {
-            Self::SIDE_PANEL_WIDTH + View::get_left_inset()
-        } else {
-            let is_fullscreen = ui.ctx().input(|i| {
-                i.viewport().fullscreen.unwrap_or(false)
-            });
-            View::window_size(ui).0 - if View::is_desktop() && !is_fullscreen &&
-                OperatingSystem::from_target_os() != OperatingSystem::Mac {
-                Self::WINDOW_FRAME_MARGIN * 2.0
-            } else {
-                0.0
-            }
-        };
-        (is_panel_open, panel_width)
-    }
-
     /// Check if ui can show [`NetworkContent`] and [`WalletsContent`] at same time.
-    pub fn is_dual_panel_mode(ui: &egui::Ui) -> bool {
-        let (w, h) = View::window_size(ui);
+    pub fn is_dual_panel_mode(ctx: &egui::Context) -> bool {
+        let (w, h) = View::window_size(ctx);
         // Screen is wide if width is greater than height or just 20% smaller.
         let is_wide_screen = w > h || w + (w * 0.2) >= h;
         // Dual panel mode is available when window is wide and its width is at least 2 times
@@ -260,9 +238,9 @@ impl Content {
     }
 
     /// Handle Back key event.
-    pub fn on_back(&mut self) {
+    pub fn on_back(&mut self, cb: &dyn PlatformCallbacks) {
         if Modal::on_back() {
-            if self.wallets.on_back() {
+            if self.wallets.on_back(cb) {
                 Self::show_exit_modal()
             }
         }
@@ -341,42 +319,40 @@ impl Content {
         let item_rounding = View::item_rounding(index, len, false);
         ui.painter().rect(bg_rect, item_rounding, Colors::fill(), View::item_stroke());
 
-        ui.vertical(|ui| {
-            ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
-                // Draw button to select language.
-                let is_current = if let Some(lang) = AppConfig::locale() {
-                    lang == locale
-                } else {
-                    rust_i18n::locale() == locale
-                };
-                if !is_current {
-                    View::item_button(ui, View::item_rounding(index, len, true), CHECK, None, || {
-                        rust_i18n::set_locale(locale);
-                        AppConfig::save_locale(locale);
-                        modal.close();
-                    });
-                } else {
-                    ui.add_space(14.0);
-                    ui.label(RichText::new(CHECK_FAT).size(20.0).color(Colors::green()));
-                    ui.add_space(14.0);
-                }
+        ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
+            // Draw button to select language.
+            let is_current = if let Some(lang) = AppConfig::locale() {
+                lang == locale
+            } else {
+                rust_i18n::locale() == locale
+            };
+            if !is_current {
+                View::item_button(ui, View::item_rounding(index, len, true), CHECK, None, || {
+                    rust_i18n::set_locale(locale);
+                    AppConfig::save_locale(locale);
+                    modal.close();
+                });
+            } else {
+                ui.add_space(14.0);
+                ui.label(RichText::new(CHECK_FAT).size(20.0).color(Colors::green()));
+                ui.add_space(14.0);
+            }
 
-                let layout_size = ui.available_size();
-                ui.allocate_ui_with_layout(layout_size, Layout::left_to_right(Align::Center), |ui| {
+            let layout_size = ui.available_size();
+            ui.allocate_ui_with_layout(layout_size, Layout::left_to_right(Align::Center), |ui| {
+                ui.add_space(12.0);
+                ui.vertical(|ui| {
+                    // Draw language name.
                     ui.add_space(12.0);
-                    ui.vertical(|ui| {
-                        // Draw language name.
-                        ui.add_space(12.0);
-                        let color = if is_current {
-                            Colors::title(false)
-                        } else {
-                            Colors::gray()
-                        };
-                        ui.label(RichText::new(t!("lang_name", locale = locale))
-                            .size(17.0)
-                            .color(color));
-                        ui.add_space(3.0);
-                    });
+                    let color = if is_current {
+                        Colors::title(false)
+                    } else {
+                        Colors::gray()
+                    };
+                    ui.label(RichText::new(t!("lang_name", locale = locale))
+                        .size(17.0)
+                        .color(color));
+                    ui.add_space(3.0);
                 });
             });
         });
@@ -433,4 +409,23 @@ impl Content {
         });
         ui.add_space(6.0);
     }
+}
+
+/// Get [`NetworkContent`] panel state and width.
+fn network_panel_state_width(ctx: &egui::Context, dual_panel: bool) -> (bool, f32) {
+    let is_panel_open = dual_panel || Content::is_network_panel_open();
+    let panel_width = if dual_panel {
+        Content::SIDE_PANEL_WIDTH + View::get_left_inset()
+    } else {
+        let is_fullscreen = ctx.input(|i| {
+            i.viewport().fullscreen.unwrap_or(false)
+        });
+        View::window_size(ctx).0 - if View::is_desktop() && !is_fullscreen &&
+            OperatingSystem::from_target_os() != OperatingSystem::Mac {
+            Content::WINDOW_FRAME_MARGIN * 2.0
+        } else {
+            0.0
+        }
+    };
+    (is_panel_open, panel_width)
 }

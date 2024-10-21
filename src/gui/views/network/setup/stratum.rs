@@ -189,7 +189,9 @@ impl StratumSetup {
             ui.add_space(8.0);
 
             // Show button to select wallet.
-            View::button(ui, t!("network_settings.choose_wallet"), Colors::button(), || {
+            View::button(ui,
+                         t!("network_settings.choose_wallet"),
+                         Colors::white_or_black(false), || {
                 self.show_wallets_modal();
             });
             ui.add_space(12.0);
@@ -260,7 +262,7 @@ impl StratumSetup {
         ui.add_space(6.0);
 
         let (_, port) = NodeConfig::get_stratum_address();
-        View::button(ui, format!("{} {}", PLUG, port.clone()), Colors::button(), || {
+        View::button(ui, format!("{} {}", PLUG, &port), Colors::white_or_black(false), || {
             // Setup values for modal.
             self.stratum_port_edit = port;
             self.stratum_port_available_edit = self.is_port_available;
@@ -359,7 +361,7 @@ impl StratumSetup {
         ui.add_space(6.0);
 
         let time = NodeConfig::get_stratum_attempt_time();
-        View::button(ui, format!("{} {}", TIMER, time.clone()), Colors::button(), || {
+        View::button(ui, format!("{} {}", TIMER, &time), Colors::white_or_black(false), || {
             // Setup values for modal.
             self.attempt_time_edit = time;
 
@@ -442,7 +444,7 @@ impl StratumSetup {
         ui.add_space(6.0);
 
         let diff = NodeConfig::get_stratum_min_share_diff();
-        View::button(ui, format!("{} {}", BARBELL, diff.clone()), Colors::button(), || {
+        View::button(ui, format!("{} {}", BARBELL, &diff), Colors::white_or_black(false), || {
             // Setup values for modal.
             self.min_share_diff_edit = diff;
 

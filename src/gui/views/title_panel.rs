@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::{Margin, Id, Layout, Align};
+use egui::{Margin, Id, Layout, Align, UiBuilder};
 
 use crate::gui::Colors;
 use crate::gui::views::{Content, View};
-use crate::gui::views::types::{TitleContentType, TitleType};
+use crate::gui::views::types::{LinePosition, TitleContentType, TitleType};
 
 /// Title panel with left/right action buttons and text in the middle.
 pub struct TitlePanel {
@@ -25,8 +25,8 @@ pub struct TitlePanel {
 }
 
 impl TitlePanel {
-    /// Default [`TitlePanel`] content height.
-    pub const DEFAULT_HEIGHT: f32 = 54.0;
+    /// Content height.
+    pub const HEIGHT: f32 = 54.0;
 
     /// Create new title panel with provided identifier.
     pub fn new(id: Id) -> Self {
@@ -43,7 +43,7 @@ impl TitlePanel {
         // Draw title panel.
         egui::TopBottomPanel::top(self.id)
             .resizable(false)
-            .exact_height(Self::DEFAULT_HEIGHT + View::get_top_inset())
+            .exact_height(Self::HEIGHT + View::get_top_inset())
             .frame(egui::Frame {
                 inner_margin:  Margin {
                     left: View::far_left_inset_margin(ui),
@@ -51,7 +51,6 @@ impl TitlePanel {
                     top: View::get_top_inset(),
                     bottom: 0.0,
                 },
-                fill: Colors::yellow(),
                 ..Default::default()
             })
             .show_inside(ui, |ui| {
@@ -68,40 +67,51 @@ impl TitlePanel {
                     match title {
                         TitleType::Single(content) => {
                             let content_rect = {
-                                let mut r = rect;
-                                r.min.x += Self::DEFAULT_HEIGHT;
-                                r.max.x -= Self::DEFAULT_HEIGHT;
+                                let mut r = rect.clone();
+                                r.min.x += Self::HEIGHT;
+                                r.max.x -= Self::HEIGHT;
                                 r
                             };
-                            ui.allocate_ui_at_rect(content_rect, |ui| {
+                            ui.allocate_new_ui(UiBuilder::new().max_rect(content_rect), |ui| {
                                 Self::title_text_content(ui, content);
                             });
                         }
                         TitleType::Dual(first, second) => {
                             let first_rect = {
-                                let mut r = rect;
-                                r.max.x = r.min.x + Content::SIDE_PANEL_WIDTH - Self::DEFAULT_HEIGHT;
-                                r.min.x += Self::DEFAULT_HEIGHT;
+                                let mut r = rect.clone();
+                                r.max.x = r.min.x + Content::SIDE_PANEL_WIDTH - Self::HEIGHT;
+                                r.min.x += Self::HEIGHT;
                                 r
                             };
                             // Draw first title content.
-                            ui.allocate_ui_at_rect(first_rect, |ui| {
+                            ui.allocate_new_ui(UiBuilder::new().max_rect(first_rect), |ui| {
                                 Self::title_text_content(ui, first);
                             });
 
                             let second_rect = {
-                                let mut r = rect;
-                                r.min.x = first_rect.max.x + 2.0 * Self::DEFAULT_HEIGHT;
-                                r.max.x -= Self::DEFAULT_HEIGHT;
+                                let mut r = rect.clone();
+                                r.min.x = first_rect.max.x + 2.0 * Self::HEIGHT;
+                                r.max.x -= Self::HEIGHT;
                                 r
                             };
                             // Draw second title content.
-                            ui.allocate_ui_at_rect(second_rect, |ui| {
+                            ui.allocate_new_ui(UiBuilder::new().max_rect(second_rect), |ui| {
                                 Self::title_text_content(ui, second);
                             });
                         }
                     }
                 });
+
+                // Draw content divider line.
+                let r = {
+                    let mut r = rect.clone();
+                    r.min.x -= View::far_left_inset_margin(ui);
+                    r.max.x += View::far_right_inset_margin(ui);
+                    r
+                };
+                if Content::is_dual_panel_mode(ui.ctx()) {
+                    View::line(ui, LinePosition::BOTTOM, &r, Colors::stroke());
+                }
             });
     }
 
@@ -115,11 +125,11 @@ impl TitlePanel {
                     } else {
                         0.0
                     });
-                    View::ellipsize_text(ui, text, 19.0, Colors::title(true));
+                    View::ellipsize_text(ui, text.to_uppercase(), 19.0, Colors::title(true));
                 }
                 TitleContentType::WithSubTitle(text, subtitle, animate) => {
                     ui.add_space(4.0);
-                    View::ellipsize_text(ui, text, 18.0, Colors::title(true));
+                    View::ellipsize_text(ui, text.to_uppercase(), 18.0, Colors::title(true));
                     ui.add_space(-2.0);
                     View::animate_text(ui, subtitle, 15.0, Colors::text(true), animate)
                 }

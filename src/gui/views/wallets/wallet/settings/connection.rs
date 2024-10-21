@@ -123,7 +123,7 @@ impl ConnectionSettings {
 
             // Show button to add new external node connection.
             let add_node_text = format!("{} {}", PLUS_CIRCLE, t!("wallets.add_node"));
-            View::button(ui, add_node_text, Colors::button(), || {
+            View::button(ui, add_node_text, Colors::white_or_black(false), || {
                 self.ext_conn_modal = ExternalConnectionModal::new(None);
                 Modal::new(ExternalConnectionModal::WALLET_ID)
                     .position(ModalPosition::CenterTop)

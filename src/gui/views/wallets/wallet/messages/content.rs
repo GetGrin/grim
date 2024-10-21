@@ -14,7 +14,7 @@
 
 use std::sync::Arc;
 use std::thread;
-use egui::{Id, Margin, RichText, ScrollArea};
+use egui::{Id, RichText, ScrollArea};
 use egui::scroll_area::ScrollBarVisibility;
 use grin_core::core::amount_to_hr_string;
 use grin_wallet_libwallet::{Error, Slate, SlateState};
@@ -23,11 +23,11 @@ use parking_lot::RwLock;
 use crate::gui::Colors;
 use crate::gui::icons::{BROOM, CLIPBOARD_TEXT, DOWNLOAD_SIMPLE, SCAN, UPLOAD_SIMPLE};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{FilePickButton, Modal, Content, View, CameraScanModal};
+use crate::gui::views::{FilePickButton, Modal, View, CameraScanModal};
 use crate::gui::views::types::{ModalPosition, QrScanResult};
 use crate::gui::views::wallets::wallet::messages::request::MessageRequestModal;
 use crate::gui::views::wallets::wallet::types::{SLATEPACK_MESSAGE_HINT, WalletTab, WalletTabType};
-use crate::gui::views::wallets::wallet::{WalletContent, WalletTransactionModal};
+use crate::gui::views::wallets::wallet::WalletTransactionModal;
 use crate::wallet::types::WalletTransaction;
 use crate::wallet::Wallet;
 
@@ -60,10 +60,8 @@ pub struct WalletMessages {
 
 /// Identifier for amount input [`Modal`] to create invoice or sending request.
 const REQUEST_MODAL: &'static str = "messages_request_modal";
-
 /// Identifier for [`Modal`] modal to show transaction information.
 const TX_INFO_MODAL: &'static str = "messages_tx_info_modal";
-
 /// Identifier for [`Modal`] to scan Slatepack message from QR code.
 const SCAN_QR_MODAL: &'static str = "messages_scan_qr_modal";
 
@@ -73,38 +71,8 @@ impl WalletTab for WalletMessages {
     }
 
     fn ui(&mut self, ui: &mut egui::Ui, wallet: &Wallet, cb: &dyn PlatformCallbacks) {
-        if WalletContent::sync_ui(ui, wallet) {
-            return;
-        }
-
-        // Show modal content for this ui container.
         self.modal_content_ui(ui, wallet, cb);
-
-        egui::CentralPanel::default()
-            .frame(egui::Frame {
-                stroke: View::item_stroke(),
-                fill: Colors::white_or_black(false),
-                inner_margin: Margin {
-                    left: View::far_left_inset_margin(ui) + 4.0,
-                    right: View::get_right_inset() + 4.0,
-                    top: 3.0,
-                    bottom: 4.0,
-                },
-                ..Default::default()
-            })
-            .show_inside(ui, |ui| {
-                ScrollArea::vertical()
-                    .scroll_bar_visibility(ScrollBarVisibility::AlwaysHidden)
-                    .id_source(Id::from("wallet_messages").with(wallet.get_config().id))
-                    .auto_shrink([false; 2])
-                    .show(ui, |ui| {
-                        ui.vertical_centered(|ui| {
-                            View::max_width_ui(ui, Content::SIDE_PANEL_WIDTH * 1.3, |ui| {
-                                self.ui(ui, wallet, cb);
-                            });
-                        });
-                    });
-            });
+        self.messages_ui(ui, wallet, cb);
     }
 }
 
@@ -124,8 +92,8 @@ impl WalletMessages {
         }
     }
 
-    /// Draw manual wallet transaction interaction content.
-    pub fn ui(&mut self,
+    /// Draw messages content.
+    fn messages_ui(&mut self,
               ui: &mut egui::Ui,
               wallet: &Wallet,
               cb: &dyn PlatformCallbacks) {
@@ -136,7 +104,6 @@ impl WalletMessages {
             }
             self.first_draw = false;
         }
-
         ui.add_space(3.0);
 
         // Show creation of request to send or receive funds.
@@ -224,7 +191,10 @@ impl WalletMessages {
             ui.columns(2, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
                     let send_text = format!("{} {}", UPLOAD_SIMPLE, t!("wallets.send"));
-                    View::colored_text_button(ui, send_text, Colors::red(), Colors::button(), || {
+                    View::colored_text_button(ui,
+                                              send_text,
+                                              Colors::red(),
+                                              Colors::white_or_black(false), || {
                         self.show_request_modal(false, cb);
                     });
                 });
@@ -240,7 +210,10 @@ impl WalletMessages {
     /// Draw invoice request creation button.
     fn receive_button_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         let receive_text = format!("{} {}", DOWNLOAD_SIMPLE, t!("wallets.receive"));
-        View::colored_text_button(ui, receive_text, Colors::green(), Colors::button(), || {
+        View::colored_text_button(ui,
+                                  receive_text,
+                                  Colors::green(),
+                                  Colors::white_or_black(false), || {
             self.show_request_modal(true, cb);
         });
     }
@@ -253,7 +226,10 @@ impl WalletMessages {
         } else {
             t!("wallets.send")
         };
-        Modal::new(REQUEST_MODAL).position(ModalPosition::CenterTop).title(title).show();
+        Modal::new(REQUEST_MODAL)
+            .position(ModalPosition::CenterTop)
+            .title(title)
+            .show();
         cb.show_keyboard();
     }
 
@@ -264,7 +240,9 @@ impl WalletMessages {
                           cb: &dyn PlatformCallbacks) {
         // Setup description text.
         if !self.message_error.is_empty() {
-            ui.label(RichText::new(&self.message_error).size(16.0).color(Colors::red()));
+            ui.label(RichText::new(&self.message_error)
+                .size(16.0)
+                .color(Colors::red()));
         } else {
             ui.label(RichText::new(t!("wallets.input_slatepack_desc"))
                 .size(16.0)
@@ -280,7 +258,7 @@ impl WalletMessages {
 
         let scroll_id = Id::from("message_input_scroll").with(wallet.get_config().id);
         ScrollArea::vertical()
-            .id_source(scroll_id)
+            .id_salt(scroll_id)
             .scroll_bar_visibility(ScrollBarVisibility::AlwaysHidden)
             .max_height(128.0)
             .auto_shrink([false; 2])
@@ -386,7 +364,7 @@ impl WalletMessages {
             ui.columns(2, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
                     let scan_text = format!("{} {}", SCAN, t!("scan"));
-                    View::button(ui, scan_text, Colors::button(), || {
+                    View::button(ui, scan_text, Colors::white_or_black(false), || {
                         self.message_edit.clear();
                         self.message_error.clear();
                         self.scan_modal_content = Some(CameraScanModal::default());
@@ -402,7 +380,7 @@ impl WalletMessages {
                 columns[1].vertical_centered_justified(|ui| {
                     // Draw button to paste text from clipboard.
                     let paste = format!("{} {}", CLIPBOARD_TEXT, t!("paste"));
-                    View::button(ui, paste, Colors::button(), || {
+                    View::button(ui, paste, Colors::white_or_black(false), || {
                         let buf = cb.get_string_from_buffer();
                         let previous = self.message_edit.clone();
                         self.message_edit = buf.clone().trim().to_string();
@@ -427,7 +405,7 @@ impl WalletMessages {
         } else {
             // Draw button to clear message input.
             let clear_text = format!("{} {}", BROOM, t!("clear"));
-            View::button(ui, clear_text, Colors::button(), || {
+            View::button(ui, clear_text, Colors::white_or_black(false), || {
                 self.message_edit.clear();
                 self.message_error.clear();
             });

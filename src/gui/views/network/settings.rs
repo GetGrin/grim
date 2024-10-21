@@ -20,7 +20,7 @@ use crate::gui::icons::ARROW_COUNTER_CLOCKWISE;
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, Content, View};
 use crate::gui::views::network::setup::{DandelionSetup, NodeSetup, P2PSetup, PoolSetup, StratumSetup};
-use crate::gui::views::network::types::{NetworkTab, NetworkTabType};
+use crate::gui::views::network::types::{NodeTab, NodeTabType};
 use crate::gui::views::types::{ModalContainer, ModalPosition};
 use crate::node::{Node, NodeConfig};
 
@@ -42,7 +42,7 @@ pub struct NetworkSettings {
 }
 
 /// Identifier for settings reset confirmation [`Modal`].
-pub const RESET_SETTINGS_MODAL: &'static str = "reset_settings";
+pub const RESET_SETTINGS_CONFIRMATION_MODAL: &'static str = "reset_settings_confirmation";
 
 impl Default for NetworkSettings {
     fn default() -> Self {
@@ -53,7 +53,7 @@ impl Default for NetworkSettings {
             pool: PoolSetup::default(),
             dandelion: DandelionSetup::default(),
             modal_ids: vec![
-                RESET_SETTINGS_MODAL
+                RESET_SETTINGS_CONFIRMATION_MODAL
             ]
         }
     }
@@ -69,15 +69,15 @@ impl ModalContainer for NetworkSettings {
                 modal: &Modal,
                 _: &dyn PlatformCallbacks) {
         match modal.id {
-            RESET_SETTINGS_MODAL  => reset_settings_confirmation_modal(ui, modal),
+            RESET_SETTINGS_CONFIRMATION_MODAL => reset_settings_confirmation_modal(ui, modal),
             _ => {}
         }
     }
 }
 
-impl NetworkTab for NetworkSettings {
-    fn get_type(&self) -> NetworkTabType {
-        NetworkTabType::Settings
+impl NodeTab for NetworkSettings {
+    fn get_type(&self) -> NodeTabType {
+        NodeTabType::Settings
     }
 
     fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
@@ -85,7 +85,7 @@ impl NetworkTab for NetworkSettings {
         self.current_modal_ui(ui, cb);
 
         ScrollArea::vertical()
-            .id_source("network_settings")
+            .id_salt("node_settings_scroll")
             .scroll_bar_visibility(ScrollBarVisibility::AlwaysHidden)
             .auto_shrink([false; 2])
             .show(ui, |ui| {
@@ -210,7 +210,7 @@ fn reset_settings_ui(ui: &mut egui::Ui) {
                                   t!("network_settings.reset_settings"));
         View::action_button(ui, button_text, || {
             // Show modal to confirm settings reset.
-            Modal::new(RESET_SETTINGS_MODAL)
+            Modal::new(RESET_SETTINGS_CONFIRMATION_MODAL)
                 .position(ModalPosition::Center)
                 .title(t!("confirmation"))
                 .show();

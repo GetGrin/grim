@@ -202,34 +202,32 @@ impl ConnectionsContent {
         let item_rounding = View::item_rounding(index, len, false);
         ui.painter().rect(bg_rect, item_rounding, Colors::fill(), View::item_stroke());
 
-        ui.vertical(|ui| {
-            ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
-                // Draw provided buttons.
-                buttons_ui(ui);
+        ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
+            // Draw provided buttons.
+            buttons_ui(ui);
 
-                let layout_size = ui.available_size();
-                ui.allocate_ui_with_layout(layout_size, Layout::left_to_right(Align::Center), |ui| {
-                    ui.add_space(6.0);
-                    ui.vertical(|ui| {
-                        // Draw connections URL.
-                        ui.add_space(4.0);
-                        let conn_text = format!("{} {}", GLOBE_SIMPLE, conn.url);
-                        View::ellipsize_text(ui, conn_text, 15.0, Colors::title(false));
-                        ui.add_space(1.0);
+            let layout_size = ui.available_size();
+            ui.allocate_ui_with_layout(layout_size, Layout::left_to_right(Align::Center), |ui| {
+                ui.add_space(6.0);
+                ui.vertical(|ui| {
+                    // Draw connections URL.
+                    ui.add_space(4.0);
+                    let conn_text = format!("{} {}", GLOBE_SIMPLE, conn.url);
+                    View::ellipsize_text(ui, conn_text, 15.0, Colors::title(false));
+                    ui.add_space(1.0);
 
-                        // Setup connection status text.
-                        let status_text = if let Some(available) = conn.available {
-                            if available {
-                                format!("{} {}", CHECK_CIRCLE, t!("network.available"))
-                            } else {
-                                format!("{} {}", X_CIRCLE, t!("network.not_available"))
-                            }
+                    // Setup connection status text.
+                    let status_text = if let Some(available) = conn.available {
+                        if available {
+                            format!("{} {}", CHECK_CIRCLE, t!("network.available"))
                         } else {
-                            format!("{} {}", DOTS_THREE_CIRCLE, t!("network.availability_check"))
-                        };
-                        ui.label(RichText::new(status_text).size(15.0).color(Colors::gray()));
-                        ui.add_space(3.0);
-                    });
+                            format!("{} {}", X_CIRCLE, t!("network.not_available"))
+                        }
+                    } else {
+                        format!("{} {}", DOTS_THREE_CIRCLE, t!("network.availability_check"))
+                    };
+                    ui.label(RichText::new(status_text).size(15.0).color(Colors::gray()));
+                    ui.add_space(3.0);
                 });
             });
         });

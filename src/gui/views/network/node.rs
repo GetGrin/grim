@@ -20,51 +20,28 @@ use crate::gui::Colors;
 use crate::gui::icons::{AT, CUBE, DEVICES, FLOW_ARROW, HANDSHAKE, PACKAGE, SHARE_NETWORK};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Content, View};
-use crate::gui::views::network::NetworkContent;
-use crate::gui::views::network::types::{NetworkTab, NetworkTabType};
+use crate::gui::views::network::types::{NodeTab, NodeTabType};
 use crate::node::{Node, NodeConfig};
 
 /// Integrated node tab content.
 #[derive(Default)]
 pub struct NetworkNode;
 
-impl NetworkTab for NetworkNode {
-    fn get_type(&self) -> NetworkTabType {
-        NetworkTabType::Node
+impl NodeTab for NetworkNode {
+    fn get_type(&self) -> NodeTabType {
+        NodeTabType::Info
     }
 
     fn ui(&mut self, ui: &mut egui::Ui, _: &dyn PlatformCallbacks) {
-        // Show an error content when available.
-        let node_err = Node::get_error();
-        if node_err.is_some() {
-            NetworkContent::node_error_ui(ui, node_err.unwrap());
-            return;
-        }
-
-        // Show message to enable node when it's not running.
-        if !Node::is_running() {
-            NetworkContent::disabled_node_ui(ui);
-            return;
-        }
-
-        // Show loading spinner when stats are not available.
-        let server_stats = Node::get_stats();
-        if server_stats.is_none() || Node::is_restarting() || Node::is_stopping() {
-            NetworkContent::loading_ui(ui, None);
-            return;
-        }
-
         ScrollArea::vertical()
-            .id_source("integrated_node")
+            .id_salt("integrated_node_info_scroll")
             .scroll_bar_visibility(ScrollBarVisibility::AlwaysHidden)
             .auto_shrink([false; 2])
             .show(ui, |ui| {
                 ui.add_space(2.0);
-                ui.vertical_centered(|ui| {
-                    View::max_width_ui(ui, Content::SIDE_PANEL_WIDTH * 1.3, |ui| {
-                        // Show node stats content.
-                        node_stats_ui(ui);
-                    });
+                View::max_width_ui(ui, Content::SIDE_PANEL_WIDTH * 1.3, |ui| {
+                    // Show node stats content.
+                    node_stats_ui(ui);
                 });
             });
     }
@@ -79,32 +56,32 @@ fn node_stats_ui(ui: &mut egui::Ui) {
     View::sub_title(ui, format!("{} {}", FLOW_ARROW, t!("network_node.header")));
     ui.columns(2, |columns| {
         columns[0].vertical_centered(|ui| {
-            View::rounded_box(ui,
-                              stats.header_stats.last_block_h.to_string(),
-                              t!("network_node.hash"),
-                              [true, false, false, false]);
+            View::label_box(ui,
+                            stats.header_stats.last_block_h.to_string(),
+                            t!("network_node.hash"),
+                            [true, false, false, false]);
         });
         columns[1].vertical_centered(|ui| {
-            View::rounded_box(ui,
-                              stats.header_stats.height.to_string(),
-                              t!("network_node.height"),
-                              [false, true, false, false]);
+            View::label_box(ui,
+                            stats.header_stats.height.to_string(),
+                            t!("network_node.height"),
+                            [false, true, false, false]);
         });
     });
     ui.columns(2, |columns| {
         columns[0].vertical_centered(|ui| {
-            View::rounded_box(ui,
-                              stats.header_stats.total_difficulty.to_string(),
-                              t!("network_node.difficulty"),
-                              [false, false, true, false]);
+            View::label_box(ui,
+                            stats.header_stats.total_difficulty.to_string(),
+                            t!("network_node.difficulty"),
+                            [false, false, true, false]);
         });
         columns[1].vertical_centered(|ui| {
             let h_ts = stats.header_stats.latest_timestamp.timestamp();
             let h_time = View::format_time(h_ts);
-            View::rounded_box(ui,
-                              h_time,
-                              t!("network_node.time"),
-                              [false, false, false, true]);
+            View::label_box(ui,
+                            h_time,
+                            t!("network_node.time"),
+                            [false, false, false, true]);
         });
     });
     ui.add_space(5.0);
@@ -113,32 +90,32 @@ fn node_stats_ui(ui: &mut egui::Ui) {
     View::sub_title(ui, format!("{} {}", CUBE, t!("network_node.block")));
     ui.columns(2, |columns| {
         columns[0].vertical_centered(|ui| {
-            View::rounded_box(ui,
-                              stats.chain_stats.last_block_h.to_string(),
-                              t!("network_node.hash"),
-                              [true, false, false, false]);
+            View::label_box(ui,
+                            stats.chain_stats.last_block_h.to_string(),
+                            t!("network_node.hash"),
+                            [true, false, false, false]);
         });
         columns[1].vertical_centered(|ui| {
-            View::rounded_box(ui,
-                              stats.chain_stats.height.to_string(),
-                              t!("network_node.height"),
-                              [false, true, false, false]);
+            View::label_box(ui,
+                            stats.chain_stats.height.to_string(),
+                            t!("network_node.height"),
+                            [false, true, false, false]);
         });
     });
     ui.columns(2, |columns| {
         columns[0].vertical_centered(|ui| {
-            View::rounded_box(ui,
-                              stats.chain_stats.total_difficulty.to_string(),
-                              t!("network_node.difficulty"),
-                              [false, false, true, false]);
+            View::label_box(ui,
+                            stats.chain_stats.total_difficulty.to_string(),
+                            t!("network_node.difficulty"),
+                            [false, false, true, false]);
         });
         columns[1].vertical_centered(|ui| {
             let b_ts = stats.chain_stats.latest_timestamp.timestamp();
             let b_time = View::format_time(b_ts);
-            View::rounded_box(ui,
-                              b_time,
-                              t!("network_node.time"),
-                              [false, false, false, true]);
+            View::label_box(ui,
+                            b_time,
+                            t!("network_node.time"),
+                            [false, false, false, true]);
         });
     });
     ui.add_space(5.0);
@@ -151,10 +128,10 @@ fn node_stats_ui(ui: &mut egui::Ui) {
                 None => "0 (0)".to_string(),
                 Some(tx) => format!("{} ({})", tx.tx_pool_size, tx.tx_pool_kernels)
             };
-            View::rounded_box(ui,
-                              tx_stat,
-                              t!("network_node.main_pool"),
-                              [true, false, false, false]);
+            View::label_box(ui,
+                            tx_stat,
+                            t!("network_node.main_pool"),
+                            [true, false, false, false]);
         });
         columns[1].vertical_centered(|ui| {
             let stem_tx_stat = match &stats.tx_stats {
@@ -163,24 +140,24 @@ fn node_stats_ui(ui: &mut egui::Ui) {
                                      stx.stem_pool_size,
                                      stx.stem_pool_kernels)
             };
-            View::rounded_box(ui,
-                              stem_tx_stat,
-                              t!("network_node.stem_pool"),
-                              [false, true, false, false]);
+            View::label_box(ui,
+                            stem_tx_stat,
+                            t!("network_node.stem_pool"),
+                            [false, true, false, false]);
         });
     });
     ui.columns(2, |columns| {
         columns[0].vertical_centered(|ui| {
-            View::rounded_box(ui,
-                              stats.disk_usage_gb.to_string(),
-                              t!("network_node.size"),
-                              [false, false, true, false]);
+            View::label_box(ui,
+                            stats.disk_usage_gb.to_string(),
+                            t!("network_node.size"),
+                            [false, false, true, false]);
         });
         columns[1].vertical_centered(|ui| {
             let peers_txt = format!("{} ({})",
                                     stats.peer_count,
                                     NodeConfig::get_max_outbound_peers());
-            View::rounded_box(ui, peers_txt, t!("network_node.peers"), [false, false, false, true]);
+            View::label_box(ui, peers_txt, t!("network_node.peers"), [false, false, false, true]);
         });
     });
     ui.add_space(5.0);
@@ -196,23 +173,27 @@ fn node_stats_ui(ui: &mut egui::Ui) {
     }
 }
 
+const PEER_ITEM_HEIGHT: f32 = 77.0;
+
 /// Draw connected peer info item.
 fn peer_item_ui(ui: &mut egui::Ui, peer: &PeerStats, rounding: Rounding) {
     let mut rect = ui.available_rect_before_wrap();
-    rect.set_height(79.0);
-    ui.allocate_ui_at_rect(rect, |ui| {
+    rect.set_height(PEER_ITEM_HEIGHT);
+    ui.allocate_ui(rect.size(), |ui| {
         ui.vertical(|ui| {
             ui.add_space(4.0);
 
             // Draw round background.
-            ui.painter().rect(rect, rounding, Colors::white_or_black(false), View::item_stroke());
+            ui.painter().rect(rect, rounding, Colors::fill_lite(), View::item_stroke());
 
-            // Draw peer address
+            // Draw IP address.
             ui.horizontal(|ui| {
                 ui.add_space(7.0);
-                ui.label(RichText::new(&peer.addr).color(Colors::white_or_black(true)).size(17.0));
+                ui.label(RichText::new(&peer.addr)
+                    .color(Colors::white_or_black(true))
+                    .size(17.0));
             });
-            // Draw peer difficulty and height
+            // Draw difficulty and height.
             ui.horizontal(|ui| {
                 ui.add_space(6.0);
                 let diff_text = format!("{} {} {} {}",
@@ -220,13 +201,17 @@ fn peer_item_ui(ui: &mut egui::Ui, peer: &PeerStats, rounding: Rounding) {
                                         peer.total_difficulty,
                                         AT,
                                         peer.height);
-                ui.label(RichText::new(diff_text).color(Colors::title(false)).size(16.0));
+                ui.label(RichText::new(diff_text)
+                    .color(Colors::title(false))
+                    .size(15.0));
             });
-            // Draw peer user-agent
+            // Draw user-agent.
             ui.horizontal(|ui| {
                 ui.add_space(6.0);
                 let agent_text = format!("{} {}", DEVICES, &peer.user_agent);
-                ui.label(RichText::new(agent_text).color(Colors::gray()).size(16.0));
+                ui.label(RichText::new(agent_text)
+                    .color(Colors::gray())
+                    .size(15.0));
             });
 
             ui.add_space(3.0);

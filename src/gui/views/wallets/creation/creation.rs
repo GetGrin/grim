@@ -20,7 +20,7 @@ use crate::gui::Colors;
 use crate::gui::icons::{CHECK, CLIPBOARD_TEXT, COPY, SCAN};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, Content, View, CameraScanModal};
-use crate::gui::views::types::{ModalContainer, ModalPosition, QrScanResult};
+use crate::gui::views::types::{LinePosition, ModalContainer, ModalPosition, QrScanResult};
 use crate::gui::views::wallets::creation::MnemonicSetup;
 use crate::gui::views::wallets::creation::types::Step;
 use crate::gui::views::wallets::ConnectionSettings;
@@ -112,27 +112,30 @@ impl WalletCreation {
               on_create: impl FnMut(Wallet)) {
         self.current_modal_ui(ui, cb);
 
-        // Show wallet creation step description and confirmation panel.
         egui::TopBottomPanel::bottom("wallet_creation_step_panel")
             .frame(egui::Frame {
-                stroke: View::item_stroke(),
-                fill: Colors::fill_deep(),
                 inner_margin: Margin {
-                    left: View::far_left_inset_margin(ui) + 8.0,
-                    right: View::get_right_inset() + 8.0,
-                    top: 4.0,
-                    bottom: View::get_bottom_inset(),
+                    left: View::far_left_inset_margin(ui) + View::TAB_ITEMS_PADDING,
+                    right: View::get_right_inset() + View::TAB_ITEMS_PADDING,
+                    top: View::TAB_ITEMS_PADDING,
+                    bottom: View::get_bottom_inset() + View::TAB_ITEMS_PADDING,
                 },
+                fill: Colors::fill_deep(),
                 ..Default::default()
             })
             .show_inside(ui, |ui| {
-                ui.vertical_centered(|ui| {
-                    ui.vertical_centered(|ui| {
-                        View::max_width_ui(ui, Content::SIDE_PANEL_WIDTH * 2.0, |ui| {
-                            self.step_control_ui(ui, on_create, cb);
-                        });
-                    });
-
+                // Draw divider line.
+                let rect = {
+                    let mut r = ui.available_rect_before_wrap();
+                    r.min.y -= View::TAB_ITEMS_PADDING;
+                    r.min.x -= View::far_left_inset_margin(ui) + View::TAB_ITEMS_PADDING;
+                    r.max.x += View::get_right_inset() + View::TAB_ITEMS_PADDING;
+                    r
+                };
+                View::line(ui, LinePosition::TOP, &rect, Colors::item_stroke());
+                // Show step control content.
+                View::max_width_ui(ui, Content::SIDE_PANEL_WIDTH * 1.3, |ui| {
+                    self.step_control_ui(ui, on_create, cb);
                 });
             });
 
@@ -149,19 +152,17 @@ impl WalletCreation {
             })
             .show_inside(ui, |ui| {
                 ScrollArea::vertical()
-                    .id_source(Id::from(format!("creation_step_scroll_{}", self.step.name())))
+                    .id_salt(Id::from(format!("creation_step_scroll_{}", self.step.name())))
                     .scroll_bar_visibility(ScrollBarVisibility::AlwaysHidden)
                     .auto_shrink([false; 2])
                     .show(ui, |ui| {
-                        ui.vertical_centered(|ui| {
-                            let max_width = if self.step == Step::SetupConnection {
-                                Content::SIDE_PANEL_WIDTH * 1.3
-                            } else {
-                                Content::SIDE_PANEL_WIDTH * 2.0
-                            };
-                            View::max_width_ui(ui, max_width, |ui| {
-                                self.step_content_ui(ui, cb);
-                            });
+                        let max_width = if self.step == Step::SetupConnection {
+                            Content::SIDE_PANEL_WIDTH * 1.3
+                        } else {
+                            Content::SIDE_PANEL_WIDTH * 2.0
+                        };
+                        View::max_width_ui(ui, max_width, |ui| {
+                            self.step_content_ui(ui, cb);
                         });
                     });
             });
@@ -201,9 +202,8 @@ impl WalletCreation {
             self.mnemonic_setup.mnemonic.mode() == PhraseMode::Generate;
         if (self.mnemonic_setup.mnemonic.valid() && self.creation_error.is_none()) ||
             generate_step {
-            ui.add_space(2.0);
             ui.label(RichText::new(step_text).size(16.0).color(Colors::gray()));
-            ui.add_space(2.0);
+            ui.add_space(6.0);
         } else {
             next = false;
             // Show error text.
@@ -214,39 +214,35 @@ impl WalletCreation {
                     .color(Colors::red()));
                 ui.add_space(10.0);
             } else {
-                ui.add_space(2.0);
                 ui.label(RichText::new(&t!("wallets.not_valid_phrase"))
                     .size(16.0)
                     .color(Colors::red()));
-                ui.add_space(2.0);
+                ui.add_space(4.0);
             };
         }
 
-        // Setup buttons.
+        // Setup spacing between buttons.
+        ui.style_mut().spacing.item_spacing = egui::vec2(8.0, 0.0);
+        // Setup vertical padding inside button.
+        ui.style_mut().spacing.button_padding = egui::vec2(10.0, 7.0);
+
         match step {
             Step::EnterMnemonic => {
-                ui.add_space(4.0);
-
-                // Setup spacing between buttons.
-                ui.spacing_mut().item_spacing = egui::Vec2::new(8.0, 0.0);
-
                 ui.columns(2, |columns| {
                     // Show copy or paste button for mnemonic phrase step.
                     columns[0].vertical_centered_justified(|ui| {
                         match self.mnemonic_setup.mnemonic.mode() {
                             PhraseMode::Generate => {
-                                // Show copy button.
-                                let c_t = format!("{} {}", COPY, t!("copy").to_uppercase());
-                                View::button(ui,
-                                             c_t.to_uppercase(),
-                                             Colors::white_or_black(false), || {
+                                let c_t = format!("{} {}",
+                                                  COPY,
+                                                  t!("copy").to_uppercase());
+                                View::button(ui, c_t, Colors::white_or_black(false), || {
                                     cb.copy_string_to_buffer(self.mnemonic_setup
                                         .mnemonic
                                         .get_phrase());
                                 });
                             }
                             PhraseMode::Import => {
-                                // Show paste button.
                                 let p_t = format!("{} {}",
                                                   CLIPBOARD_TEXT,
                                                   t!("paste").to_uppercase());
@@ -262,7 +258,9 @@ impl WalletCreation {
                         if next {
                             self.next_step_button_ui(ui, on_create);
                         } else {
-                            let scan_text = format!("{} {}", SCAN, t!("scan").to_uppercase());
+                            let scan_text = format!("{} {}",
+                                                    SCAN,
+                                                    t!("scan").to_uppercase());
                             View::button(ui, scan_text, Colors::white_or_black(false), || {
                                 self.scan_modal_content = Some(CameraScanModal::default());
                                 // Show QR code scan modal.
@@ -276,10 +274,8 @@ impl WalletCreation {
                         }
                     });
                 });
-                ui.add_space(4.0);
             }
             Step::ConfirmMnemonic => {
-                ui.add_space(4.0);
                 // Show next step or paste button.
                 if next {
                     self.next_step_button_ui(ui, on_create);
@@ -290,17 +286,14 @@ impl WalletCreation {
                         self.mnemonic_setup.mnemonic.import(&data);
                     });
                 }
-                ui.add_space(4.0);
             }
             Step::SetupConnection => {
                 if next {
-                    ui.add_space(4.0);
                     self.next_step_button_ui(ui, on_create);
-                    ui.add_space(4.0);
+                    ui.add_space(2.0);
                 }
             }
         }
-        ui.add_space(3.0);
     }
 
     /// Draw button to go to next [`Step`].
@@ -311,7 +304,7 @@ impl WalletCreation {
         let (next_text, text_color, bg_color) = if self.step == Step::SetupConnection {
             (format!("{} {}", CHECK, t!("complete")), Colors::title(true), Colors::gold())
         } else {
-            (t!("continue"), Colors::text_button(), Colors::white_or_black(false))
+            (t!("continue"), Colors::green(), Colors::white_or_black(false))
         };
 
         // Show next step button.
@@ -361,7 +354,7 @@ impl WalletCreation {
             Step::ConfirmMnemonic => self.mnemonic_setup.confirm_ui(ui, cb),
             Step::SetupConnection => {
                 // Redraw if node is running.
-                if Node::is_running() && !Content::is_dual_panel_mode(ui) {
+                if Node::is_running() && !Content::is_dual_panel_mode(ui.ctx()) {
                     ui.ctx().request_repaint_after(Node::STATS_UPDATE_DELAY);
                 }
                 self.network_setup.create_ui(ui, cb)

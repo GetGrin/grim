@@ -65,7 +65,7 @@ impl WalletConnectionModal {
             } else {
                 350.0
             })
-            .id_source("integrated_node")
+            .id_salt("connections_scroll")
             .scroll_bar_visibility(ScrollBarVisibility::AlwaysHidden)
             .auto_shrink([true; 2])
             .show(ui, |ui| {
@@ -96,7 +96,7 @@ impl WalletConnectionModal {
                     ui.add_space(6.0);
                     // Show button to add new external node connection.
                     let add_node_text = format!("{} {}", PLUS_CIRCLE, t!("wallets.add_node"));
-                    View::button(ui, add_node_text, Colors::button(), || {
+                    View::button(ui, add_node_text, Colors::white_or_black(false), || {
                         self.ext_conn_content = Some(ExternalConnectionModal::new(None));
                     });
                 });
@@ -137,7 +137,7 @@ impl WalletConnectionModal {
             });
 
         ui.add_space(2.0);
-        View::horizontal_line(ui, Colors::stroke());
+        View::horizontal_line(ui, Colors::item_stroke());
         ui.add_space(6.0);
 
         // Show button to close modal.

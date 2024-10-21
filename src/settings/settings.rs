@@ -13,17 +13,14 @@
 // limitations under the License.
 
 use std::fs::{self, File};
-use std::io;
 use std::io::Write;
 use std::path::PathBuf;
 use std::sync::Arc;
-use egui::os::OperatingSystem;
 use lazy_static::lazy_static;
 use parking_lot::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use grin_config::ConfigError;
-use interprocess::local_socket::{GenericFilePath, GenericNamespaced, Name, NameType, ToFsName, ToNsName};
 
 use crate::node::NodeConfig;
 use crate::settings::AppConfig;
@@ -146,17 +143,6 @@ impl Settings {
         let mut socket_path = Self::base_path(None);
         socket_path.push(Self::SOCKET_NAME);
         socket_path
-    }
-
-    /// Get desktop application socket name from provided path.
-    pub fn socket_name(path: &PathBuf) -> io::Result<Name> {
-        let name = if OperatingSystem::Mac != OperatingSystem::from_target_os() &&
-            GenericNamespaced::is_supported() {
-            Self::SOCKET_NAME.to_ns_name::<GenericNamespaced>()?
-        } else {
-            path.clone().to_fs_name::<GenericFilePath>()?
-        };
-        Ok(name)
     }
 
     /// Get configuration file path from provided name and subdirectory if needed.

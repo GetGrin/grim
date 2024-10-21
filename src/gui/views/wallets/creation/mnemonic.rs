@@ -216,7 +216,7 @@ impl MnemonicSetup {
         };
         if edit {
             ui.add_space(6.0);
-            View::button(ui, PENCIL.to_string(), Colors::button(), || {
+            View::button(ui, PENCIL.to_string(), Colors::white_or_black(false), || {
                 self.word_index_edit = num - 1;
                 self.word_edit = word.text.clone();
                 self.valid_word_edit = word.valid;

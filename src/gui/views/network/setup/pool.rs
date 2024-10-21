@@ -145,7 +145,7 @@ impl PoolSetup {
         ui.add_space(6.0);
 
         let fee = NodeConfig::get_base_fee();
-        View::button(ui, format!("{} {}", HAND_COINS, fee.clone()), Colors::button(), || {
+        View::button(ui, format!("{} {}", HAND_COINS, &fee), Colors::white_or_black(false), || {
             // Setup values for modal.
             self.fee_base_edit = fee;
             // Show fee setup modal.
@@ -195,7 +195,6 @@ impl PoolSetup {
                         modal.close();
                     }
                 };
-
                 ui.columns(2, |columns| {
                     columns[0].vertical_centered_justified(|ui| {
                         View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
@@ -220,9 +219,10 @@ impl PoolSetup {
             .color(Colors::gray())
         );
         ui.add_space(6.0);
-
         let period = NodeConfig::get_reorg_cache_period();
-        View::button(ui, format!("{} {}", CLOCK_COUNTDOWN, period.clone()), Colors::button(), || {
+        View::button(ui,
+                     format!("{} {}", CLOCK_COUNTDOWN, &period),
+                     Colors::white_or_black(false), || {
             // Setup values for modal.
             self.reorg_period_edit = period;
             // Show reorg period setup modal.
@@ -299,7 +299,7 @@ impl PoolSetup {
         ui.add_space(6.0);
 
         let size = NodeConfig::get_max_pool_size();
-        View::button(ui, format!("{} {}", CIRCLES_THREE, size.clone()), Colors::button(), || {
+        View::button(ui, format!("{} {}", CIRCLES_THREE, size), Colors::white_or_black(false), || {
             // Setup values for modal.
             self.pool_size_edit = size;
             // Show pool size setup modal.
@@ -376,7 +376,9 @@ impl PoolSetup {
         ui.add_space(6.0);
 
         let size = NodeConfig::get_max_stempool_size();
-        View::button(ui, format!("{} {}", BEZIER_CURVE, size.clone()), Colors::button(), || {
+        View::button(ui,
+                     format!("{} {}", BEZIER_CURVE, &size),
+                     Colors::white_or_black(false), || {
             // Setup values for modal.
             self.stempool_size_edit = size;
             // Show stempool size setup modal.
@@ -453,7 +455,9 @@ impl PoolSetup {
         ui.add_space(6.0);
 
         let weight = NodeConfig::get_mineable_max_weight();
-        View::button(ui, format!("{} {}", BOUNDING_BOX, weight.clone()), Colors::button(), || {
+        View::button(ui,
+                     format!("{} {}", BOUNDING_BOX, &weight),
+                     Colors::white_or_black(false), || {
             // Setup values for modal.
             self.max_weight_edit = weight;
             // Show total tx weight setup modal.

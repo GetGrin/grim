@@ -62,7 +62,7 @@ impl Default for CommonSettings {
 impl CommonSettings {
     /// Draw common wallet settings content.
     pub fn ui(&mut self, ui: &mut egui::Ui, wallet: &Wallet, cb: &dyn PlatformCallbacks) {
-        // Show modal content for this ui container.
+        // Show modal content for this container.
         self.modal_content_ui(ui, wallet, cb);
 
         ui.vertical_centered(|ui| {
@@ -80,7 +80,7 @@ impl CommonSettings {
 
             // Show wallet name setup.
             let name_text = format!("{} {}", PENCIL, t!("change"));
-            View::button(ui, name_text, Colors::button(), || {
+            View::button(ui, name_text, Colors::white_or_black(false), || {
                 self.name_edit = config.name;
                 // Show wallet name modal.
                 Modal::new(NAME_EDIT_MODAL)
@@ -98,7 +98,7 @@ impl CommonSettings {
 
             // Show wallet password setup.
             let pass_text = format!("{} {}", PASSWORD, t!("change"));
-            View::button(ui, pass_text, Colors::button(), || {
+            View::button(ui, pass_text, Colors::white_or_black(false), || {
                 // Setup modal values.
                 self.first_edit_pass_opening = true;
                 self.old_pass_edit = "".to_string();
@@ -120,7 +120,7 @@ impl CommonSettings {
 
             // Show minimum amount of confirmations value setup.
             let min_conf_text = format!("{} {}", CLOCK_COUNTDOWN, config.min_confirmations);
-            View::button(ui, min_conf_text, Colors::button(), || {
+            View::button(ui, min_conf_text, Colors::white_or_black(false), || {
                 self.min_confirmations_edit = config.min_confirmations.to_string();
                 // Show minimum amount of confirmations value modal.
                 Modal::new(MIN_CONFIRMATIONS_EDIT_MODAL)

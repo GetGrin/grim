@@ -141,7 +141,7 @@ impl DandelionSetup {
         ui.add_space(6.0);
 
         let epoch = NodeConfig::get_dandelion_epoch();
-        View::button(ui, format!("{} {}", WATCH, epoch.clone()), Colors::button(), || {
+        View::button(ui, format!("{} {}", WATCH, &epoch), Colors::white_or_black(false), || {
             // Setup values for modal.
             self.epoch_edit = epoch;
             // Show epoch setup modal.
@@ -218,8 +218,7 @@ impl DandelionSetup {
         ui.add_space(6.0);
 
         let embargo = NodeConfig::get_dandelion_embargo();
-        View::button(ui, format!("{} {}", TIMER, embargo.clone()), Colors::button(), || {
-            // Setup values for modal.
+        View::button(ui, format!("{} {}", TIMER, &embargo), Colors::white_or_black(false), || {
             self.embargo_edit = embargo;
             // Show embargo setup modal.
             Modal::new(EMBARGO_MODAL)
@@ -294,10 +293,10 @@ impl DandelionSetup {
         );
         ui.add_space(6.0);
 
-        let agg = NodeConfig::get_dandelion_aggregation();
-        View::button(ui, format!("{} {}", CLOCK_COUNTDOWN, agg.clone()), Colors::button(), || {
+        let ag = NodeConfig::get_dandelion_aggregation();
+        View::button(ui, format!("{} {}", CLOCK_COUNTDOWN, &ag), Colors::white_or_black(false), || {
             // Setup values for modal.
-            self.aggregation_edit = agg;
+            self.aggregation_edit = ag;
             // Show aggregation setup modal.
             Modal::new(AGGREGATION_MODAL)
                 .position(ModalPosition::CenterTop)
@@ -372,7 +371,7 @@ impl DandelionSetup {
         ui.add_space(6.0);
 
         let stem_prob = NodeConfig::get_stem_probability();
-        View::button(ui, format!("{}%", stem_prob.clone()), Colors::button(), || {
+        View::button(ui, format!("{}%", &stem_prob), Colors::white_or_black(false), || {
             // Setup values for modal.
             self.stem_prob_edit = stem_prob;
             // Show stem probability setup modal.

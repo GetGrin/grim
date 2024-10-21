@@ -46,6 +46,9 @@ const FILL_DARK: Color32 = Color32::from_gray(24);
 const FILL_DEEP: Color32 = Color32::from_gray(238);
 const FILL_DEEP_DARK: Color32 = Color32::from_gray(18);
 
+const FILL_LITE: Color32 = Color32::from_gray(249);
+const FILL_LITE_DARK: Color32 = Color32::from_gray(16);
+
 const TEXT: Color32 = Color32::from_gray(80);
 const TEXT_DARK: Color32 = Color32::from_gray(185);
 
@@ -57,9 +60,6 @@ const TEXT_BUTTON_DARK: Color32 = Color32::from_gray(195);
 
 const TITLE: Color32 = Color32::from_gray(60);
 const TITLE_DARK: Color32 = Color32::from_gray(205);
-
-const BUTTON: Color32 = Color32::from_gray(249);
-const BUTTON_DARK: Color32 = Color32::from_gray(16);
 
 const GRAY: Color32 = Color32::from_gray(120);
 const GRAY_DARK: Color32 = Color32::from_gray(145);
@@ -167,6 +167,14 @@ impl Colors {
         }
     }
 
+    pub fn fill_lite() -> Color32 {
+        if use_dark() {
+            FILL_LITE_DARK
+        } else {
+            FILL_LITE
+        }
+    }
+
     pub fn checkbox() -> Color32 {
         if use_dark() {
             CHECKBOX_DARK
@@ -196,14 +204,6 @@ impl Colors {
             TITLE_DARK
         } else {
             TITLE
-        }
-    }
-
-    pub fn button() -> Color32 {
-        if use_dark() {
-            BUTTON_DARK
-        } else {
-            BUTTON
         }
     }
 

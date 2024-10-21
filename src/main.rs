@@ -108,20 +108,10 @@ fn panic_info_message<'pi>(panic_info: &'pi std::panic::PanicHookInfo<'_>) -> &'
 #[cfg(not(target_os = "android"))]
 fn start_desktop_gui(platform: grim::gui::platform::Desktop) {
     use grim::AppConfig;
-    use dark_light::Mode;
-
-    // Setup system theme if not set.
-    if let None = AppConfig::dark_theme() {
-        let dark = match dark_light::detect() {
-            Mode::Dark => true,
-            Mode::Light => false,
-            Mode::Default => false
-        };
-        AppConfig::set_dark_theme(dark);
-    }
-
+    let os = egui::os::OperatingSystem::from_target_os();
     let (width, height) = AppConfig::window_size();
     let mut viewport = egui::ViewportBuilder::default()
+
         .with_min_inner_size([AppConfig::MIN_WIDTH, AppConfig::MIN_HEIGHT])
         .with_inner_size([width, height]);
 
@@ -134,10 +124,10 @@ fn start_desktop_gui(platform: grim::gui::platform::Desktop) {
         viewport = viewport.with_position(egui::pos2(x, y));
     }
     // Setup window decorations.
-    let is_mac = egui::os::OperatingSystem::from_target_os() == egui::os::OperatingSystem::Mac;
+    let is_mac = os == egui::os::OperatingSystem::Mac;
     viewport = viewport
-        .with_window_level(egui::WindowLevel::Normal)
         .with_fullsize_content_view(true)
+        .with_window_level(egui::WindowLevel::Normal)
         .with_title_shown(false)
         .with_titlebar_buttons_shown(false)
         .with_titlebar_shown(false)
@@ -148,9 +138,9 @@ fn start_desktop_gui(platform: grim::gui::platform::Desktop) {
         viewport,
         ..Default::default()
     };
-    // Use Glow renderer for Windows.
-    let win = egui::os::OperatingSystem::from_target_os() == egui::os::OperatingSystem::Windows;
-    options.renderer = if win {
+    // Use Glow renderer for Windows and Mac.
+    let is_win = os == egui::os::OperatingSystem::Windows;
+    options.renderer = if is_win || is_mac {
         eframe::Renderer::Glow
     } else {
         eframe::Renderer::Wgpu
@@ -161,7 +151,7 @@ fn start_desktop_gui(platform: grim::gui::platform::Desktop) {
     match grim::start(options.clone(), grim::app_creator(app)) {
         Ok(_) => {}
         Err(e) => {
-            if win {
+            if is_win || is_mac {
                 panic!("{}", e);
             }
             // Start with another renderer on error.
@@ -194,7 +184,7 @@ fn is_app_running(data: &Option<String>) -> bool {
             };
 
             let socket_path = grim::Settings::socket_path();
-            let name = grim::Settings::socket_name(&socket_path)?;
+            let name = socket_name(&socket_path)?;
 
             // Connect to running application socket.
             let conn = Stream::connect(name).await?;
@@ -250,7 +240,7 @@ fn start_app_socket(platform: grim::gui::platform::Desktop) {
                 if socket_path.exists() {
                     let _ = std::fs::remove_file(&socket_path);
                 }
-                let name = grim::Settings::socket_name(&socket_path)?;
+                let name = socket_name(&socket_path)?;
 
                 // Create listener.
                 let opts = ListenerOptions::new().name(name);
@@ -282,4 +272,18 @@ fn start_app_socket(platform: grim::gui::platform::Desktop) {
                 }
             });
     });
+}
+
+/// Get application socket name from provided path.
+#[allow(dead_code)]
+#[cfg(not(target_os = "android"))]
+fn socket_name(path: &std::path::PathBuf) -> std::io::Result<interprocess::local_socket::Name> {
+    use interprocess::local_socket::{NameType, ToFsName, ToNsName};
+    let name = if egui::os::OperatingSystem::Mac != egui::os::OperatingSystem::from_target_os() &&
+        interprocess::local_socket::GenericNamespaced::is_supported() {
+        grim::Settings::SOCKET_NAME.to_ns_name::<interprocess::local_socket::GenericNamespaced>()?
+    } else {
+        path.clone().to_fs_name::<interprocess::local_socket::GenericFilePath>()?
+    };
+    Ok(name)
 }

@@ -16,7 +16,7 @@
 extern crate rust_i18n;
 
 use eframe::NativeOptions;
-use egui::{Context, Stroke};
+use egui::{Context, Stroke, Theme};
 use lazy_static::lazy_static;
 use std::sync::Arc;
 use parking_lot::RwLock;
@@ -77,6 +77,7 @@ fn android_main(app: AndroidApp) {
     options.wgpu_options.device_descriptor = std::sync::Arc::new(|_| {
         let base_limits = wgpu::Limits::downlevel_webgl2_defaults();
         wgpu::DeviceDescriptor {
+            memory_hints: wgpu::MemoryHints::default(),
             label: Some("egui wgpu device"),
             required_features: wgpu::Features::default(),
             required_limits: wgpu::Limits {
@@ -102,31 +103,22 @@ fn use_dark_theme(platform: &gui::platform::Android) -> bool {
 }
 
 /// [`App`] setup for [`eframe`].
-pub fn app_creator<T: 'static>(app: App<T>) -> eframe::AppCreator
+pub fn app_creator<T: 'static>(app: App<T>) -> eframe::AppCreator<'static>
     where App<T>: eframe::App, T: PlatformCallbacks {
     Box::new(|cc| {
+        setup_fonts(&cc.egui_ctx);
         // Setup images support.
         egui_extras::install_image_loaders(&cc.egui_ctx);
-        // Setup visuals.
-        setup_visuals(&cc.egui_ctx);
-        // Setup fonts.
-        setup_fonts(&cc.egui_ctx);
-        // Return app instance.
         Ok(Box::new(app))
     })
 }
 
 /// Entry point to start ui with [`eframe`].
-pub fn start(mut options: NativeOptions, app_creator: eframe::AppCreator) -> eframe::Result<()> {
-    options.default_theme = if AppConfig::dark_theme().unwrap_or(false) {
-        eframe::Theme::Dark
-    } else {
-        eframe::Theme::Light
-    };
+pub fn start(options: NativeOptions, app_creator: eframe::AppCreator) -> eframe::Result<()> {
     // Setup translations.
     setup_i18n();
     // Start integrated node if needed.
-    if Settings::app_config_to_read().auto_start_node {
+    if AppConfig::autostart_node() {
         Node::start();
     }
     // Launch graphical interface.
@@ -135,6 +127,10 @@ pub fn start(mut options: NativeOptions, app_creator: eframe::AppCreator) -> efr
 
 /// Setup application [`egui::Style`] and [`egui::Visuals`].
 pub fn setup_visuals(ctx: &Context) {
+    let use_dark = AppConfig::dark_theme().unwrap_or_else(|| {
+        ctx.system_theme().unwrap_or(Theme::Dark) == Theme::Dark
+    });
+
     let mut style = (*ctx.style()).clone();
     // Setup selection.
     style.interaction.selectable_labels = false;
@@ -155,7 +151,6 @@ pub fn setup_visuals(ctx: &Context) {
     ctx.set_style(style);
 
     // Setup visuals based on app color theme.
-    let use_dark = AppConfig::dark_theme().unwrap_or(false);
     let mut visuals = if use_dark {
         egui::Visuals::dark()
     } else {
@@ -191,9 +186,9 @@ pub fn setup_fonts(ctx: &Context) {
             "../fonts/phosphor.ttf"
         )).tweak(egui::FontTweak {
             scale: 1.0,
-            y_offset_factor: -0.30,
+            y_offset_factor: -0.20,
             y_offset: 0.0,
-            baseline_offset_factor: 0.50,
+            baseline_offset_factor: 0.16,
         }),
     );
     fonts

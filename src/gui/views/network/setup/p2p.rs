@@ -246,7 +246,9 @@ impl P2PSetup {
         ui.add_space(6.0);
 
         let port = NodeConfig::get_p2p_port();
-        View::button(ui, format!("{} {}", PLUG, port.clone()), Colors::button(), || {
+        View::button(ui,
+                     format!("{} {}", PLUG, &port),
+                     Colors::white_or_black(false), || {
             // Setup values for modal.
             self.port_edit = port;
             self.port_available_edit = self.is_port_available;
@@ -306,11 +308,9 @@ impl P2PSetup {
                     // Save port at config if it's available.
                     if available {
                         NodeConfig::save_p2p_port(self.port_edit.parse::<u16>().unwrap());
-
                         if Node::is_running() {
                             Node::restart();
                         }
-
                         self.is_port_available = true;
                         cb.hide_keyboard();
                         modal.close();
@@ -371,9 +371,7 @@ impl P2PSetup {
                     .size(16.0)
                     .color(Colors::inactive_text()));
             }
-            if !peers.is_empty() {
-                ui.add_space(12.0);
-            }
+            ui.add_space(12.0);
 
             let add_text = if peer_type == &PeerType::CustomSeed {
                 format!("{} {}", PLUS_CIRCLE, t!("network_settings.add_seed"))
@@ -381,7 +379,7 @@ impl P2PSetup {
                 format!("{} {}", PLUS_CIRCLE, t!("network_settings.add_peer"))
 
             };
-            View::button(ui, add_text, Colors::button(), || {
+            View::button(ui, add_text, Colors::white_or_black(false), || {
                 // Setup values for modal.
                 self.is_correct_address_edit = true;
                 self.peer_edit = "".to_string();
@@ -508,7 +506,9 @@ impl P2PSetup {
         ui.add_space(6.0);
 
         let ban_window = NodeConfig::get_p2p_ban_window();
-        View::button(ui, format!("{} {}", PROHIBIT_INSET, ban_window.clone()), Colors::button(), || {
+        View::button(ui,
+                     format!("{} {}", PROHIBIT_INSET, &ban_window),
+                     Colors::white_or_black(false), || {
             // Setup values for modal.
             self.ban_window_edit = ban_window;
             // Show ban window period setup modal.
@@ -590,8 +590,9 @@ impl P2PSetup {
         ui.add_space(6.0);
 
         let max_inbound = NodeConfig::get_max_inbound_peers();
-        let button_text = format!("{} {}", ARROW_FAT_LINES_DOWN, max_inbound.clone());
-        View::button(ui, button_text, Colors::button(), || {
+        View::button(ui,
+                     format!("{} {}", ARROW_FAT_LINES_DOWN, &max_inbound),
+                     Colors::white_or_black(false), || {
             // Setup values for modal.
             self.max_inbound_count = max_inbound;
             // Show maximum number of inbound peers setup modal.
@@ -666,10 +667,10 @@ impl P2PSetup {
             .color(Colors::gray())
         );
         ui.add_space(6.0);
-
         let max_outbound = NodeConfig::get_max_outbound_peers();
-        let button_text = format!("{} {}", ARROW_FAT_LINES_UP, max_outbound.clone());
-        View::button(ui, button_text, Colors::button(), || {
+        View::button(ui,
+                     format!("{} {}", ARROW_FAT_LINES_UP, &max_outbound),
+                     Colors::white_or_black(false), || {
             // Setup values for modal.
             self.max_outbound_count = max_outbound;
             // Show maximum number of outbound peers setup modal.
@@ -740,9 +741,10 @@ impl P2PSetup {
     /// Draw content to reset peers data.
     fn reset_peers_ui(&mut self, ui: &mut egui::Ui) {
         ui.add_space(4.0);
-
-        let button_text = format!("{} {}", TRASH, t!("network_settings.reset_peers"));
-        View::colored_text_button(ui, button_text, Colors::red(), Colors::button(), || {
+        View::colored_text_button(ui,
+                                  format!("{} {}", TRASH, t!("network_settings.reset_peers")),
+                                  Colors::red(),
+                                  Colors::white_or_black(false), || {
             Node::reset_peers(false);
             self.peers_reset = true;
         });

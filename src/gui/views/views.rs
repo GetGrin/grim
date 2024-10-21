@@ -17,8 +17,8 @@ use std::sync::Arc;
 use parking_lot::RwLock;
 use lazy_static::lazy_static;
 
-use egui::{Align, Button, CursorIcon, Layout, lerp, PointerState, Rect, Response, Rgba, RichText, Sense, SizeHint, Spinner, TextBuffer, TextStyle, TextureHandle, TextureOptions, Widget};
-use egui::epaint::{Color32, FontId, RectShape, Rounding, Stroke};
+use egui::{Align, Button, CursorIcon, Layout, lerp, PointerState, Rect, Response, Rgba, RichText, Sense, SizeHint, Spinner, TextBuffer, TextStyle, TextureHandle, TextureOptions, Widget, UiBuilder};
+use egui::epaint::{Color32, FontId, PathShape, PathStroke, RectShape, Rounding, Stroke};
 use egui::epaint::text::TextWrapping;
 use egui::load::SizedTexture;
 use egui::os::OperatingSystem;
@@ -30,7 +30,7 @@ use crate::AppConfig;
 use crate::gui::Colors;
 use crate::gui::icons::{CHECK_SQUARE, CLIPBOARD_TEXT, COPY, EYE, EYE_SLASH, SCAN, SQUARE};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::types::TextEditOptions;
+use crate::gui::views::types::{LinePosition, TextEditOptions};
 
 pub struct View;
 
@@ -78,14 +78,16 @@ impl View {
         rect.set_width(width);
 
         // Draw content.
-        ui.allocate_ui(rect.size(), |ui| {
-            (add_content)(ui);
+        ui.vertical_centered(|ui| {
+            ui.allocate_ui(rect.size(), |ui| {
+                (add_content)(ui);
+            });
         });
     }
 
     /// Get width and height of app window.
-    pub fn window_size(ui: &egui::Ui) -> (f32, f32) {
-        let rect = ui.ctx().screen_rect();
+    pub fn window_size(ctx: &egui::Context) -> (f32, f32) {
+        let rect = ctx.screen_rect();
         (rect.width(), rect.height())
     }
 
@@ -108,7 +110,7 @@ impl View {
     /// Calculate margin for far left view based on display insets (cutouts).
     pub fn far_right_inset_margin(ui: &mut egui::Ui) -> f32 {
         let container_width = ui.available_rect_before_wrap().max.x as i32;
-        let window_size = Self::window_size(ui);
+        let window_size = Self::window_size(ui.ctx());
         let display_width = window_size.0 as i32;
         // Means end of the screen.
         if container_width == display_width {
@@ -235,7 +237,7 @@ impl View {
                 ui.style_mut().visuals.widgets.active.expansion = 0.0;
                 // Setup fill colors.
                 ui.visuals_mut().widgets.inactive.weak_bg_fill = Colors::white_or_black(false);
-                ui.visuals_mut().widgets.hovered.weak_bg_fill = Colors::button();
+                ui.visuals_mut().widgets.hovered.weak_bg_fill = Colors::fill_lite();
                 ui.visuals_mut().widgets.active.weak_bg_fill = Colors::fill();
                 // Setup stroke colors.
                 ui.visuals_mut().widgets.inactive.bg_stroke = Self::default_stroke();
@@ -325,7 +327,7 @@ impl View {
                        action: impl FnOnce()) {
         // Setup button size.
         let mut rect = ui.available_rect_before_wrap();
-        rect.set_width(32.0);
+        rect.set_width(42.0);
         let button_size = rect.size();
 
         ui.scope(|ui| {
@@ -336,12 +338,12 @@ impl View {
             ui.style_mut().visuals.widgets.active.expansion = 0.0;
             // Setup fill colors.
             ui.visuals_mut().widgets.inactive.weak_bg_fill = Colors::white_or_black(false);
-            ui.visuals_mut().widgets.hovered.weak_bg_fill = Colors::button();
+            ui.visuals_mut().widgets.hovered.weak_bg_fill = Colors::fill_lite();
             ui.visuals_mut().widgets.active.weak_bg_fill = Colors::fill();
-            // Setup stroke colors.
-            ui.visuals_mut().widgets.inactive.bg_stroke = Self::default_stroke();
-            ui.visuals_mut().widgets.hovered.bg_stroke = Self::hover_stroke();
-            ui.visuals_mut().widgets.active.bg_stroke = Self::item_stroke();
+            // Disable strokes.
+            ui.visuals_mut().widgets.inactive.bg_stroke = Stroke::NONE;
+            ui.visuals_mut().widgets.hovered.bg_stroke = Stroke::NONE;
+            ui.visuals_mut().widgets.active.bg_stroke = Stroke::NONE;
 
             // Setup button text color.
             let text_color = if let Some(c) = color { c } else { Colors::item_button() };
@@ -353,9 +355,18 @@ impl View {
                 .ui(ui)
                 .on_hover_cursor(CursorIcon::PointingHand);
             br.surrender_focus();
-            if Self::touched(ui, br) {
+            if Self::touched(ui, br.clone()) {
                 (action)();
             }
+
+            // Draw stroke.
+            let r = {
+                let mut r = ui.available_rect_before_wrap();
+                r.min = br.rect.min;
+                r.min.x += 0.5;
+                r
+            };
+            Self::line(ui, LinePosition::LEFT, &r, Colors::item_stroke());
         });
     }
 
@@ -529,28 +540,20 @@ impl View {
     /// where is r = (top_left, top_right, bottom_left, bottom_right).
     /// | VALUE |
     /// | label |
-    pub fn rounded_box(ui: &mut egui::Ui, value: String, label: String, r: [bool; 4]) {
+    pub fn label_box(ui: &mut egui::Ui, text: String, label: String, r: [bool; 4]) {
         let rect = ui.available_rect_before_wrap();
 
         // Create background shape.
-        let mut bg_shape = RectShape {
-            rect,
-            rounding: Rounding {
-                nw: if r[0] { 8.0 } else { 0.0 },
-                ne: if r[1] { 8.0 } else { 0.0 },
-                sw: if r[2] { 8.0 } else { 0.0 },
-                se: if r[3] { 8.0 } else { 0.0 },
-            },
-            fill: Colors::TRANSPARENT,
-            stroke: Self::item_stroke(),
-            blur_width: 0.0,
-            fill_texture_id: Default::default(),
-            uv: Rect::ZERO
-        };
+        let mut bg_shape = RectShape::new(rect, Rounding {
+            nw: if r[0] { 8.0 } else { 0.0 },
+            ne: if r[1] { 8.0 } else { 0.0 },
+            sw: if r[2] { 8.0 } else { 0.0 },
+            se: if r[3] { 8.0 } else { 0.0 },
+        }, Colors::fill_lite(), Self::item_stroke());
         let bg_idx = ui.painter().add(bg_shape);
 
         // Draw box content.
-        let content_resp = ui.allocate_ui_at_rect(rect, |ui| {
+        let content_resp = ui.allocate_new_ui(UiBuilder::new().max_rect(rect), |ui| {
             ui.vertical_centered_justified(|ui| {
                 ui.add_space(4.0);
                 ui.scope(|ui| {
@@ -558,7 +561,7 @@ impl View {
                     ui.style_mut().spacing.item_spacing.y = -3.0;
 
                     // Draw box value.
-                    let mut job = LayoutJob::single_section(value, TextFormat {
+                    let mut job = LayoutJob::single_section(text, TextFormat {
                         font_id: FontId::proportional(17.0),
                         color: Colors::white_or_black(true),
                         ..Default::default()
@@ -578,7 +581,7 @@ impl View {
             });
         }).response;
 
-        // Setup background shape to be painted behind box content.
+        // Setup background shape size.
         bg_shape.rect = content_resp.rect;
         ui.painter().set(bg_idx, bg_shape);
     }
@@ -590,7 +593,7 @@ impl View {
             let side_margin = 28.0;
             rect.min += egui::emath::vec2(side_margin, ui.available_height() / 2.0 - height / 2.0);
             rect.max -= egui::emath::vec2(side_margin, 0.0);
-            ui.allocate_ui_at_rect(rect, |ui| {
+            ui.allocate_new_ui(UiBuilder::new().max_rect(rect), |ui| {
                 (content)(ui);
             });
         });
@@ -653,6 +656,47 @@ impl View {
                       Stroke { width: 1.0, color });
     }
 
+    /// Draw line for panel content.
+    pub fn line(ui: &mut egui::Ui, pos: LinePosition, rect: &Rect, color: Color32) {
+        let points = match pos {
+            LinePosition::RIGHT => {
+                vec![{
+                         let mut r = rect.clone();
+                         r.min.x = r.max.x;
+                         r.min
+                }, rect.max]
+            }
+            LinePosition::BOTTOM => {
+                vec![{
+                        let mut r = rect.clone();
+                        r.min.y = r.max.y;
+                        r.min
+                }, rect.max]
+            }
+            LinePosition::LEFT => {
+                vec![rect.min, {
+                        let mut r = rect.clone();
+                        r.max.x = r.min.x;
+                        r.max
+                }]
+            }
+            LinePosition::TOP => {
+                vec![rect.min, {
+                        let mut r = rect.clone();
+                        r.max.y = r.min.y;
+                        r.max
+                }]
+            }
+        };
+        let stroke = PathShape {
+            points,
+            closed: false,
+            fill: Default::default(),
+            stroke: PathStroke::new(1.0, color),
+        };
+        ui.painter().add(stroke);
+    }
+
     /// Draw SVG image from provided data with optional provided size.
     pub fn svg_image(ui: &mut egui::Ui,
                      name: &str,
@@ -696,6 +740,19 @@ impl View {
             .size(16.0)
             .color(Colors::title(false))
         );
+    }
+
+    /// Draw semi-transparent cover at specified area.
+    pub fn content_cover_ui(ui: &mut egui::Ui,
+                            rect: Rect,
+                            id: impl std::hash::Hash,
+                            mut on_click: impl FnMut()) {
+        let resp = ui.interact(rect, egui::Id::new(id), Sense::click_and_drag());
+        if resp.clicked() || resp.dragged() {
+            on_click();
+        }
+        let shape = RectShape::filled(resp.rect, Rounding::ZERO, Colors::semi_transparent());
+        ui.painter().add(shape);
     }
 
     /// Get top display inset (cutout) size.

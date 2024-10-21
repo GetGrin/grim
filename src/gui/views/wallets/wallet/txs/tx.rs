@@ -53,7 +53,7 @@ pub struct WalletTransactionModal {
     qr_code_content: Option<QrCodeContent>,
 
     /// QR code scanner content.
-    qr_scan_content: Option<CameraContent>,
+    scan_qr_content: Option<CameraContent>,
 
     /// Button to parse picked file content.
     file_pick_button: FilePickButton,
@@ -93,7 +93,7 @@ impl WalletTransactionModal {
             finalizing: false,
             final_result: Arc::new(RwLock::new(None)),
             qr_code_content: None,
-            qr_scan_content: None,
+            scan_qr_content: None,
             file_pick_button: FilePickButton::default(),
         }
     }
@@ -122,78 +122,9 @@ impl WalletTransactionModal {
         }
         let tx = txs.get(0).unwrap();
 
-        if self.qr_code_content.is_none() && self.qr_scan_content.is_none() {
-            ui.add_space(6.0);
-
-            let r = View::item_rounding(0, 2, false);
-            let mut rect = ui.available_rect_before_wrap();
-            rect.set_height(WalletTransactions::TX_ITEM_HEIGHT);
-            // Show transaction amount status and time.
-            WalletTransactions::tx_item_ui(ui, tx, rect, r, &data, |ui| {
-                if self.finalizing {
-                    return;
-                }
-                // Show block height or buttons.
-                if let Some(h) = tx.height {
-                    if h != 0 {
-                        ui.add_space(6.0);
-                        let height = format!("{} {}", CUBE, h.to_string());
-                        ui.with_layout(Layout::bottom_up(Align::Max), |ui| {
-                            ui.add_space(3.0);
-                            ui.label(RichText::new(height)
-                                .size(15.0)
-                                .color(Colors::text(false)));
-                        });
-                    }
-                    return;
-                }
-
-                let wallet_loaded = wallet.foreign_api_port().is_some();
-
-                // Draw button to show transaction finalization or transaction info.
-                if wallet_loaded && tx.can_finalize {
-                    let (icon, color) = if self.show_finalization {
-                        (FILE_TEXT, None)
-                    } else {
-                        (CHECK, Some(Colors::green()))
-                    };
-                    let mut r = r.clone();
-                    r.nw = 0.0;
-                    r.sw = 0.0;
-                    View::item_button(ui, r, icon, color, || {
-                        cb.hide_keyboard();
-                        if self.show_finalization {
-                            self.show_finalization = false;
-                            return;
-                        }
-                        self.show_finalization = true;
-                    });
-                }
-
-                // Draw button to cancel transaction.
-                if wallet_loaded && tx.can_cancel() {
-                    View::item_button(ui, Rounding::default(), PROHIBIT, Some(Colors::red()), || {
-                        cb.hide_keyboard();
-                        wallet.cancel(tx.data.id);
-                    });
-                }
-            });
-
-            // Show identifier.
-            if let Some(id) = tx.data.tx_slate_id {
-                let label = format!("{} {}", HASH_STRAIGHT, t!("id"));
-                Self::info_item_ui(ui, id.to_string(), label, true, cb);
-            }
-            // Show kernel.
-            if let Some(kernel) = tx.data.kernel_excess {
-                let label = format!("{} {}", FILE_ARCHIVE, t!("kernel"));
-                Self::info_item_ui(ui, kernel.0.to_hex(), label, true, cb);
-            }
-            // Show receiver address.
-            if let Some(rec) = tx.receiver() {
-                let label = format!("{} {}", CUBE, t!("network_mining.address"));
-                Self::info_item_ui(ui, rec.to_string(), label, true, cb);
-            }
+        // Show transaction information.
+        if self.qr_code_content.is_none() && self.scan_qr_content.is_none() {
+            self.info_ui(ui, tx, wallet, cb);
         }
 
         // Show Slatepack message interaction.
@@ -220,21 +151,21 @@ impl WalletTransactionModal {
                         });
                     });
                 });
-            } else if self.qr_scan_content.is_some() {
+            } else if self.scan_qr_content.is_some() {
                 ui.add_space(8.0);
                 // Show buttons to close modal or scanner.
                 ui.columns(2, |cols| {
                     cols[0].vertical_centered_justified(|ui| {
                         View::button(ui, t!("close"), Colors::white_or_black(false), || {
                             cb.stop_camera();
-                            self.qr_scan_content = None;
+                            self.scan_qr_content = None;
                             modal.close();
                         });
                     });
                     cols[1].vertical_centered_justified(|ui| {
                         View::button(ui, t!("back"), Colors::white_or_black(false), || {
                             cb.stop_camera();
-                            self.qr_scan_content = None;
+                            self.scan_qr_content = None;
                             modal.enable_closing();
                         });
                     });
@@ -286,44 +217,91 @@ impl WalletTransactionModal {
         }
     }
 
-    /// Draw transaction information item content.
-    fn info_item_ui(ui: &mut egui::Ui,
-                    value: String,
-                    label: String,
-                    copy: bool,
-                    cb: &dyn PlatformCallbacks) {
-        // Setup layout size.
+    /// Draw transaction information content.
+    fn info_ui(&mut self,
+               ui: &mut egui::Ui,
+               tx: &WalletTransaction,
+               wallet: &Wallet,
+               cb: &dyn PlatformCallbacks) {
+        ui.add_space(6.0);
+
         let mut rect = ui.available_rect_before_wrap();
-        rect.set_height(50.0);
+        rect.set_height(WalletTransactions::TX_ITEM_HEIGHT);
 
-        // Draw round background.
-        let bg_rect = rect.clone();
-        let mut rounding = View::item_rounding(1, 3, false);
+        // Draw tx item background.
+        let p = ui.painter();
+        let r = View::item_rounding(0, 2, false);
+        p.rect(rect, r, Colors::TRANSPARENT, View::item_stroke());
 
-        ui.painter().rect(bg_rect, rounding, Colors::fill(), View::item_stroke());
-
-        ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
-            // Draw button to copy transaction info value.
-            if copy {
-                rounding.nw = 0.0;
-                rounding.sw = 0.0;
-                View::item_button(ui, rounding, COPY, None, || {
-                    cb.copy_string_to_buffer(value.clone());
-                });
+        // Show transaction amount status and time.
+        let data = wallet.get_data().unwrap();
+        WalletTransactions::tx_item_ui(ui, tx, rect, &data, |ui| {
+            if self.finalizing {
+                return;
+            }
+            // Show block height or buttons.
+            if let Some(h) = tx.height {
+                if h != 0 {
+                    ui.add_space(6.0);
+                    let height = format!("{} {}", CUBE, h.to_string());
+                    ui.with_layout(Layout::bottom_up(Align::Max), |ui| {
+                        ui.add_space(3.0);
+                        ui.label(RichText::new(height)
+                            .size(15.0)
+                            .color(Colors::text(false)));
+                    });
+                }
+                return;
             }
 
-            // Draw value information.
-            let layout_size = ui.available_size();
-            ui.allocate_ui_with_layout(layout_size, Layout::left_to_right(Align::Center), |ui| {
-                ui.add_space(6.0);
-                ui.vertical(|ui| {
-                    ui.add_space(3.0);
-                    View::ellipsize_text(ui, value, 15.0, Colors::title(false));
-                    ui.label(RichText::new(label).size(15.0).color(Colors::gray()));
-                    ui.add_space(3.0);
+            let wallet_loaded = wallet.foreign_api_port().is_some();
+
+            // Draw button to show transaction finalization or request info.
+            if wallet_loaded && tx.can_finalize {
+                let (icon, color) = if self.show_finalization {
+                    (FILE_TEXT, None)
+                } else {
+                    (CHECK, Some(Colors::green()))
+                };
+                let r = View::item_rounding(0, 2, true);
+                View::item_button(ui, r, icon, color, || {
+                    cb.hide_keyboard();
+                    if self.show_finalization {
+                        self.show_finalization = false;
+                        return;
+                    }
+                    self.show_finalization = true;
                 });
-            });
+            }
+            // Draw button to cancel transaction.
+            if wallet_loaded && tx.can_cancel() {
+                let r = if tx.can_finalize {
+                    Rounding::default()
+                } else {
+                    View::item_rounding(0, 2, true)
+                };
+                View::item_button(ui, r, PROHIBIT, Some(Colors::red()), || {
+                    cb.hide_keyboard();
+                    wallet.cancel(tx.data.id);
+                });
+            }
         });
+
+        // Show identifier.
+        if let Some(id) = tx.data.tx_slate_id {
+            let label = format!("{} {}", HASH_STRAIGHT, t!("id"));
+            info_item_ui(ui, id.to_string(), label, true, cb);
+        }
+        // Show kernel.
+        if let Some(kernel) = tx.data.kernel_excess {
+            let label = format!("{} {}", FILE_ARCHIVE, t!("kernel"));
+            info_item_ui(ui, kernel.0.to_hex(), label, true, cb);
+        }
+        // Show receiver address.
+        if let Some(rec) = tx.receiver() {
+            let label = format!("{} {}", CUBE, t!("network_mining.address"));
+            info_item_ui(ui, rec.to_string(), label, true, cb);
+        }
     }
 
     /// Draw Slatepack message content.
@@ -336,8 +314,8 @@ impl WalletTransactionModal {
         ui.add_space(6.0);
 
         // Draw QR code scanner content if requested.
-        if let Some(qr_scan_content) = self.qr_scan_content.as_mut() {
-            if let Some(result) = qr_scan_content.qr_scan_result() {
+        if let Some(scan_content) = self.scan_qr_content.as_mut() {
+            if let Some(result) = scan_content.qr_scan_result() {
                 cb.stop_camera();
 
                 // Setup value to finalization input field.
@@ -345,9 +323,9 @@ impl WalletTransactionModal {
                 self.on_finalization_input_change(tx, wallet, modal, cb);
 
                 modal.enable_closing();
-                self.qr_scan_content = None;
+                self.scan_qr_content = None;
             } else {
-                qr_scan_content.ui(ui, cb);
+                scan_content.ui(ui, cb);
             }
             return;
         }
@@ -415,7 +393,7 @@ impl WalletTransactionModal {
             View::horizontal_line(ui, Colors::item_stroke());
             ui.add_space(3.0);
             ScrollArea::vertical()
-                .id_source(scroll_id)
+                .id_salt(scroll_id)
                 .scroll_bar_visibility(ScrollBarVisibility::AlwaysHidden)
                 .max_height(128.0)
                 .auto_shrink([false; 2])
@@ -460,17 +438,17 @@ impl WalletTransactionModal {
                 columns[0].vertical_centered_justified(|ui| {
                     // Draw button to scan Slatepack message QR code.
                     let qr_text = format!("{} {}", SCAN, t!("scan"));
-                    View::button(ui, qr_text, Colors::button(), || {
+                    View::button(ui, qr_text, Colors::fill_lite(), || {
                         cb.hide_keyboard();
                         modal.disable_closing();
                         cb.start_camera();
-                        self.qr_scan_content = Some(CameraContent::default());
+                        self.scan_qr_content = Some(CameraContent::default());
                     });
                 });
                 columns[1].vertical_centered_justified(|ui| {
                     // Draw button to paste data from clipboard.
                     let paste_text = format!("{} {}", CLIPBOARD_TEXT, t!("paste"));
-                    View::button(ui, paste_text, Colors::button(), || {
+                    View::button(ui, paste_text, Colors::fill_lite(), || {
                         self.finalize_edit = cb.get_string_from_buffer();
                     });
                 });
@@ -480,7 +458,7 @@ impl WalletTransactionModal {
                 if self.finalize_error {
                     // Draw button to clear message input.
                     let clear_text = format!("{} {}", BROOM, t!("clear"));
-                    View::button(ui, clear_text, Colors::button(), || {
+                    View::button(ui, clear_text, Colors::fill_lite(), || {
                         self.finalize_edit.clear();
                         self.finalize_error = false;
                     });
@@ -501,7 +479,7 @@ impl WalletTransactionModal {
                 columns[0].vertical_centered_justified(|ui| {
                     // Draw button to show Slatepack message as QR code.
                     let qr_text = format!("{} {}", QR_CODE, t!("qr_code"));
-                    View::button(ui, qr_text.clone(), Colors::button(), || {
+                    View::button(ui, qr_text.clone(), Colors::white_or_black(false), || {
                         cb.hide_keyboard();
                         let text = self.response_edit.clone();
                         self.qr_code_content = Some(QrCodeContent::new(text, true));
@@ -510,7 +488,7 @@ impl WalletTransactionModal {
                 columns[1].vertical_centered_justified(|ui| {
                     // Draw copy button.
                     let copy_text = format!("{} {}", COPY, t!("copy"));
-                    View::button(ui, copy_text, Colors::button(), || {
+                    View::button(ui, copy_text, Colors::white_or_black(false), || {
                         cb.copy_string_to_buffer(self.response_edit.clone());
                         self.finalize_edit = "".to_string();
                         if tx.can_finalize {
@@ -578,4 +556,44 @@ impl WalletTransactionModal {
             }
         }
     }
+}
+
+/// Draw transaction information item content.
+fn info_item_ui(ui: &mut egui::Ui,
+                value: String,
+                label: String,
+                copy: bool,
+                cb: &dyn PlatformCallbacks) {
+    // Setup layout size.
+    let mut rect = ui.available_rect_before_wrap();
+    rect.set_height(50.0);
+
+    // Draw round background.
+    let bg_rect = rect.clone();
+    let mut rounding = View::item_rounding(1, 3, false);
+
+    ui.painter().rect(bg_rect, rounding, Colors::fill(), View::item_stroke());
+
+    ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
+        // Draw button to copy transaction info value.
+        if copy {
+            rounding.nw = 0.0;
+            rounding.sw = 0.0;
+            View::item_button(ui, rounding, COPY, None, || {
+                cb.copy_string_to_buffer(value.clone());
+            });
+        }
+
+        // Draw value information.
+        let layout_size = ui.available_size();
+        ui.allocate_ui_with_layout(layout_size, Layout::left_to_right(Align::Center), |ui| {
+            ui.add_space(6.0);
+            ui.vertical(|ui| {
+                ui.add_space(3.0);
+                View::ellipsize_text(ui, value, 15.0, Colors::title(false));
+                ui.label(RichText::new(label).size(15.0).color(Colors::gray()));
+                ui.add_space(3.0);
+            });
+        });
+    });
 }

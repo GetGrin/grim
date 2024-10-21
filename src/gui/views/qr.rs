@@ -16,7 +16,7 @@ use std::mem::size_of;
 use std::sync::Arc;
 use parking_lot::RwLock;
 use std::thread;
-use egui::{SizeHint, TextureHandle};
+use egui::{SizeHint, TextureHandle, UiBuilder};
 use egui::epaint::RectShape;
 use image::{ExtendedColorType, ImageEncoder};
 use image::codecs::png::{CompressionType, FilterType, PngEncoder};
@@ -235,26 +235,23 @@ impl QrCodeContent {
         rect.max -= egui::emath::vec2(10.0, 0.0);
 
         // Create background shape.
-        let mut bg_shape = RectShape {
+        let mut bg_shape = RectShape::new(
             rect,
-            rounding: egui::Rounding::default(),
-            fill: egui::Color32::WHITE,
-            stroke: egui::Stroke::NONE,
-            blur_width: 0.0,
-            fill_texture_id: Default::default(),
-            uv: egui::Rect::ZERO
-        };
+            egui::Rounding::default(),
+            egui::Color32::WHITE,
+            egui::Stroke::NONE
+        );
         let bg_idx = ui.painter().add(bg_shape);
 
         // Draw QR code image content.
-        let mut content_rect = ui.allocate_ui_at_rect(rect, |ui| {
+        let mut content_rect = ui.allocate_new_ui(UiBuilder::new().max_rect(rect), |ui| {
             ui.add_space(10.0);
             let size = SizeHint::Size(ui.available_width() as u32, ui.available_width() as u32);
             self.texture_handle = Some(View::svg_image(ui, "qr_code", svg.as_slice(), Some(size)));
             ui.add_space(10.0);
         }).response.rect;
 
-        // Setup background shape to be painted behind content.
+        // Setup background size.
         content_rect.min -= egui::emath::vec2(10.0, 0.0);
         content_rect.max += egui::emath::vec2(10.0, 0.0);
         bg_shape.rect = content_rect;

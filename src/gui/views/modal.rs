@@ -16,7 +16,7 @@ use lazy_static::lazy_static;
 use std::sync::Arc;
 use parking_lot::RwLock;
 use std::sync::atomic::{AtomicBool, Ordering};
-use egui::{Align2, Rect, RichText, Rounding, Stroke, Vec2};
+use egui::{Align2, RichText, Rounding, Stroke, UiBuilder, Vec2};
 use egui::epaint::{RectShape, Shadow};
 use egui::os::OperatingSystem;
 
@@ -29,17 +29,17 @@ lazy_static! {
     static ref MODAL_STATE: Arc<RwLock<ModalState>> = Arc::new(RwLock::new(ModalState::default()));
 }
 
-/// Stores data to draw modal [`egui::Window`] at ui.
+/// Modal [`egui::Window`] container.
 #[derive(Clone)]
 pub struct Modal {
     /// Identifier for modal.
     pub(crate) id: &'static str,
     /// Position on the screen.
     pub position: ModalPosition,
-    /// To check if it can be closed.
+    /// Flag to check if modal can be closed by keys.
     closeable: Arc<AtomicBool>,
-    /// Title text
-    title: Option<String>
+    /// Title text.
+    title: Option<String>,
 }
 
 impl Modal {
@@ -54,7 +54,7 @@ impl Modal {
             id,
             position: ModalPosition::Center,
             closeable: Arc::new(AtomicBool::new(true)),
-            title: None
+            title: None,
         }
     }
 
@@ -110,7 +110,7 @@ impl Modal {
     }
 
     /// Remove [`Modal`] from [`ModalState`] if it's showing and can be closed.
-    /// Return `false` if Modal existed in [`ModalState`] before call.
+    /// Return `false` if modal existed in state before call.
     pub fn on_back() -> bool {
         let mut w_state = MODAL_STATE.write();
 
@@ -125,7 +125,7 @@ impl Modal {
         true
     }
 
-    /// Return id of opened [`Modal`].
+    /// Return identifier of opened [`Modal`].
     pub fn opened() -> Option<&'static str> {
         // Check if modal is showing.
         {
@@ -138,6 +138,19 @@ impl Modal {
         let r_state = MODAL_STATE.read();
         let modal = r_state.modal.as_ref().unwrap();
         Some(modal.id)
+    }
+
+    /// Check if [`Modal`] is opened and can be closed.
+    pub fn opened_closeable() -> bool {
+        // Check if modal is showing.
+        {
+            if MODAL_STATE.read().modal.is_none() {
+                return false;
+            }
+        }
+        let r_state = MODAL_STATE.read();
+        let modal = r_state.modal.as_ref().unwrap();
+        modal.closeable.load(Ordering::Relaxed)
     }
 
     /// Set title text for current opened [`Modal`].
@@ -170,19 +183,21 @@ impl Modal {
         let is_fullscreen = ctx.input(|i| {
             i.viewport().fullscreen.unwrap_or(false)
         });
-        let is_mac_os = OperatingSystem::from_target_os() == OperatingSystem::Mac;
 
-        let mut rect = ctx.screen_rect();
-        if View::is_desktop() && !is_mac_os {
-            let margin = if !is_fullscreen {
-                Content::WINDOW_FRAME_MARGIN
+        // Setup content rect.
+        let rect = if View::is_desktop() {
+            if !is_fullscreen && OperatingSystem::from_target_os() != OperatingSystem::Mac {
+                ctx.screen_rect().shrink(Content::WINDOW_FRAME_MARGIN)
             } else {
-                0.0
-            };
-            rect = rect.shrink(margin - 0.5);
-            rect.min += egui::vec2(0.0, Content::WINDOW_TITLE_HEIGHT + 0.5);
-            rect.max.x += 0.5;
-        }
+                let mut r = ctx.screen_rect();
+                r.min.y += Content::WINDOW_TITLE_HEIGHT;
+                r
+            }
+        } else {
+            ctx.screen_rect()
+        };
+
+        // Draw modal background.
         egui::Window::new("modal_bg_window")
             .title_bar(false)
             .resizable(false)
@@ -201,9 +216,9 @@ impl Modal {
         let available_width = rect.width() - (side_insets + Self::DEFAULT_MARGIN);
         let width = f32::min(available_width, Self::DEFAULT_WIDTH);
 
-        // Show main content Window at given position.
-        let (content_align, content_offset) = self.modal_position(is_fullscreen);
-        let layer_id = egui::Window::new(format!("modal_window_{}", self.id))
+        // Show main content window at given position.
+        let (content_align, content_offset) = self.modal_position();
+        let layer_id = egui::Window::new("modal_window")
             .title_bar(false)
             .resizable(false)
             .collapsible(false)
@@ -218,37 +233,29 @@ impl Modal {
                     color: egui::Color32::from_black_alpha(32),
                 },
                 rounding: Rounding::same(8.0),
-                fill: Colors::fill(),
                 ..Default::default()
             })
             .show(ctx, |ui| {
-                if self.title.is_some() {
-                    self.title_ui(ui);
+                if let Some(title) = &self.title {
+                    title_ui(title, ui);
                 }
                 self.content_ui(ui, add_content);
             }).unwrap().response.layer_id;
 
-        // Always show main content Window above background Window.
+        // Always show main content window above background window.
         ctx.move_to_top(layer_id);
-
     }
 
     /// Get [`egui::Window`] position based on [`ModalPosition`].
-    fn modal_position(&self, is_fullscreen: bool) -> (Align2, Vec2) {
+    fn modal_position(&self) -> (Align2, Vec2) {
         let align = match self.position {
             ModalPosition::CenterTop => Align2::CENTER_TOP,
             ModalPosition::Center => Align2::CENTER_CENTER
         };
 
         let x_align = View::get_left_inset() - View::get_right_inset();
-
-        let is_mac_os = OperatingSystem::from_target_os() == OperatingSystem::Mac;
-        let extra_y = if View::is_desktop() && !is_mac_os {
-            Content::WINDOW_TITLE_HEIGHT + if !is_fullscreen {
-                Content::WINDOW_FRAME_MARGIN
-            } else {
-                0.0
-            }
+        let extra_y = if View::is_desktop() {
+            Content::WINDOW_TITLE_HEIGHT - Self::DEFAULT_MARGIN / 2.0
         } else {
             0.0
         };
@@ -264,80 +271,64 @@ impl Modal {
     /// Draw provided content.
     fn content_ui(&self, ui: &mut egui::Ui, add_content: impl FnOnce(&mut egui::Ui, &Modal)) {
         let mut rect = ui.available_rect_before_wrap();
-        rect.min += egui::emath::vec2(6.0, 0.0);
-        rect.max -= egui::emath::vec2(6.0, 0.0);
 
         // Create background shape.
-        let rounding = if self.title.is_some() {
+        let mut bg_shape = RectShape::new(rect, if self.title.is_none() {
+            Rounding::same(8.0)
+        } else {
             Rounding {
                 nw: 0.0,
                 ne: 0.0,
                 sw: 8.0,
                 se: 8.0,
             }
-        } else {
-            Rounding::same(8.0)
-        };
-        let mut bg_shape = RectShape {
-            rect,
-            rounding,
-            fill: Colors::fill(),
-            stroke: Stroke::NONE,
-            blur_width: 0.0,
-            fill_texture_id: Default::default(),
-            uv: Rect::ZERO
-        };
+        }, Colors::fill(), Stroke::NONE);
         let bg_idx = ui.painter().add(bg_shape);
 
-        // Draw main content.
-        let mut content_rect = ui.allocate_ui_at_rect(rect, |ui| {
+        rect.min += egui::emath::vec2(6.0, 0.0);
+        rect.max -= egui::emath::vec2(6.0, 0.0);
+        let resp = ui.allocate_new_ui(UiBuilder::new().max_rect(rect), |ui| {
             (add_content)(ui, self);
-        }).response.rect;
-
-        // Setup background shape to be painted behind main content.
-        content_rect.min -= egui::emath::vec2(6.0, 0.0);
-        content_rect.max += egui::emath::vec2(6.0, 0.0);
-        bg_shape.rect = content_rect;
-        ui.painter().set(bg_idx, bg_shape);
-    }
-
-    /// Draw title content.
-    fn title_ui(&self, ui: &mut egui::Ui) {
-        let rect = ui.available_rect_before_wrap();
-
-        // Create background shape.
-        let mut bg_shape = RectShape {
-            rect,
-            rounding: Rounding {
-                nw: 8.0,
-                ne: 8.0,
-                sw: 0.0,
-                se: 0.0,
-            },
-            fill: Colors::yellow(),
-            stroke: Stroke::NONE,
-            blur_width: 0.0,
-            fill_texture_id: Default::default(),
-            uv: Rect::ZERO
-        };
-        let bg_idx = ui.painter().add(bg_shape);
-
-        // Draw title content.
-        let title_resp = ui.allocate_ui_at_rect(rect, |ui| {
-            ui.vertical_centered_justified(|ui| {
-                ui.add_space(Self::DEFAULT_MARGIN + 1.0);
-                ui.label(RichText::new(self.title.as_ref().unwrap())
-                    .size(19.0)
-                    .color(Colors::title(true))
-                );
-                ui.add_space(Self::DEFAULT_MARGIN);
-                // Draw line below title.
-                View::horizontal_line(ui, Colors::item_stroke());
-            });
         }).response;
 
-        // Setup background shape to be painted behind title content.
-        bg_shape.rect = title_resp.rect;
+        // Setup background size.
+        let bg_rect = {
+            let mut r = resp.rect.clone();
+            r.min -= egui::emath::vec2(6.0, 0.0);
+            r.max += egui::emath::vec2(6.0, 0.0);
+            r
+        };
+        bg_shape.rect = bg_rect;
         ui.painter().set(bg_idx, bg_shape);
     }
+}
+
+/// Draw title content.
+fn title_ui(title: &String, ui: &mut egui::Ui) {
+    let rect = ui.available_rect_before_wrap();
+
+    // Create background shape.
+    let mut bg_shape = RectShape::new(rect, Rounding {
+        nw: 8.0,
+        ne: 8.0,
+        sw: 0.0,
+        se: 0.0,
+    }, Colors::yellow(), Stroke::NONE);
+    let bg_idx = ui.painter().add(bg_shape);
+
+    // Draw title content.
+    let resp = ui.vertical_centered(|ui| {
+        ui.add_space(Modal::DEFAULT_MARGIN + 2.0);
+        ui.label(RichText::new(title)
+            .size(19.0)
+            .color(Colors::title(true))
+        );
+        ui.add_space(Modal::DEFAULT_MARGIN + 1.0);
+        // Draw line below title.
+        View::horizontal_line(ui, Colors::item_stroke());
+    }).response;
+
+    // Setup background size.
+    bg_shape.rect = resp.rect;
+    ui.painter().set(bg_idx, bg_shape);
 }

@@ -13,7 +13,7 @@
 // limitations under the License.
 
 use egui::scroll_area::ScrollAreaOutput;
-use egui::{Sense, Align2, Area, Color32, Id, Rect, Response, Widget, Vec2};
+use egui::{Sense, Align2, Area, Color32, Id, Rect, Response, Widget, Vec2, UiBuilder};
 use egui::epaint::{emath::lerp, vec2, Pos2, Shape, Stroke};
 
 /// A spinner widget used to indicate loading.
@@ -195,7 +195,9 @@ impl PullToRefresh {
         ui: &mut egui::Ui,
         content: impl FnOnce(&mut egui::Ui) -> T,
     ) -> PullToRefreshResponse<T> {
-        let mut child = ui.child_ui(ui.available_rect_before_wrap(), *ui.layout(), None);
+        let mut child = ui.new_child(UiBuilder::new()
+            .max_rect(ui.available_rect_before_wrap())
+            .layout(*ui.layout()));
 
         let output = content(&mut child);
 

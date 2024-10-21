@@ -12,18 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::{Align, Id, Layout, Margin, RichText, Rounding, ScrollArea};
-use egui::scroll_area::ScrollBarVisibility;
+use egui::{Align, Layout, RichText, Rounding};
 
 use crate::gui::Colors;
 use crate::gui::icons::{CHECK_CIRCLE, COPY, DOTS_THREE_CIRCLE, EXPORT, GEAR_SIX, GLOBE_SIMPLE, POWER, QR_CODE, SHIELD_CHECKERED, SHIELD_SLASH, WARNING_CIRCLE, X_CIRCLE};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Modal, QrCodeContent, Content, View};
+use crate::gui::views::{Modal, QrCodeContent, View};
 use crate::gui::views::types::ModalPosition;
 use crate::gui::views::wallets::wallet::transport::send::TransportSendModal;
 use crate::gui::views::wallets::wallet::transport::settings::TransportSettingsModal;
 use crate::gui::views::wallets::wallet::types::{WalletTab, WalletTabType};
-use crate::gui::views::wallets::wallet::WalletContent;
 use crate::tor::{Tor, TorConfig};
 use crate::wallet::types::WalletData;
 use crate::wallet::Wallet;
@@ -49,39 +47,8 @@ impl WalletTab for WalletTransport {
           ui: &mut egui::Ui,
           wallet: &Wallet,
           cb: &dyn PlatformCallbacks) {
-        if WalletContent::sync_ui(ui, wallet) {
-            return;
-        }
-
-        // Show modal content for this ui container.
         self.modal_content_ui(ui, wallet, cb);
-
-        // Show transport content panel.
-        egui::CentralPanel::default()
-            .frame(egui::Frame {
-                stroke: View::item_stroke(),
-                fill: Colors::white_or_black(false),
-                inner_margin: Margin {
-                    left: View::far_left_inset_margin(ui) + 4.0,
-                    right: View::get_right_inset() + 4.0,
-                    top: 3.0,
-                    bottom: 4.0,
-                },
-                ..Default::default()
-            })
-            .show_inside(ui, |ui| {
-                ScrollArea::vertical()
-                    .id_source(Id::from("wallet_transport").with(wallet.get_config().id))
-                    .scroll_bar_visibility(ScrollBarVisibility::AlwaysHidden)
-                    .auto_shrink([false; 2])
-                    .show(ui, |ui| {
-                        ui.vertical_centered(|ui| {
-                            View::max_width_ui(ui, Content::SIDE_PANEL_WIDTH * 1.3, |ui| {
-                                self.ui(ui, wallet, cb);
-                            });
-                        });
-                    });
-            });
+        self.transport_ui(ui, wallet, cb);
     }
 }
 
@@ -106,7 +73,7 @@ impl Default for WalletTransport {
 
 impl WalletTransport {
     /// Draw wallet transport content.
-    pub fn ui(&mut self, ui: &mut egui::Ui, wallet: &Wallet, cb: &dyn PlatformCallbacks) {
+    fn transport_ui(&mut self, ui: &mut egui::Ui, wallet: &Wallet, cb: &dyn PlatformCallbacks) {
         ui.add_space(3.0);
         ui.label(RichText::new(t!("transport.desc"))
             .size(16.0)
@@ -180,7 +147,7 @@ impl WalletTransport {
         // Draw round background.
         let bg_rect = rect.clone();
         let item_rounding = View::item_rounding(0, 2, false);
-        ui.painter().rect(bg_rect, item_rounding, Colors::button(), View::item_stroke());
+        ui.painter().rect(bg_rect, item_rounding, Colors::fill_lite(), View::item_stroke());
 
         ui.vertical(|ui| {
             ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
@@ -286,7 +253,7 @@ impl WalletTransport {
         } else {
             View::item_rounding(1, 2, false)
         };
-        ui.painter().rect(bg_rect, item_rounding, Colors::button(), View::item_stroke());
+        ui.painter().rect(bg_rect, item_rounding, Colors::fill_lite(), View::item_stroke());
 
         ui.vertical(|ui| {
             ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {

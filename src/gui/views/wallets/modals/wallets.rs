@@ -64,7 +64,7 @@ impl WalletsModal {
         ui.add_space(4.0);
         ScrollArea::vertical()
             .max_height(373.0)
-            .id_source("select_wallet_list")
+            .id_salt("select_wallet_list_scroll")
             .scroll_bar_visibility(ScrollBarVisibility::AlwaysHidden)
             .auto_shrink([true; 2])
             .show(ui, |ui| {
@@ -83,7 +83,7 @@ impl WalletsModal {
             });
 
         ui.add_space(2.0);
-        View::horizontal_line(ui, Colors::stroke());
+        View::horizontal_line(ui, Colors::item_stroke());
         ui.add_space(6.0);
 
         // Show button to close modal.

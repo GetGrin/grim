@@ -78,8 +78,8 @@ impl FilePickButton {
             }
         } else {
             // Draw button to pick file.
-            let file_text = format!("{} {}", ARCHIVE_BOX, t!("choose_file"));
-            View::colored_text_button(ui, file_text, Colors::blue(), Colors::button(), || {
+            let text = format!("{} {}", ARCHIVE_BOX, t!("choose_file"));
+            View::colored_text_button(ui, text, Colors::blue(), Colors::white_or_black(false), || {
                 if let Some(path) = cb.pick_file() {
                     self.on_file_pick(path);
                 }

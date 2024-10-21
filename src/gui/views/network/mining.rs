@@ -23,7 +23,7 @@ use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Content, View};
 use crate::gui::views::network::NetworkContent;
 use crate::gui::views::network::setup::StratumSetup;
-use crate::gui::views::network::types::{NetworkTab, NetworkTabType};
+use crate::gui::views::network::types::{NodeTab, NodeTabType};
 use crate::node::{Node, NodeConfig};
 use crate::wallet::WalletConfig;
 
@@ -50,35 +50,13 @@ impl Default for NetworkMining {
     }
 }
 
-impl NetworkTab for NetworkMining {
-    fn get_type(&self) -> NetworkTabType {
-        NetworkTabType::Mining
+impl NodeTab for NetworkMining {
+    fn get_type(&self) -> NodeTabType {
+        NodeTabType::Mining
     }
 
     fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
-        // Show an error content when available.
-        let node_err = Node::get_error();
-        if node_err.is_some() {
-            NetworkContent::node_error_ui(ui, node_err.unwrap());
-            return;
-        }
-
-        // Show message to enable node when it's not running.
-        if !Node::is_running() {
-            NetworkContent::disabled_node_ui(ui);
-            return;
-        }
-
-        // Show loading spinner when node is stopping or stratum server is starting.
-        if Node::is_stopping() || Node::is_stratum_starting() {
-            NetworkContent::loading_ui(ui, None);
-            return;
-        }
-
-        // Show message when mining is not available.
-        let server_stats = Node::get_stats();
-        if server_stats.is_none() || Node::is_restarting()
-            || Node::get_sync_status().unwrap() != SyncStatus::NoSync {
+        if Node::is_stratum_starting() || Node::get_sync_status().unwrap() != SyncStatus::NoSync {
             NetworkContent::loading_ui(ui, Some(t!("network_mining.loading")));
             return;
         }
@@ -87,15 +65,13 @@ impl NetworkTab for NetworkMining {
         let stratum_stats = Node::get_stratum_stats();
         if !stratum_stats.is_running {
             ScrollArea::vertical()
-                .id_source("stratum_setup_scroll")
+                .id_salt("stratum_setup_scroll")
                 .scroll_bar_visibility(ScrollBarVisibility::AlwaysHidden)
                 .auto_shrink([false; 2])
                 .show(ui, |ui| {
                     ui.add_space(1.0);
-                    ui.vertical_centered(|ui| {
-                        View::max_width_ui(ui, Content::SIDE_PANEL_WIDTH * 1.3, |ui| {
-                            self.stratum_server_setup.ui(ui, cb);
-                        });
+                    View::max_width_ui(ui, Content::SIDE_PANEL_WIDTH * 1.3, |ui| {
+                        self.stratum_server_setup.ui(ui, cb);
                     });
                 });
             return;
@@ -108,16 +84,16 @@ impl NetworkTab for NetworkMining {
         ui.columns(2, |columns| {
             columns[0].vertical_centered(|ui| {
                 let (stratum_addr, stratum_port) = NodeConfig::get_stratum_address();
-                View::rounded_box(ui,
-                                  format!("{}:{}", stratum_addr, stratum_port),
-                                  t!("network_mining.address"),
-                                  [true, false, true, false]);
+                View::label_box(ui,
+                                format!("{}:{}", stratum_addr, stratum_port),
+                                t!("network_mining.address"),
+                                [true, false, true, false]);
             });
             columns[1].vertical_centered(|ui| {
-                View::rounded_box(ui,
-                                  self.wallet_name.clone(),
-                                  t!("network_mining.rewards_wallet"),
-                                  [false, true, false, true]);
+                View::label_box(ui,
+                                self.wallet_name.clone(),
+                                t!("network_mining.rewards_wallet"),
+                                [false, true, false, true]);
             });
         });
         ui.add_space(4.0);
@@ -131,10 +107,10 @@ impl NetworkTab for NetworkMining {
                 } else {
                     "-".into()
                 };
-                View::rounded_box(ui,
-                                  difficulty,
-                                  t!("network_node.difficulty"),
-                                  [true, false, true, false]);
+                View::label_box(ui,
+                                difficulty,
+                                t!("network_node.difficulty"),
+                                [true, false, true, false]);
             });
             columns[1].vertical_centered(|ui| {
                 let block_height = if stratum_stats.block_height > 0 {
@@ -142,10 +118,10 @@ impl NetworkTab for NetworkMining {
                 } else {
                     "-".into()
                 };
-                View::rounded_box(ui,
-                                  block_height,
-                                  t!("network_node.header"),
-                                  [false, false, false, false]);
+                View::label_box(ui,
+                                block_height,
+                                t!("network_node.header"),
+                                [false, false, false, false]);
             });
             columns[2].vertical_centered(|ui| {
                 let hashrate = if stratum_stats.network_hashrate > 0.0 {
@@ -153,10 +129,10 @@ impl NetworkTab for NetworkMining {
                 } else {
                     "-".into()
                 };
-                View::rounded_box(ui,
-                                  hashrate,
-                                  t!("network_mining.hashrate", "bits" => stratum_stats.edge_bits),
-                                  [false, true, false, true]);
+                View::label_box(ui,
+                                hashrate,
+                                t!("network_mining.hashrate", "bits" => stratum_stats.edge_bits),
+                                [false, true, false, true]);
             });
         });
         ui.add_space(4.0);
@@ -165,17 +141,17 @@ impl NetworkTab for NetworkMining {
         View::sub_title(ui, format!("{} {}", CPU, t!("network_mining.miners")));
         ui.columns(2, |columns| {
             columns[0].vertical_centered(|ui| {
-                View::rounded_box(ui,
-                                  stratum_stats.num_workers.to_string(),
-                                  t!("network_mining.devices"),
-                                  [true, false, true, false]);
+                View::label_box(ui,
+                                stratum_stats.num_workers.to_string(),
+                                t!("network_mining.devices"),
+                                [true, false, true, false]);
             });
 
             columns[1].vertical_centered(|ui| {
-                View::rounded_box(ui,
-                                  stratum_stats.blocks_found.to_string(),
-                                  t!("network_mining.blocks_found"),
-                                  [false, true, false, true]);
+                View::label_box(ui,
+                                stratum_stats.blocks_found.to_string(),
+                                t!("network_mining.blocks_found"),
+                                [false, true, false, true]);
             });
         });
         ui.add_space(4.0);
@@ -187,7 +163,7 @@ impl NetworkTab for NetworkMining {
             View::horizontal_line(ui, Colors::item_stroke());
             ui.add_space(4.0);
             ScrollArea::vertical()
-                .id_source("stratum_workers_scroll")
+                .id_salt("stratum_workers_scroll")
                 .scroll_bar_visibility(ScrollBarVisibility::AlwaysHidden)
                 .auto_shrink([false; 2])
                 .show_rows(

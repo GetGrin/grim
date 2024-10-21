@@ -32,6 +32,11 @@ pub enum TitleContentType {
     WithSubTitle(String, String, bool)
 }
 
+/// Stroke position against content.
+pub enum LinePosition {
+    TOP, LEFT, RIGHT, BOTTOM
+}
+
 /// Position of [`Modal`] on the screen.
 #[derive(Clone)]
 pub enum ModalPosition {

@@ -96,6 +96,7 @@ impl TransportSendModal {
     /// Draw content to send.
     fn content_ui(&mut self, ui: &mut egui::Ui, wallet: &Wallet, modal: &Modal,
                   cb: &dyn PlatformCallbacks) {
+        ui.add_space(6.0);
         // Draw QR code scanner content if requested.
         if let Some(scanner) = self.address_scan_content.as_mut() {
             let mut on_stop = || {
@@ -249,7 +250,11 @@ impl TransportSendModal {
     }
 
     /// Draw error content.
-    fn error_ui(&mut self, ui: &mut egui::Ui, wallet: &Wallet, modal: &Modal, cb: &dyn PlatformCallbacks) {
+    fn error_ui(&mut self,
+                ui: &mut egui::Ui,
+                wallet: &Wallet,
+                modal: &Modal,
+                cb: &dyn PlatformCallbacks) {
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("transport.tor_send_error"))
@@ -342,7 +347,8 @@ impl TransportSendModal {
                 let res = self.send_result.read().clone().unwrap();
                 match res {
                     Ok(tx) => {
-                        self.tx_info_content = Some(WalletTransactionModal::new(wallet, &tx, false));
+                        self.tx_info_content =
+                            Some(WalletTransactionModal::new(wallet, &tx, false));
                     }
                     Err(_) => {
                         self.error = true;

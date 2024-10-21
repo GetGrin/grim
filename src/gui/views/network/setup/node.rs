@@ -255,7 +255,7 @@ impl NodeSetup {
         ui.add_space(6.0);
 
         let (_, port) = NodeConfig::get_api_ip_port();
-        View::button(ui, format!("{} {}", PLUG, port.clone()), Colors::button(), || {
+        View::button(ui, format!("{} {}", PLUG, &port), Colors::white_or_black(false), || {
             // Setup values for modal.
             self.api_port_edit = port;
             self.api_port_available_edit = self.is_api_port_available;
@@ -283,7 +283,9 @@ impl NodeSetup {
     fn api_port_modal(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
-            ui.label(RichText::new(t!("network_settings.api_port")).size(17.0).color(Colors::gray()));
+            ui.label(RichText::new(t!("network_settings.api_port"))
+                .size(17.0)
+                .color(Colors::gray()));
             ui.add_space(6.0);
 
             // Draw API port text edit.
@@ -366,7 +368,7 @@ impl NodeSetup {
             format!("{} {}", SHIELD_SLASH, t!("network_settings.disabled"))
         };
 
-        View::button(ui, secret_text, Colors::button(), || {
+        View::button(ui, secret_text, Colors::white_or_black(false), || {
             // Setup values for modal.
             self.secret_edit = secret_value.unwrap_or("".to_string());
             // Show secret edit modal.
@@ -449,7 +451,9 @@ impl NodeSetup {
         ui.add_space(6.0);
 
         let ftl = NodeConfig::get_ftl();
-        View::button(ui, format!("{} {}", CLOCK_CLOCKWISE, ftl.clone()), Colors::button(), || {
+        View::button(ui,
+                     format!("{} {}", CLOCK_CLOCKWISE, &ftl),
+                     Colors::white_or_black(false), || {
             // Setup values for modal.
             self.ftl_edit = ftl;
             // Show ftl value setup modal.

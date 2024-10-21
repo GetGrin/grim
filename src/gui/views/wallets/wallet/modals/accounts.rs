@@ -130,7 +130,7 @@ impl WalletAccountsModal {
             // Show list of accounts.
             let size = self.accounts.len();
             ScrollArea::vertical()
-                .id_source("account_list_modal_scroll")
+                .id_salt("account_list_modal_scroll")
                 .scroll_bar_visibility(ScrollBarVisibility::AlwaysHidden)
                 .max_height(266.0)
                 .auto_shrink([true; 2])
@@ -149,7 +149,7 @@ impl WalletAccountsModal {
                 });
 
             ui.add_space(2.0);
-            View::horizontal_line(ui, Colors::stroke());
+            View::horizontal_line(ui, Colors::item_stroke());
             ui.add_space(6.0);
 
             // Setup spacing between buttons.

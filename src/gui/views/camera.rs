@@ -15,11 +15,9 @@
 use std::sync::Arc;
 use parking_lot::RwLock;
 use std::thread;
-use eframe::emath::Align;
 use egui::load::SizedTexture;
-use egui::{Layout, Pos2, Rect, RichText, TextureOptions, Widget};
-use image::{DynamicImage, EncodableLayout, ImageFormat};
-
+use egui::{Pos2, Rect, RichText, TextureOptions, UiBuilder, Widget};
+use image::{DynamicImage, EncodableLayout};
 use grin_util::ZeroingString;
 use grin_wallet_libwallet::SlatepackAddress;
 use grin_keychain::mnemonic::WORDS;
@@ -36,16 +34,15 @@ use crate::wallet::WalletUtils;
 pub struct CameraContent {
     /// QR code scanning progress and result.
     qr_scan_state: Arc<RwLock<QrScanState>>,
-
     /// Uniform Resources URIs collected from QR code scanning.
-    ur_data: Arc<RwLock<Option<(Vec<String>, usize)>>>,
+    ur_data: Arc<RwLock<Option<(Vec<String>, usize)>>>
 }
 
 impl Default for CameraContent {
     fn default() -> Self {
         Self {
             qr_scan_state: Arc::new(RwLock::new(QrScanState::default())),
-            ur_data: Arc::new(RwLock::new(None)),
+            ur_data: Arc::new(RwLock::new(None))
         }
     }
 }
@@ -53,97 +50,105 @@ impl Default for CameraContent {
 impl CameraContent {
     /// Draw camera content.
     pub fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
-        // Draw last image from camera or loader.
+        ui.ctx().request_repaint();
         if let Some(img_data) = cb.camera_image() {
-            // Load image to draw.
-            if let Ok(mut img) =
-                image::load_from_memory_with_format(&*img_data.0, ImageFormat::Jpeg) {
+            if let Ok(img) =
+                image::load_from_memory(&*img_data.0) {
                 // Process image to find QR code.
                 self.scan_qr(&img);
-                // Setup image rotation.
-                img = match img_data.1 {
-                    90 => img.rotate90(),
-                    180 => img.rotate180(),
-                    270 => img.rotate270(),
-                    _ => img
-                };
-                img = img.fliph();
-                // Convert to ColorImage to add at content.
-                let color_img = match &img {
-                    DynamicImage::ImageRgb8(image) => {
-                        egui::ColorImage::from_rgb(
-                            [image.width() as usize, image.height() as usize],
-                            image.as_bytes(),
-                        )
-                    },
-                    other => {
-                        let image = other.to_rgba8();
-                        egui::ColorImage::from_rgba_unmultiplied(
-                            [image.width() as usize, image.height() as usize],
-                            image.as_bytes(),
-                        )
-                    },
-                };
-                // Create image texture.
-                let texture = ui.ctx().load_texture("camera_image",
-                                                    color_img.clone(),
-                                                    TextureOptions::default());
-                let img_size = egui::emath::vec2(color_img.width() as f32,
-                                                 color_img.height() as f32);
-                let sized_img = SizedTexture::new(texture.id(), img_size);
-                // Add image to content.
-                ui.vertical_centered(|ui| {
-                    egui::Image::from_texture(sized_img)
-                        // Setup to crop image at square.
-                        .uv(Rect::from([
-                            Pos2::new(1.0 - (img_size.y / img_size.x), 0.0),
-                            Pos2::new(1.0, 1.0)
-                        ]))
-                        .max_height(ui.available_width())
-                        .maintain_aspect_ratio(false)
-                        .shrink_to_fit()
-                        .ui(ui);
-                });
+
+                // Draw image.
+                let img_rect = self.image_ui(ui, img, img_data.1);
 
                 // Show UR scan progress.
-                let show_ur_progress = {
-                    self.ur_data.clone().read().is_some()
-                };
-                let ur_progress = self.ur_progress();
-                if show_ur_progress && ur_progress != 0 {
-                    ui.add_space(-52.0);
-                    ui.vertical_centered(|ui| {
-                        ui.label(RichText::new(format!("{}%", ur_progress))
-                            .size(16.0)
-                            .color(Colors::yellow()));
-                    });
-                }
+                self.ur_progress_ui(ui);
 
                 // Show button to switch cameras.
                 if cb.can_switch_camera() {
-                    ui.add_space(-52.0);
-                    let mut size = ui.available_size();
-                    size.y = 48.0;
-                    ui.allocate_ui_with_layout(size, Layout::right_to_left(Align::Max), |ui| {
-                        ui.add_space(4.0);
-                        View::button(ui, CAMERA_ROTATE.to_string(), Colors::white_or_black(false), || {
+                    let r = {
+                        let mut r = img_rect.clone();
+                        r.min.y = r.max.y - 52.0;
+                        r.min.x = r.max.x - 52.0;
+                        r
+                    };
+                    ui.allocate_new_ui(UiBuilder::new().max_rect(r), |ui| {
+                        let rotate_img = CAMERA_ROTATE.to_string();
+                        View::button(ui, rotate_img, Colors::white_or_black(false), || {
                             cb.switch_camera();
                         });
                     });
                 }
             } else {
-                self.loading_content_ui(ui);
+                self.loading_ui(ui);
             }
         } else {
-            self.loading_content_ui(ui);
+            self.loading_ui(ui);
         }
+    }
 
-        // Request redraw.
-        ui.ctx().request_repaint();
+    /// Draw camera image.
+    fn image_ui(&mut self, ui: &mut egui::Ui, mut img: DynamicImage, rotation: u32) -> Rect {
+        // Setup image rotation.
+        img = match rotation {
+            90 => img.rotate90(),
+            180 => img.rotate180(),
+            270 => img.rotate270(),
+            _ => img
+        };
+        if View::is_desktop() {
+            img = img.fliph();
+        }
+        // Convert to ColorImage.
+        let color_img = match &img {
+            DynamicImage::ImageRgb8(image) => {
+                egui::ColorImage::from_rgb(
+                    [image.width() as usize, image.height() as usize],
+                    image.as_bytes(),
+                )
+            },
+            other => {
+                let image = other.to_rgba8();
+                egui::ColorImage::from_rgba_unmultiplied(
+                    [image.width() as usize, image.height() as usize],
+                    image.as_bytes(),
+                )
+            },
+        };
+        // Create image texture.
+        let texture = ui.ctx().load_texture("camera_image",
+                                            color_img.clone(),
+                                            TextureOptions::default());
+        let img_size = egui::emath::vec2(color_img.width() as f32,
+                                         color_img.height() as f32);
+        let sized_img = SizedTexture::new(texture.id(), img_size);
+        egui::Image::from_texture(sized_img)
+            // Setup to crop image at square.
+            .uv(Rect::from([
+                Pos2::new(1.0 - (img_size.y / img_size.x), 0.0),
+                Pos2::new(1.0, 1.0)
+            ]))
+            .max_height(ui.available_width())
+            .maintain_aspect_ratio(false)
+            .shrink_to_fit()
+            .ui(ui).rect
+    }
+
+    /// Draw animated QR code scanning progress.
+    fn ur_progress_ui(&self, ui: &mut egui::Ui) {
+        let show_ur_progress = {
+            self.ur_data.as_ref().read().is_some()
+        };
+        if show_ur_progress {
+            ui.centered_and_justified(|ui| {
+                ui.label(RichText::new(format!("{}%", self.ur_progress()))
+                    .size(17.0)
+                    .color(Colors::green()));
+            });
+        }
     }
 
     /// Draw camera loading progress content.
-    fn loading_content_ui(&self, ui: &mut egui::Ui) {
+    fn loading_ui(&self, ui: &mut egui::Ui) {
         let space = (ui.available_width() - View::BIG_SPINNER_SIZE) / 2.0;
         ui.vertical_centered(|ui| {
             ui.add_space(space);

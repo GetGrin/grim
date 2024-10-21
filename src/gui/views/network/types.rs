@@ -14,28 +14,28 @@
 
 use crate::gui::platform::PlatformCallbacks;
 
-/// Network tab content interface.
-pub trait NetworkTab {
-    fn get_type(&self) -> NetworkTabType;
+/// Integrated node tab content interface.
+pub trait NodeTab {
+    fn get_type(&self) -> NodeTabType;
     fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks);
 }
 
-/// Type of [`NetworkTab`] content.
+/// Type of [`NodeTab`] content.
 #[derive(PartialEq)]
-pub enum NetworkTabType {
-    Node,
+pub enum NodeTabType {
+    Info,
     Metrics,
     Mining,
     Settings
 }
 
-impl NetworkTabType {
+impl NodeTabType {
     pub fn title(&self) -> String {
         match *self {
-            NetworkTabType::Node => { t!("network.node") }
-            NetworkTabType::Metrics => { t!("network.metrics") }
-            NetworkTabType::Mining => { t!("network.mining") }
-            NetworkTabType::Settings => { t!("network.settings") }
+            NodeTabType::Info => { t!("network.node") }
+            NodeTabType::Metrics => { t!("network.metrics") }
+            NodeTabType::Mining => { t!("network.mining") }
+            NodeTabType::Settings => { t!("network.settings") }
         }
     }
 }

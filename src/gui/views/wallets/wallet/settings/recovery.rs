@@ -92,9 +92,11 @@ impl RecoverySettings {
             ui.add_space(6.0);
 
             // Draw button to restore the wallet.
-            let recover_text = format!("{} {}", LIFEBUOY, t!("wallets.recover"));
             ui.add_space(4.0);
-            View::colored_text_button(ui, recover_text, Colors::green(), Colors::button(), || {
+            View::colored_text_button(ui,
+                                      format!("{} {}", LIFEBUOY, t!("wallets.recover")),
+                                      Colors::green(),
+                                      Colors::white_or_black(false), || {
                 wallet.delete_db(true);
             });
             ui.add_space(6.0);
@@ -112,7 +114,7 @@ impl RecoverySettings {
 
             // Draw button to show recovery phrase.
             let show_text = format!("{} {}", EYE, t!("show"));
-            View::button(ui, show_text, Colors::button(), || {
+            View::button(ui, show_text, Colors::white_or_black(false), || {
                 self.show_recovery_phrase_modal(cb);
             });
 
@@ -123,8 +125,10 @@ impl RecoverySettings {
             ui.add_space(6.0);
 
             // Draw button to delete the wallet.
-            let delete_text = format!("{} {}", TRASH, t!("wallets.delete"));
-            View::colored_text_button(ui, delete_text, Colors::red(), Colors::button(), || {
+            View::colored_text_button(ui,
+                                      format!("{} {}", TRASH, t!("wallets.delete")),
+                                      Colors::red(),
+                                      Colors::white_or_black(false), || {
                 Modal::new(DELETE_CONFIRMATION_MODAL)
                     .position(ModalPosition::Center)
                     .title(t!("confirmation"))
