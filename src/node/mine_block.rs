@@ -15,7 +15,6 @@
 //! Build a block to mine: gathers transactions from the pool, assembles
 //! them into a block and returns it.
 
-use std::panic::panic_any;
 use chrono::prelude::{DateTime, Utc};
 use rand::{thread_rng, Rng};
 use serde_json::{json, Value};
@@ -77,7 +76,7 @@ pub fn get_block(
     key_id: Option<Identifier>,
     wallet_listener_url: Option<String>,
     stop_state: &Arc<StratumStopState>
-) -> (core::Block, BlockFees) {
+) -> Option<(core::Block, BlockFees)> {
     let wallet_retry_interval = 5;
     // get the latest chain state and build a block on top of it
     let mut result = build_block(chain, tx_pool, key_id.clone(), wallet_listener_url.clone());
@@ -116,12 +115,11 @@ pub fn get_block(
 
         // Stop attempts to build a block on stop.
         if stop_state.is_stopped() {
-            panic_any("Stopped");
+            return None;
         }
-
         result = build_block(chain, tx_pool, new_key_id, wallet_listener_url.clone());
     }
-    return result.unwrap();
+    Some(result.unwrap())
 }
 
 /// Builds a new block with the chain head as previous and eligible

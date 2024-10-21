@@ -604,40 +604,43 @@ impl Handler {
                     let clear_blocks = current_hash != latest_hash;
 
                     // Build the new block (version)
-                    let (new_block, block_fees) = get_block(
+                    if let Some((new_block, block_fees)) = get_block(
                         &self.chain,
                         tx_pool,
                         state.current_key_id.clone(),
                         wallet_listener_url,
                         &stop_state
-                    );
+                    ) {
+                        // scaled difficulty
+                        state.current_difficulty =
+                            (new_block.header.total_difficulty() - head.total_difficulty).to_num();
 
-                    // scaled difficulty
-                    state.current_difficulty =
-                        (new_block.header.total_difficulty() - head.total_difficulty).to_num();
+                        state.current_key_id = block_fees.key_id();
 
-                    state.current_key_id = block_fees.key_id();
+                        current_hash = latest_hash;
+                        // set the minimum acceptable share unscaled difficulty for this block
+                        state.minimum_share_difficulty = config.minimum_share_difficulty;
 
-                    current_hash = latest_hash;
-                    // set the minimum acceptable share unscaled difficulty for this block
-                    state.minimum_share_difficulty = config.minimum_share_difficulty;
+                        // set a new deadline for rebuilding with fresh transactions
+                        deadline = Utc::now().timestamp() + config.attempt_time_per_block as i64;
 
-                    // set a new deadline for rebuilding with fresh transactions
-                    deadline = Utc::now().timestamp() + config.attempt_time_per_block as i64;
+                        // If this is a new block we will clear the current_block version history
+                        if clear_blocks {
+                            state.current_block_versions.clear();
+                        }
 
-                    // If this is a new block we will clear the current_block version history
-                    if clear_blocks {
-                        state.current_block_versions.clear();
+                        // Update the mining stats
+                        self.workers.update_block_height(new_block.header.height);
+                        let difficulty = new_block.header.total_difficulty() - head.total_difficulty;
+                        self.workers.update_network_difficulty(difficulty.to_num());
+                        self.workers.update_network_hashrate();
+
+                        // Add this new block candidate onto our list of block versions for height
+                        state.current_block_versions.push(new_block);
+                    } else {
+                        thread::sleep(Duration::from_millis(1500));
+                        break;
                     }
-
-                    // Update the mining stats
-                    self.workers.update_block_height(new_block.header.height);
-                    let difficulty = new_block.header.total_difficulty() - head.total_difficulty;
-                    self.workers.update_network_difficulty(difficulty.to_num());
-                    self.workers.update_network_hashrate();
-
-                    // Add this new block candidate onto our list of block versions for this height
-                    state.current_block_versions.push(new_block);
                 }
                 // Send this job to all connected workers
                 self.broadcast_job();

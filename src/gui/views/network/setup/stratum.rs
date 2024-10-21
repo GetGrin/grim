@@ -44,7 +44,7 @@ pub struct StratumSetup {
     is_port_available: bool,
 
     /// Wallet name to receive rewards.
-    wallet_name: Option<String>,
+    pub wallet_name: Option<String>,
 
     /// Attempt time value in seconds to mine on a particular header.
     attempt_time_edit: String,
