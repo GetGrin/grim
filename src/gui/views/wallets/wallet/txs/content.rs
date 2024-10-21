@@ -17,11 +17,12 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use egui::{Align, Id, Layout, Rect, RichText, Rounding, ScrollArea};
 use egui::epaint::RectShape;
 use egui::scroll_area::ScrollBarVisibility;
+use grin_core::consensus::COINBASE_MATURITY;
 use grin_core::core::amount_to_hr_string;
 use grin_wallet_libwallet::TxLogEntryType;
 
 use crate::gui::Colors;
-use crate::gui::icons::{ARROW_CIRCLE_DOWN, ARROW_CIRCLE_UP, BRIDGE, CALENDAR_CHECK, CHAT_CIRCLE_TEXT, CHECK, CHECK_CIRCLE, DOTS_THREE_CIRCLE, FILE_TEXT, GEAR_FINE, PROHIBIT, X_CIRCLE};
+use crate::gui::icons::{ARROW_CIRCLE_DOWN, ARROW_CIRCLE_UP, BRIDGE, CALENDAR_CHECK, CHAT_CIRCLE_TEXT, CHECK, DOTS_THREE_CIRCLE, FILE_TEXT, GEAR_FINE, PROHIBIT, X_CIRCLE};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, PullToRefresh, Content, View};
 use crate::gui::views::types::{LinePosition, ModalPosition};
@@ -315,6 +316,7 @@ impl WalletTransactions {
                     ui.add_space(-2.0);
 
                     // Setup transaction status text.
+                    let height = data.info.last_confirmed_height;
                     let status_text = if !tx.data.confirmed {
                         let is_canceled = tx.data.tx_type == TxLogEntryType::TxSentCancelled
                             || tx.data.tx_type == TxLogEntryType::TxReceivedCancelled;
@@ -340,7 +342,7 @@ impl WalletTransactions {
                                     _ => {
                                         format!("{} {}",
                                                 DOTS_THREE_CIRCLE,
-                                                t!("wallets.tx_confirmed"))
+                                                t!("wallets.tx_confirming"))
                                     }
                                 }
                             }
@@ -348,10 +350,28 @@ impl WalletTransactions {
                     } else {
                         match tx.data.tx_type {
                             TxLogEntryType::ConfirmedCoinbase => {
-                                format!("{} {}", CHECK_CIRCLE, t!("wallets.tx_confirmed"))
+                                let tx_h = tx.height.unwrap_or(1) - 1;
+                                if tx_h != 0 {
+                                    let left_conf = height - tx_h;
+                                    let conf_info = if tx_h != 0 && height >= tx_h &&
+                                        left_conf < COINBASE_MATURITY {
+                                        format!("{}/{}", left_conf, COINBASE_MATURITY)
+                                    } else {
+                                        "".to_string()
+                                    };
+                                    format!("{} {} {}",
+                                            DOTS_THREE_CIRCLE,
+                                            t!("wallets.tx_confirming"),
+                                            conf_info
+                                    )
+                                } else {
+                                    format!("{} {}",
+                                            DOTS_THREE_CIRCLE,
+                                            t!("wallets.tx_confirmed"))
+                                }
+
                             },
                             TxLogEntryType::TxSent | TxLogEntryType::TxReceived => {
-                                let height = data.info.last_confirmed_height;
                                 let min_conf = data.info.minimum_confirmations;
                                 if tx.height.is_none() || (tx.height.unwrap() != 0 &&
                                     height - tx.height.unwrap() > min_conf - 1) {
