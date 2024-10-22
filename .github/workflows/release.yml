@@ -103,9 +103,9 @@ jobs:
       - name: Install cargo-zigbuild
         run: cargo install cargo-zigbuild
       - name: Download SDK
-        run: wget https://github.com/phracker/MacOSX-SDKs/releases/download/11.3/MacOSX10.15.sdk.tar.xz && tar -xzf MacOSX10.15.sdk.tar.xz
+        run: wget https://github.com/phracker/MacOSX-SDKs/releases/download/11.3/MacOSX10.15.sdk.tar.xz
       - name: Setup SDK env
-        run: echo "SDK_PATH=${{ github.workspace }}/MacOSX10.15.sdk" >> $GITHUB_ENV
+        run: tar xf ${{ github.workspace }}/MacOSX10.15.sdk.tar.xz && echo "SDK_PATH=${{ github.workspace }}/MacOSX10.15.sdk" >> $GITHUB_ENV
       - name: Release x86
         run: |
           rustup target add x86_64-apple-darwin
