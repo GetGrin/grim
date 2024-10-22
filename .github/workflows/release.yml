@@ -94,20 +94,18 @@ jobs:
 
   macos_release:
     name: MacOS Release
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Zig Setup
-        uses: goto-bus-stop/setup-zig@v2
-        with:
-          version: 0.12.1
-      - name: Install coreutils
-        run: brew install coreutils
       - name: Install cargo-zigbuild
         run: cargo install cargo-zigbuild
+      - name: Download SDK
+        run: wget https://github.com/phracker/MacOSX-SDKs/releases/download/11.3/MacOSX10.15.sdk.tar.xz && tar -xzf MacOSX10.15.sdk.tar.xz
+      - name: Setup SDK env
+        run: echo "SDK_PATH=${{ github.workspace }}/MacOSX10.15.sdk" >> $GITHUB_ENV
       - name: Release x86
         run: |
           rustup target add x86_64-apple-darwin
