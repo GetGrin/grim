@@ -94,26 +94,22 @@ jobs:
 
   macos_release:
     name: MacOS Release
-    runs-on: ubuntu-latest
+    runs-on: macos-12
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Setup zig
-        uses: korandoru/setup-zig@v1
-        with:
-          zig-version: 0.12.1
       - name: Download SDK
         run: wget https://github.com/phracker/MacOSX-SDKs/releases/download/11.3/MacOSX10.15.sdk.tar.xz
       - name: Setup SDK env
         run: tar xf ${{ github.workspace }}/MacOSX10.15.sdk.tar.xz && echo "SDKROOT=${{ github.workspace }}/MacOSX10.15.sdk" >> $GITHUB_ENV
-      - name: Install cargo-zigbuild
-        run: cargo install cargo-zigbuild
+      - name: Setup platform env
+        run: echo "MACOSX_DEPLOYMENT_TARGET=10.15" >> $GITHUB_ENV
       - name: Release x86
         run: |
           rustup target add x86_64-apple-darwin
-          cargo zigbuild --release --target x86_64-apple-darwin
+          cargo build --release --target x86_64-apple-darwin
           yes | cp -rf target/x86_64-apple-darwin/release/grim macos/Grim.app/Contents/MacOS
       - name: Archive x86
         run: |
@@ -128,7 +124,7 @@ jobs:
       - name: Release ARM
         run: |
           rustup target add aarch64-apple-darwin
-          cargo zigbuild --release --target aarch64-apple-darwin
+          cargo build --release --target aarch64-apple-darwin
           yes | cp -rf target/aarch64-apple-darwin/release/grim macos/Grim.app/Contents/MacOS
       - name: Archive ARM
         run: |
@@ -142,10 +138,8 @@ jobs:
         run: sha256sum grim-${{ github.ref_name }}-macos-arm.zip > grim-${{ github.ref_name }}-macos-arm-sha256sum.txt
       - name: Release Universal
         run: |
-          rustup target add aarch64-apple-darwin
-          rustup target add x86_64-apple-darwin
-          cargo zigbuild --release --target universal2-apple-darwin
-          yes | cp -rf target/universal2-apple-darwin/release/grim macos/Grim.app/Contents/MacOS
+          lipo -create -output target/grim target/aarch64-apple-darwin/release/grim target/x86_64-apple-darwin/release/grim
+          yes | cp -rf target/grim macos/Grim.app/Contents/MacOS
       - name: Archive Universal
         run: |
           cd macos
