@@ -77,10 +77,12 @@ fi
 
 # Update version in build.gradle
 
-sed -i 's/versionName [0-9a-zA-Z -_]*/versionName "'"$VERSION_NEXT"'"/' android/app/build.gradle
+sed -i'.bak' -e 's/versionName [0-9a-zA-Z -_]*/versionName "'"$VERSION_NEXT"'"/' android/app/build.gradle
+rm -f android/app/build.gradle.bak
 
 # Update version in Cargo.toml
-sed -i "s/^version = .*/version = \"$VERSION_NEXT\"/" Cargo.toml
+sed -i'.bak' -e "s/^version = .*/version = \"$VERSION_NEXT\"/" Cargo.toml
+rm -f Cargo.toml.bak
 
 # Update Cargo.lock as this changes when
 # updating the version in your manifest
@@ -96,4 +98,4 @@ git commit -m "release: v$VERSION_NEXT"
 
 # Create a tag and push to master branch
 git tag "v$VERSION_NEXT" master
-git push origin master --follow-tags
+#git push origin master --follow-tags
