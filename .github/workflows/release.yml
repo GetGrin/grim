@@ -123,6 +123,8 @@ jobs:
         working-directory: target/x86_64-apple-darwin/release
         shell: bash
         run: sha256sum grim-${{ github.ref_name }}-macos-x86_64.zip > grim-${{ github.ref_name }}-macos-x86_64-sha256sum.txt
+      - name: Setup platform env
+        run: echo "MACOSX_DEPLOYMENT_TARGET=11.0" >> $GITHUB_ENV
       - name: Release ARM
         run: |
           rustup target add aarch64-apple-darwin
@@ -138,6 +140,8 @@ jobs:
         working-directory: target/aarch64-apple-darwin/release
         shell: bash
         run: sha256sum grim-${{ github.ref_name }}-macos-arm.zip > grim-${{ github.ref_name }}-macos-arm-sha256sum.txt
+      - name: Setup platform env
+        run: echo "MACOSX_DEPLOYMENT_TARGET=10.15" >> $GITHUB_ENV
       - name: Release Universal
         run: |
           lipo -create -output target/grim target/aarch64-apple-darwin/release/grim target/x86_64-apple-darwin/release/grim
