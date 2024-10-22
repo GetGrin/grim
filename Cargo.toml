@@ -1,6 +1,6 @@
 [package]
 name = "grim"
-version = "0.2.1"
+version = "0.2.2"
 authors = ["Ardocrat <ardocrat@proton.me>"]
 description = "Cross-platform GUI for Grin with focus on usability and availability to be used by anyone, anywhere."
 license = "Apache-2.0"
