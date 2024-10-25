@@ -1,6 +1,6 @@
 #!/bin/bash
 
-usage="Usage: android.sh [type] [platform]\n - type: 'build', 'release', ''\n - platform, for build type: 'v7', 'v8', 'x86'"
+usage="Usage: android.sh [type] [platform|version]\n - type: 'build', 'release'\n - platform, for 'build' type: 'v7', 'v8', 'x86'\n - optional version for 'release' (needed on MacOS), example: '0.2.2'"
 case $1 in
   build|release)
     ;;
@@ -59,8 +59,6 @@ function build_lib() {
 
 ### Build application
 function build_apk() {
-  version=$(grep -m 1 -Po 'version = "\K[^"]*' Cargo.toml)
-
   cd android || exit 1
   ./gradlew clean
   # Build signed apk if keystore exists
@@ -81,6 +79,11 @@ function build_apk() {
         adb -s "$SERIAL" shell am start -n mw.gri.android/.MainActivity;
     done
   else
+    if [[ "$OSTYPE" != "darwin"* ]]; then
+      version=$(grep -m 1 -Po 'version = "\K[^"]*' Cargo.toml)
+    else
+      version=v$2
+    fi
     # Setup release file name
     name=grim-${version}-android-$1.apk
     [[ $1 == "arm" ]] && name=grim-${version}-android.apk
@@ -110,8 +113,8 @@ else
 
   build_lib "v7"
   [ $success -eq 1 ] && build_lib "v8"
-  [ $success -eq 1 ] && build_apk "arm"
+  [ $success -eq 1 ] && build_apk "arm" "$2"
   rm -rf android/app/src/main/jniLibs/*
   [ $success -eq 1 ] && build_lib "x86"
-  [ $success -eq 1 ] && build_apk "x86_64"
+  [ $success -eq 1 ] && build_apk "x86_64" "$2"
 fi
