@@ -14,7 +14,7 @@
 
 use std::sync::atomic::{AtomicBool, Ordering};
 use lazy_static::lazy_static;
-use egui::{Align, Context, CursorIcon, Layout, Modifiers, Rect, ResizeDirection, Rounding, Stroke, UiBuilder, ViewportCommand};
+use egui::{Align, Context, CursorIcon, Layout, Modifiers, ResizeDirection, Rounding, UiBuilder, ViewportCommand};
 use egui::epaint::{RectShape};
 use egui::os::OperatingSystem;
 
@@ -138,35 +138,29 @@ impl<Platform: PlatformCallbacks> App<Platform> {
 
     /// Draw mobile platform window content.
     fn mobile_window_ui(&mut self, ui: &mut egui::Ui) {
-        Self::title_panel_bg(ui, false);
+        Self::title_panel_bg(ui, true);
         self.content.ui(ui, &self.platform);
     }
 
     /// Draw desktop platform window content.
     fn desktop_window_ui(&mut self, ui: &mut egui::Ui, is_fullscreen: bool) {
         Self::title_panel_bg(ui, is_fullscreen);
+        let rect = ui.max_rect();
 
         let content_bg_rect = {
-            let mut rect = ui.max_rect();
+            let mut r = rect.clone();
             if !is_fullscreen {
-                rect = rect.shrink(Content::WINDOW_FRAME_MARGIN);
+                r = r.shrink(Content::WINDOW_FRAME_MARGIN);
             }
-            let top = Content::WINDOW_TITLE_HEIGHT + TitlePanel::HEIGHT + 0.5;
-            rect.min += egui::vec2(0.0, top);
-            rect
+            let top = Content::WINDOW_TITLE_HEIGHT + TitlePanel::HEIGHT + if !is_fullscreen {
+                Content::WINDOW_FRAME_MARGIN
+            } else {
+                0.0
+            };
+            r.min.y = top;
+            r
         };
-        let content_bg = RectShape {
-            rect: content_bg_rect,
-            rounding: Rounding::ZERO,
-            fill: Colors::fill_lite(),
-            stroke: Stroke {
-                width: 1.0,
-                color: Colors::stroke()
-            },
-            blur_width: 0.0,
-            fill_texture_id: Default::default(),
-            uv: Rect::ZERO
-        };
+        let content_bg = RectShape::filled(content_bg_rect, Rounding::ZERO, Colors::fill_lite());
         // Draw content background.
         ui.painter().add(content_bg);
 
@@ -184,10 +178,10 @@ impl<Platform: PlatformCallbacks> App<Platform> {
                 rect.min.y += Content::WINDOW_TITLE_HEIGHT;
                 rect
             };
-            // Draw main content.
             let mut content_ui = ui.new_child(UiBuilder::new()
                 .max_rect(content_rect)
                 .layout(*ui.layout()));
+            // Draw main content.
             self.content.ui(&mut content_ui, &self.platform);
         });
 
@@ -224,10 +218,8 @@ impl<Platform: PlatformCallbacks> App<Platform> {
 
     /// Draw custom window title content.
     fn window_title_ui(&self, ui: &mut egui::Ui, is_fullscreen: bool) {
-        let content_rect = ui.max_rect();
-
         let title_rect = {
-            let mut rect = content_rect;
+            let mut rect = ui.max_rect();
             rect.max.y = rect.min.y + Content::WINDOW_TITLE_HEIGHT;
             rect
         };
@@ -268,9 +260,8 @@ impl<Platform: PlatformCallbacks> App<Platform> {
         }
 
         // Paint the title.
-        let dual_wallets_panel =
-            ui.available_width() >= (Content::SIDE_PANEL_WIDTH * 3.0)
-                + View::get_right_inset() + View::get_left_inset();
+        let dual_wallets_panel = ui.available_width() >= (Content::SIDE_PANEL_WIDTH * 3.0) +
+            View::get_right_inset() + View::get_left_inset();
         let wallet_panel_opened = self.content.wallets.showing_wallet();
         let show_app_name = if dual_wallets_panel {
             wallet_panel_opened && !AppConfig::show_wallets_at_dual_panel()
@@ -411,7 +402,11 @@ impl<Platform: PlatformCallbacks> eframe::App for App<Platform> {
     }
 
     fn clear_color(&self, _visuals: &egui::Visuals) -> [f32; 4] {
-        Colors::fill_lite().to_normalized_gamma_f32()
+        let is_mac = OperatingSystem::from_target_os() == OperatingSystem::Mac;
+        if !View::is_desktop() || is_mac {
+            return Colors::fill_lite().to_normalized_gamma_f32();
+        }
+        Colors::TRANSPARENT.to_normalized_gamma_f32()
     }
 }
 

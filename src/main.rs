@@ -138,9 +138,9 @@ fn start_desktop_gui(platform: grim::gui::platform::Desktop) {
         viewport,
         ..Default::default()
     };
-    // Use Glow renderer for Windows and Mac.
+    // Use Glow renderer for Windows.
     let is_win = os == egui::os::OperatingSystem::Windows;
-    options.renderer = if is_win || is_mac {
+    options.renderer = if is_win {
         eframe::Renderer::Glow
     } else {
         eframe::Renderer::Wgpu
@@ -151,7 +151,7 @@ fn start_desktop_gui(platform: grim::gui::platform::Desktop) {
     match grim::start(options.clone(), grim::app_creator(app)) {
         Ok(_) => {}
         Err(e) => {
-            if is_win || is_mac {
+            if is_win {
                 panic!("{}", e);
             }
             // Start with another renderer on error.

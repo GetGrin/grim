@@ -184,15 +184,14 @@ impl Modal {
             i.viewport().fullscreen.unwrap_or(false)
         });
 
-        // Setup content rect.
-        let rect = if View::is_desktop() {
-            if !is_fullscreen && OperatingSystem::from_target_os() != OperatingSystem::Mac {
-                ctx.screen_rect().shrink(Content::WINDOW_FRAME_MARGIN)
-            } else {
-                let mut r = ctx.screen_rect();
-                r.min.y += Content::WINDOW_TITLE_HEIGHT;
-                r
+        // Setup background rect.
+        let bg_rect = if View::is_desktop() && !is_fullscreen {
+            let mut r = ctx.screen_rect();
+            if OperatingSystem::Mac != OperatingSystem::from_target_os() {
+                r = r.shrink(Content::WINDOW_FRAME_MARGIN);
             }
+            r.min.y += Content::WINDOW_TITLE_HEIGHT;
+            r
         } else {
             ctx.screen_rect()
         };
@@ -202,18 +201,18 @@ impl Modal {
             .title_bar(false)
             .resizable(false)
             .collapsible(false)
-            .fixed_rect(rect)
+            .fixed_rect(bg_rect)
             .frame(egui::Frame {
                 fill: Colors::semi_transparent(),
                 ..Default::default()
             })
             .show(ctx, |ui| {
-                ui.set_min_size(rect.size());
+                ui.set_min_size(bg_rect.size());
             });
 
         // Setup width of modal content.
         let side_insets = View::get_left_inset() + View::get_right_inset();
-        let available_width = rect.width() - (side_insets + Self::DEFAULT_MARGIN);
+        let available_width = ctx.screen_rect().width() - (side_insets + Self::DEFAULT_MARGIN);
         let width = f32::min(available_width, Self::DEFAULT_WIDTH);
 
         // Show main content window at given position.

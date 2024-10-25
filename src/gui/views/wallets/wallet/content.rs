@@ -159,7 +159,7 @@ impl WalletContent {
                     r
                 };
                 View::line(ui, LinePosition::BOTTOM, &r, Colors::item_stroke());
-                if dual_panel && show_wallets_dual {
+                if dual_panel && show_wallets_dual && !show_qr_scan {
                     View::line(ui, LinePosition::LEFT, &r, Colors::item_stroke());
                 }
             });
