@@ -88,10 +88,9 @@ impl<Platform: PlatformCallbacks> App<Platform> {
                 ctx.send_viewport_cmd(ViewportCommand::CancelClose);
                 Content::show_exit_modal();
             } else {
+                let (w, h) = View::window_size(ctx);
+                AppConfig::save_window_size(w, h);
                 ctx.input(|i| {
-                    if let Some(rect) = i.viewport().inner_rect {
-                        AppConfig::save_window_size(rect.width(), rect.height());
-                    }
                     if let Some(rect) = i.viewport().outer_rect {
                         AppConfig::save_window_pos(rect.left(), rect.top());
                     }
