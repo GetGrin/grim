@@ -14,7 +14,7 @@
 
 use std::sync::atomic::{AtomicBool, Ordering};
 use lazy_static::lazy_static;
-use egui::{Align, Context, CursorIcon, Layout, Modifiers, ResizeDirection, Rounding, UiBuilder, ViewportCommand};
+use egui::{Align, Context, CursorIcon, Layout, Modifiers, ResizeDirection, Rounding, Stroke, UiBuilder, ViewportCommand};
 use egui::epaint::{RectShape};
 use egui::os::OperatingSystem;
 
@@ -114,7 +114,7 @@ impl<Platform: PlatformCallbacks> App<Platform> {
                     } else {
                         self.window_title_ui(ui, is_fullscreen);
                         ui.add_space(-1.0);
-                        Self::title_panel_bg(ui, is_fullscreen);
+                        Self::title_panel_bg(ui);
                         self.content.ui(ui, &self.platform);
                     }
                 } else {
@@ -138,29 +138,24 @@ impl<Platform: PlatformCallbacks> App<Platform> {
 
     /// Draw mobile platform window content.
     fn mobile_window_ui(&mut self, ui: &mut egui::Ui) {
-        Self::title_panel_bg(ui, true);
+        Self::title_panel_bg(ui);
         self.content.ui(ui, &self.platform);
     }
 
     /// Draw desktop platform window content.
     fn desktop_window_ui(&mut self, ui: &mut egui::Ui, is_fullscreen: bool) {
-        Self::title_panel_bg(ui, is_fullscreen);
-        let rect = ui.max_rect();
-
         let content_bg_rect = {
-            let mut r = rect.clone();
+            let mut r = ui.max_rect();
             if !is_fullscreen {
                 r = r.shrink(Content::WINDOW_FRAME_MARGIN);
             }
-            let top = Content::WINDOW_TITLE_HEIGHT + TitlePanel::HEIGHT + if !is_fullscreen {
-                Content::WINDOW_FRAME_MARGIN
-            } else {
-                0.0
-            };
-            r.min.y = top;
+            r.min.y += Content::WINDOW_TITLE_HEIGHT + TitlePanel::HEIGHT;
             r
         };
-        let content_bg = RectShape::filled(content_bg_rect, Rounding::ZERO, Colors::fill_lite());
+        let content_bg = RectShape::new(content_bg_rect,
+                                        Rounding::ZERO,
+                                        Colors::fill_lite(),
+                                        View::default_stroke());
         // Draw content background.
         ui.painter().add(content_bg);
 
@@ -172,6 +167,10 @@ impl<Platform: PlatformCallbacks> App<Platform> {
         ui.allocate_new_ui(UiBuilder::new().max_rect(content_rect), |ui| {
             // Draw window title.
             self.window_title_ui(ui, is_fullscreen);
+            ui.add_space(-1.0);
+
+            // Draw title panel background.
+            Self::title_panel_bg(ui);
 
             let content_rect = {
                 let mut rect = ui.max_rect();
@@ -199,15 +198,11 @@ impl<Platform: PlatformCallbacks> App<Platform> {
     }
 
     /// Draw title panel background.
-    fn title_panel_bg(ui: &mut egui::Ui, is_fullscreen: bool) {
+    fn title_panel_bg(ui: &mut egui::Ui) {
         let title_rect = {
             let mut rect = ui.max_rect();
             if View::is_desktop() {
-                let is_mac = OperatingSystem::from_target_os() == OperatingSystem::Mac;
-                if !is_mac && !is_fullscreen {
-                    rect = rect.shrink(Content::WINDOW_FRAME_MARGIN)
-                }
-                rect.min.y += Content::WINDOW_TITLE_HEIGHT;
+                rect.min.y += Content::WINDOW_TITLE_HEIGHT - 0.5;
             }
             rect.max.y = rect.min.y + View::get_top_inset() + TitlePanel::HEIGHT;
             rect
@@ -224,8 +219,13 @@ impl<Platform: PlatformCallbacks> App<Platform> {
             rect
         };
 
+        let title_bg_rect = {
+            let mut r = title_rect.clone();
+            r.max.y += TitlePanel::HEIGHT - 1.0;
+            r
+        };
         let is_mac = OperatingSystem::from_target_os() == OperatingSystem::Mac;
-        let window_title_bg = RectShape::filled(title_rect, if is_fullscreen || is_mac {
+        let window_title_bg = RectShape::new(title_bg_rect, if is_fullscreen || is_mac {
             Rounding::ZERO
         } else {
             Rounding {
@@ -234,7 +234,7 @@ impl<Platform: PlatformCallbacks> App<Platform> {
                 sw: 0.0,
                 se: 0.0,
             }
-        }, Colors::yellow_dark());
+        }, Colors::yellow_dark(), Stroke::new(1.0, Colors::STROKE));
         // Draw title background.
         ui.painter().add(window_title_bg);
 

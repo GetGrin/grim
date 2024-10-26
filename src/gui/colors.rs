@@ -64,7 +64,6 @@ const TITLE_DARK: Color32 = Color32::from_gray(205);
 const GRAY: Color32 = Color32::from_gray(120);
 const GRAY_DARK: Color32 = Color32::from_gray(145);
 
-const STROKE: Color32 = Color32::from_gray(200);
 const STROKE_DARK: Color32 = Color32::from_gray(50);
 
 const INACTIVE_TEXT: Color32 = Color32::from_gray(150);
@@ -86,6 +85,7 @@ fn use_dark() -> bool {
 
 impl Colors {
     pub const TRANSPARENT: Color32 = Color32::from_rgba_premultiplied(0, 0, 0, 0);
+    pub const STROKE: Color32 = Color32::from_gray(200);
 
     pub fn white_or_black(black_in_white: bool) -> Color32 {
         if use_dark() {
@@ -219,7 +219,7 @@ impl Colors {
         if use_dark() {
             STROKE_DARK
         } else {
-            STROKE
+            Self::STROKE
         }
     }
 

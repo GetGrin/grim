@@ -185,10 +185,11 @@ impl Modal {
         });
 
         // Setup background rect.
-        let bg_rect = if View::is_desktop() && !is_fullscreen {
+        let bg_rect = if View::is_desktop() {
             let mut r = ctx.screen_rect();
-            if OperatingSystem::Mac != OperatingSystem::from_target_os() {
-                r = r.shrink(Content::WINDOW_FRAME_MARGIN);
+            let is_mac = OperatingSystem::Mac == OperatingSystem::from_target_os();
+            if !is_mac && !is_fullscreen {
+                r = r.shrink(Content::WINDOW_FRAME_MARGIN - 1.0);
             }
             r.min.y += Content::WINDOW_TITLE_HEIGHT;
             r
@@ -253,12 +254,17 @@ impl Modal {
         };
 
         let x_align = View::get_left_inset() - View::get_right_inset();
+        let is_mac = OperatingSystem::Mac == OperatingSystem::from_target_os();
         let extra_y = if View::is_desktop() {
-            Content::WINDOW_TITLE_HEIGHT - Self::DEFAULT_MARGIN / 2.0
+            Content::WINDOW_TITLE_HEIGHT + if !is_mac {
+                Content::WINDOW_FRAME_MARGIN
+            } else {
+                0.0
+            }
         } else {
             0.0
         };
-        let y_align = View::get_top_inset() + Self::DEFAULT_MARGIN + extra_y;
+        let y_align = View::get_top_inset() + Self::DEFAULT_MARGIN / 2.0 + extra_y;
 
         let offset = match self.position {
             ModalPosition::CenterTop => Vec2::new(x_align, y_align),
