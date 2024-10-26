@@ -91,7 +91,7 @@ tor-error = "0.23.0"
 sha2 = "0.10.8"
 ed25519-dalek = "2.1.1"
 curve25519-dalek = "4.1.3"
-hyper = { version = "0.14.29", features = ["full"] }
+hyper = { version = "0.14.30", features = ["full"] }
 hyper-tls = "0.5.0"
 tls-api = "0.9.0"
 tls-api-native-tls = "0.9.0"
@@ -101,13 +101,13 @@ tokio-old = {version = "0.2", features = ["full"], package = "tokio" }
 tokio-util-old = { version = "0.2", features = ["codec"], package = "tokio-util" }
 
 [target.'cfg(target_os = "linux")'.dependencies]
-nokhwa = { version = "0.10.4", default-features = false, features = ["input-v4l"] }
+nokhwa = { version = "0.10.5", default-features = false, features = ["input-v4l"] }
 
 [target.'cfg(target_os = "windows")'.dependencies]
-nokhwa = { version = "0.10.4", default-features = false, features = ["input-msmf"] }
+nokhwa = { version = "0.10.5", default-features = false, features = ["input-msmf"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
-nokhwa = { version = "0.10.4", default-features = false, features = ["flume", "input-avfoundation"] }
+eye = { git = "https://github.com/raymanfx/eye-rs", rev = "5b7e3f7a1e79966091692896c568aab042e449ef", default-features = false }
 tls-api-openssl = "0.9.0"
 
 [target.'cfg(not(target_os = "android"))'.dependencies]
@@ -127,8 +127,9 @@ winit = { version = "0.30.5", features = ["android-game-activity"] }
 eframe = { version = "0.29.1", features = ["wgpu", "android-game-activity"] }
 
 [patch.crates-io]
-egui_extras = { git = "https://github.com/emilk/egui", rev = "23728e145ec52bd1193f6f0123973763de4dbb3d" }
-egui = { git = "https://github.com/emilk/egui", rev = "23728e145ec52bd1193f6f0123973763de4dbb3d" }
-eframe = { git = "https://github.com/emilk/egui", rev = "23728e145ec52bd1193f6f0123973763de4dbb3d" }
+openpnp_capture = { git = "https://github.com/ardocrat/openpnp-capture-rs", rev = "f9b06f627c5e5d42c672d117650af700846ca6cf" }
+egui_extras = { git = "https://github.com/emilk/egui", rev = "5b846b4554fe47269affb43efef2cad8710a8a47" }
+egui = { git = "https://github.com/emilk/egui", rev = "5b846b4554fe47269affb43efef2cad8710a8a47" }
+eframe = { git = "https://github.com/emilk/egui", rev = "5b846b4554fe47269affb43efef2cad8710a8a47" }
 ### patch grin store
 #grin_store = { path = "../grin-store" }

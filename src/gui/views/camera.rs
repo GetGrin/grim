@@ -51,7 +51,7 @@ impl CameraContent {
     /// Draw camera content.
     pub fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         ui.ctx().request_repaint();
-        if let Some(img_data) = cb.camera_image() {
+        let rect = if let Some(img_data) = cb.camera_image() {
             if let Ok(img) =
                 image::load_from_memory(&*img_data.0) {
                 // Process image to find QR code.
@@ -62,27 +62,28 @@ impl CameraContent {
 
                 // Show UR scan progress.
                 self.ur_progress_ui(ui);
-
-                // Show button to switch cameras.
-                if cb.can_switch_camera() {
-                    let r = {
-                        let mut r = img_rect.clone();
-                        r.min.y = r.max.y - 52.0;
-                        r.min.x = r.max.x - 52.0;
-                        r
-                    };
-                    ui.allocate_new_ui(UiBuilder::new().max_rect(r), |ui| {
-                        let rotate_img = CAMERA_ROTATE.to_string();
-                        View::button(ui, rotate_img, Colors::white_or_black(false), || {
-                            cb.switch_camera();
-                        });
-                    });
-                }
+                img_rect
             } else {
-                self.loading_ui(ui);
+                self.loading_ui(ui)
             }
         } else {
-            self.loading_ui(ui);
+            self.loading_ui(ui)
+        };
+
+        // Show button to switch cameras.
+        if cb.can_switch_camera() {
+            let r = {
+                let mut r = rect.clone();
+                r.min.y = r.max.y - 52.0;
+                r.min.x = r.max.x - 52.0;
+                r
+            };
+            ui.allocate_new_ui(UiBuilder::new().max_rect(r), |ui| {
+                let rotate_img = CAMERA_ROTATE.to_string();
+                View::button(ui, rotate_img, Colors::white_or_black(false), || {
+                    cb.switch_camera();
+                });
+            });
         }
     }
 
@@ -148,13 +149,13 @@ impl CameraContent {
     }
 
     /// Draw camera loading progress content.
-    fn loading_ui(&self, ui: &mut egui::Ui) {
+    fn loading_ui(&self, ui: &mut egui::Ui) -> Rect {
         let space = (ui.available_width() - View::BIG_SPINNER_SIZE) / 2.0;
         ui.vertical_centered(|ui| {
             ui.add_space(space);
             View::big_loading_spinner(ui);
             ui.add_space(space);
-        });
+        }).response.rect
     }
 
     /// Check if image is processing to find QR code.
