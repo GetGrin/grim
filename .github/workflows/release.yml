@@ -109,11 +109,11 @@ jobs:
       - name: Install cargo-zigbuild
         run: cargo install cargo-zigbuild
       - name: Download SDK
-        run: wget https://github.com/phracker/MacOSX-SDKs/releases/download/11.3/MacOSX10.15.sdk.tar.xz
+        run: wget https://github.com/phracker/MacOSX-SDKs/releases/download/11.3/MacOSX11.0.sdk.tar.xz
       - name: Setup SDK env
-        run: tar xf ${{ github.workspace }}/MacOSX10.15.sdk.tar.xz && echo "SDKROOT=${{ github.workspace }}/MacOSX10.15.sdk" >> $GITHUB_ENV
+        run: tar xf ${{ github.workspace }}/MacOSX11.0.sdk.tar.xz && echo "SDKROOT=${{ github.workspace }}/MacOSX11.0.sdk" >> $GITHUB_ENV
       - name: Setup platform env
-        run: echo "MACOSX_DEPLOYMENT_TARGET=10.15" >> $GITHUB_ENV
+        run: echo "MACOSX_DEPLOYMENT_TARGET=11.0" >> $GITHUB_ENV
       - name: Release x86
         run: |
           rustup target add x86_64-apple-darwin
@@ -129,12 +129,6 @@ jobs:
         working-directory: target/x86_64-apple-darwin/release
         shell: bash
         run: sha256sum grim-${{ github.ref_name }}-macos-x86_64.zip > grim-${{ github.ref_name }}-macos-x86_64-sha256sum.txt
-      - name: Download SDK
-        run: wget https://github.com/phracker/MacOSX-SDKs/releases/download/11.3/MacOSX11.0.sdk.tar.xz
-      - name: Setup SDK env
-        run: tar xf ${{ github.workspace }}/MacOSX11.0.sdk.tar.xz && echo "SDKROOT=${{ github.workspace }}/MacOSX11.0.sdk" >> $GITHUB_ENV
-      - name: Setup platform env
-        run: echo "MACOSX_DEPLOYMENT_TARGET=11.0" >> $GITHUB_ENV
       - name: Release ARM
         run: |
           rustup target add aarch64-apple-darwin
