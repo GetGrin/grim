@@ -339,6 +339,30 @@ impl WalletTransactions {
                                                 DOTS_THREE_CIRCLE,
                                                 t!("wallets.tx_sending"))
                                     },
+                                    TxLogEntryType::ConfirmedCoinbase => {
+                                        let tx_h = tx.height.unwrap_or(1) - 1;
+                                        if tx_h != 0 {
+                                            let left_conf = height - tx_h;
+                                            if height >= tx_h && left_conf < COINBASE_MATURITY {
+                                                let conf_info = format!("{}/{}",
+                                                                        left_conf,
+                                                                        COINBASE_MATURITY);
+                                                format!("{} {} {}",
+                                                        DOTS_THREE_CIRCLE,
+                                                        t!("wallets.tx_confirming"),
+                                                        conf_info
+                                                )
+                                            } else {
+                                                format!("{} {}",
+                                                        DOTS_THREE_CIRCLE,
+                                                        t!("wallets.tx_confirming"))
+                                            }
+                                        } else {
+                                            format!("{} {}",
+                                                    DOTS_THREE_CIRCLE,
+                                                    t!("wallets.tx_confirming"))
+                                        }
+                                    },
                                     _ => {
                                         format!("{} {}",
                                                 DOTS_THREE_CIRCLE,
@@ -353,17 +377,20 @@ impl WalletTransactions {
                                 let tx_h = tx.height.unwrap_or(1) - 1;
                                 if tx_h != 0 {
                                     let left_conf = height - tx_h;
-                                    let conf_info = if tx_h != 0 && height >= tx_h &&
-                                        left_conf < COINBASE_MATURITY {
-                                        format!("{}/{}", left_conf, COINBASE_MATURITY)
+                                    if height >= tx_h && left_conf < COINBASE_MATURITY {
+                                        let conf_info = format!("{}/{}",
+                                                                left_conf,
+                                                                COINBASE_MATURITY);
+                                        format!("{} {} {}",
+                                                DOTS_THREE_CIRCLE,
+                                                t!("wallets.tx_confirming"),
+                                                conf_info
+                                        )
                                     } else {
-                                        "".to_string()
-                                    };
-                                    format!("{} {} {}",
-                                            DOTS_THREE_CIRCLE,
-                                            t!("wallets.tx_confirming"),
-                                            conf_info
-                                    )
+                                        format!("{} {}",
+                                                DOTS_THREE_CIRCLE,
+                                                t!("wallets.tx_confirmed"))
+                                    }
                                 } else {
                                     format!("{} {}",
                                             DOTS_THREE_CIRCLE,

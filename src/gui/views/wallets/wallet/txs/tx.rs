@@ -203,6 +203,7 @@ impl WalletTransactionModal {
                 if let Ok(_) = res {
                     self.show_finalization = false;
                     self.finalize_edit = "".to_string();
+                    self.response_edit = "".to_string();
                 } else {
                     self.finalize_error = true;
                 }
