@@ -31,6 +31,7 @@ use grin_util::secp::SecretKey;
 use hyper::{Body, Uri};
 use parking_lot::RwLock;
 use sha2::Sha512;
+use tls_api_native_tls::TlsConnector;
 use tls_api::{TlsConnector as TlsConnectorTrait, TlsConnectorBuilder};
 use tokio::time::sleep;
 use tor_hscrypto::pk::{HsIdKey, HsIdKeypair};
@@ -47,14 +48,6 @@ use tor_llcrypto::pk::ed25519::ExpandedKeypair;
 use tor_rtcompat::tokio::TokioNativeTlsRuntime;
 use tor_rtcompat::Runtime;
 
-// On aarch64-apple-darwin targets there is an issue with the native and rustls
-// tls implementation so this makes it fall back to the openssl variant.
-//
-// https://gitlab.torproject.org/tpo/core/arti/-/issues/715
-#[cfg(not(all(target_vendor = "apple", target_arch = "aarch64")))]
-use tls_api_native_tls::TlsConnector;
-#[cfg(all(target_vendor = "apple", target_arch = "aarch64"))]
-use tls_api_openssl::TlsConnector;
 use crate::tor::http::ArtiHttpConnector;
 use crate::tor::TorConfig;
 

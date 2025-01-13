@@ -108,7 +108,6 @@ nokhwa = { version = "0.10.5", default-features = false, features = ["input-msmf
 
 [target.'cfg(target_os = "macos")'.dependencies]
 eye = { git = "https://github.com/raymanfx/eye-rs", rev = "5b7e3f7a1e79966091692896c568aab042e449ef", default-features = false }
-tls-api-openssl = "0.9.0"
 
 [target.'cfg(not(target_os = "android"))'.dependencies]
 env_logger = "0.11.3"

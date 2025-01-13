@@ -472,7 +472,7 @@ dependencies = [
  "fs-mistrust",
  "futures 0.3.31",
  "hostname-validator",
- "humantime 2.1.0",
+ "humantime",
  "humantime-serde",
  "libc",
  "once_cell",
@@ -2756,25 +2756,12 @@ dependencies = [
 
 [[package]]
 name = "env_logger"
-version = "0.5.13"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "15b0a4d2e39f8420210be8b27eeda28029729e2fd4291019455016c348240c38"
-dependencies = [
- "atty",
- "humantime 1.3.0",
- "log",
- "regex",
- "termcolor",
-]
-
-[[package]]
-name = "env_logger"
 version = "0.8.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a19187fea3ac7e84da7dacf48de0c45d63c6a76f9490dae389aead16c243fce3"
 dependencies = [
  "atty",
- "humantime 2.1.0",
+ "humantime",
  "log",
  "regex",
  "termcolor",
@@ -2787,7 +2774,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a12e6657c4c97ebab115a42dcee77225f7f482cdd841cf7088c657a42e9e00e7"
 dependencies = [
  "atty",
- "humantime 2.1.0",
+ "humantime",
  "log",
  "regex",
  "termcolor",
@@ -2802,7 +2789,7 @@ dependencies = [
  "anstream",
  "anstyle",
  "env_filter",
- "humantime 2.1.0",
+ "humantime",
  "log",
 ]
 
@@ -3694,9 +3681,8 @@ dependencies = [
  "sha2 0.10.8",
  "sys-locale",
  "thiserror 1.0.64",
- "tls-api 0.12.0",
+ "tls-api",
  "tls-api-native-tls",
- "tls-api-openssl",
  "tokio 0.2.25",
  "tokio 1.40.0",
  "tokio-util 0.2.0",
@@ -3737,7 +3723,7 @@ dependencies = [
  "lazy_static",
  "log",
  "regex",
- "ring 0.16.20",
+ "ring",
  "rustls 0.17.0",
  "serde",
  "serde_derive",
@@ -3988,7 +3974,7 @@ dependencies = [
  "grin_wallet_util",
  "log",
  "rand 0.6.5",
- "ring 0.16.20",
+ "ring",
  "serde",
  "serde_derive",
  "serde_json",
@@ -4035,7 +4021,7 @@ dependencies = [
  "prettytable-rs",
  "qr_code",
  "rand 0.7.3",
- "ring 0.16.20",
+ "ring",
  "serde",
  "serde_derive",
  "serde_json",
@@ -4073,7 +4059,7 @@ dependencies = [
  "rand 0.6.5",
  "regex",
  "reqwest",
- "ring 0.16.20",
+ "ring",
  "serde",
  "serde_derive",
  "serde_json",
@@ -4427,15 +4413,6 @@ checksum = "df3b46402a9d5adb4c86a0cf463f42e19994e3ee891101b1841f30a545cb49a9"
 
 [[package]]
 name = "humantime"
-version = "1.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "df004cfca50ef23c36850aaaa59ad52cc70d0e90243c3c7737a4dd32dc7a3c4f"
-dependencies = [
- "quick-error 1.2.3",
-]
-
-[[package]]
-name = "humantime"
 version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9a3a5bfb195931eeb336b2a7b4d761daec841b97f947d34394601737a7bba5e4"
@@ -4446,7 +4423,7 @@ version = "1.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "57a3db5ea5923d99402c94e9feb261dc5ee9b4efa158b0315f788cf549cc200c"
 dependencies = [
- "humantime 2.1.0",
+ "humantime",
  "serde",
 ]
 
@@ -4513,7 +4490,7 @@ dependencies = [
  "rustls-native-certs",
  "tokio 0.2.25",
  "tokio-rustls 0.13.1",
- "webpki 0.21.4",
+ "webpki",
 ]
 
 [[package]]
@@ -4529,7 +4506,7 @@ dependencies = [
  "rustls 0.18.1",
  "tokio 0.2.25",
  "tokio-rustls 0.14.1",
- "webpki 0.21.4",
+ "webpki",
 ]
 
 [[package]]
@@ -4730,7 +4707,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f79afb8cbee2ef20f59ccd477a218c12a93943d075b492015ecb1bb81f8ee904"
 dependencies = [
  "byteorder-lite",
- "quick-error 2.0.1",
+ "quick-error",
 ]
 
 [[package]]
@@ -5278,7 +5255,7 @@ dependencies = [
  "derivative",
  "flate2",
  "fnv",
- "humantime 2.1.0",
+ "humantime",
  "libc",
  "log",
  "log-mdc",
@@ -6538,17 +6515,6 @@ checksum = "19b17cddbe7ec3f8bc800887bab5e717348c95ea2ca0b1bf0837fb964dc67099"
 
 [[package]]
 name = "pem"
-version = "0.8.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fd56cbd21fea48d0c440b41cd69c589faacade08c992d9a54e471b79d0fd13eb"
-dependencies = [
- "base64 0.13.1",
- "once_cell",
- "regex",
-]
-
-[[package]]
-name = "pem"
 version = "3.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8e459365e590736a54c3fa561947c84837534b8e9af6fc5bf781307e82658fae"
@@ -6935,12 +6901,6 @@ checksum = "4339fc7a1021c9c1621d87f5e3505f2805c8c105420ba2f2a4df86814590c142"
 
 [[package]]
 name = "quick-error"
-version = "1.2.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a1d01941d82fa2ab50be1e79e6714289dd7cde78eba4c074bc5a4374f650dfe0"
-
-[[package]]
-name = "quick-error"
 version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a993555f31e5a609f617c12db6250dedcac1b0a85076912c436e6fc9b2c8e6a3"
@@ -7243,7 +7203,7 @@ dependencies = [
  "avif-serialize",
  "imgref",
  "loop9",
- "quick-error 2.0.1",
+ "quick-error",
  "rav1e",
  "rgb",
 ]
@@ -7491,24 +7451,9 @@ dependencies = [
  "libc",
  "once_cell",
  "spin 0.5.2",
- "untrusted 0.7.1",
+ "untrusted",
  "web-sys",
  "winapi 0.3.9",
-]
-
-[[package]]
-name = "ring"
-version = "0.17.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c17fa4cb658e3583423e915b9f3acc01cceaee1860e33d59ebae66adc3a2dc0d"
-dependencies = [
- "cc",
- "cfg-if 1.0.0",
- "getrandom 0.2.15",
- "libc",
- "spin 0.9.8",
- "untrusted 0.9.0",
- "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -7731,9 +7676,9 @@ checksum = "c0d4a31f5d68413404705d6982529b0e11a9aacd4839d1d6222ee3b8cb4015e1"
 dependencies = [
  "base64 0.11.0",
  "log",
- "ring 0.16.20",
+ "ring",
  "sct",
- "webpki 0.21.4",
+ "webpki",
 ]
 
 [[package]]
@@ -7744,9 +7689,9 @@ checksum = "5d1126dcf58e93cee7d098dbda643b5f92ed724f1f6a63007c1116eed6700c81"
 dependencies = [
  "base64 0.12.3",
  "log",
- "ring 0.16.20",
+ "ring",
  "sct",
- "webpki 0.21.4",
+ "webpki",
 ]
 
 [[package]]
@@ -7858,8 +7803,8 @@ version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b362b83898e0e69f38515b82ee15aa80636befe47c3b6d3d89a911e78fc228ce"
 dependencies = [
- "ring 0.16.20",
- "untrusted 0.7.1",
+ "ring",
+ "untrusted",
 ]
 
 [[package]]
@@ -8689,17 +8634,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "test-cert-gen"
-version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "345f92b7cac59507cdaba298c5493f7c40e2063d31f6fc621105183344d5d50a"
-dependencies = [
- "once_cell",
- "pem 0.8.3",
- "tempfile",
-]
-
-[[package]]
 name = "textwrap"
 version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -8886,28 +8820,12 @@ checksum = "1f3ccbac311fea05f86f61904b462b55fb3df8837a366dfc601a0161d0532f20"
 
 [[package]]
 name = "tls-api"
-version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "66d1b3dfb0a60da3e8a130c9f2432063d9979928a05c2b2cdcfc9fd05e4f53a3"
-dependencies = [
- "anyhow",
- "log",
- "pem 0.8.3",
- "tempfile",
- "thiserror 1.0.64",
- "tokio 1.40.0",
- "void",
- "webpki 0.22.4",
-]
-
-[[package]]
-name = "tls-api"
 version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a8eb75b7304e6c157a435fff36a9ddc111ad410015d5260b306f10a18cffad72"
 dependencies = [
  "anyhow",
- "pem 3.0.4",
+ "pem",
  "tempfile",
  "thiserror 2.0.11",
  "tokio 1.40.0",
@@ -8922,40 +8840,8 @@ dependencies = [
  "anyhow",
  "native-tls",
  "thiserror 2.0.11",
- "tls-api 0.12.0",
+ "tls-api",
  "tokio 1.40.0",
-]
-
-[[package]]
-name = "tls-api-openssl"
-version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "82155f245c99a3b652627f32abeacd4eae9e0fec996c1090df121e01379d28f3"
-dependencies = [
- "anyhow",
- "openssl",
- "openssl-sys",
- "thiserror 1.0.64",
- "tls-api 0.9.0",
- "tls-api-test",
- "tokio 1.40.0",
-]
-
-[[package]]
-name = "tls-api-test"
-version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9df107843d725428d76bb159040fbae6d1524dcf25d5b24c56daa6b37ce9dbb5"
-dependencies = [
- "anyhow",
- "env_logger 0.5.13",
- "log",
- "pem 0.8.3",
- "test-cert-gen",
- "tls-api 0.9.0",
- "tokio 1.40.0",
- "untrusted 0.6.2",
- "webpki 0.22.4",
 ]
 
 [[package]]
@@ -9051,7 +8937,7 @@ dependencies = [
  "futures-core",
  "rustls 0.17.0",
  "tokio 0.2.25",
- "webpki 0.21.4",
+ "webpki",
 ]
 
 [[package]]
@@ -9063,7 +8949,7 @@ dependencies = [
  "futures-core",
  "rustls 0.18.1",
  "tokio 0.2.25",
- "webpki 0.21.4",
+ "webpki",
 ]
 
 [[package]]
@@ -9337,7 +9223,7 @@ version = "0.26.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cd3d9898abee1d7dd03dee82809bd261274bd04f1174f042aa8ab4fdfb0d18b4"
 dependencies = [
- "humantime 2.1.0",
+ "humantime",
  "signature 2.2.0",
  "thiserror 2.0.11",
  "tor-llcrypto",
@@ -9496,7 +9382,7 @@ dependencies = [
  "fslock",
  "futures 0.3.31",
  "hex",
- "humantime 2.1.0",
+ "humantime",
  "humantime-serde",
  "itertools 0.14.0",
  "memmap2",
@@ -9574,7 +9460,7 @@ dependencies = [
  "dyn-clone",
  "educe",
  "futures 0.3.31",
- "humantime 2.1.0",
+ "humantime",
  "humantime-serde",
  "itertools 0.14.0",
  "num_enum",
@@ -9721,7 +9607,7 @@ dependencies = [
  "futures 0.3.31",
  "growable-bloom-filter",
  "hex",
- "humantime 2.1.0",
+ "humantime",
  "itertools 0.14.0",
  "k12",
  "once_cell",
@@ -9795,7 +9681,7 @@ dependencies = [
  "dyn-clone",
  "fs-mistrust",
  "glob-match",
- "humantime 2.1.0",
+ "humantime",
  "inventory",
  "itertools 0.14.0",
  "rand 0.8.5",
@@ -9884,7 +9770,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bc19acabfe7cdffda29434a9c45e2ed02ffbdbdd6f8292f3f7fb9713cc6fd5d8"
 dependencies = [
  "futures 0.3.31",
- "humantime 2.1.0",
+ "humantime",
  "once_cell",
  "thiserror 2.0.11",
  "tor-error",
@@ -9933,7 +9819,7 @@ dependencies = [
  "digest 0.10.7",
  "futures 0.3.31",
  "hex",
- "humantime 2.1.0",
+ "humantime",
  "itertools 0.14.0",
  "num_enum",
  "rand 0.8.5",
@@ -9969,7 +9855,7 @@ dependencies = [
  "digest 0.10.7",
  "educe",
  "hex",
- "humantime 2.1.0",
+ "humantime",
  "itertools 0.14.0",
  "once_cell",
  "phf",
@@ -10169,7 +10055,7 @@ dependencies = [
  "derive_more",
  "educe",
  "futures 0.3.31",
- "humantime 2.1.0",
+ "humantime",
  "itertools 0.14.0",
  "oneshot-fused-workaround",
  "pin-project",
@@ -10475,21 +10361,9 @@ checksum = "673aac59facbab8a9007c7f6108d11f63b603f7cabff99fabf650fea5c32b861"
 
 [[package]]
 name = "untrusted"
-version = "0.6.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "55cd1f4b4e96b46aeb8d4855db4a7a9bd96eeeb5c6a1ab54593328761642ce2f"
-
-[[package]]
-name = "untrusted"
 version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a156c684c91ea7d62626509bce3cb4e1d9ed5c4d978f7b4352658f96a4c26b4a"
-
-[[package]]
-name = "untrusted"
-version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8ecb6da28b8a351d773b68d5825ac39017e680750f980f3a1a85cd8dd28a47c1"
 
 [[package]]
 name = "ur"
@@ -10952,18 +10826,8 @@ version = "0.21.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b8e38c0608262c46d4a56202ebabdeb094cef7e560ca7a226c6bf055188aa4ea"
 dependencies = [
- "ring 0.16.20",
- "untrusted 0.7.1",
-]
-
-[[package]]
-name = "webpki"
-version = "0.22.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ed63aea5ce73d0ff405984102c42de94fc55a6b75765d621c65262469b3c9b53"
-dependencies = [
- "ring 0.17.8",
- "untrusted 0.9.0",
+ "ring",
+ "untrusted",
 ]
 
 [[package]]
@@ -10972,7 +10836,7 @@ version = "0.20.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0f20dea7535251981a9670857150d571846545088359b28e4951d350bdaf179f"
 dependencies = [
- "webpki 0.21.4",
+ "webpki",
 ]
 
 [[package]]
