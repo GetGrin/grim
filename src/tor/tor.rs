@@ -80,20 +80,16 @@ pub struct Tor {
 
 impl Default for Tor {
     fn default() -> Self {
+        // Cleanup keys, state and cache on start.
+        fs::remove_dir_all(TorConfig::keystore_path()).unwrap_or_default();
+        fs::remove_dir_all(TorConfig::state_path()).unwrap_or_default();
+        fs::remove_dir_all(TorConfig::cache_path()).unwrap_or_default();
+        // Create Tor client.
         let runtime = TokioNativeTlsRuntime::create().unwrap();
         let config = Self::build_config();
-        let client = if let Ok(c) = TorClient::with_runtime(runtime)
+        let client = TorClient::with_runtime(runtime)
             .config(config.clone())
-            .create_unbootstrapped() {
-            c
-        } else {
-            fs::remove_dir_all(TorConfig::state_path()).unwrap();
-            fs::remove_dir_all(TorConfig::cache_path()).unwrap();
-            let runtime = TokioNativeTlsRuntime::create().unwrap();
-            TorClient::with_runtime(runtime)
-                .config(config.clone())
-                .create_unbootstrapped().unwrap()
-        };
+            .create_unbootstrapped().unwrap();
         Self {
             running_services: Arc::new(RwLock::new(BTreeMap::new())),
             starting_services: Arc::new(RwLock::new(BTreeSet::new())),
