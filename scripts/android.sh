@@ -63,8 +63,8 @@ function build_apk() {
   ./gradlew clean
   # Build signed apk if keystore exists
   if [ ! -f keystore.properties ]; then
-    ./gradlew assembleRelease
-    apk_path=app/build/outputs/apk/release/app-release.apk
+    ./gradlew assembleDebug
+    apk_path=app/build/outputs/apk/debug/app-debug.apk
   else
     ./gradlew assembleSignedRelease
     apk_path=app/build/outputs/apk/signedRelease/app-signedRelease.apk
