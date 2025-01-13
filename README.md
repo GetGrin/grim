@@ -1,4 +1,4 @@
-# <img height="22" src="https://gri.mw/code/GUI/grim/raw/branch/master/android/app/src/main/ic_launcher-playstore.png"/> Grim <img height="20" src="https://gri.mw/code/GUI/grim/raw/branch/master/img/grin-logo.png"/> <img height="20" src="https://gri.mw/code/GUI/grim/raw/branch/master/img/logo.png"/>
+# Grim <img height="20" src="https://gri.mw/code/GUI/grim/raw/branch/master/img/grin-logo.png"/> <img height="20" src="https://gri.mw/code/GUI/grim/raw/branch/master/img/logo.png"/>
 Cross-platform GUI for [GRiN ツ](https://grin.mw) in [Rust](https://www.rust-lang.org/) 
 for maximum compatibility with original [Mimblewimble](https://github.com/mimblewimble/grin) implementation.
 Initially supported platforms are Linux, Mac, Windows, limited Android and possible web support with help of [egui](https://github.com/emilk/egui) - immediate mode GUI library in pure Rust.
