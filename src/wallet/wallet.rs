@@ -617,7 +617,7 @@ impl Wallet {
         let r_inst = self.instance.as_ref().read();
         let instance = r_inst.clone().unwrap();
         let mut api = Owner::new(instance, None);
-        return match parse_slatepack(&mut api, None, None, Some(text.clone())) {
+        match parse_slatepack(&mut api, None, None, Some(text.clone())) {
             Ok(s) => Ok(s.0),
             Err(e) => Err(e)
         }
@@ -714,7 +714,7 @@ impl Wallet {
             amount,
             minimum_confirmations: config.min_confirmations,
             num_change_outputs: 1,
-            selection_strategy_is_use_all: true,
+            selection_strategy_is_use_all: false,
             ..Default::default()
         };
         let r_inst = self.instance.as_ref().read();
@@ -857,7 +857,7 @@ impl Wallet {
                 src_acct_name: None,
                 amount: slate.amount,
                 minimum_confirmations: config.min_confirmations,
-                selection_strategy_is_use_all: true,
+                selection_strategy_is_use_all: false,
                 ..Default::default()
             };
             let r_inst = self.instance.as_ref().read();
