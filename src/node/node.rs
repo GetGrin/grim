@@ -529,8 +529,8 @@ impl Node {
 /// Start the node [`Server`].
 fn start_node_server() -> Result<Server, Error>  {
     // Setup server config.
-    PeersConfig::load_to_server_config();
-    let config = NodeConfig::node_server_config();
+    let mut config = NodeConfig::node_server_config();
+    PeersConfig::load_to_server_config(&mut config);
     let mut server_config = config.server.clone();
 
     // Setup Mainnet DNSSeed

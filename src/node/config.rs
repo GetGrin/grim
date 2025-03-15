@@ -69,62 +69,58 @@ impl PeersConfig {
     }
 
     /// Load saved peers to node server [`ConfigMembers`] config.
-    pub fn load_to_server_config() {
-        let mut w_config = Settings::node_config_to_update();
+    pub fn load_to_server_config(config: &mut ConfigMembers) {
         // Load seeds.
-        for seed in w_config.peers.seeds.clone() {
+        let r_config = Settings::node_config_to_read();
+        for seed in r_config.peers.seeds.clone() {
             if let Some(p) = Self::peer_to_addr(seed.to_string()) {
-                let mut seeds = w_config
-                    .node
+                let mut seeds = config
                     .server
                     .p2p_config
                     .seeds
                     .clone()
                     .unwrap_or(PeerAddrs::default());
                 seeds.peers.insert(seeds.peers.len(), p);
-                w_config.node.server.p2p_config.seeds = Some(seeds);
+                config.server.p2p_config.seeds = Some(seeds);
             }
         }
         // Load allowed peers.
-        for peer in w_config.peers.allowed.clone() {
+        for peer in r_config.peers.allowed.clone() {
             if let Some(p) = Self::peer_to_addr(peer.clone()) {
-                let mut allowed = w_config
-                    .node
+                let mut allowed = config
                     .server
                     .p2p_config
                     .peers_allow
                     .clone()
                     .unwrap_or(PeerAddrs::default());
                 allowed.peers.insert(allowed.peers.len(), p);
-                w_config.node.server.p2p_config.peers_allow = Some(allowed);
+                config.server.p2p_config.peers_allow = Some(allowed);
             }
         }
         // Load denied peers.
-        for peer in w_config.peers.denied.clone() {
+        for peer in r_config.peers.denied.clone() {
             if let Some(p) = Self::peer_to_addr(peer.clone()) {
-                let mut denied = w_config
-                    .node
+                let mut denied = config
                     .server
                     .p2p_config
                     .peers_deny
                     .clone()
                     .unwrap_or(PeerAddrs::default());
                 denied.peers.insert(denied.peers.len(), p);
-                w_config.node.server.p2p_config.peers_deny = Some(denied);
+                config.server.p2p_config.peers_deny = Some(denied);
             }
         }
         // Load preferred peers.
-        for peer in &w_config.peers.preferred.clone() {
+        for peer in &r_config.peers.preferred.clone() {
             if let Some(p) = Self::peer_to_addr(peer.clone()) {
-                let mut preferred = w_config
-                    .node
+                let mut preferred = config
                     .server
                     .p2p_config
                     .peers_preferred
                     .clone()
                     .unwrap_or(PeerAddrs::default());
                 preferred.peers.insert(preferred.peers.len(), p);
-                w_config.node.server.p2p_config.peers_preferred = Some(preferred);
+                config.server.p2p_config.peers_preferred = Some(preferred);
             }
         }
     }
