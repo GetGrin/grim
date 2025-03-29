@@ -107,7 +107,7 @@ nokhwa = { version = "0.10.5", default-features = false, features = ["input-v4l"
 nokhwa = { version = "0.10.5", default-features = false, features = ["input-msmf"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
-eye = { git = "https://github.com/raymanfx/eye-rs", rev = "5b7e3f7a1e79966091692896c568aab042e449ef", default-features = false }
+nokhwa-mac = { git = "https://github.com/l1npengtul/nokhwa", rev = "612c861ef153cf0ee575d8dd1413b960e4e19dd6", features = ["input-avfoundation", "output-threaded"], package = "nokhwa" }
 
 [target.'cfg(not(target_os = "android"))'.dependencies]
 env_logger = "0.11.3"
@@ -126,7 +126,6 @@ winit = { version = "0.30.5", features = ["android-game-activity"] }
 eframe = { version = "0.29.1", features = ["wgpu", "android-game-activity"] }
 
 [patch.crates-io]
-openpnp_capture = { git = "https://github.com/ardocrat/openpnp-capture-rs", rev = "f9b06f627c5e5d42c672d117650af700846ca6cf" }
 egui_extras = { git = "https://github.com/emilk/egui", rev = "5b846b4554fe47269affb43efef2cad8710a8a47" }
 egui = { git = "https://github.com/emilk/egui", rev = "5b846b4554fe47269affb43efef2cad8710a8a47" }
 eframe = { git = "https://github.com/emilk/egui", rev = "5b846b4554fe47269affb43efef2cad8710a8a47" }
