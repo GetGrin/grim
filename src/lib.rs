@@ -128,7 +128,9 @@ pub fn start(options: NativeOptions, app_creator: eframe::AppCreator) -> eframe:
 /// Setup application [`egui::Style`] and [`egui::Visuals`].
 pub fn setup_visuals(ctx: &Context) {
     let use_dark = AppConfig::dark_theme().unwrap_or_else(|| {
-        ctx.system_theme().unwrap_or(Theme::Dark) == Theme::Dark
+        let use_dark = ctx.system_theme().unwrap_or(Theme::Dark) == Theme::Dark;
+        AppConfig::set_dark_theme(use_dark);
+        use_dark
     });
 
     let mut style = (*ctx.style()).clone();
