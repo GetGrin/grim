@@ -52,7 +52,7 @@ impl Desktop {
         }
     }
 
-    #[allow(dead_code)]
+    // #[allow(dead_code)]
     #[cfg(not(target_os = "macos"))]
     fn start_camera_capture(cameras_amount: Arc<AtomicUsize>,
                             camera_index: Arc<AtomicUsize>,
@@ -109,52 +109,56 @@ impl Desktop {
     fn start_camera_capture(cameras_amount: Arc<AtomicUsize>,
                             camera_index: Arc<AtomicUsize>,
                             stop_camera: Arc<AtomicBool>) {
-        use image::{ExtendedColorType, ImageBuffer, ImageEncoder, Rgb};
-        use eye::hal::{traits::{Context, Device, Stream}, PlatformContext};
-        use image::codecs::jpeg::JpegEncoder;
+        use nokhwa_mac::nokhwa_initialize;
+        use nokhwa_mac::pixel_format::RgbFormat;
+        use nokhwa_mac::utils::{CameraIndex, RequestedFormat, RequestedFormatType};
+        use nokhwa_mac::utils::ApiBackend;
+        use nokhwa_mac::query;
+        use nokhwa_mac::CallbackCamera;
 
-        let index = camera_index.load(Ordering::Relaxed);
-        let devices = PlatformContext::default().devices().unwrap_or(vec![]);
-        cameras_amount.store(devices.len(), Ordering::Relaxed);
-        if devices.is_empty() || index >= devices.len() {
-            return;
-        }
+        // Ask permission to open camera.
+        nokhwa_initialize(|_| {});
 
-        // Capture images at separate thread.
-        let uri = devices[camera_index.load(Ordering::Relaxed)].uri.clone();
         thread::spawn(move || {
-            if let Ok(dev) = PlatformContext::default().open_device(&uri) {
-                let streams = dev.streams().unwrap_or(vec![]);
-                if streams.is_empty() {
-                    return;
-                }
-                let stream_desc = streams[0].clone();
-                let w = stream_desc.width;
-                let h = stream_desc.height;
-                if let Ok(mut stream) = dev.start_stream(&stream_desc) {
+            let cameras = query(ApiBackend::Auto).unwrap();
+            cameras_amount.store(cameras.len(), Ordering::Relaxed);
+            let index = camera_index.load(Ordering::Relaxed);
+            if cameras.is_empty() || index >= cameras.len() {
+                return;
+            }
+            // Start camera.
+            let camera_index = CameraIndex::Index(camera_index.load(Ordering::Relaxed) as u32);
+            let camera_callback = CallbackCamera::new(
+                camera_index,
+                RequestedFormat::new::<RgbFormat>(RequestedFormatType::AbsoluteHighestFrameRate),
+                |_| {}
+            );
+            if let Ok(mut cb) = camera_callback {
+                if cb.open_stream().is_ok() {
                     loop {
                         // Stop if camera was stopped.
                         if stop_camera.load(Ordering::Relaxed) {
                             stop_camera.store(false, Ordering::Relaxed);
+                            // Clear image.
                             let mut w_image = LAST_CAMERA_IMAGE.write();
                             *w_image = None;
                             break;
                         }
-                        // Get a frame.
-                        let frame = stream.next()
-                            .expect("Stream is dead")
-                            .expect("Failed to capture a frame");
-                        let mut out = vec![];
-                        if let Some(buf) = ImageBuffer::<Rgb<u8>, &[u8]>::from_raw(w, h, &frame) {
-                            JpegEncoder::new(&mut out)
-                                .write_image(buf.as_raw(), w, h, ExtendedColorType::Rgb8)
-                                .unwrap_or_default();
+                        // Get image from camera.
+                        if let Ok(frame) = cb.poll_frame() {
+                            let image = frame.decode_image::<RgbFormat>().unwrap();
+                            let mut bytes: Vec<u8> = Vec::new();
+                            let format = image::ImageFormat::Jpeg;
+                            // Convert image to Jpeg format.
+                            image.write_to(&mut std::io::Cursor::new(&mut bytes), format).unwrap();
+                            let mut w_image = LAST_CAMERA_IMAGE.write();
+                            *w_image = Some((bytes, 0));
                         } else {
-                            out = frame.to_vec();
+                            // Clear image.
+                            let mut w_image = LAST_CAMERA_IMAGE.write();
+                            *w_image = None;
+                            break;
                         }
-                        // Save image.
-                        let mut w_image = LAST_CAMERA_IMAGE.write();
-                        *w_image = Some((out, 0));
                     }
                 }
             }
