@@ -16,7 +16,7 @@
 //! them into a block and returns it.
 
 use chrono::prelude::{DateTime, Utc};
-use rand::{thread_rng, Rng};
+use rand::{rng, Rng};
 use serde_json::{json, Value};
 use std::sync::Arc;
 use std::thread;
@@ -174,7 +174,7 @@ fn build_block(
     // making sure we're not spending time mining a useless block
     b.validate(&head.total_kernel_offset)?;
 
-    b.header.pow.nonce = thread_rng().gen();
+    b.header.pow.nonce = rng().random();
     b.header.pow.secondary_scaling = difficulty.secondary_scaling;
     b.header.timestamp = DateTime::from_timestamp(now_sec, 0).unwrap();
 

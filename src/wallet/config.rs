@@ -81,7 +81,7 @@ impl WalletConfig {
             min_confirmations: MIN_CONFIRMATIONS_DEFAULT,
             use_dandelion: Some(true),
             enable_tor_listener: Some(false),
-            api_port: Some(rand::thread_rng().gen_range(10000..30000)),
+            api_port: Some(rand::rng().random_range(10000..30000)),
         };
         Settings::write_to_file(&config, config_path);
         config

@@ -1415,7 +1415,7 @@ fn sync_wallet_data(wallet: &Wallet, from_node: bool) {
 /// Start Foreign API server to receive txs over transport and mining rewards.
 fn start_api_server(wallet: &Wallet) -> Result<(ApiServer, u16), Error> {
     let host = "127.0.0.1";
-    let port = wallet.get_config().api_port.unwrap_or(rand::thread_rng().gen_range(10000..30000));
+    let port = wallet.get_config().api_port.unwrap_or(rand::rng().random_range(10000..30000));
     let free_port = (port..).find(|port| {
         return match TcpListener::bind((host, port.to_owned())) {
             Ok(_) => {

@@ -190,13 +190,13 @@ impl NodeConfig {
     fn setup_default_ports(config: &mut ConfigMembers) {
         let (api, p2p) = match config.server.chain_type {
             ChainTypes::Mainnet => {
-                let api = rand::thread_rng().gen_range(30000..33000);
-                let p2p = rand::thread_rng().gen_range(33000..37000);
+                let api = rand::rng().random_range(30000..33000);
+                let p2p = rand::rng().random_range(33000..37000);
                 (api, p2p)
             },
             _ => {
-                let api = rand::thread_rng().gen_range(40000..43000);
-                let p2p = rand::thread_rng().gen_range(43000..47000);
+                let api = rand::rng().random_range(40000..43000);
+                let p2p = rand::rng().random_range(43000..47000);
                 (api, p2p)
             }
         };

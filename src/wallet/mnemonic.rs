@@ -14,7 +14,7 @@
 
 use grin_keychain::mnemonic::{from_entropy, search, to_entropy};
 use grin_util::ZeroingString;
-use rand::{Rng, thread_rng};
+use rand::Rng;
 
 use crate::wallet::types::{PhraseMode, PhraseSize, PhraseWord};
 
@@ -100,10 +100,10 @@ impl Mnemonic {
     fn generate_words(mode: &PhraseMode, size: &PhraseSize) -> Vec<PhraseWord> {
         match mode {
             PhraseMode::Generate => {
-                let mut rng = thread_rng();
+                let mut rng = rand::rng();
                 let mut entropy: Vec<u8> = Vec::with_capacity(size.entropy_size());
                 for _ in 0..size.entropy_size() {
-                    entropy.push(rng.gen());
+                    entropy.push(rng.random());
                 }
                 from_entropy(&entropy).unwrap()
                     .split(" ")
