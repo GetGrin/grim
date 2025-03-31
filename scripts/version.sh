@@ -70,6 +70,9 @@ else
   exit 1
 fi
 
+# Update version for Windows installer.
+sed -i '' -e 's/" Version="[^\"]*"/" Version="'"$VERSION_NEXT"'"/g' wix/main.wxs
+
 # ==================================
 # Update Android build.gradle file
 # and package version at Cargo.toml
