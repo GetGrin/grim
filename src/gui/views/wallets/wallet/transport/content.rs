@@ -54,24 +54,25 @@ impl WalletTab for WalletTransport {
 
 /// Identifier for [`Modal`] to send amount over Tor.
 const SEND_TOR_MODAL: &'static str = "send_tor_modal";
-
 /// Identifier for [`Modal`] to setup Tor service.
 const TOR_SETTINGS_MODAL: &'static str = "tor_settings_modal";
-
 /// Identifier for [`Modal`] to show QR code address image.
 const QR_ADDRESS_MODAL: &'static str = "qr_address_modal";
 
-impl Default for WalletTransport {
-    fn default() -> Self {
-        Self {
+impl WalletTransport {
+    /// Create new transport content instance, opening sending `Modal` if address was provided.
+    pub fn new(address: Option<String>, cb: &dyn PlatformCallbacks) -> Self {
+        let mut content = Self {
             send_modal_content: None,
             qr_address_content: None,
             settings_modal_content: None,
+        };
+        if address.is_some() {
+            content.show_send_tor_modal(cb, address)
         }
+        content
     }
-}
 
-impl WalletTransport {
     /// Draw wallet transport content.
     fn transport_ui(&mut self, ui: &mut egui::Ui, wallet: &Wallet, cb: &dyn PlatformCallbacks) {
         ui.add_space(3.0);
@@ -352,7 +353,7 @@ impl WalletTransport {
     }
 
     /// Show [`Modal`] to send over Tor.
-    pub fn show_send_tor_modal(&mut self, cb: &dyn PlatformCallbacks, address: Option<String>) {
+    fn show_send_tor_modal(&mut self, cb: &dyn PlatformCallbacks, address: Option<String>) {
         self.send_modal_content = Some(TransportSendModal::new(address));
         // Show modal.
         Modal::new(SEND_TOR_MODAL)

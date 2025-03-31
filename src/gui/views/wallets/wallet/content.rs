@@ -23,7 +23,7 @@ use crate::gui::Colors;
 use crate::gui::icons::{ARROWS_CLOCKWISE, BRIDGE, CAMERA_ROTATE, CHAT_CIRCLE_TEXT, FOLDER_USER, GEAR_FINE, GRAPH, PACKAGE, POWER, SCAN, SPINNER, USERS_THREE};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, Content, View, CameraContent};
-use crate::gui::views::types::{LinePosition, ModalContainer, ModalPosition};
+use crate::gui::views::types::{LinePosition, ModalContainer, ModalPosition, QrScanResult};
 use crate::gui::views::wallets::{WalletTransactions, WalletMessages, WalletTransport};
 use crate::gui::views::wallets::types::{GRIN, WalletTab, WalletTabType};
 use crate::gui::views::wallets::wallet::modals::WalletAccountsModal;
@@ -134,17 +134,33 @@ impl WalletContent {
             .show_animated_inside(ui, show_account, |ui| {
                 let rect = ui.available_rect_before_wrap();
                 if show_qr_scan {
-                    View::max_width_ui(ui, Content::SIDE_PANEL_WIDTH, |ui| {
-                        self.qr_scan_content.as_mut().unwrap().ui(ui, cb);
-                        ui.add_space(6.0);
-                        ui.vertical_centered_justified(|ui| {
-                            View::button(ui, t!("close"), Colors::white_or_black(false), || {
-                                cb.stop_camera();
-                                self.qr_scan_content = None;
+                    if let Some(result) = self.qr_scan_content.as_ref().unwrap().qr_scan_result() {
+                        match result {
+                            QrScanResult::Address(address) => {
+                                self.current_tab =
+                                    Box::new(WalletTransport::new(Some(address.to_string()), cb));
+                            }
+                            _ => {
+                                self.current_tab =
+                                    Box::new(WalletMessages::new(Some(result.text())))
+                            }
+                        }
+                        // Stop camera and close scanning.
+                        cb.stop_camera();
+                        self.qr_scan_content = None;
+                    } else {
+                        View::max_width_ui(ui, Content::SIDE_PANEL_WIDTH, |ui| {
+                            self.qr_scan_content.as_mut().unwrap().ui(ui, cb);
+                            ui.add_space(6.0);
+                            ui.vertical_centered_justified(|ui| {
+                                View::button(ui, t!("close"), Colors::white_or_black(false), || {
+                                    cb.stop_camera();
+                                    self.qr_scan_content = None;
+                                });
                             });
+                            ui.add_space(6.0);
                         });
-                        ui.add_space(6.0);
-                    });
+                    }
                 } else {
                     View::max_width_ui(ui, Content::SIDE_PANEL_WIDTH * 1.3, |ui| {
                         self.account_ui(ui, data.unwrap(), cb);
@@ -393,7 +409,7 @@ impl WalletContent {
                 });
                 columns[2].vertical_centered_justified(|ui| {
                     View::tab_button(ui, BRIDGE, current_type == WalletTabType::Transport, |_| {
-                        self.current_tab = Box::new(WalletTransport::default());
+                        self.current_tab = Box::new(WalletTransport::new(None, cb));
                     });
                 });
                 columns[3].vertical_centered_justified(|ui| {
