@@ -263,7 +263,8 @@ impl Tor {
                             return;
                         }
                         let client_check = client_thread.clone();
-                        let url = format!("http://{}/", service.onion_name().unwrap().to_string());
+                        let addr = service.onion_address().unwrap().to_string();
+                        let url = format!("http://{}/", addr);
                         thread::spawn(move || {
                             // Wait 1 second to start.
                             thread::sleep(Duration::from_millis(1000));
@@ -305,7 +306,7 @@ impl Tor {
                                                 // Remove service from failed.
                                                 let mut w_services =
                                                     TOR_SERVER_STATE.failed_services.write();
-                                                w_services.remove(id);
+                                                w_services.remove(&service_id);
                                                 // Check again after 50 seconds.
                                                 Duration::from_millis(50000)
                                             }

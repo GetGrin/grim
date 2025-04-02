@@ -18,7 +18,7 @@ use egui::{Id, RichText};
 use grin_core::core::{amount_from_hr_string, amount_to_hr_string};
 use grin_wallet_libwallet::{Error, SlatepackAddress};
 use parking_lot::RwLock;
-use tor_rtcompat::BlockOn;
+use tor_rtcompat::ToplevelBlockOn;
 use tor_rtcompat::tokio::TokioNativeTlsRuntime;
 use crate::gui::Colors;
 use crate::gui::platform::PlatformCallbacks;

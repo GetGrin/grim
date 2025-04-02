@@ -14,6 +14,8 @@
 
 #![windows_subsystem = "windows"]
 
+use tor_rtcompat::ToplevelBlockOn;
+
 pub fn main() {
     #[allow(dead_code)]
     #[cfg(not(target_os = "android"))]
@@ -173,7 +175,7 @@ fn start_desktop_gui(platform: grim::gui::platform::Desktop) {
 #[allow(dead_code)]
 #[cfg(not(target_os = "android"))]
 fn is_app_running(data: &Option<String>) -> bool {
-    use tor_rtcompat::BlockOn;
+    use tor_rtcompat::ToplevelBlockOn;
     let runtime = tor_rtcompat::tokio::TokioNativeTlsRuntime::create().unwrap();
     let res: Result<(), Box<dyn std::error::Error>> = runtime
         .block_on(async {
@@ -212,7 +214,7 @@ fn is_app_running(data: &Option<String>) -> bool {
 #[cfg(not(target_os = "android"))]
 fn start_app_socket(platform: grim::gui::platform::Desktop) {
     std::thread::spawn(move || {
-        use tor_rtcompat::BlockOn;
+        use tor_rtcompat::ToplevelBlockOn;
         let runtime = tor_rtcompat::tokio::TokioNativeTlsRuntime::create().unwrap();
         let _: Result<_, _> = runtime
             .block_on(async {
