@@ -19,3 +19,4 @@ app/src/main/jniLibs
 macos/cert.pem
 linux/Grim.AppDir/AppRun
 .intentionally-empty-file.o
+Cargo.toml-e
