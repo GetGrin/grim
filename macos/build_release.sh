@@ -27,23 +27,11 @@ cd ..
 [[ $1 == "x86_64" ]] && arch+=(x86_64-apple-darwin)
 [[ $1 == "arm" ]] && arch+=(aarch64-apple-darwin)
 
-if [[ "$OSTYPE" != "darwin"* ]]; then
-  # Start release build on non-MacOS with zig linker, requires zig 0.12.1
-  rustup target add x86_64-apple-darwin
-  rustup target add aarch64-apple-darwin
-  [[ $1 == "universal" ]]; arch+=(universal2-apple-darwin)
-  cargo install cargo-zigbuild
-  cargo zigbuild --release --target ${arch}
-else
-  rustup target add ${arch}
-  if [[ $1 == "universal" ]]; then
-    cargo build --release --target x86_64-apple-darwin
-    cargo build --release --target aarch64-apple-darwin
-    lipo -create -output target/grim target/aarch64-apple-darwin/release/grim target/x86_64-apple-darwin/release/grim
-  else
-    cargo build --release --target ${arch}
-  fi
-fi
+rustup target add x86_64-apple-darwin
+rustup target add aarch64-apple-darwin
+[[ $1 == "universal" ]]; arch+=(universal2-apple-darwin)
+cargo install cargo-zigbuild
+cargo zigbuild --release --target ${arch}
 
 rm -f .intentionally-empty-file.o
 
