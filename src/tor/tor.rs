@@ -302,6 +302,10 @@ impl Tor {
                                                 let mut w_services =
                                                     TOR_SERVER_STATE.starting_services.write();
                                                 w_services.remove(&service_id);
+                                                // Remove service from failed.
+                                                let mut w_services =
+                                                    TOR_SERVER_STATE.failed_services.write();
+                                                w_services.remove(id);
                                                 // Check again after 50 seconds.
                                                 Duration::from_millis(50000)
                                             }
