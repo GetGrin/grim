@@ -11,10 +11,7 @@
         <Package Id="D612823B-B70E-4700-8D35-B71A1925FBFD" InstallerVersion="300" Compressed="yes"/>
         <Media Id="1" Cabinet="grim.cab" EmbedCab="yes" />
 
-        <MajorUpgrade
-            DowngradeErrorMessage = "A newer version of [ProductName] is already installed."
-            AllowSameVersionUpgrades = "yes"
-        />
+        <MajorUpgrade AllowDowngrades = "yes"/>
 
         <Icon Id='Product.ico' SourceFile='wix\Product.ico'/>
         <Property Id='ARPPRODUCTICON' Value='Product.ico' />
