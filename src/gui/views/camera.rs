@@ -290,7 +290,7 @@ impl CameraContent {
 
         // Launch scanner at separate thread.
         thread::spawn(move || {
-            tokio::runtime::Builder::new_multi_thread()
+            tokio::runtime::Builder::new_current_thread()
                 .enable_all()
                 .build()
                 .unwrap()

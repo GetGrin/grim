@@ -78,7 +78,7 @@ impl ExternalConnection {
         }
     }
 
-    /// Check external connections availability.
+    /// Check external connection availability.
     pub fn check(id: Option<i64>, ui_ctx: &egui::Context) {
         let conn_list = ConnectionsConfig::ext_conn_list();
         for conn in conn_list {
@@ -99,7 +99,7 @@ fn check_ext_conn(conn: &ExternalConnection, ui_ctx: &egui::Context) {
     let ui_ctx = ui_ctx.clone();
     ConnectionsConfig::update_ext_conn_status(conn.id, None);
     std::thread::spawn(move || {
-        tokio::runtime::Builder::new_multi_thread()
+        tokio::runtime::Builder::new_current_thread()
             .enable_all()
             .build()
             .unwrap()

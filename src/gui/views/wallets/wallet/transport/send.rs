@@ -18,11 +18,9 @@ use egui::{Id, RichText};
 use grin_core::core::{amount_from_hr_string, amount_to_hr_string};
 use grin_wallet_libwallet::{Error, SlatepackAddress};
 use parking_lot::RwLock;
-use tor_rtcompat::ToplevelBlockOn;
-use tor_rtcompat::tokio::TokioNativeTlsRuntime;
+
 use crate::gui::Colors;
 use crate::gui::platform::PlatformCallbacks;
-
 use crate::gui::views::{CameraContent, Modal, View};
 use crate::gui::views::types::TextEditOptions;
 use crate::gui::views::wallets::wallet::WalletTransactionModal;
@@ -311,8 +309,10 @@ impl TransportSendModal {
                 let res = self.send_result.clone();
                 self.sending = true;
                 thread::spawn(move || {
-                    let runtime = TokioNativeTlsRuntime::create().unwrap();
-                    runtime
+                    tokio::runtime::Builder::new_current_thread()
+                        .enable_all()
+                        .build()
+                        .unwrap()
                         .block_on(async {
                             let result = wallet.send_tor(a, &addr).await;
                             let mut w_res = res.write();

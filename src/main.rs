@@ -14,8 +14,6 @@
 
 #![windows_subsystem = "windows"]
 
-use tor_rtcompat::ToplevelBlockOn;
-
 pub fn main() {
     #[allow(dead_code)]
     #[cfg(not(target_os = "android"))]
@@ -113,7 +111,6 @@ fn start_desktop_gui(platform: grim::gui::platform::Desktop) {
     let os = egui::os::OperatingSystem::from_target_os();
     let (width, height) = AppConfig::window_size();
     let mut viewport = egui::ViewportBuilder::default()
-
         .with_min_inner_size([AppConfig::MIN_WIDTH, AppConfig::MIN_HEIGHT])
         .with_inner_size([width, height]);
 
@@ -142,7 +139,6 @@ fn start_desktop_gui(platform: grim::gui::platform::Desktop) {
         ..Default::default()
     };
     // Use Glow renderer for Windows.
-    let is_win = os == egui::os::OperatingSystem::Windows;
     options.renderer = if is_win {
         eframe::Renderer::Glow
     } else {
@@ -175,9 +171,10 @@ fn start_desktop_gui(platform: grim::gui::platform::Desktop) {
 #[allow(dead_code)]
 #[cfg(not(target_os = "android"))]
 fn is_app_running(data: &Option<String>) -> bool {
-    use tor_rtcompat::ToplevelBlockOn;
-    let runtime = tor_rtcompat::tokio::TokioNativeTlsRuntime::create().unwrap();
-    let res: Result<(), Box<dyn std::error::Error>> = runtime
+    let res: Result<(), Box<dyn std::error::Error>> = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .unwrap()
         .block_on(async {
             use interprocess::local_socket::{
                 tokio::{prelude::*, Stream}
@@ -214,9 +211,10 @@ fn is_app_running(data: &Option<String>) -> bool {
 #[cfg(not(target_os = "android"))]
 fn start_app_socket(platform: grim::gui::platform::Desktop) {
     std::thread::spawn(move || {
-        use tor_rtcompat::ToplevelBlockOn;
-        let runtime = tor_rtcompat::tokio::TokioNativeTlsRuntime::create().unwrap();
-        let _: Result<_, _> = runtime
+        let _ = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .unwrap()
             .block_on(async {
                 use interprocess::local_socket::{
                     tokio::{prelude::*, Stream},
