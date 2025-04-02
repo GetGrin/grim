@@ -1,0 +1,170 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  linux_release:
+    name: Linux Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Download appimagetools
+        run: |
+          wget https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
+          chmod +x appimagetool-x86_64.AppImage
+          sudo apt install libfuse2
+      - name: Zig Setup
+        uses: goto-bus-stop/setup-zig@v2
+        with:
+          version: 0.12.1
+      - name: Install cargo-zigbuild
+        run: cargo install cargo-zigbuild
+      - name: Release x86
+        run: cargo zigbuild --release --target x86_64-unknown-linux-gnu
+      - name: Release ARM
+        run: |
+          rustup target add aarch64-unknown-linux-gnu
+          cargo zigbuild --release --target aarch64-unknown-linux-gnu
+      - name: AppImage x86
+        run: |
+          cp target/x86_64-unknown-linux-gnu/release/grim linux/Grim.AppDir/AppRun
+          ./appimagetool-x86_64.AppImage linux/Grim.AppDir target/x86_64-unknown-linux-gnu/release/grim-${{ github.ref_name }}-linux-x86_64.AppImage
+      - name: Checksum AppImage x86
+        working-directory: target/x86_64-unknown-linux-gnu/release
+        shell: bash
+        run: sha256sum grim-${{ github.ref_name }}-linux-x86_64.AppImage > grim-${{ github.ref_name }}-linux-x86_64-appimage-sha256sum.txt
+      - name: AppImage ARM
+        run: |
+          cp target/aarch64-unknown-linux-gnu/release/grim linux/Grim.AppDir/AppRun
+          ./appimagetool-x86_64.AppImage linux/Grim.AppDir target/aarch64-unknown-linux-gnu/release/grim-${{ github.ref_name }}-linux-arm.AppImage
+      - name: Checksum AppImage ARM
+        working-directory: target/aarch64-unknown-linux-gnu/release
+        shell: bash
+        run: sha256sum grim-${{ github.ref_name }}-linux-arm.AppImage > grim-${{ github.ref_name }}-linux-arm-appimage-sha256sum.txt
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            target/x86_64-unknown-linux-gnu/release/grim-${{ github.ref_name }}-linux-x86_64.AppImage
+            target/x86_64-unknown-linux-gnu/release/grim-${{ github.ref_name }}-linux-x86_64-appimage-sha256sum.txt
+            target/aarch64-unknown-linux-gnu/release/grim-${{ github.ref_name }}-linux-arm.AppImage
+            target/aarch64-unknown-linux-gnu/release/grim-${{ github.ref_name }}-linux-arm-appimage-sha256sum.txt
+
+  windows_release:
+    name: Windows Release
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Build release
+        run: cargo build --release
+      - name: Archive release
+        uses: vimtor/action-zip@v1
+        with:
+          files: target/release/grim.exe
+          dest: target/release/grim-${{ github.ref_name }}-win-x86_64.zip
+      - name: Checksum release
+        working-directory: target/release
+        shell: bash
+        run: sha256sum grim-${{ github.ref_name }}-win-x86_64.zip > grim-${{ github.ref_name }}-win-x86_64-sha256sum.txt
+      - name: Install cargo-wix
+        run: cargo install cargo-wix
+      - name: Run cargo-wix
+        run: cargo wix -p grim -o ./target/wix/grim-${{ github.ref_name }}-win-x86_64.msi --nocapture
+      - name: Checksum msi
+        working-directory: target/wix
+        shell: bash
+        run: sha256sum grim-${{ github.ref_name }}-win-x86_64.msi > grim-${{ github.ref_name }}-win-x86_64-msi-sha256sum.txt
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            target/release/grim-${{ github.ref_name }}-win-x86_64.zip
+            target/release/grim-${{ github.ref_name }}-win-x86_64-sha256sum.txt
+            target/wix/grim-${{ github.ref_name }}-win-x86_64.msi
+            target/wix/grim-${{ github.ref_name }}-win-x86_64-msi-sha256sum.txt
+
+  macos_release:
+    name: MacOS Release
+    runs-on: macos-12
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install coreutils
+        run: brew install coreutils
+      - name: Zig Setup
+        uses: goto-bus-stop/setup-zig@v2
+        with:
+          version: 0.12.1
+      - name: Install cargo-zigbuild
+        run: cargo install cargo-zigbuild
+      - name: Download SDK
+        run: wget https://github.com/phracker/MacOSX-SDKs/releases/download/11.3/MacOSX11.0.sdk.tar.xz
+      - name: Setup SDK env
+        run: tar xf ${{ github.workspace }}/MacOSX11.0.sdk.tar.xz && echo "SDKROOT=${{ github.workspace }}/MacOSX11.0.sdk" >> $GITHUB_ENV
+      - name: Setup platform env
+        run: echo "MACOSX_DEPLOYMENT_TARGET=11.0" >> $GITHUB_ENV
+      - name: Release x86
+        run: |
+          rustup target add x86_64-apple-darwin
+          cargo zigbuild --release --target x86_64-apple-darwin
+          yes | cp -rf target/x86_64-apple-darwin/release/grim macos/Grim.app/Contents/MacOS
+      - name: Archive x86
+        run: |
+          cd macos
+          zip -r grim-${{ github.ref_name }}-macos-x86_64.zip Grim.app
+          mv grim-${{ github.ref_name }}-macos-x86_64.zip ../target/x86_64-apple-darwin/release
+          cd ..
+      - name: Checksum Release x86
+        working-directory: target/x86_64-apple-darwin/release
+        shell: bash
+        run: sha256sum grim-${{ github.ref_name }}-macos-x86_64.zip > grim-${{ github.ref_name }}-macos-x86_64-sha256sum.txt
+      - name: Release ARM
+        run: |
+          rustup target add aarch64-apple-darwin
+          cargo zigbuild --release --target aarch64-apple-darwin
+          yes | cp -rf target/aarch64-apple-darwin/release/grim macos/Grim.app/Contents/MacOS
+      - name: Archive ARM
+        run: |
+          cd macos
+          zip -r grim-${{ github.ref_name }}-macos-arm.zip Grim.app
+          mv grim-${{ github.ref_name }}-macos-arm.zip ../target/aarch64-apple-darwin/release
+          cd ..
+      - name: Checksum Release ARM
+        working-directory: target/aarch64-apple-darwin/release
+        shell: bash
+        run: sha256sum grim-${{ github.ref_name }}-macos-arm.zip > grim-${{ github.ref_name }}-macos-arm-sha256sum.txt
+      - name: Release Universal
+        run: |
+          cargo zigbuild --release --target universal2-apple-darwin
+          yes | cp -rf target/universal2-apple-darwin/release/grim macos/Grim.app/Contents/MacOS
+      - name: Archive Universal
+        run: |
+          cd macos
+          zip -r grim-${{ github.ref_name }}-macos-universal.zip Grim.app
+          mv grim-${{ github.ref_name }}-macos-universal.zip ../target/universal2-apple-darwin/release
+          cd ..
+      - name: Checksum Release Universal
+        working-directory: target/universal2-apple-darwin/release
+        shell: pwsh
+        run: sha256sum grim-${{ github.ref_name }}-macos-universal.zip > grim-${{ github.ref_name }}-macos-universal-sha256sum.txt
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            target/x86_64-apple-darwin/release/grim-${{ github.ref_name }}-macos-x86_64.zip
+            target/x86_64-apple-darwin/release/grim-${{ github.ref_name }}-macos-x86_64-sha256sum.txt
+            target/aarch64-apple-darwin/release/grim-${{ github.ref_name }}-macos-arm.zip
+            target/aarch64-apple-darwin/release/grim-${{ github.ref_name }}-macos-arm-sha256sum.txt
+            target/universal2-apple-darwin/release/grim-${{ github.ref_name }}-macos-universal.zip
+            target/universal2-apple-darwin/release/grim-${{ github.ref_name }}-macos-universal-sha256sum.txt
