@@ -249,16 +249,16 @@ impl P2PSetup {
         View::button(ui,
                      format!("{} {}", PLUG, &port),
                      Colors::white_or_black(false), || {
-            // Setup values for modal.
-            self.port_edit = port;
-            self.port_available_edit = self.is_port_available;
-            // Show p2p port modal.
-            Modal::new(PORT_MODAL)
-                .position(ModalPosition::CenterTop)
-                .title(t!("network_settings.change_value"))
-                .show();
-            cb.show_keyboard();
-        });
+                // Setup values for modal.
+                self.port_edit = port;
+                self.port_available_edit = self.is_port_available;
+                // Show p2p port modal.
+                Modal::new(PORT_MODAL)
+                    .position(ModalPosition::CenterTop)
+                    .title(t!("network_settings.change_value"))
+                    .show();
+                cb.show_keyboard();
+            });
         ui.add_space(6.0);
 
         // Show error when p2p port is unavailable.
@@ -300,7 +300,7 @@ impl P2PSetup {
                 ui.spacing_mut().item_spacing = egui::Vec2::new(8.0, 0.0);
 
                 // Save button callback.
-                let on_save = || {
+                let mut on_save = || {
                     // Check if port is available.
                     let available = NodeConfig::is_p2p_port_available(&self.port_edit);
                     self.port_available_edit = available;
@@ -316,6 +316,11 @@ impl P2PSetup {
                         modal.close();
                     }
                 };
+
+                // Continue on Enter key press.
+                View::on_enter_key(ui, || {
+                    on_save();
+                });
 
                 ui.columns(2, |columns| {
                     columns[0].vertical_centered_justified(|ui| {
@@ -370,8 +375,10 @@ impl P2PSetup {
                 ui.label(RichText::new(desc)
                     .size(16.0)
                     .color(Colors::inactive_text()));
+                ui.add_space(12.0);
+            } else if !peers.is_empty() {
+                ui.add_space(12.0);
             }
-            ui.add_space(12.0);
 
             let add_text = if peer_type == &PeerType::CustomSeed {
                 format!("{} {}", PLUS_CIRCLE, t!("network_settings.add_seed"))
@@ -438,7 +445,7 @@ impl P2PSetup {
                 ui.spacing_mut().item_spacing = egui::Vec2::new(8.0, 0.0);
 
                 // Save button callback.
-                let on_save = || {
+                let mut on_save = || {
                     // Check if peer is correct and/or available.
                     let peer = self.peer_edit.clone();
                     let is_correct_address = PeersConfig::peer_to_addr(peer.clone()).is_some();
@@ -459,6 +466,11 @@ impl P2PSetup {
                         modal.close();
                     }
                 };
+
+                // Continue on Enter key press.
+                View::on_enter_key(ui, || {
+                    on_save();
+                });
 
                 ui.columns(2, |columns| {
                     columns[0].vertical_centered_justified(|ui| {
@@ -509,15 +521,15 @@ impl P2PSetup {
         View::button(ui,
                      format!("{} {}", PROHIBIT_INSET, &ban_window),
                      Colors::white_or_black(false), || {
-            // Setup values for modal.
-            self.ban_window_edit = ban_window;
-            // Show ban window period setup modal.
-            Modal::new(BAN_WINDOW_MODAL)
-                .position(ModalPosition::CenterTop)
-                .title(t!("network_settings.change_value"))
-                .show();
-            cb.show_keyboard();
-        });
+                // Setup values for modal.
+                self.ban_window_edit = ban_window;
+                // Show ban window period setup modal.
+                Modal::new(BAN_WINDOW_MODAL)
+                    .position(ModalPosition::CenterTop)
+                    .title(t!("network_settings.change_value"))
+                    .show();
+                cb.show_keyboard();
+            });
         ui.add_space(6.0);
         ui.label(RichText::new(t!("network_settings.ban_window_desc"))
             .size(16.0)
@@ -565,6 +577,11 @@ impl P2PSetup {
                 }
             };
 
+            // Continue on Enter key press.
+            View::on_enter_key(ui, || {
+                on_save();
+            });
+
             ui.columns(2, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
                     View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
@@ -593,15 +610,15 @@ impl P2PSetup {
         View::button(ui,
                      format!("{} {}", ARROW_FAT_LINES_DOWN, &max_inbound),
                      Colors::white_or_black(false), || {
-            // Setup values for modal.
-            self.max_inbound_count = max_inbound;
-            // Show maximum number of inbound peers setup modal.
-            Modal::new(MAX_INBOUND_MODAL)
-                .position(ModalPosition::CenterTop)
-                .title(t!("network_settings.change_value"))
-                .show();
-            cb.show_keyboard();
-        });
+                // Setup values for modal.
+                self.max_inbound_count = max_inbound;
+                // Show maximum number of inbound peers setup modal.
+                Modal::new(MAX_INBOUND_MODAL)
+                    .position(ModalPosition::CenterTop)
+                    .title(t!("network_settings.change_value"))
+                    .show();
+                cb.show_keyboard();
+            });
         ui.add_space(6.0);
     }
 
@@ -644,6 +661,11 @@ impl P2PSetup {
                 }
             };
 
+            // Continue on Enter key press.
+            View::on_enter_key(ui, || {
+                on_save();
+            });
+
             ui.columns(2, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
                     View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
@@ -671,15 +693,15 @@ impl P2PSetup {
         View::button(ui,
                      format!("{} {}", ARROW_FAT_LINES_UP, &max_outbound),
                      Colors::white_or_black(false), || {
-            // Setup values for modal.
-            self.max_outbound_count = max_outbound;
-            // Show maximum number of outbound peers setup modal.
-            Modal::new(MAX_OUTBOUND_MODAL)
-                .position(ModalPosition::CenterTop)
-                .title(t!("network_settings.change_value"))
-                .show();
-            cb.show_keyboard();
-        });
+                // Setup values for modal.
+                self.max_outbound_count = max_outbound;
+                // Show maximum number of outbound peers setup modal.
+                Modal::new(MAX_OUTBOUND_MODAL)
+                    .position(ModalPosition::CenterTop)
+                    .title(t!("network_settings.change_value"))
+                    .show();
+                cb.show_keyboard();
+            });
         ui.add_space(6.0);
     }
 
@@ -722,6 +744,11 @@ impl P2PSetup {
                 }
             };
 
+            // Continue on Enter key press.
+            View::on_enter_key(ui, || {
+                on_save();
+            });
+
             ui.columns(2, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
                     View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
@@ -745,9 +772,9 @@ impl P2PSetup {
                                   format!("{} {}", TRASH, t!("network_settings.reset_peers")),
                                   Colors::red(),
                                   Colors::white_or_black(false), || {
-            Node::reset_peers(false);
-            self.peers_reset = true;
-        });
+                Node::reset_peers(false);
+                self.peers_reset = true;
+            });
         ui.add_space(6.0);
         ui.label(RichText::new(t!("network_settings.reset_peers_desc"))
             .size(16.0)

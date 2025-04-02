@@ -310,7 +310,7 @@ impl NodeSetup {
             ui.spacing_mut().item_spacing = egui::Vec2::new(8.0, 0.0);
 
             // Save button callback.
-            let on_save = || {
+            let mut on_save = || {
                 // Check if port is available.
                 let (api_ip, _) = NodeConfig::get_api_ip_port();
                 let available = NodeConfig::is_api_port_available(&api_ip, &self.api_port_edit);
@@ -329,6 +329,11 @@ impl NodeSetup {
                     modal.close();
                 }
             };
+
+            // Continue on Enter key press.
+            View::on_enter_key(ui, || {
+                on_save();
+            });
 
             ui.columns(2, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
@@ -427,6 +432,11 @@ impl NodeSetup {
                 modal.close();
             };
 
+            // Continue on Enter key press.
+            View::on_enter_key(ui, || {
+                on_save();
+            });
+
             ui.columns(2, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
                     View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
@@ -508,6 +518,11 @@ impl NodeSetup {
                     modal.close();
                 }
             };
+
+            // Continue on Enter key press.
+            View::on_enter_key(ui, || {
+                on_save();
+            });
 
             ui.columns(2, |columns| {
                 columns[0].vertical_centered_justified(|ui| {

@@ -316,7 +316,7 @@ impl StratumSetup {
                 ui.spacing_mut().item_spacing = egui::Vec2::new(8.0, 0.0);
 
                 // Save button callback.
-                let on_save = || {
+                let mut on_save = || {
                     // Check if port is available.
                     let (stratum_ip, _) = NodeConfig::get_stratum_address();
                     let available = NodeConfig::is_stratum_port_available(
@@ -334,6 +334,11 @@ impl StratumSetup {
                         modal.close();
                     }
                 };
+
+                // Continue on Enter key press.
+                View::on_enter_key(ui, || {
+                    on_save();
+                });
 
                 ui.columns(2, |columns| {
                     columns[0].vertical_centered_justified(|ui| {
@@ -419,6 +424,11 @@ impl StratumSetup {
                 }
             };
 
+            // Continue on Enter key press.
+            View::on_enter_key(ui, || {
+                on_save();
+            });
+
             ui.columns(2, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
                     View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
@@ -496,6 +506,11 @@ impl StratumSetup {
                     modal.close();
                 }
             };
+
+            // Continue on Enter key press.
+            View::on_enter_key(ui, || {
+                on_save();
+            });
 
             ui.columns(2, |columns| {
                 columns[0].vertical_centered_justified(|ui| {

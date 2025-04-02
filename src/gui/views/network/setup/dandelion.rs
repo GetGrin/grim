@@ -193,6 +193,11 @@ impl DandelionSetup {
                 }
             };
 
+            // Continue on Enter key press.
+            View::on_enter_key(ui, || {
+                on_save();
+            });
+
             ui.columns(2, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
                     View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
@@ -268,6 +273,11 @@ impl DandelionSetup {
                     modal.close();
                 }
             };
+
+            // Continue on Enter key press.
+            View::on_enter_key(ui, || {
+                on_save();
+            });
 
             ui.columns(2, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
@@ -346,6 +356,11 @@ impl DandelionSetup {
                 }
             };
 
+            // Continue on Enter key press.
+            View::on_enter_key(ui, || {
+                on_save();
+            });
+
             ui.columns(2, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
                     View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
@@ -422,6 +437,11 @@ impl DandelionSetup {
                     modal.close();
                 }
             };
+
+            // Continue on Enter key press.
+            View::on_enter_key(ui, || {
+                on_save();
+            });
 
             ui.columns(2, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
