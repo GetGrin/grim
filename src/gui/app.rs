@@ -403,7 +403,13 @@ impl<Platform: PlatformCallbacks> eframe::App for App<Platform> {
     }
 
     fn clear_color(&self, _visuals: &egui::Visuals) -> [f32; 4] {
-        Colors::fill_lite().to_normalized_gamma_f32()
+        let os = egui::os::OperatingSystem::from_target_os();
+        let is_win = os == egui::os::OperatingSystem::Windows;
+        let is_mac = os == egui::os::OperatingSystem::Mac;
+        if !View::is_desktop() || is_win || is_mac {
+            return Colors::fill_lite().to_normalized_gamma_f32();
+        }
+        Colors::TRANSPARENT.to_normalized_gamma_f32()
     }
 }
 
