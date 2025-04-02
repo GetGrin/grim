@@ -72,14 +72,9 @@ fi
 
 # Update version for Windows installer.
 sed -i '' -e 's/" Version="[^\"]*"/" Version="'"$VERSION_NEXT"'"/g' wix/main.wxs
+sed -i '' -e 's/<Package Id="[^\"]*"/<Package Id="'"$(uuidgen)"'"/g' wix/main.wxs
 
-# ==================================
-# Update Android build.gradle file
-# and package version at Cargo.toml
-# ==================================
-
-# Update version in build.gradle
-
+# Update Android version in build.gradle
 sed -i'.bak' -e 's/versionName [0-9a-zA-Z -_]*/versionName "'"$VERSION_NEXT"'"/' android/app/build.gradle
 rm -f android/app/build.gradle.bak
 
