@@ -16,7 +16,6 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use lazy_static::lazy_static;
 use egui::{Align, Context, CursorIcon, Layout, Modifiers, ResizeDirection, Rounding, Stroke, UiBuilder, ViewportCommand};
 use egui::epaint::{RectShape};
-use egui::os::OperatingSystem;
 
 use crate::AppConfig;
 use crate::gui::Colors;
@@ -108,16 +107,25 @@ impl<Platform: PlatformCallbacks> App<Platform> {
                     let is_fullscreen = ui.ctx().input(|i| {
                         i.viewport().fullscreen.unwrap_or(false)
                     });
-                    if OperatingSystem::from_target_os() != OperatingSystem::Mac {
-                        self.desktop_window_ui(ui, is_fullscreen);
-                    } else {
-                        self.window_title_ui(ui, is_fullscreen);
-                        ui.add_space(-1.0);
-                        Self::title_panel_bg(ui);
-                        self.content.ui(ui, &self.platform);
+                    let os = egui::os::OperatingSystem::from_target_os();
+                    match os {
+                        egui::os::OperatingSystem::Mac => {
+                            self.window_title_ui(ui, is_fullscreen);
+                            ui.add_space(-1.0);
+                            Self::title_panel_bg(ui, true);
+                            self.content.ui(ui, &self.platform);
+                        }
+                        egui::os::OperatingSystem::Windows => {
+                            Self::title_panel_bg(ui, false);
+                            self.content.ui(ui, &self.platform);
+                        }
+                        _ => {
+                            self.custom_frame_ui(ui, is_fullscreen);
+                        }
                     }
                 } else {
-                    self.mobile_window_ui(ui);
+                    Self::title_panel_bg(ui, false);
+                    self.content.ui(ui, &self.platform);
                 }
 
                 // Provide incoming data to wallets.
@@ -135,14 +143,8 @@ impl<Platform: PlatformCallbacks> App<Platform> {
         }
     }
 
-    /// Draw mobile platform window content.
-    fn mobile_window_ui(&mut self, ui: &mut egui::Ui) {
-        Self::title_panel_bg(ui);
-        self.content.ui(ui, &self.platform);
-    }
-
-    /// Draw desktop platform window content.
-    fn desktop_window_ui(&mut self, ui: &mut egui::Ui, is_fullscreen: bool) {
+    /// Draw custom desktop window frame content.
+    fn custom_frame_ui(&mut self, ui: &mut egui::Ui, is_fullscreen: bool) {
         let content_bg_rect = {
             let mut r = ui.max_rect();
             if !is_fullscreen {
@@ -169,7 +171,7 @@ impl<Platform: PlatformCallbacks> App<Platform> {
             ui.add_space(-1.0);
 
             // Draw title panel background.
-            Self::title_panel_bg(ui);
+            Self::title_panel_bg(ui, true);
 
             let content_rect = {
                 let mut rect = ui.max_rect();
@@ -197,10 +199,10 @@ impl<Platform: PlatformCallbacks> App<Platform> {
     }
 
     /// Draw title panel background.
-    fn title_panel_bg(ui: &mut egui::Ui) {
+    fn title_panel_bg(ui: &mut egui::Ui, window_title: bool) {
         let title_rect = {
             let mut rect = ui.max_rect();
-            if View::is_desktop() {
+            if window_title {
                 rect.min.y += Content::WINDOW_TITLE_HEIGHT - 0.5;
             }
             rect.max.y = rect.min.y + View::get_top_inset() + TitlePanel::HEIGHT;
@@ -223,7 +225,7 @@ impl<Platform: PlatformCallbacks> App<Platform> {
             r.max.y += TitlePanel::HEIGHT - 1.0;
             r
         };
-        let is_mac = OperatingSystem::from_target_os() == OperatingSystem::Mac;
+        let is_mac = egui::os::OperatingSystem::from_target_os() == egui::os::OperatingSystem::Mac;
         let window_title_bg = RectShape::new(title_bg_rect, if is_fullscreen || is_mac {
             Rounding::ZERO
         } else {
@@ -401,11 +403,7 @@ impl<Platform: PlatformCallbacks> eframe::App for App<Platform> {
     }
 
     fn clear_color(&self, _visuals: &egui::Visuals) -> [f32; 4] {
-        let is_mac = OperatingSystem::from_target_os() == OperatingSystem::Mac;
-        if !View::is_desktop() || is_mac {
-            return Colors::fill_lite().to_normalized_gamma_f32();
-        }
-        Colors::TRANSPARENT.to_normalized_gamma_f32()
+        Colors::fill_lite().to_normalized_gamma_f32()
     }
 }
 

@@ -125,14 +125,15 @@ fn start_desktop_gui(platform: grim::gui::platform::Desktop) {
     }
     // Setup window decorations.
     let is_mac = os == egui::os::OperatingSystem::Mac;
+    let is_win = os == egui::os::OperatingSystem::Windows;
     viewport = viewport
         .with_fullsize_content_view(true)
         .with_window_level(egui::WindowLevel::Normal)
-        .with_title_shown(false)
-        .with_titlebar_buttons_shown(false)
-        .with_titlebar_shown(false)
+        .with_title_shown(is_win)
+        .with_titlebar_buttons_shown(is_win)
+        .with_titlebar_shown(is_win)
         .with_transparent(true)
-        .with_decorations(is_mac);
+        .with_decorations(is_mac || is_win);
 
     let mut options = eframe::NativeOptions {
         viewport,

@@ -185,7 +185,8 @@ impl Modal {
         });
 
         // Setup background rect.
-        let bg_rect = if View::is_desktop() {
+        let is_win = OperatingSystem::Windows == OperatingSystem::from_target_os();
+        let bg_rect = if View::is_desktop() && !is_win {
             let mut r = ctx.screen_rect();
             let is_mac = OperatingSystem::Mac == OperatingSystem::from_target_os();
             if !is_mac && !is_fullscreen {
@@ -255,7 +256,8 @@ impl Modal {
 
         let x_align = View::get_left_inset() - View::get_right_inset();
         let is_mac = OperatingSystem::Mac == OperatingSystem::from_target_os();
-        let extra_y = if View::is_desktop() {
+        let is_win = OperatingSystem::Windows == OperatingSystem::from_target_os();
+        let extra_y = if View::is_desktop() && !is_win {
             Content::WINDOW_TITLE_HEIGHT + if !is_mac {
                 Content::WINDOW_FRAME_MARGIN
             } else {
