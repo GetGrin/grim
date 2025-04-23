@@ -31,10 +31,6 @@ pub struct ExternalConnection {
     /// Flag to check if server is available.
     #[serde(skip_serializing, skip_deserializing)]
     pub available: Option<bool>,
-
-    /// Flag to check if connection was deleted.
-    #[serde(skip_serializing, skip_deserializing)]
-    pub deleted: bool
 }
 
 /// Default external node URL for main network.
@@ -61,7 +57,6 @@ impl ExternalConnection {
                 url: url.to_string(),
                 secret: None,
                 available: None,
-                deleted: false,
             }
         }).collect::<Vec<ExternalConnection>>()
     }
@@ -74,7 +69,6 @@ impl ExternalConnection {
             url,
             secret,
             available: None,
-            deleted: false
         }
     }
 

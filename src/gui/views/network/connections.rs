@@ -105,7 +105,7 @@ impl ConnectionsContent {
         let ext_conn_size = ext_conn_list.len();
         if ext_conn_size != 0 {
             ui.add_space(8.0);
-            for (index, conn) in ext_conn_list.iter().filter(|c| !c.deleted).enumerate() {
+            for (index, conn) in ext_conn_list.iter().enumerate() {
                 ui.horizontal_wrapped(|ui| {
                     // Draw connection list item.
                     Self::ext_conn_item_ui(ui, conn, index, ext_conn_size, |ui| {

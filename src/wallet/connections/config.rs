@@ -49,13 +49,7 @@ impl ConnectionsConfig {
 
     /// Save connections configuration.
     pub fn save(&mut self) {
-        // Check deleted external connections.
-        let mut config = self.clone();
-        config.external = config.external.iter()
-            .map(|c| c.clone())
-            .filter(|c| !c.deleted)
-            .collect::<Vec<ExternalConnection>>();
-
+        let config = self.clone();
         let sub_dir = Some(AppConfig::chain_type().shortname());
         Settings::write_to_file(&config, Settings::config_path(Self::FILE_NAME, sub_dir));
     }
@@ -106,13 +100,7 @@ impl ConnectionsConfig {
     /// Remove [`ExternalConnection`] with provided identifier.
     pub fn remove_ext_conn(id: i64) {
         let mut w_config = Settings::conn_config_to_update();
-        if let Some(pos) = w_config.external.iter().position(|c| {
-            c.id == id
-        }) {
-            if let Some(conn) = w_config.external.get_mut(pos) {
-                conn.deleted = true;
-                w_config.save();
-            }
-        }
+        w_config.external = w_config.external.iter().filter(|c| c.id != id).cloned().collect();
+        w_config.save();
     }
 }

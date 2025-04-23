@@ -121,9 +121,7 @@ impl WalletConfig {
     pub fn connection(&self) -> ConnectionMethod {
         if let Some(ext_conn_id) = self.ext_conn_id {
             if let Some(conn) = ConnectionsConfig::ext_conn(ext_conn_id) {
-                if !conn.deleted {
-                    return ConnectionMethod::External(conn.id, conn.url);
-                }
+                return ConnectionMethod::External(conn.id, conn.url);
             }
         }
         ConnectionMethod::Integrated

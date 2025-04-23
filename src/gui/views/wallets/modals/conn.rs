@@ -104,10 +104,7 @@ impl WalletConnectionModal {
 
                 if !ext_conn_list.is_empty() {
                     ui.add_space(8.0);
-                    for (index, conn) in ext_conn_list.iter().filter(|c| !c.deleted).enumerate() {
-                        if conn.deleted {
-                            continue;
-                        }
+                    for (index, conn) in ext_conn_list.iter().enumerate() {
                         ui.horizontal_wrapped(|ui| {
                             let len = ext_conn_list.len();
                             ConnectionsContent::ext_conn_item_ui(ui, conn, index, len, |ui| {

@@ -74,7 +74,7 @@ impl ConnectionSettings {
 
     /// Draw existing wallet connection setup content.
     pub fn wallet_ui(&mut self, ui: &mut egui::Ui, wallet: &Wallet, cb: &dyn PlatformCallbacks) {
-        self.method =  wallet.get_current_connection();
+        self.method = wallet.get_current_connection();
 
         // Draw setup content.
         let changed = self.ui(ui, cb);
@@ -133,31 +133,39 @@ impl ConnectionSettings {
             });
             ui.add_space(4.0);
 
-            // Check if it's current method.
-            let is_current = |m: &ConnectionMethod, c: &ExternalConnection| -> Option<bool> {
-                match m {
-                    ConnectionMethod::External(id, _) => if c.deleted && *id == c.id {
-                        None
-                    } else {
-                        Some(*id == c.id)
-                    },
-                    _ => Some(false)
+            // Check for removed active connection.
+            let cur_method = &self.method.clone();
+            let mut ext_conn_list = ConnectionsConfig::ext_conn_list();
+            let has_method = !ext_conn_list.iter().filter(|c| {
+                match cur_method {
+                    ConnectionMethod::Integrated => true,
+                    ConnectionMethod::External(id, url) => id == &c.id || url == &c.url
                 }
-            };
+            }).collect::<Vec<&ExternalConnection>>().is_empty();
+            if !has_method {
+                match cur_method {
+                    ConnectionMethod::External(id, url) => {
+                        ext_conn_list.push(ExternalConnection {
+                            id: *id,
+                            url: url.clone(),
+                            secret: None,
+                            available: Some(true),
+                        })
+                    }
+                    _ => {}
+                }
+            }
 
-            let method = &self.method.clone();
-            let ext_conn_list = ConnectionsConfig::ext_conn_list();
-            let ext_list = ext_conn_list.iter().filter(|c| {
-                !c.deleted || is_current(method, c).unwrap_or(true)
-            }).collect::<Vec<&ExternalConnection>>();
-            let ext_size = ext_list.len();
+            let ext_size = ext_conn_list.len();
             if ext_size != 0 {
                 ui.add_space(8.0);
-
-                for (i, c) in ext_list.iter().enumerate() {
+                for (i, c) in ext_conn_list.iter().enumerate() {
                     ui.horizontal_wrapped(|ui| {
                         // Draw external connection item.
-                        let is_current = is_current(method, c);
+                        let is_current = match cur_method {
+                            ConnectionMethod::External(id, url) => id == &c.id || url == &c.url,
+                            _ => false
+                        };
                         Self::ext_conn_item_ui(ui, c, is_current, i, ext_size, || {
                             self.method = ConnectionMethod::External(c.id, c.url.clone());
                             changed = true;
@@ -172,7 +180,7 @@ impl ConnectionSettings {
     /// Draw external connection item content.
     fn ext_conn_item_ui(ui: &mut egui::Ui,
                         conn: &ExternalConnection,
-                        is_current: Option<bool>,
+                        is_current: bool,
                         index: usize,
                         len: usize,
                         mut on_select: impl FnMut()) {
@@ -187,7 +195,7 @@ impl ConnectionSettings {
 
         ui.vertical(|ui| {
             ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
-                if is_current.unwrap_or(true) {
+                if is_current {
                     ui.add_space(12.0);
                     ui.label(RichText::new(CHECK_FAT).size(20.0).color(Colors::green()));
                 } else {
@@ -210,11 +218,7 @@ impl ConnectionSettings {
                         // Setup connection status text.
                         let status_text = if let Some(available) = conn.available {
                             if available {
-                                format!("{} {}", CHECK_CIRCLE, if is_current.is_none() {
-                                    t!("transport.connected")
-                                } else {
-                                    t!("network.available")
-                                })
+                                format!("{} {}", CHECK_CIRCLE, t!("network.available"))
                             } else {
                                 format!("{} {}", X_CIRCLE, t!("network.not_available"))
                             }
