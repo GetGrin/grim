@@ -366,15 +366,6 @@ impl Node {
         }
         let config = NodeConfig::node_server_config();
         let server_config = config.server.clone();
-
-        // Remove lock file if exists.
-        let mut lock_path = PathBuf::from(&server_config.db_root);
-        lock_path.push("grin.lock");
-        if lock_path.exists() {
-            fs::remove_file(lock_path).unwrap();
-        }
-
-        // Remove chain data.
         let dirs_to_remove: Vec<&str> = vec!["header", "lmdb", "txhashset"];
         for dir in dirs_to_remove {
             let mut path = PathBuf::from(&server_config.db_root);
