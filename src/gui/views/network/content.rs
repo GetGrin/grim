@@ -187,7 +187,7 @@ impl NetworkContent {
             });
 
         // Redraw after delay if node is running at non-dual-panel mode.
-        if !dual_panel && Content::is_network_panel_open() && Node::is_running() {
+        if ((!dual_panel && Content::is_network_panel_open()) || dual_panel) && Node::is_running() {
             ui.ctx().request_repaint_after(Node::STATS_UPDATE_DELAY);
         }
     }
