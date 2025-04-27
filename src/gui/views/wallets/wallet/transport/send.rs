@@ -300,7 +300,7 @@ impl TransportSendModal {
             return;
         }
         let addr_str = self.address_edit.as_str();
-        if let Ok(addr) = SlatepackAddress::try_from(addr_str) {
+        if let Ok(addr) = SlatepackAddress::try_from(addr_str.trim()) {
             if let Ok(a) = amount_from_hr_string(self.amount_edit.as_str()) {
                 cb.hide_keyboard();
                 modal.disable_closing();
