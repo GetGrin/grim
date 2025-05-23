@@ -85,14 +85,17 @@ impl TransportSendModal {
         if self.sending {
             self.progress_ui(ui, wallet);
         } else if self.error {
-            self.error_ui(ui, wallet, modal, cb);
+            self.error_ui(ui, wallet, modal);
         } else {
             self.content_ui(ui, wallet, modal, cb);
         }
     }
 
     /// Draw content to send.
-    fn content_ui(&mut self, ui: &mut egui::Ui, wallet: &Wallet, modal: &Modal,
+    fn content_ui(&mut self,
+                  ui: &mut egui::Ui,
+                  wallet: &Wallet,
+                  modal: &Modal,
                   cb: &dyn PlatformCallbacks) {
         ui.add_space(6.0);
         // Draw QR code scanner content if requested.
@@ -107,7 +110,6 @@ impl TransportSendModal {
                 self.address_edit = result.text();
                 on_stop();
                 self.address_scan_content = None;
-                cb.show_keyboard();
             } else {
                 scanner.ui(ui, cb);
                 ui.add_space(6.0);
@@ -128,7 +130,6 @@ impl TransportSendModal {
                         View::button(ui, t!("back"), Colors::white_or_black(false), || {
                             on_stop();
                             self.address_scan_content = None;
-                            cb.show_keyboard();
                         });
                     });
                 });
@@ -217,7 +218,6 @@ impl TransportSendModal {
         View::text_edit(ui, cb, &mut self.address_edit, &mut address_edit_opts);
         // Check if scan button was pressed.
         if address_edit_opts.scan_pressed {
-            cb.hide_keyboard();
             modal.disable_closing();
             address_edit_opts.scan_pressed = false;
             self.address_scan_content = Some(CameraContent::default());
@@ -235,12 +235,12 @@ impl TransportSendModal {
         ui.columns(2, |columns| {
             columns[0].vertical_centered_justified(|ui| {
                 View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
-                    self.close(modal, cb);
+                    self.close(modal);
                 });
             });
             columns[1].vertical_centered_justified(|ui| {
                 View::button(ui, t!("continue"), Colors::white_or_black(false), || {
-                    self.send(wallet, modal, cb);
+                    self.send(wallet, modal);
                 });
             });
         });
@@ -248,11 +248,7 @@ impl TransportSendModal {
     }
 
     /// Draw error content.
-    fn error_ui(&mut self,
-                ui: &mut egui::Ui,
-                wallet: &Wallet,
-                modal: &Modal,
-                cb: &dyn PlatformCallbacks) {
+    fn error_ui(&mut self, ui: &mut egui::Ui, wallet: &Wallet, modal: &Modal) {
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("transport.tor_send_error"))
@@ -267,12 +263,12 @@ impl TransportSendModal {
         ui.columns(2, |columns| {
             columns[0].vertical_centered_justified(|ui| {
                 View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
-                   self.close(modal, cb);
+                   self.close(modal);
                 });
             });
             columns[1].vertical_centered_justified(|ui| {
                 View::button(ui, t!("repeat"), Colors::white_or_black(false), || {
-                    self.send(wallet, modal, cb);
+                    self.send(wallet, modal);
                 });
             });
         });
@@ -280,7 +276,7 @@ impl TransportSendModal {
     }
 
     /// Close modal and clear data.
-    fn close(&mut self, modal: &Modal, cb: &dyn PlatformCallbacks) {
+    fn close(&mut self, modal: &Modal) {
         self.amount_edit = "".to_string();
         self.address_edit = "".to_string();
 
@@ -290,19 +286,17 @@ impl TransportSendModal {
         self.tx_info_content = None;
         self.address_scan_content = None;
 
-        cb.hide_keyboard();
         modal.close();
     }
 
     /// Send entered amount to address.
-    fn send(&mut self, wallet: &Wallet, modal: &Modal, cb: &dyn PlatformCallbacks) {
+    fn send(&mut self, wallet: &Wallet, modal: &Modal) {
         if self.amount_edit.is_empty() {
             return;
         }
         let addr_str = self.address_edit.as_str();
         if let Ok(addr) = SlatepackAddress::try_from(addr_str.trim()) {
             if let Ok(a) = amount_from_hr_string(self.amount_edit.as_str()) {
-                cb.hide_keyboard();
                 modal.disable_closing();
                 // Send amount over Tor.
                 let mut wallet = wallet.clone();

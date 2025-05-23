@@ -116,7 +116,6 @@ impl WalletTransactionModal {
             .filter(|tx| tx.data.id == self.tx_id)
             .collect::<Vec<WalletTransaction>>();
         if txs.is_empty() {
-            cb.hide_keyboard();
             modal.close();
             return;
         }
@@ -178,7 +177,6 @@ impl WalletTransactionModal {
                 // Show button to close modal.
                 ui.vertical_centered_justified(|ui| {
                     View::button(ui, t!("close"), Colors::white_or_black(false), || {
-                        cb.hide_keyboard();
                         modal.close();
                     });
                 });
@@ -266,7 +264,6 @@ impl WalletTransactionModal {
                 };
                 let r = View::item_rounding(0, 2, true);
                 View::item_button(ui, r, icon, color, || {
-                    cb.hide_keyboard();
                     if self.show_finalization {
                         self.show_finalization = false;
                         return;
@@ -282,7 +279,6 @@ impl WalletTransactionModal {
                     View::item_rounding(0, 2, true)
                 };
                 View::item_button(ui, r, PROHIBIT, Some(Colors::red()), || {
-                    cb.hide_keyboard();
                     wallet.cancel(tx.data.id);
                 });
             }
@@ -321,7 +317,7 @@ impl WalletTransactionModal {
 
                 // Setup value to finalization input field.
                 self.finalize_edit = result.text();
-                self.on_finalization_input_change(tx, wallet, modal, cb);
+                self.on_finalization_input_change(tx, wallet, modal);
 
                 modal.enable_closing();
                 self.scan_qr_content = None;
@@ -409,14 +405,8 @@ impl WalletTransactionModal {
                         .hint_text(SLATEPACK_MESSAGE_HINT)
                         .desired_width(f32::INFINITY)
                         .show(ui).response;
-                    // Show soft keyboard on click.
                     if self.show_finalization && resp.clicked() {
                         resp.request_focus();
-                        cb.show_keyboard();
-                    }
-                    if self.show_finalization && resp.has_focus() {
-                        // Apply text from input on Android as temporary fix for egui.
-                        View::on_soft_input(ui, input_id, message_edit);
                     }
                     ui.add_space(6.0);
                 });
@@ -440,7 +430,6 @@ impl WalletTransactionModal {
                     // Draw button to scan Slatepack message QR code.
                     let qr_text = format!("{} {}", SCAN, t!("scan"));
                     View::button(ui, qr_text, Colors::fill_lite(), || {
-                        cb.hide_keyboard();
                         modal.disable_closing();
                         cb.start_camera();
                         self.scan_qr_content = Some(CameraContent::default());
@@ -473,7 +462,7 @@ impl WalletTransactionModal {
 
             // Callback on finalization message input change.
             if message_before != self.finalize_edit {
-                self.on_finalization_input_change(tx, wallet, modal, cb);
+                self.on_finalization_input_change(tx, wallet, modal);
             }
         } else {
             ui.columns(2, |columns| {
@@ -481,7 +470,6 @@ impl WalletTransactionModal {
                     // Draw button to show Slatepack message as QR code.
                     let qr_text = format!("{} {}", QR_CODE, t!("qr_code"));
                     View::button(ui, qr_text.clone(), Colors::white_or_black(false), || {
-                        cb.hide_keyboard();
                         let text = self.response_edit.clone();
                         self.qr_code_content = Some(QrCodeContent::new(text, true));
                     });
@@ -495,7 +483,6 @@ impl WalletTransactionModal {
                         if tx.can_finalize {
                             self.show_finalization = true;
                         } else {
-                            cb.hide_keyboard();
                             modal.close();
                         }
                     });
@@ -521,27 +508,22 @@ impl WalletTransactionModal {
     }
 
     /// Parse Slatepack message on transaction finalization input change.
-    fn on_finalization_input_change(&mut self,
-                                    tx: &WalletTransaction,
-                                    wallet: &Wallet,
-                                    modal: &Modal,
-                                    cb: &dyn PlatformCallbacks) {
+    fn on_finalization_input_change(&mut self, tx: &WalletTransaction, w: &Wallet, modal: &Modal) {
         let message = &self.finalize_edit;
         if message.is_empty() {
             self.finalize_error = false;
         } else {
             // Parse input message to finalize.
-            if let Ok(slate) = wallet.parse_slatepack(message) {
+            if let Ok(slate) = w.parse_slatepack(message) {
                 let send = slate.state == SlateState::Standard2 &&
                     tx.data.tx_type == TxLogEntryType::TxSent;
                 let receive = slate.state == SlateState::Invoice2 &&
                     tx.data.tx_type == TxLogEntryType::TxReceived;
                 if Some(slate.id) == tx.data.tx_slate_id && (send || receive) {
                     let message = message.clone();
-                    let wallet = wallet.clone();
+                    let wallet = w.clone();
                     let final_res = self.final_result.clone();
                     // Finalize transaction at separate thread.
-                    cb.hide_keyboard();
                     self.finalizing = true;
                     modal.disable_closing();
                     thread::spawn(move || {

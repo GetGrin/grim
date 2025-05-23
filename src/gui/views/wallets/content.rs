@@ -202,7 +202,7 @@ impl WalletsContent {
                     ui.vertical_centered(|ui| {
                         let pressed = Modal::opened() == Some(ADD_WALLET_MODAL);
                         View::tab_button(ui, PLUS, pressed, |_| {
-                            self.show_add_wallet_modal(cb);
+                            self.show_add_wallet_modal();
                         });
                     });
 
@@ -239,7 +239,7 @@ impl WalletsContent {
                         ui.ctx().request_repaint_after(Duration::from_millis(1000));
                     }
                     // Show wallet list.
-                    self.wallet_list_ui(ui, cb);
+                    self.wallet_list_ui(ui);
                 });
         }
 
@@ -282,7 +282,7 @@ impl WalletsContent {
                         // Show wallet creation button.
                         let add_text = format!("{} {}", FOLDER_PLUS, t!("wallets.add"));
                         View::button(ui, add_text, Colors::white_or_black(false), || {
-                            self.show_add_wallet_modal(cb);
+                            self.show_add_wallet_modal();
                         });
                     });
                 } else {
@@ -307,7 +307,7 @@ impl WalletsContent {
     }
 
     /// Handle data from deeplink or opened file.
-    pub fn on_data(&mut self, ui: &mut egui::Ui, data: Option<String>, cb: &dyn PlatformCallbacks) {
+    pub fn on_data(&mut self, ui: &mut egui::Ui, data: Option<String>) {
         let wallets_size = self.wallets.list().len();
         if wallets_size == 0 {
             return;
@@ -322,7 +322,7 @@ impl WalletsContent {
             if w.is_open() {
                 self.wallet_content = Some(WalletContent::new(w, data));
             } else {
-                self.show_opening_modal(w, data, cb);
+                self.show_opening_modal(w, data);
             }
         } else {
             self.show_wallet_selection_modal(data);
@@ -330,13 +330,12 @@ impl WalletsContent {
     }
 
     /// Show initial wallet creation [`Modal`].
-    pub fn show_add_wallet_modal(&mut self, cb: &dyn PlatformCallbacks) {
+    pub fn show_add_wallet_modal(&mut self) {
         self.add_wallet_modal_content = Some(AddWalletModal::default());
         Modal::new(ADD_WALLET_MODAL)
             .position(ModalPosition::CenterTop)
             .title(t!("wallets.add"))
             .show();
-        cb.show_keyboard();
     }
 
     /// Show wallet selection with provided optional data.
@@ -492,9 +491,7 @@ impl WalletsContent {
     }
 
     /// Draw list of wallets.
-    fn wallet_list_ui(&mut self,
-                      ui: &mut egui::Ui,
-                      cb: &dyn PlatformCallbacks) {
+    fn wallet_list_ui(&mut self, ui: &mut egui::Ui) {
         ScrollArea::vertical()
             .id_salt("wallet_list_scroll")
             .scroll_bar_visibility(ScrollBarVisibility::AlwaysHidden)
@@ -517,9 +514,9 @@ impl WalletsContent {
                         // Check if wallet reopen is needed.
                         if w.reopen_needed() && !w.is_open() {
                             w.set_reopen(false);
-                            self.show_opening_modal(w.clone(), None, cb);
+                            self.show_opening_modal(w.clone(), None);
                         }
-                        self.wallet_item_ui(ui, w, cb);
+                        self.wallet_item_ui(ui, w);
                         ui.add_space(5.0);
                     }
                 });
@@ -527,10 +524,7 @@ impl WalletsContent {
     }
 
     /// Draw wallet list item.
-    fn wallet_item_ui(&mut self,
-                      ui: &mut egui::Ui,
-                      wallet: &Wallet,
-                      cb: &dyn PlatformCallbacks) {
+    fn wallet_item_ui(&mut self, ui: &mut egui::Ui, wallet: &Wallet) {
         let config = wallet.get_config();
         let current = if let Some(content) = &self.wallet_content {
             content.wallet.get_config().id == config.id && wallet.is_open()
@@ -553,7 +547,7 @@ impl WalletsContent {
             if !wallet.is_open() {
                 // Show button to open closed wallet.
                 View::item_button(ui, View::item_rounding(0, 1, true), FOLDER_OPEN, None, || {
-                    self.show_opening_modal(wallet.clone(), None, cb);
+                    self.show_opening_modal(wallet.clone(), None);
                 });
                 if !wallet.syncing() {
                     let mut show_selection = false;
@@ -628,17 +622,13 @@ impl WalletsContent {
     }
 
     /// Show [`Modal`] to select and open wallet.
-    fn show_opening_modal(&mut self,
-                          wallet: Wallet,
-                          data: Option<String>,
-                          cb: &dyn PlatformCallbacks) {
+    fn show_opening_modal(&mut self, wallet: Wallet, data: Option<String>) {
         self.wallet_content = Some(WalletContent::new(wallet.clone(), None));
         self.open_wallet_content = Some(OpenWalletModal::new(wallet, data));
         Modal::new(OPEN_WALLET_MODAL)
             .position(ModalPosition::CenterTop)
             .title(t!("wallets.open"))
             .show();
-        cb.show_keyboard();
     }
 
     /// Check if it's possible to show [`WalletsContent`] and [`WalletContent`] panels at same time.

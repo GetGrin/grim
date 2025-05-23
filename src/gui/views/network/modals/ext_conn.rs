@@ -113,7 +113,6 @@ impl ExternalConnectionModal {
                         self.ext_node_url_edit = "".to_string();
                         self.ext_node_secret_edit = "".to_string();
                         self.ext_node_url_error = false;
-                        cb.hide_keyboard();
                         modal.close();
                     });
                 });
@@ -146,7 +145,6 @@ impl ExternalConnectionModal {
                             self.ext_node_url_edit = "".to_string();
                             self.ext_node_secret_edit = "".to_string();
                             self.ext_node_url_error = false;
-                            cb.hide_keyboard();
                             modal.close();
                         }
                     };

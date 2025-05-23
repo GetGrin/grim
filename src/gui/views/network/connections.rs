@@ -96,7 +96,7 @@ impl ConnectionsContent {
         // Show button to add new external node connection.
         let add_node_text = format!("{} {}", PLUS_CIRCLE, t!("wallets.add_node"));
         View::button(ui, add_node_text, Colors::white_or_black(false), || {
-            self.show_add_ext_conn_modal(None, cb);
+            self.show_add_ext_conn_modal(None);
         });
 
         ui.add_space(4.0);
@@ -114,7 +114,7 @@ impl ConnectionsContent {
                             ConnectionsConfig::remove_ext_conn(conn.id);
                         });
                         View::item_button(ui, Rounding::default(), PENCIL, None, || {
-                            self.show_add_ext_conn_modal(Some(conn.clone()), cb);
+                            self.show_add_ext_conn_modal(Some(conn.clone()));
                         });
                     });
                 });
@@ -234,15 +234,12 @@ impl ConnectionsContent {
     }
 
     /// Show [`Modal`] to add external connection.
-    pub fn show_add_ext_conn_modal(&mut self,
-                                   conn: Option<ExternalConnection>,
-                                   cb: &dyn PlatformCallbacks) {
+    pub fn show_add_ext_conn_modal(&mut self, conn: Option<ExternalConnection>) {
         self.ext_conn_modal = ExternalConnectionModal::new(conn);
         // Show modal.
         Modal::new(ExternalConnectionModal::NETWORK_ID)
             .position(ModalPosition::CenterTop)
             .title(t!("wallets.add_node"))
             .show();
-        cb.show_keyboard();
     }
 }

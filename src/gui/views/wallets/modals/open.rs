@@ -52,6 +52,8 @@ impl OpenWalletModal {
               cb: &dyn PlatformCallbacks,
               mut on_continue: impl FnMut(Wallet, Option<String>)) {
         ui.add_space(6.0);
+        
+        let mut enter_pressed = false;
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("wallets.pass"))
                 .size(17.0)
@@ -61,6 +63,7 @@ impl OpenWalletModal {
             // Show password input.
             let mut pass_edit_opts = TextEditOptions::new(Id::from(modal.id)).password();
             View::text_edit(ui, cb, &mut self.pass_edit, &mut pass_edit_opts);
+            enter_pressed = pass_edit_opts.enter_pressed;
 
             // Show information when password is empty.
             if self.pass_edit.is_empty() {
@@ -87,7 +90,6 @@ impl OpenWalletModal {
                 columns[0].vertical_centered_justified(|ui| {
                     View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                         // Close modal.
-                        cb.hide_keyboard();
                         modal.close();
                     });
                 });
@@ -101,7 +103,6 @@ impl OpenWalletModal {
                         match self.wallet.open(ZeroingString::from(pass)) {
                             Ok(_) => {
                                 self.pass_edit = "".to_string();
-                                cb.hide_keyboard();
                                 modal.close();
                                 on_continue(self.wallet.clone(), self.data.clone());
                             }
@@ -113,6 +114,9 @@ impl OpenWalletModal {
                     View::on_enter_key(ui, || {
                         (on_continue)();
                     });
+                    if enter_pressed {
+                        (on_continue)();
+                    }
 
                     View::button(ui, t!("continue"), Colors::white_or_black(false), on_continue);
                 });

@@ -87,7 +87,7 @@ impl MnemonicSetup {
         ui.add_space(6.0);
 
         // Show words setup.
-        self.word_list_ui(ui, self.mnemonic.mode() == PhraseMode::Import, cb);
+        self.word_list_ui(ui, self.mnemonic.mode() == PhraseMode::Import);
     }
 
     /// Draw content for phrase confirmation step.
@@ -101,7 +101,7 @@ impl MnemonicSetup {
             ui.label(RichText::new(text).size(16.0).color(Colors::gray()));
         });
         ui.add_space(4.0);
-        self.word_list_ui(ui, true, cb);
+        self.word_list_ui(ui, true);
     }
 
     /// Draw mode and size setup.
@@ -149,7 +149,7 @@ impl MnemonicSetup {
     }
 
     /// Draw grid of words for mnemonic phrase.
-    fn word_list_ui(&mut self, ui: &mut egui::Ui, edit: bool, cb: &dyn PlatformCallbacks) {
+    fn word_list_ui(&mut self, ui: &mut egui::Ui, edit: bool) {
         ui.add_space(6.0);
         ui.scope(|ui| {
             // Setup spacing between columns.
@@ -167,25 +167,25 @@ impl MnemonicSetup {
                     ui.columns(cols, |columns| {
                         columns[0].horizontal(|ui| {
                             let word = chunk.get(0).unwrap();
-                            self.word_item_ui(ui, word_number, word, edit, cb);
+                            self.word_item_ui(ui, word_number, word, edit);
                         });
                         columns[1].horizontal(|ui| {
                             word_number += 1;
                             let word = chunk.get(1).unwrap();
-                            self.word_item_ui(ui, word_number, word, edit, cb);
+                            self.word_item_ui(ui, word_number, word, edit);
                         });
                         if size > 2 {
                             columns[2].horizontal(|ui| {
                                 word_number += 1;
                                 let word = chunk.get(2).unwrap();
-                                self.word_item_ui(ui, word_number, word, edit, cb);
+                                self.word_item_ui(ui, word_number, word, edit);
                             });
                         }
                         if size > 3 {
                             columns[3].horizontal(|ui| {
                                 word_number += 1;
                                 let word = chunk.get(3).unwrap();
-                                self.word_item_ui(ui, word_number, word, edit, cb);
+                                self.word_item_ui(ui, word_number, word, edit);
                             });
                         }
                     });
@@ -193,7 +193,7 @@ impl MnemonicSetup {
                     ui.columns(cols, |columns| {
                         columns[0].horizontal(|ui| {
                             let word = chunk.get(0).unwrap();
-                            self.word_item_ui(ui, word_number, word, edit, cb);
+                            self.word_item_ui(ui, word_number, word, edit);
                         });
                     });
                 }
@@ -207,8 +207,7 @@ impl MnemonicSetup {
                     ui: &mut egui::Ui,
                     num: usize,
                     word: &PhraseWord,
-                    edit: bool,
-                    cb: &dyn PlatformCallbacks) {
+                    edit: bool) {
         let color = if !word.valid || (word.text.is_empty() && !self.mnemonic.valid()) {
             Colors::red()
         } else {
@@ -225,7 +224,6 @@ impl MnemonicSetup {
                     .position(ModalPosition::CenterTop)
                     .title(t!("wallets.recovery_phrase"))
                     .show();
-                cb.show_keyboard();
             });
             ui.label(RichText::new(format!("#{} {}", num, word.text))
                 .size(17.0)
@@ -276,7 +274,6 @@ impl MnemonicSetup {
                 columns[0].vertical_centered_justified(|ui| {
                     View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                         // Close modal.
-                        cb.hide_keyboard();
                         modal.close();
                     });
                 });
@@ -295,7 +292,6 @@ impl MnemonicSetup {
                             (!next_word.as_ref().unwrap().text.is_empty() &&
                             next_word.unwrap().valid);
                         if close_modal {
-                            cb.hide_keyboard();
                             modal.close();
                         } else {
                             self.word_index_edit += 1;

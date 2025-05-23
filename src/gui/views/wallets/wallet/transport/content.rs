@@ -61,14 +61,14 @@ const QR_ADDRESS_MODAL: &'static str = "qr_address_modal";
 
 impl WalletTransport {
     /// Create new transport content instance, opening sending `Modal` if address was provided.
-    pub fn new(address: Option<String>, cb: &dyn PlatformCallbacks) -> Self {
+    pub fn new(address: Option<String>) -> Self {
         let mut content = Self {
             send_modal_content: None,
             qr_address_content: None,
             settings_modal_content: None,
         };
         if address.is_some() {
-            content.show_send_tor_modal(cb, address)
+            content.show_send_tor_modal(address)
         }
         content
     }
@@ -135,7 +135,7 @@ impl WalletTransport {
         let service_id = &wallet.identifier();
         if data.info.amount_currently_spendable > 0 && wallet.foreign_api_port().is_some() &&
             !Tor::is_service_starting(service_id) {
-            self.tor_send_ui(ui, cb);
+            self.tor_send_ui(ui);
         }
     }
 
@@ -330,7 +330,7 @@ impl WalletTransport {
     }
 
     /// Draw Tor send content.
-    fn tor_send_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
+    fn tor_send_ui(&mut self, ui: &mut egui::Ui) {
         // Setup layout size.
         let mut rect = ui.available_rect_before_wrap();
         rect.set_height(55.0);
@@ -346,20 +346,19 @@ impl WalletTransport {
                 // Draw button to open sending modal.
                 let send_text = format!("{} {}", EXPORT, t!("wallets.send"));
                 View::button(ui, send_text, Colors::white_or_black(false), || {
-                    self.show_send_tor_modal(cb, None);
+                    self.show_send_tor_modal(None);
                 });
             });
         });
     }
 
     /// Show [`Modal`] to send over Tor.
-    fn show_send_tor_modal(&mut self, cb: &dyn PlatformCallbacks, address: Option<String>) {
+    fn show_send_tor_modal(&mut self, address: Option<String>) {
         self.send_modal_content = Some(TransportSendModal::new(address));
         // Show modal.
         Modal::new(SEND_TOR_MODAL)
             .position(ModalPosition::CenterTop)
             .title(t!("wallets.send"))
             .show();
-        cb.show_keyboard();
     }
 }

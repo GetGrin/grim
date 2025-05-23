@@ -185,12 +185,12 @@ impl NodeSetup {
                     NodeConfig::save_api_address(selected_ip, &api_port);
                 });
                 // Show API port setup.
-                self.api_port_setup_ui(ui, cb);
+                self.api_port_setup_ui(ui);
                 // Show API secret setup.
-                self.secret_ui(API_SECRET_MODAL, ui, cb);
+                self.secret_ui(API_SECRET_MODAL, ui);
                 ui.add_space(12.0);
                 // Show Foreign API secret setup.
-                self.secret_ui(FOREIGN_API_SECRET_MODAL, ui, cb);
+                self.secret_ui(FOREIGN_API_SECRET_MODAL, ui);
                 ui.add_space(6.0);
             });
         }
@@ -201,7 +201,7 @@ impl NodeSetup {
 
         ui.vertical_centered(|ui| {
             // Show FTL setup.
-            self.ftl_ui(ui, cb);
+            self.ftl_ui(ui);
 
             ui.add_space(6.0);
             View::horizontal_line(ui, Colors::item_stroke());
@@ -250,7 +250,7 @@ impl NodeSetup {
     }
 
     /// Draw API port setup content.
-    fn api_port_setup_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
+    fn api_port_setup_ui(&mut self, ui: &mut egui::Ui) {
         ui.label(RichText::new(t!("network_settings.api_port")).size(16.0).color(Colors::gray()));
         ui.add_space(6.0);
 
@@ -265,7 +265,6 @@ impl NodeSetup {
                 .position(ModalPosition::CenterTop)
                 .title(t!("network_settings.change_value"))
                 .show();
-            cb.show_keyboard();
         });
         ui.add_space(6.0);
 
@@ -325,7 +324,6 @@ impl NodeSetup {
                     }
 
                     self.is_api_port_available = true;
-                    cb.hide_keyboard();
                     modal.close();
                 }
             };
@@ -338,7 +336,6 @@ impl NodeSetup {
             ui.columns(2, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
                     View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
-                        cb.hide_keyboard();
                         modal.close();
                     });
                 });
@@ -351,7 +348,7 @@ impl NodeSetup {
     }
 
     /// Draw API secret token setup content.
-    fn secret_ui(&mut self, modal_id: &'static str, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
+    fn secret_ui(&mut self, modal_id: &'static str, ui: &mut egui::Ui) {
         let secret_title = match modal_id {
             API_SECRET_MODAL => t!("network_settings.api_secret"),
             _ => t!("network_settings.foreign_api_secret")
@@ -381,7 +378,6 @@ impl NodeSetup {
                 .position(ModalPosition::CenterTop)
                 .title(t!("network_settings.change_value"))
                 .show();
-            cb.show_keyboard();
         });
     }
 
@@ -428,7 +424,6 @@ impl NodeSetup {
                         NodeConfig::save_foreign_api_secret(&secret);
                     }
                 };
-                cb.hide_keyboard();
                 modal.close();
             };
 
@@ -440,7 +435,6 @@ impl NodeSetup {
             ui.columns(2, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
                     View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
-                        cb.hide_keyboard();
                         modal.close();
                     });
                 });
@@ -453,7 +447,7 @@ impl NodeSetup {
     }
 
     /// Draw FTL setup content.
-    fn ftl_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
+    fn ftl_ui(&mut self, ui: &mut egui::Ui) {
         ui.label(RichText::new(t!("network_settings.ftl"))
             .size(16.0)
             .color(Colors::gray())
@@ -471,7 +465,6 @@ impl NodeSetup {
                 .position(ModalPosition::CenterTop)
                 .title(t!("network_settings.change_value"))
                 .show();
-            cb.show_keyboard();
         });
         ui.add_space(6.0);
         ui.label(RichText::new(t!("network_settings.ftl_description"))
@@ -514,7 +507,6 @@ impl NodeSetup {
             let on_save = || {
                 if let Ok(ftl) = self.ftl_edit.parse::<u64>() {
                     NodeConfig::save_ftl(ftl);
-                    cb.hide_keyboard();
                     modal.close();
                 }
             };
@@ -528,7 +520,6 @@ impl NodeSetup {
                 columns[0].vertical_centered_justified(|ui| {
                     View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                         // Close modal.
-                        cb.hide_keyboard();
                         modal.close();
                     });
                 });

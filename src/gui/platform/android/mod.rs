@@ -70,20 +70,6 @@ impl PlatformCallbacks for Android {
         let _ = self.call_java_method("exit", "()V", &[]);
     }
 
-    fn show_keyboard(&self) {
-        // Disable NDK soft input show call before fix for egui.
-        // self.android_app.show_soft_input(false);
-
-        let _ = self.call_java_method("showKeyboard", "()V", &[]);
-    }
-
-    fn hide_keyboard(&self) {
-        // Disable NDK soft input hide call before fix for egui.
-        // self.android_app.hide_soft_input(false);
-
-        let _ = self.call_java_method("hideKeyboard", "()V", &[]);
-    }
-
     fn copy_string_to_buffer(&self, data: String) {
         let vm = unsafe { jni::JavaVM::from_raw(self.android_app.vm_as_ptr() as _) }.unwrap();
         let env = vm.attach_current_thread().unwrap();

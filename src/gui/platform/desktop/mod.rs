@@ -180,10 +180,6 @@ impl PlatformCallbacks for Desktop {
         }
     }
 
-    fn show_keyboard(&self) {}
-
-    fn hide_keyboard(&self) {}
-
     fn copy_string_to_buffer(&self, data: String) {
         let mut clipboard = arboard::Clipboard::new().unwrap();
         clipboard.set_text(data).unwrap();

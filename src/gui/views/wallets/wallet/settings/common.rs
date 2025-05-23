@@ -87,7 +87,6 @@ impl CommonSettings {
                     .position(ModalPosition::CenterTop)
                     .title(t!("wallets.wallet"))
                     .show();
-                cb.show_keyboard();
             });
 
             ui.add_space(12.0);
@@ -109,7 +108,6 @@ impl CommonSettings {
                     .position(ModalPosition::CenterTop)
                     .title(t!("wallets.wallet"))
                     .show();
-                cb.show_keyboard();
             });
 
             ui.add_space(12.0);
@@ -127,7 +125,6 @@ impl CommonSettings {
                     .position(ModalPosition::CenterTop)
                     .title(t!("network_settings.change_value"))
                     .show();
-                cb.show_keyboard();
             });
 
             ui.add_space(12.0);
@@ -202,7 +199,6 @@ impl CommonSettings {
                 columns[0].vertical_centered_justified(|ui| {
                     View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                         // Close modal.
-                        cb.hide_keyboard();
                         modal.close();
                     });
                 });
@@ -211,7 +207,6 @@ impl CommonSettings {
                     let on_save = || {
                         if !self.name_edit.is_empty() {
                             wallet.change_name(self.name_edit.clone());
-                            cb.hide_keyboard();
                             modal.close();
                         }
                     };
@@ -288,7 +283,6 @@ impl CommonSettings {
                 columns[0].vertical_centered_justified(|ui| {
                     View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                         // Close modal.
-                        cb.hide_keyboard();
                         modal.close();
                     });
                 });
@@ -306,7 +300,6 @@ impl CommonSettings {
                                 self.old_pass_edit = "".to_string();
                                 self.new_pass_edit = "".to_string();
                                 // Close modal.
-                                cb.hide_keyboard();
                                 modal.close();
                             }
                             Err(_) => self.wrong_pass = true
@@ -361,7 +354,6 @@ impl CommonSettings {
                 columns[0].vertical_centered_justified(|ui| {
                     View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                         // Close modal.
-                        cb.hide_keyboard();
                         modal.close();
                     });
                 });
@@ -370,7 +362,6 @@ impl CommonSettings {
                     let on_save = || {
                         if let Ok(min_conf) = self.min_confirmations_edit.parse::<u64>() {
                             wallet.update_min_confirmations(min_conf);
-                            cb.hide_keyboard();
                             modal.close();
                         }
                     };

@@ -227,19 +227,19 @@ impl StratumSetup {
 
             });
             // Show stratum port setup.
-            self.port_setup_ui(ui, cb);
+            self.port_setup_ui(ui);
 
             View::horizontal_line(ui, Colors::item_stroke());
             ui.add_space(6.0);
 
             // Show attempt time setup.
-            self.attempt_time_ui(ui, cb);
+            self.attempt_time_ui(ui);
 
             View::horizontal_line(ui, Colors::item_stroke());
             ui.add_space(6.0);
 
             // Show minimum acceptable share difficulty setup.
-            self.min_diff_ui(ui, cb);
+            self.min_diff_ui(ui);
         });
     }
 
@@ -254,7 +254,7 @@ impl StratumSetup {
     }
 
     /// Draw stratum port value setup content.
-    fn port_setup_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
+    fn port_setup_ui(&mut self, ui: &mut egui::Ui) {
         ui.label(RichText::new(t!("network_settings.stratum_port"))
             .size(16.0)
             .color(Colors::gray())
@@ -271,7 +271,6 @@ impl StratumSetup {
                 .position(ModalPosition::CenterTop)
                 .title(t!("network_settings.change_value"))
                 .show();
-            cb.show_keyboard();
         });
         ui.add_space(12.0);
 
@@ -330,7 +329,6 @@ impl StratumSetup {
                         NodeConfig::save_stratum_address(&stratum_ip, &self.stratum_port_edit);
 
                         self.is_port_available = true;
-                        cb.hide_keyboard();
                         modal.close();
                     }
                 };
@@ -344,7 +342,6 @@ impl StratumSetup {
                     columns[0].vertical_centered_justified(|ui| {
                         View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                             // Close modal.
-                            cb.hide_keyboard();
                             modal.close();
                         });
                     });
@@ -358,7 +355,7 @@ impl StratumSetup {
     }
 
     /// Draw attempt time value setup content.
-    fn attempt_time_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
+    fn attempt_time_ui(&mut self, ui: &mut egui::Ui) {
         ui.label(RichText::new(t!("network_settings.attempt_time"))
             .size(16.0)
             .color(Colors::gray())
@@ -375,7 +372,6 @@ impl StratumSetup {
                 .position(ModalPosition::CenterTop)
                 .title(t!("network_settings.change_value"))
                 .show();
-            cb.show_keyboard();
         });
         ui.add_space(6.0);
         ui.label(RichText::new(t!("network_settings.attempt_time_desc"))
@@ -419,7 +415,6 @@ impl StratumSetup {
             let on_save = || {
                 if let Ok(time) = self.attempt_time_edit.parse::<u32>() {
                     NodeConfig::save_stratum_attempt_time(time);
-                    cb.hide_keyboard();
                     modal.close();
                 }
             };
@@ -433,7 +428,6 @@ impl StratumSetup {
                 columns[0].vertical_centered_justified(|ui| {
                     View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                         // Close modal.
-                        cb.hide_keyboard();
                         modal.close();
                     });
                 });
@@ -446,7 +440,7 @@ impl StratumSetup {
     }
 
     /// Draw minimum share difficulty value setup content.
-    fn min_diff_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
+    fn min_diff_ui(&mut self, ui: &mut egui::Ui) {
         ui.label(RichText::new(t!("network_settings.min_share_diff"))
             .size(16.0)
             .color(Colors::gray())
@@ -463,7 +457,6 @@ impl StratumSetup {
                 .position(ModalPosition::CenterTop)
                 .title(t!("network_settings.change_value"))
                 .show();
-            cb.show_keyboard();
         });
         ui.add_space(6.0);
     }
@@ -502,7 +495,6 @@ impl StratumSetup {
             let on_save = || {
                 if let Ok(diff) = self.min_share_diff_edit.parse::<u64>() {
                     NodeConfig::save_stratum_min_share_diff(diff);
-                    cb.hide_keyboard();
                     modal.close();
                 }
             };
@@ -516,7 +508,6 @@ impl StratumSetup {
                 columns[0].vertical_centered_justified(|ui| {
                     View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                         // Close modal.
-                        cb.hide_keyboard();
                         modal.close();
                     });
                 });

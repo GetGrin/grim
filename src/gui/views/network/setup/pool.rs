@@ -104,40 +104,40 @@ impl PoolSetup {
 
         ui.vertical_centered(|ui| {
             // Show base fee setup.
-            self.fee_base_ui(ui, cb);
+            self.fee_base_ui(ui);
 
             ui.add_space(6.0);
             View::horizontal_line(ui, Colors::item_stroke());
             ui.add_space(6.0);
 
             // Show reorg cache retention period setup.
-            self.reorg_period_ui(ui, cb);
+            self.reorg_period_ui(ui);
 
             ui.add_space(6.0);
             View::horizontal_line(ui, Colors::item_stroke());
             ui.add_space(6.0);
 
             // Show pool size setup.
-            self.pool_size_ui(ui, cb);
+            self.pool_size_ui(ui);
 
             ui.add_space(6.0);
             View::horizontal_line(ui, Colors::item_stroke());
             ui.add_space(6.0);
 
             // Show stem pool size setup.
-            self.stem_size_ui(ui, cb);
+            self.stem_size_ui(ui);
 
             ui.add_space(6.0);
             View::horizontal_line(ui, Colors::item_stroke());
             ui.add_space(6.0);
 
             // Show max weight of transactions setup.
-            self.max_weight_ui(ui, cb);
+            self.max_weight_ui(ui);
         });
     }
 
     /// Draw fee base setup content.
-    fn fee_base_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
+    fn fee_base_ui(&mut self, ui: &mut egui::Ui) {
         ui.label(RichText::new(t!("network_settings.pool_fee"))
             .size(16.0)
             .color(Colors::gray())
@@ -153,7 +153,6 @@ impl PoolSetup {
                 .position(ModalPosition::CenterTop)
                 .title(t!("network_settings.change_value"))
                 .show();
-            cb.show_keyboard();
         });
         ui.add_space(6.0);
     }
@@ -191,7 +190,6 @@ impl PoolSetup {
                 let on_save = || {
                     if let Ok(fee) = self.fee_base_edit.parse::<u64>() {
                         NodeConfig::save_base_fee(fee);
-                        cb.hide_keyboard();
                         modal.close();
                     }
                 };
@@ -205,7 +203,6 @@ impl PoolSetup {
                     columns[0].vertical_centered_justified(|ui| {
                         View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                             // Close modal.
-                            cb.hide_keyboard();
                             modal.close();
                         });
                     });
@@ -219,7 +216,7 @@ impl PoolSetup {
     }
 
     /// Draw reorg cache retention period setup content.
-    fn reorg_period_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
+    fn reorg_period_ui(&mut self, ui: &mut egui::Ui) {
         ui.label(RichText::new(t!("network_settings.reorg_period"))
             .size(16.0)
             .color(Colors::gray())
@@ -236,7 +233,6 @@ impl PoolSetup {
                 .position(ModalPosition::CenterTop)
                 .title(t!("network_settings.change_value"))
                 .show();
-            cb.show_keyboard();
         });
         ui.add_space(6.0);
     }
@@ -274,7 +270,6 @@ impl PoolSetup {
                 let on_save = || {
                     if let Ok(period) = self.reorg_period_edit.parse::<u32>() {
                         NodeConfig::save_reorg_cache_period(period);
-                        cb.hide_keyboard();
                         modal.close();
                     }
                 };
@@ -288,7 +283,6 @@ impl PoolSetup {
                     columns[0].vertical_centered_justified(|ui| {
                         View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                             // Close modal.
-                            cb.hide_keyboard();
                             modal.close();
                         });
                     });
@@ -302,7 +296,7 @@ impl PoolSetup {
     }
 
     /// Draw maximum number of transactions in the pool setup content.
-    fn pool_size_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
+    fn pool_size_ui(&mut self, ui: &mut egui::Ui) {
         ui.label(RichText::new(t!("network_settings.max_tx_pool"))
             .size(16.0)
             .color(Colors::gray())
@@ -318,7 +312,6 @@ impl PoolSetup {
                 .position(ModalPosition::CenterTop)
                 .title(t!("network_settings.change_value"))
                 .show();
-            cb.show_keyboard();
         });
         ui.add_space(6.0);
     }
@@ -356,7 +349,6 @@ impl PoolSetup {
                 let on_save = || {
                     if let Ok(size) = self.pool_size_edit.parse::<usize>() {
                         NodeConfig::save_max_pool_size(size);
-                        cb.hide_keyboard();
                         modal.close();
                     }
                 };
@@ -370,7 +362,6 @@ impl PoolSetup {
                     columns[0].vertical_centered_justified(|ui| {
                         View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                             // Close modal.
-                            cb.hide_keyboard();
                             modal.close();
                         });
                     });
@@ -384,7 +375,7 @@ impl PoolSetup {
     }
 
     /// Draw maximum number of transactions in the stempool setup content.
-    fn stem_size_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
+    fn stem_size_ui(&mut self, ui: &mut egui::Ui) {
         ui.label(RichText::new(t!("network_settings.max_tx_stempool"))
             .size(16.0)
             .color(Colors::gray())
@@ -402,7 +393,6 @@ impl PoolSetup {
                 .position(ModalPosition::CenterTop)
                 .title(t!("network_settings.change_value"))
                 .show();
-            cb.show_keyboard();
         });
         ui.add_space(6.0);
     }
@@ -440,7 +430,6 @@ impl PoolSetup {
                 let on_save = || {
                     if let Ok(size) = self.stempool_size_edit.parse::<usize>() {
                         NodeConfig::save_max_stempool_size(size);
-                        cb.hide_keyboard();
                         modal.close();
                     }
                 };
@@ -454,7 +443,6 @@ impl PoolSetup {
                     columns[0].vertical_centered_justified(|ui| {
                         View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                             // Close modal.
-                            cb.hide_keyboard();
                             modal.close();
                         });
                     });
@@ -468,7 +456,7 @@ impl PoolSetup {
     }
 
     /// Draw maximum total weight of transactions setup content.
-    fn max_weight_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
+    fn max_weight_ui(&mut self, ui: &mut egui::Ui) {
         ui.label(RichText::new(t!("network_settings.max_tx_weight"))
             .size(16.0)
             .color(Colors::gray())
@@ -486,7 +474,6 @@ impl PoolSetup {
                 .position(ModalPosition::CenterTop)
                 .title(t!("network_settings.change_value"))
                 .show();
-            cb.show_keyboard();
         });
         ui.add_space(6.0);
     }
@@ -524,7 +511,6 @@ impl PoolSetup {
                 let on_save = || {
                     if let Ok(weight) = self.max_weight_edit.parse::<u64>() {
                         NodeConfig::save_mineable_max_weight(weight);
-                        cb.hide_keyboard();
                         modal.close();
                     }
                 };
@@ -538,7 +524,6 @@ impl PoolSetup {
                     columns[0].vertical_centered_justified(|ui| {
                         View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                             // Close modal.
-                            cb.hide_keyboard();
                             modal.close();
                         });
                     });

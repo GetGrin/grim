@@ -138,7 +138,7 @@ impl WalletContent {
                         match result {
                             QrScanResult::Address(address) => {
                                 self.current_tab =
-                                    Box::new(WalletTransport::new(Some(address.to_string()), cb));
+                                    Box::new(WalletTransport::new(Some(address.to_string())));
                             }
                             _ => {
                                 self.current_tab =
@@ -409,7 +409,7 @@ impl WalletContent {
                 });
                 columns[2].vertical_centered_justified(|ui| {
                     View::tab_button(ui, BRIDGE, current_type == WalletTabType::Transport, |_| {
-                        self.current_tab = Box::new(WalletTransport::new(None, cb));
+                        self.current_tab = Box::new(WalletTransport::new(None));
                     });
                 });
                 columns[3].vertical_centered_justified(|ui| {

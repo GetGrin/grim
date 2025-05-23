@@ -21,7 +21,7 @@ use crate::AppConfig;
 use crate::gui::Colors;
 use crate::gui::icons::{ARROWS_IN, ARROWS_OUT, CARET_DOWN, MOON, SUN, X};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Content, Modal, TitlePanel, View};
+use crate::gui::views::{Content, KeyboardContent, Modal, TitlePanel, View};
 use crate::wallet::ExternalConnection;
 
 lazy_static! {
@@ -33,8 +33,12 @@ lazy_static! {
 pub struct App<Platform> {
     /// Handles platform-specific functionality.
     pub platform: Platform,
+
     /// Main content.
     content: Content,
+    /// Keyboard content.
+    keyboard_content: KeyboardContent,
+
     /// Last window resize direction.
     resize_direction: Option<ResizeDirection>,
     /// Flag to check if it's first draw.
@@ -46,6 +50,7 @@ impl<Platform: PlatformCallbacks> App<Platform> {
         Self {
             platform,
             content: Content::default(),
+            keyboard_content: KeyboardContent::default(),
             resize_direction: None,
             first_draw: true
         }
@@ -73,7 +78,12 @@ impl<Platform: PlatformCallbacks> App<Platform> {
         // Handle Esc keyboard key event and platform Back button key event.
         let back_pressed = BACK_BUTTON_PRESSED.load(Ordering::Relaxed);
         if back_pressed || ctx.input_mut(|i| i.consume_key(Modifiers::NONE, egui::Key::Escape)) {
-            self.content.on_back(&self.platform);
+            // Hide keyboard or pass event to content.
+            if KeyboardContent::showing() {
+                KeyboardContent::hide();
+            } else {
+                self.content.on_back(&self.platform);
+            }
             if back_pressed {
                 BACK_BUTTON_PRESSED.store(false, Ordering::Relaxed);
             }
@@ -128,10 +138,13 @@ impl<Platform: PlatformCallbacks> App<Platform> {
                     self.content.ui(ui, &self.platform);
                 }
 
+                // Show soft keyboard content.
+                self.keyboard_content.ui(ctx);
+
                 // Provide incoming data to wallets.
                 if let Some(data) = crate::consume_incoming_data() {
                     if !data.is_empty() {
-                        self.content.wallets.on_data(ui, Some(data), &self.platform);
+                        self.content.wallets.on_data(ui, Some(data));
                     }
                 }
             });

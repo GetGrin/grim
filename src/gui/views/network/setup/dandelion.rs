@@ -96,28 +96,28 @@ impl DandelionSetup {
 
         ui.vertical_centered(|ui| {
             // Show epoch duration setup.
-            self.epoch_ui(ui, cb);
+            self.epoch_ui(ui);
 
             ui.add_space(6.0);
             View::horizontal_line(ui, Colors::item_stroke());
             ui.add_space(6.0);
 
             // Show embargo expiration time setup.
-            self.embargo_ui(ui, cb);
+            self.embargo_ui(ui);
 
             ui.add_space(6.0);
             View::horizontal_line(ui, Colors::item_stroke());
             ui.add_space(6.0);
 
             // Show aggregation period setup.
-            self.aggregation_ui(ui, cb);
+            self.aggregation_ui(ui);
 
             ui.add_space(6.0);
             View::horizontal_line(ui, Colors::item_stroke());
             ui.add_space(6.0);
 
             // Show Stem phase probability setup.
-            self.stem_prob_ui(ui, cb);
+            self.stem_prob_ui(ui);
 
             ui.add_space(6.0);
             View::horizontal_line(ui, Colors::item_stroke());
@@ -133,7 +133,7 @@ impl DandelionSetup {
     }
 
     /// Draw epoch duration setup content.
-    fn epoch_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
+    fn epoch_ui(&mut self, ui: &mut egui::Ui) {
         ui.label(RichText::new(t!("network_settings.epoch_duration"))
             .size(16.0)
             .color(Colors::gray())
@@ -149,7 +149,6 @@ impl DandelionSetup {
                 .position(ModalPosition::CenterTop)
                 .title(t!("network_settings.change_value"))
                 .show();
-            cb.show_keyboard();
         });
         ui.add_space(6.0);
     }
@@ -188,7 +187,6 @@ impl DandelionSetup {
             let on_save = || {
                 if let Ok(epoch) = self.epoch_edit.parse::<u16>() {
                     NodeConfig::save_dandelion_epoch(epoch);
-                    cb.hide_keyboard();
                     modal.close();
                 }
             };
@@ -202,7 +200,6 @@ impl DandelionSetup {
                 columns[0].vertical_centered_justified(|ui| {
                     View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                         // Close modal.
-                        cb.hide_keyboard();
                         modal.close();
                     });
                 });
@@ -215,7 +212,7 @@ impl DandelionSetup {
     }
 
     /// Draw embargo expiration time setup content.
-    fn embargo_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
+    fn embargo_ui(&mut self, ui: &mut egui::Ui) {
         ui.label(RichText::new(t!("network_settings.embargo_timer"))
             .size(16.0)
             .color(Colors::gray())
@@ -230,7 +227,6 @@ impl DandelionSetup {
                 .position(ModalPosition::CenterTop)
                 .title(t!("network_settings.change_value"))
                 .show();
-            cb.show_keyboard();
         });
         ui.add_space(6.0);
     }
@@ -269,7 +265,6 @@ impl DandelionSetup {
             let on_save = || {
                 if let Ok(embargo) = self.embargo_edit.parse::<u16>() {
                     NodeConfig::save_dandelion_embargo(embargo);
-                    cb.hide_keyboard();
                     modal.close();
                 }
             };
@@ -283,7 +278,6 @@ impl DandelionSetup {
                 columns[0].vertical_centered_justified(|ui| {
                     View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                         // Close modal.
-                        cb.hide_keyboard();
                         modal.close();
                     });
                 });
@@ -296,7 +290,7 @@ impl DandelionSetup {
     }
 
     /// Draw aggregation period setup content.
-    fn aggregation_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
+    fn aggregation_ui(&mut self, ui: &mut egui::Ui) {
         ui.label(RichText::new(t!("network_settings.aggregation_period"))
             .size(16.0)
             .color(Colors::gray())
@@ -312,7 +306,6 @@ impl DandelionSetup {
                 .position(ModalPosition::CenterTop)
                 .title(t!("network_settings.change_value"))
                 .show();
-            cb.show_keyboard();
         });
         ui.add_space(6.0);
     }
@@ -351,7 +344,6 @@ impl DandelionSetup {
             let on_save = || {
                 if let Ok(embargo) = self.aggregation_edit.parse::<u16>() {
                     NodeConfig::save_dandelion_aggregation(embargo);
-                    cb.hide_keyboard();
                     modal.close();
                 }
             };
@@ -365,7 +357,6 @@ impl DandelionSetup {
                 columns[0].vertical_centered_justified(|ui| {
                     View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                         // Close modal.
-                        cb.hide_keyboard();
                         modal.close();
                     });
                 });
@@ -378,7 +369,7 @@ impl DandelionSetup {
     }
 
     /// Draw stem phase probability setup content.
-    fn stem_prob_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
+    fn stem_prob_ui(&mut self, ui: &mut egui::Ui) {
         ui.label(RichText::new(t!("network_settings.stem_probability"))
             .size(16.0)
             .color(Colors::gray())
@@ -394,7 +385,6 @@ impl DandelionSetup {
                 .position(ModalPosition::CenterTop)
                 .title(t!("network_settings.change_value"))
                 .show();
-            cb.show_keyboard();
         });
         ui.add_space(6.0);
     }
@@ -433,7 +423,6 @@ impl DandelionSetup {
             let on_save = || {
                 if let Ok(prob) = self.stem_prob_edit.parse::<u8>() {
                     NodeConfig::save_stem_probability(prob);
-                    cb.hide_keyboard();
                     modal.close();
                 }
             };
@@ -447,7 +436,6 @@ impl DandelionSetup {
                 columns[0].vertical_centered_justified(|ui| {
                     View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                         // Close modal.
-                        cb.hide_keyboard();
                         modal.close();
                     });
                 });

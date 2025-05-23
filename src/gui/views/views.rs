@@ -13,8 +13,6 @@
 // limitations under the License.
 
 use std::sync::atomic::{AtomicI32, Ordering};
-use std::sync::Arc;
-use parking_lot::RwLock;
 use lazy_static::lazy_static;
 
 use egui::{Align, Button, CursorIcon, Layout, lerp, PointerState, Rect, Response, Rgba, RichText, Sense, SizeHint, Spinner, TextBuffer, TextStyle, TextureHandle, TextureOptions, Widget, UiBuilder};
@@ -30,6 +28,7 @@ use crate::AppConfig;
 use crate::gui::Colors;
 use crate::gui::icons::{CHECK_SQUARE, CLIPBOARD_TEXT, COPY, EYE, EYE_SLASH, SCAN, SQUARE};
 use crate::gui::platform::PlatformCallbacks;
+use crate::gui::views::{KeyboardContent, KeyboardInput};
 use crate::gui::views::types::{LinePosition, TextEditOptions};
 
 pub struct View;
@@ -450,59 +449,80 @@ impl View {
                     .password(show_pass)
                     .cursor_at_end(true)
                     .ui(ui);
-                // Show keyboard on click.
-                if text_edit_resp.clicked() {
-                    text_edit_resp.request_focus();
-                    cb.show_keyboard();
+                // Store focusing state on click or from options.
+                let focus_id = egui::Id::new("focused_input");
+                if text_edit_resp.clicked() || options.focus {
+                    ui.data_mut(|data| {
+                        data.insert_temp(focus_id, options.id);
+                    });
                 }
-                // Setup focus on input field.
-                if options.focus {
+                let focus = ui.data(|data| {
+                    data.get_temp(focus_id)
+                }).unwrap_or(egui::Id::from(""));
+                if focus == options.id {
                     text_edit_resp.request_focus();
-                    cb.show_keyboard();
+                    KeyboardContent::show();
                 }
-
-                // Apply text from input on Android as temporary fix for egui.
+                // Apply text from software input.
                 if text_edit_resp.has_focus() {
-                    Self::on_soft_input(ui, options.id, value);
+                    options.focus = true;
+                    options.enter_pressed = Self::on_soft_input(ui, options.id, false, value);
                 }
             });
         });
     }
 
-    /// Apply soft keyboard input data to provided String.
-    pub fn on_soft_input(ui: &mut egui::Ui, id: egui::Id, value: &mut String) {
-        let os = OperatingSystem::from_target_os();
-        if os == OperatingSystem::Android {
-            let mut w_input = LAST_SOFT_KEYBOARD_INPUT.write();
-
-            if !w_input.is_empty() {
-                let mut state = TextEditState::load(ui.ctx(), id).unwrap();
-                match state.cursor.char_range() {
-                    None => {}
-                    Some(range) => {
-                        let mut r = range.clone();
-
-                        let mut index = r.primary.index;
-
-                        value.insert_text(w_input.as_str(), index);
-                        index = index + 1;
-
-                        if index == 0 {
-                            r.primary.index = value.len();
-                            r.secondary.index = r.primary.index;
-                        } else {
-                            r.primary.index = index;
-                            r.secondary.index = r.primary.index;
+    /// Apply soft keyboard input data to provided String, returns `true` if Enter was pressed.
+    fn on_soft_input(ui: &mut egui::Ui, id: egui::Id, multiline: bool, value: &mut String) -> bool {
+        if let Some(input) = KeyboardContent::consume_action() {
+            let mut enter_pressed = false;
+            let mut state = TextEditState::load(ui.ctx(), id).unwrap();
+            match state.cursor.char_range() {
+                None => {}
+                Some(range) => {
+                    let mut r = range.clone();
+                    let mut index = r.primary.index;
+                    match input {
+                        KeyboardInput::TEXT(text) => {
+                            value.insert_text(text.as_str(), index);
+                            index = index + 1;
                         }
-                        state.cursor.set_char_range(Some(r));
-                        TextEditState::store(state, ui.ctx(), id);
+                        KeyboardInput::CLEAR => {
+                            if index != 0 {
+                                *value = {
+                                    let part1: String = value.chars()
+                                        .skip(0)
+                                        .take(index - 1)
+                                        .collect();
+                                    let part2: String = value.chars()
+                                        .skip(index)
+                                        .take(value.len() - index)
+                                        .collect();
+                                    format!("{}{}", part1, part2)
+                                };
+                                index = index - 1;
+                            }
+                        }
+                        KeyboardInput::ENTER => {
+                            if multiline {
+                                value.insert_text("\n", index);
+                                index = index + 1;
+                            } else {
+                                enter_pressed = true;
+                            }
+                        }
                     }
+                    // Setup cursor index.
+                    r.primary.index = index;
+                    r.secondary.index = r.primary.index;
+
+                    state.cursor.set_char_range(Some(r));
+                    TextEditState::store(state, ui.ctx(), id);
                 }
             }
-
-            *w_input = "".to_string();
-            ui.ctx().request_repaint();
+            return enter_pressed;
         }
+        false
     }
 
     /// Calculate item background/button rounding based on item index.
@@ -806,34 +826,4 @@ pub extern "C" fn Java_mw_gri_android_MainActivity_onDisplayInsets(
     RIGHT_DISPLAY_INSET.store(array[1], Ordering::Relaxed);
     BOTTOM_DISPLAY_INSET.store(array[2], Ordering::Relaxed);
     LEFT_DISPLAY_INSET.store(array[3], Ordering::Relaxed);
-}
-
-lazy_static! {
-    static ref LAST_SOFT_KEYBOARD_INPUT: Arc<RwLock<String>> = Arc::new(RwLock::new("".into()));
-}
-
-#[allow(dead_code)]
-#[cfg(target_os = "android")]
-#[allow(non_snake_case)]
-#[no_mangle]
-/// Callback from Java code with last entered character from soft keyboard.
-pub extern "C" fn Java_mw_gri_android_MainActivity_onInput(
-    _env: jni::JNIEnv,
-    _class: jni::objects::JObject,
-    char: jni::sys::jstring
-) {
-    use jni::objects::JString;
-    use std::ops::Add;
-
-    unsafe {
-        let j_obj = JString::from_raw(char);
-        let j_str = _env.get_string_unchecked(j_obj.as_ref()).unwrap();
-        match j_str.to_str() {
-            Ok(str) => {
-                let mut w_input = LAST_SOFT_KEYBOARD_INPUT.write();
-                *w_input = w_input.clone().add(str);
-            }
-            Err(_) => {}
-        }
-    }
 }

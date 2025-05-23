@@ -96,7 +96,6 @@ impl WalletAccountsModal {
                 columns[0].vertical_centered_justified(|ui| {
                     View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                         // Close modal.
-                        cb.hide_keyboard();
                         modal.close();
                     });
                 });
@@ -108,7 +107,6 @@ impl WalletAccountsModal {
                             match wallet.create_account(label) {
                                 Ok(_) => {
                                     let _ = wallet.set_active_account(label);
-                                    cb.hide_keyboard();
                                     modal.close();
                                 },
                                 Err(_) => self.account_creation_error = true
@@ -165,7 +163,6 @@ impl WalletAccountsModal {
                 columns[1].vertical_centered_justified(|ui| {
                     View::button(ui, t!("create"), Colors::white_or_black(false), || {
                         self.account_creating = true;
-                        cb.show_keyboard();
                     });
                 });
             });

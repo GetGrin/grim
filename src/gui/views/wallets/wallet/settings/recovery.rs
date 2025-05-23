@@ -115,7 +115,7 @@ impl RecoverySettings {
             // Draw button to show recovery phrase.
             let show_text = format!("{} {}", EYE, t!("show"));
             View::button(ui, show_text, Colors::white_or_black(false), || {
-                self.show_recovery_phrase_modal(cb);
+                self.show_recovery_phrase_modal();
             });
 
             ui.add_space(12.0);
@@ -164,7 +164,7 @@ impl RecoverySettings {
     }
 
     /// Show recovery phrase [`Modal`].
-    fn show_recovery_phrase_modal(&mut self, cb: &dyn PlatformCallbacks) {
+    fn show_recovery_phrase_modal(&mut self) {
         // Setup modal values.
         self.pass_edit = "".to_string();
         self.wrong_pass = false;
@@ -174,7 +174,6 @@ impl RecoverySettings {
             .position(ModalPosition::CenterTop)
             .title(t!("wallets.recovery_phrase"))
             .show();
-        cb.show_keyboard();
     }
 
     /// Draw recovery phrase [`Modal`] content.
@@ -242,7 +241,6 @@ impl RecoverySettings {
                                 Ok(phrase) => {
                                     self.wrong_pass = false;
                                     self.recovery_phrase = Some(phrase);
-                                    cb.hide_keyboard();
                                 }
                                 Err(_) => {
                                     self.wrong_pass = true;

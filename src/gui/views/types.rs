@@ -94,6 +94,8 @@ pub struct TextEditOptions {
     pub scan_qr: bool,
     /// Callback when scan button was pressed.
     pub scan_pressed: bool,
+    /// Callback when Enter key was pressed.
+    pub enter_pressed: bool,
 }
 
 impl TextEditOptions {
@@ -107,6 +109,7 @@ impl TextEditOptions {
             paste: false,
             scan_qr: false,
             scan_pressed: false,
+            enter_pressed: false,
         }
     }
 

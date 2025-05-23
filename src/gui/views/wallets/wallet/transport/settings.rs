@@ -72,7 +72,6 @@ impl TransportSettingsModal {
                 self.bridge_conn_line_edit = result.text();
                 on_stop();
                 self.bridge_qr_scan_content = None;
-                cb.show_keyboard();
             } else {
                 scanner.ui(ui, cb);
                 ui.add_space(12.0);
@@ -191,7 +190,6 @@ impl TransportSettingsModal {
                     View::text_edit(ui, cb, &mut self.bridge_conn_line_edit, &mut conn_edit_opts);
                     // Check if scan button was pressed.
                     if conn_edit_opts.scan_pressed {
-                        cb.hide_keyboard();
                         modal.disable_closing();
                         conn_edit_opts.scan_pressed = false;
                         self.bridge_qr_scan_content = Some(CameraContent::default());

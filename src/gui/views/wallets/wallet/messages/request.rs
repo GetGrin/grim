@@ -102,7 +102,6 @@ impl MessageRequestModal {
                 View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                     self.amount_edit = "".to_string();
                     self.request_error = None;
-                    cb.hide_keyboard();
                     modal.close();
                 });
             });
@@ -113,7 +112,6 @@ impl MessageRequestModal {
                         return;
                     }
                     if let Ok(a) = amount_from_hr_string(self.amount_edit.as_str()) {
-                        cb.hide_keyboard();
                         modal.disable_closing();
                         // Setup data for request.
                         let wallet = wallet.clone();

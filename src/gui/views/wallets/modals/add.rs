@@ -48,6 +48,8 @@ impl AddWalletModal {
               cb: &dyn PlatformCallbacks,
               mut on_input: impl FnMut(String, ZeroingString)) {
         ui.add_space(6.0);
+        
+        let mut enter_pressed = false;
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("wallets.name"))
                 .size(17.0)
@@ -62,8 +64,11 @@ impl AddWalletModal {
                 name_edit_opts.focus = true;
             }
             View::text_edit(ui, cb, &mut self.name_edit, &mut name_edit_opts);
-            ui.add_space(8.0);
+            View::on_enter_key(ui, || {
+                name_edit_opts.enter_pressed = name_edit_opts.focus;
+            });
 
+            ui.add_space(8.0);
             ui.label(RichText::new(t!("wallets.pass"))
                 .size(17.0)
                 .color(Colors::gray()));
@@ -73,7 +78,12 @@ impl AddWalletModal {
             let mut pass_text_edit_opts = TextEditOptions::new(Id::from(modal.id).with("pass"))
                 .password()
                 .no_focus();
+            if name_edit_opts.enter_pressed {
+                pass_text_edit_opts.focus = true;
+            }
             View::text_edit(ui, cb, &mut self.pass_edit, &mut pass_text_edit_opts);
+            enter_pressed = pass_text_edit_opts.enter_pressed;
+
             ui.add_space(12.0);
         });
 
@@ -86,7 +96,6 @@ impl AddWalletModal {
                 columns[0].vertical_centered_justified(|ui| {
                     View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                         // Close modal.
-                        cb.hide_keyboard();
                         modal.close();
                     });
                 });
@@ -97,7 +106,6 @@ impl AddWalletModal {
                         if name.is_empty() || pass.is_empty() {
                             return;
                         }
-                        cb.hide_keyboard();
                         modal.close();
                         on_input(name, ZeroingString::from(pass));
                     };
@@ -106,6 +114,9 @@ impl AddWalletModal {
                     View::on_enter_key(ui, || {
                         (on_next)();
                     });
+                    if enter_pressed {
+                        (on_next)();
+                    }
 
                     View::button(ui, t!("continue"), Colors::white_or_black(false), on_next);
                 });

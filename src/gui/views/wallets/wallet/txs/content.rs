@@ -61,7 +61,7 @@ impl WalletTab for WalletTransactions {
 
     fn ui(&mut self, ui: &mut egui::Ui, wallet: &Wallet, cb: &dyn PlatformCallbacks) {
         self.modal_content_ui(ui, wallet, cb);
-        self.txs_ui(ui, wallet, cb);
+        self.txs_ui(ui, wallet);
     }
 }
 
@@ -75,10 +75,7 @@ impl WalletTransactions {
     pub const TX_ITEM_HEIGHT: f32 = 75.0;
 
     /// Draw transactions content.
-    fn txs_ui(&mut self,
-              ui: &mut egui::Ui,
-              wallet: &Wallet,
-              cb: &dyn PlatformCallbacks) {
+    fn txs_ui(&mut self, ui: &mut egui::Ui, wallet: &Wallet) {
         let data = wallet.get_data().unwrap();
         if data.txs.is_none() {
             ui.centered_and_justified(|ui| {
@@ -123,7 +120,7 @@ impl WalletTransactions {
                     .show_rows(ui, Self::TX_ITEM_HEIGHT, txs.len(), |ui, row_range| {
                         ui.add_space(1.0);
                         View::max_width_ui(ui, Content::SIDE_PANEL_WIDTH * 1.3, |ui| {
-                            self.tx_list_ui(ui, awaiting_amount, row_range, wallet, txs, cb);
+                            self.tx_list_ui(ui, awaiting_amount, row_range, wallet, txs);
                         });
                     })
             });
@@ -143,8 +140,7 @@ impl WalletTransactions {
                   awaiting: bool,
                   row_range: Range<usize>,
                   wallet: &Wallet,
-                  txs: &Vec<WalletTransaction>,
-                  cb: &dyn PlatformCallbacks) {
+                  txs: &Vec<WalletTransaction>) {
         for index in row_range {
             let mut rect = if awaiting {
                 let mut rect = ui.available_rect_before_wrap();
@@ -179,7 +175,6 @@ impl WalletTransactions {
                 if wallet_loaded && tx.can_finalize {
                     let (icon, color) = (CHECK, Some(Colors::green()));
                     View::item_button(ui, Rounding::default(), icon, color, || {
-                        cb.hide_keyboard();
                         self.show_tx_info_modal(wallet, tx, true);
                     });
                 }

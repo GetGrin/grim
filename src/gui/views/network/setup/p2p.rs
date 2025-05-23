@@ -162,14 +162,14 @@ impl P2PSetup {
 
         ui.vertical_centered(|ui| {
             // Show p2p port setup.
-            self.port_ui(ui, cb);
+            self.port_ui(ui);
 
             ui.add_space(6.0);
             View::horizontal_line(ui, Colors::item_stroke());
             ui.add_space(6.0);
 
             // Show seeding type setup.
-            self.seeding_type_ui(ui, cb);
+            self.seeding_type_ui(ui);
 
             ui.add_space(6.0);
             View::horizontal_line(ui, Colors::item_stroke());
@@ -180,7 +180,7 @@ impl P2PSetup {
                 .color(Colors::gray()));
             ui.add_space(6.0);
             // Show allowed peers setup.
-            self.peer_list_ui(ui, &PeerType::Allowed, cb);
+            self.peer_list_ui(ui, &PeerType::Allowed);
 
             ui.add_space(6.0);
             View::horizontal_line(ui, Colors::item_stroke());
@@ -191,7 +191,7 @@ impl P2PSetup {
                 .color(Colors::gray()));
             ui.add_space(6.0);
             // Show denied peers setup.
-            self.peer_list_ui(ui, &PeerType::Denied, cb);
+            self.peer_list_ui(ui, &PeerType::Denied);
 
             ui.add_space(6.0);
             View::horizontal_line(ui, Colors::item_stroke());
@@ -202,7 +202,7 @@ impl P2PSetup {
                 .color(Colors::gray()));
             ui.add_space(6.0);
             // Show preferred peers setup.
-            self.peer_list_ui(ui, &PeerType::Preferred, cb);
+            self.peer_list_ui(ui, &PeerType::Preferred);
 
 
             ui.add_space(6.0);
@@ -210,21 +210,21 @@ impl P2PSetup {
             ui.add_space(6.0);
 
             // Show ban window setup.
-            self.ban_window_ui(ui, cb);
+            self.ban_window_ui(ui);
 
             ui.add_space(6.0);
             View::horizontal_line(ui, Colors::item_stroke());
             ui.add_space(6.0);
 
             // Show maximum inbound peers value setup.
-            self.max_inbound_ui(ui, cb);
+            self.max_inbound_ui(ui);
 
             ui.add_space(6.0);
             View::horizontal_line(ui, Colors::item_stroke());
             ui.add_space(6.0);
 
             // Show maximum outbound peers value setup.
-            self.max_outbound_ui(ui, cb);
+            self.max_outbound_ui(ui);
 
             if !Node::is_restarting() && !self.peers_reset {
                 ui.add_space(6.0);
@@ -238,7 +238,7 @@ impl P2PSetup {
     }
 
     /// Draw p2p port setup content.
-    fn port_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
+    fn port_ui(&mut self, ui: &mut egui::Ui) {
         ui.label(RichText::new(t!("network_settings.p2p_port"))
             .size(16.0)
             .color(Colors::gray())
@@ -257,7 +257,6 @@ impl P2PSetup {
                     .position(ModalPosition::CenterTop)
                     .title(t!("network_settings.change_value"))
                     .show();
-                cb.show_keyboard();
             });
         ui.add_space(6.0);
 
@@ -312,7 +311,6 @@ impl P2PSetup {
                             Node::restart();
                         }
                         self.is_port_available = true;
-                        cb.hide_keyboard();
                         modal.close();
                     }
                 };
@@ -326,7 +324,6 @@ impl P2PSetup {
                     columns[0].vertical_centered_justified(|ui| {
                         View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                             // Close modal.
-                            cb.hide_keyboard();
                             modal.close();
                         });
                     });
@@ -340,7 +337,7 @@ impl P2PSetup {
     }
 
     /// Draw peer list content based on provided [`PeerType`].
-    fn peer_list_ui(&mut self, ui: &mut egui::Ui, peer_type: &PeerType, cb: &dyn PlatformCallbacks) {
+    fn peer_list_ui(&mut self, ui: &mut egui::Ui, peer_type: &PeerType) {
         let peers = match peer_type {
             PeerType::DefaultSeed => {
                 if AppConfig::chain_type() == ChainTypes::Testnet {
@@ -409,7 +406,6 @@ impl P2PSetup {
                     .position(ModalPosition::CenterTop)
                     .title(modal_title)
                     .show();
-                cb.show_keyboard();
             });
         }
         ui.add_space(6.0);
@@ -462,7 +458,6 @@ impl P2PSetup {
                         }
 
                         self.is_port_available = true;
-                        cb.hide_keyboard();
                         modal.close();
                     }
                 };
@@ -476,7 +471,6 @@ impl P2PSetup {
                     columns[0].vertical_centered_justified(|ui| {
                         View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                             // Close modal.
-                            cb.hide_keyboard();
                             modal.close();
                         });
                     });
@@ -490,7 +484,7 @@ impl P2PSetup {
     }
 
     /// Draw seeding type setup content.
-    fn seeding_type_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
+    fn seeding_type_ui(&mut self, ui: &mut egui::Ui) {
         let title = Self::DNS_SEEDS_TITLE;
         ui.label(RichText::new(title).size(16.0).color(Colors::gray()));
         ui.add_space(2.0);
@@ -506,11 +500,11 @@ impl P2PSetup {
         } else {
             PeerType::CustomSeed
         };
-        self.peer_list_ui(ui, &peers_type, cb);
+        self.peer_list_ui(ui, &peers_type);
     }
 
     /// Draw ban window setup content.
-    fn ban_window_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
+    fn ban_window_ui(&mut self, ui: &mut egui::Ui) {
         ui.label(RichText::new(t!("network_settings.ban_window"))
             .size(16.0)
             .color(Colors::gray())
@@ -528,7 +522,6 @@ impl P2PSetup {
                     .position(ModalPosition::CenterTop)
                     .title(t!("network_settings.change_value"))
                     .show();
-                cb.show_keyboard();
             });
         ui.add_space(6.0);
         ui.label(RichText::new(t!("network_settings.ban_window_desc"))
@@ -572,7 +565,6 @@ impl P2PSetup {
             let on_save = || {
                 if let Ok(ban_window) = self.ban_window_edit.parse::<i64>() {
                     NodeConfig::save_p2p_ban_window(ban_window);
-                    cb.hide_keyboard();
                     modal.close();
                 }
             };
@@ -586,7 +578,6 @@ impl P2PSetup {
                 columns[0].vertical_centered_justified(|ui| {
                     View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                         // Close modal.
-                        cb.hide_keyboard();
                         modal.close();
                     });
                 });
@@ -599,7 +590,7 @@ impl P2PSetup {
     }
 
     /// Draw maximum number of inbound peers setup content.
-    fn max_inbound_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
+    fn max_inbound_ui(&mut self, ui: &mut egui::Ui) {
         ui.label(RichText::new(t!("network_settings.max_inbound_count"))
             .size(16.0)
             .color(Colors::gray())
@@ -617,7 +608,6 @@ impl P2PSetup {
                     .position(ModalPosition::CenterTop)
                     .title(t!("network_settings.change_value"))
                     .show();
-                cb.show_keyboard();
             });
         ui.add_space(6.0);
     }
@@ -656,7 +646,6 @@ impl P2PSetup {
             let on_save = || {
                 if let Ok(max_inbound) = self.max_inbound_count.parse::<u32>() {
                     NodeConfig::save_max_inbound_peers(max_inbound);
-                    cb.hide_keyboard();
                     modal.close();
                 }
             };
@@ -670,7 +659,6 @@ impl P2PSetup {
                 columns[0].vertical_centered_justified(|ui| {
                     View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                         // Close modal.
-                        cb.hide_keyboard();
                         modal.close();
                     });
                 });
@@ -683,7 +671,7 @@ impl P2PSetup {
     }
 
     /// Draw maximum number of outbound peers setup content.
-    fn max_outbound_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
+    fn max_outbound_ui(&mut self, ui: &mut egui::Ui) {
         ui.label(RichText::new(t!("network_settings.max_outbound_count"))
             .size(16.0)
             .color(Colors::gray())
@@ -700,7 +688,6 @@ impl P2PSetup {
                     .position(ModalPosition::CenterTop)
                     .title(t!("network_settings.change_value"))
                     .show();
-                cb.show_keyboard();
             });
         ui.add_space(6.0);
     }
@@ -739,7 +726,6 @@ impl P2PSetup {
             let on_save = || {
                 if let Ok(max_outbound) = self.max_outbound_count.parse::<u32>() {
                     NodeConfig::save_max_outbound_peers(max_outbound);
-                    cb.hide_keyboard();
                     modal.close();
                 }
             };
@@ -753,7 +739,6 @@ impl P2PSetup {
                 columns[0].vertical_centered_justified(|ui| {
                     View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                         // Close modal.
-                        cb.hide_keyboard();
                         modal.close();
                     });
                 });

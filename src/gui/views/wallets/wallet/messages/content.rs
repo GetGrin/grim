@@ -107,7 +107,7 @@ impl WalletMessages {
         ui.add_space(3.0);
 
         // Show creation of request to send or receive funds.
-        self.request_ui(ui, wallet, cb);
+        self.request_ui(ui, wallet);
 
         ui.add_space(12.0);
         View::horizontal_line(ui, Colors::item_stroke());
@@ -173,10 +173,7 @@ impl WalletMessages {
     }
 
     /// Draw creation of request to send or receive funds.
-    fn request_ui(&mut self,
-                  ui: &mut egui::Ui,
-                  wallet: &Wallet,
-                  cb: &dyn PlatformCallbacks) {
+    fn request_ui(&mut self, ui: &mut egui::Ui, wallet: &Wallet) {
         ui.label(RichText::new(t!("wallets.create_request_desc"))
             .size(16.0)
             .color(Colors::inactive_text()));
@@ -195,31 +192,31 @@ impl WalletMessages {
                                               send_text,
                                               Colors::red(),
                                               Colors::white_or_black(false), || {
-                        self.show_request_modal(false, cb);
+                        self.show_request_modal(false);
                     });
                 });
                 columns[1].vertical_centered_justified(|ui| {
-                    self.receive_button_ui(ui, cb);
+                    self.receive_button_ui(ui);
                 });
             });
         } else {
-            self.receive_button_ui(ui, cb);
+            self.receive_button_ui(ui);
         }
     }
 
     /// Draw invoice request creation button.
-    fn receive_button_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
+    fn receive_button_ui(&mut self, ui: &mut egui::Ui) {
         let receive_text = format!("{} {}", DOWNLOAD_SIMPLE, t!("wallets.receive"));
         View::colored_text_button(ui,
                                   receive_text,
                                   Colors::green(),
                                   Colors::white_or_black(false), || {
-            self.show_request_modal(true, cb);
+            self.show_request_modal(true);
         });
     }
 
     /// Show [`Modal`] to create invoice or sending request.
-    fn show_request_modal(&mut self, invoice: bool, cb: &dyn PlatformCallbacks) {
+    fn show_request_modal(&mut self, invoice: bool) {
         self.request_modal_content = Some(MessageRequestModal::new(invoice));
         let title = if invoice {
             t!("wallets.receive")
@@ -230,7 +227,6 @@ impl WalletMessages {
             .position(ModalPosition::CenterTop)
             .title(title)
             .show();
-        cb.show_keyboard();
     }
 
     /// Draw Slatepack message input content.
@@ -274,14 +270,8 @@ impl WalletMessages {
                     .desired_width(f32::INFINITY)
                     .show(ui)
                     .response;
-                // Show soft keyboard on click.
                 if resp.clicked() {
                     resp.request_focus();
-                    cb.show_keyboard();
-                }
-                if resp.has_focus() {
-                    // Apply text from input on Android as temporary fix for egui.
-                    View::on_soft_input(ui, input_id, &mut self.message_edit);
                 }
                 ui.add_space(6.0);
             });

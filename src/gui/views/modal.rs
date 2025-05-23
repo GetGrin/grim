@@ -21,7 +21,7 @@ use egui::epaint::{RectShape, Shadow};
 use egui::os::OperatingSystem;
 
 use crate::gui::Colors;
-use crate::gui::views::{Content, View};
+use crate::gui::views::{Content, KeyboardContent, View};
 use crate::gui::views::types::{ModalPosition, ModalState};
 
 lazy_static! {
@@ -70,10 +70,12 @@ impl Modal {
         w_state.modal.as_mut().unwrap().position = position;
     }
 
-    /// Mark [`Modal`] closed.
+    /// Close [`Modal`] by clearing its state..
     pub fn close(&self) {
         let mut w_nav = MODAL_STATE.write();
         w_nav.modal = None;
+        // Hide keyboard.
+        KeyboardContent::hide();
     }
 
     /// Setup possibility to close [`Modal`].

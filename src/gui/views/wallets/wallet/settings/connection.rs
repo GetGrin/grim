@@ -129,7 +129,6 @@ impl ConnectionSettings {
                     .position(ModalPosition::CenterTop)
                     .title(t!("wallets.add_node"))
                     .show();
-                cb.show_keyboard();
             });
             ui.add_space(4.0);
 
