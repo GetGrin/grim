@@ -71,7 +71,7 @@ impl TextEdit {
     pub fn ui(&mut self, ui: &mut egui::Ui, input: &mut String, cb: &dyn PlatformCallbacks) {
         let mut layout_rect = ui.available_rect_before_wrap();
         layout_rect.set_height(Self::TEXT_EDIT_HEIGHT);
-        ui.allocate_ui_with_layout(layout_rect.size(), Layout::right_to_left(Align::Center), |ui| {
+        ui.allocate_ui_with_layout(layout_rect.size(), Layout::right_to_left(Align::Max), |ui| {
             let mut hide_input = false;
             if self.password {
                 let show_pass_id = egui::Id::new(self.id).with("_show_pass");
@@ -118,7 +118,7 @@ impl TextEdit {
             }
 
             let layout_size = ui.available_size();
-            ui.allocate_ui_with_layout(layout_size, Layout::left_to_right(Align::Center), |ui| {
+            ui.allocate_ui_with_layout(layout_size, Layout::left_to_right(Align::Min), |ui| {
                 // Setup text edit size.
                 let mut edit_rect = ui.available_rect_before_wrap();
                 edit_rect.set_height(Self::TEXT_EDIT_HEIGHT);
@@ -132,7 +132,6 @@ impl TextEdit {
                 // Show text edit.
                 let text_edit_resp = egui::TextEdit::singleline(input)
                     .id(self.id)
-                    .margin(egui::Vec2::new(2.0, 0.0))
                     .font(TextStyle::Heading)
                     .min_size(edit_rect.size())
                     .horizontal_align(if self.h_center { Align::Center } else { Align::Min })

@@ -145,6 +145,7 @@ pub fn setup_visuals(ctx: &Context) {
     style.spacing.scroll.foreground_color = false;
     // Disable spacing between items.
     style.spacing.item_spacing = egui::vec2(0.0, 0.0);
+    style.spacing.text_edit_width = 500.0;
     // Setup radio button/checkbox size and spacing.
     style.spacing.icon_width = 24.0;
     style.spacing.icon_width_inner = 14.0;
@@ -172,7 +173,7 @@ pub fn setup_visuals(ctx: &Context) {
         Colors::yellow()
     };
     visuals.widgets.inactive.fg_stroke.color = Colors::item_button();
-    // Setup visuals
+    // Setup visuals.
     ctx.set_visuals(visuals);
 }
 
