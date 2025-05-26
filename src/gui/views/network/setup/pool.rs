@@ -17,9 +17,9 @@ use egui::{Id, RichText};
 use crate::gui::Colors;
 use crate::gui::icons::{BEZIER_CURVE, BOUNDING_BOX, CHART_SCATTER, CIRCLES_THREE, CLOCK_COUNTDOWN, HAND_COINS};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Modal, View};
+use crate::gui::views::{Modal, TextEdit, View};
 use crate::gui::views::network::settings::NetworkSettings;
-use crate::gui::views::types::{ModalContainer, ModalPosition, TextEditOptions};
+use crate::gui::views::types::{ModalContainer, ModalPosition};
 use crate::node::NodeConfig;
 
 /// Memory pool setup section content.
@@ -159,6 +159,13 @@ impl PoolSetup {
 
     /// Draw fee base [`Modal`] content.
     fn fee_base_modal(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
+        let on_save = |c: &mut PoolSetup| {
+            if let Ok(fee) = c.fee_base_edit.parse::<u64>() {
+                NodeConfig::save_base_fee(fee);
+                modal.close();
+            }
+        };
+
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.pool_fee"))
@@ -167,8 +174,9 @@ impl PoolSetup {
             ui.add_space(8.0);
 
             // Draw fee base text edit.
-            let mut fee_base_edit_opts = TextEditOptions::new(Id::from(modal.id)).h_center();
-            View::text_edit(ui, cb, &mut self.fee_base_edit, &mut fee_base_edit_opts);
+            TextEdit::new(Id::from(modal.id))
+                .h_center()
+                .ui(ui, &mut self.fee_base_edit, cb);
 
             // Show error when specified value is not valid or reminder to restart enabled node.
             if self.fee_base_edit.parse::<u64>().is_err() {
@@ -186,19 +194,6 @@ impl PoolSetup {
                 // Setup spacing between buttons.
                 ui.spacing_mut().item_spacing = egui::Vec2::new(8.0, 0.0);
 
-                // Save button callback.
-                let on_save = || {
-                    if let Ok(fee) = self.fee_base_edit.parse::<u64>() {
-                        NodeConfig::save_base_fee(fee);
-                        modal.close();
-                    }
-                };
-
-                // Continue on Enter key press.
-                View::on_enter_key(ui, || {
-                    on_save();
-                });
-
                 ui.columns(2, |columns| {
                     columns[0].vertical_centered_justified(|ui| {
                         View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
@@ -207,7 +202,9 @@ impl PoolSetup {
                         });
                     });
                     columns[1].vertical_centered_justified(|ui| {
-                        View::button(ui, t!("modal.save"), Colors::white_or_black(false), on_save);
+                        View::button(ui, t!("modal.save"), Colors::white_or_black(false), || {
+                            on_save(self);
+                        });
                     });
                 });
                 ui.add_space(6.0);
@@ -239,6 +236,13 @@ impl PoolSetup {
 
     /// Draw reorg cache retention period [`Modal`] content.
     fn reorg_period_modal(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
+        let on_save = |c: &mut PoolSetup| {
+            if let Ok(period) = c.reorg_period_edit.parse::<u32>() {
+                NodeConfig::save_reorg_cache_period(period);
+                modal.close();
+            }
+        };
+
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.reorg_period"))
@@ -247,8 +251,11 @@ impl PoolSetup {
             ui.add_space(8.0);
 
             // Draw reorg period text edit.
-            let mut reorg_period_edit_opts = TextEditOptions::new(Id::from(modal.id)).h_center();
-            View::text_edit(ui, cb, &mut self.reorg_period_edit, &mut reorg_period_edit_opts);
+            let mut edit = TextEdit::new(Id::from(modal.id)).h_center();
+            edit.ui(ui, &mut self.reorg_period_edit, cb);
+            if edit.enter_pressed {
+                on_save(self);
+            }
 
             // Show error when specified value is not valid or reminder to restart enabled node.
             if self.reorg_period_edit.parse::<u32>().is_err() {
@@ -266,19 +273,6 @@ impl PoolSetup {
                 // Setup spacing between buttons.
                 ui.spacing_mut().item_spacing = egui::Vec2::new(8.0, 0.0);
 
-                // Save button callback.
-                let on_save = || {
-                    if let Ok(period) = self.reorg_period_edit.parse::<u32>() {
-                        NodeConfig::save_reorg_cache_period(period);
-                        modal.close();
-                    }
-                };
-
-                // Continue on Enter key press.
-                View::on_enter_key(ui, || {
-                    on_save();
-                });
-
                 ui.columns(2, |columns| {
                     columns[0].vertical_centered_justified(|ui| {
                         View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
@@ -287,7 +281,9 @@ impl PoolSetup {
                         });
                     });
                     columns[1].vertical_centered_justified(|ui| {
-                        View::button(ui, t!("modal.save"), Colors::white_or_black(false), on_save);
+                        View::button(ui, t!("modal.save"), Colors::white_or_black(false), || {
+                            on_save(self);
+                        });
                     });
                 });
                 ui.add_space(6.0);
@@ -318,6 +314,13 @@ impl PoolSetup {
 
     /// Draw maximum number of transactions in the pool [`Modal`] content.
     fn pool_size_modal(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
+        let on_save = |c: &mut PoolSetup| {
+            if let Ok(size) = c.pool_size_edit.parse::<usize>() {
+                NodeConfig::save_max_pool_size(size);
+                modal.close();
+            }
+        };
+
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.max_tx_pool"))
@@ -326,8 +329,12 @@ impl PoolSetup {
             ui.add_space(8.0);
 
             // Draw pool size text edit.
-            let mut pool_size_edit_opts = TextEditOptions::new(Id::from(modal.id)).h_center();
-            View::text_edit(ui, cb, &mut self.pool_size_edit, &mut pool_size_edit_opts);
+            let mut edit = TextEdit::new(Id::from(modal.id))
+                .h_center();
+            edit.ui(ui, &mut self.pool_size_edit, cb);
+            if edit.enter_pressed {
+                on_save(self);
+            }
 
             // Show error when specified value is not valid or reminder to restart enabled node.
             if self.pool_size_edit.parse::<usize>().is_err() {
@@ -345,19 +352,6 @@ impl PoolSetup {
                 // Setup spacing between buttons.
                 ui.spacing_mut().item_spacing = egui::Vec2::new(8.0, 0.0);
 
-                // Save button callback.
-                let on_save = || {
-                    if let Ok(size) = self.pool_size_edit.parse::<usize>() {
-                        NodeConfig::save_max_pool_size(size);
-                        modal.close();
-                    }
-                };
-
-                // Continue on Enter key press.
-                View::on_enter_key(ui, || {
-                    on_save();
-                });
-
                 ui.columns(2, |columns| {
                     columns[0].vertical_centered_justified(|ui| {
                         View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
@@ -366,7 +360,9 @@ impl PoolSetup {
                         });
                     });
                     columns[1].vertical_centered_justified(|ui| {
-                        View::button(ui, t!("modal.save"), Colors::white_or_black(false), on_save);
+                        View::button(ui, t!("modal.save"), Colors::white_or_black(false), || {
+                            on_save(self);
+                        });
                     });
                 });
                 ui.add_space(6.0);
@@ -399,6 +395,13 @@ impl PoolSetup {
 
     /// Draw maximum number of transactions in the stempool [`Modal`] content.
     fn stem_size_modal(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
+        let on_save = |c: &mut PoolSetup| {
+            if let Ok(size) = c.stempool_size_edit.parse::<usize>() {
+                NodeConfig::save_max_stempool_size(size);
+                modal.close();
+            }
+        };
+
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.max_tx_stempool"))
@@ -407,8 +410,11 @@ impl PoolSetup {
             ui.add_space(8.0);
 
             // Draw stempool size text edit.
-            let mut stem_pool_edit_opts = TextEditOptions::new(Id::from(modal.id)).h_center();
-            View::text_edit(ui, cb, &mut self.stempool_size_edit, &mut stem_pool_edit_opts);
+            let mut edit = TextEdit::new(Id::from(modal.id)).h_center();
+            edit.ui(ui, &mut self.stempool_size_edit, cb);
+            if edit.enter_pressed {
+                on_save(self);
+            }
 
             // Show error when specified value is not valid or reminder to restart enabled node.
             if self.stempool_size_edit.parse::<usize>().is_err() {
@@ -426,19 +432,6 @@ impl PoolSetup {
                 // Setup spacing between buttons.
                 ui.spacing_mut().item_spacing = egui::Vec2::new(8.0, 0.0);
 
-                // Save button callback.
-                let on_save = || {
-                    if let Ok(size) = self.stempool_size_edit.parse::<usize>() {
-                        NodeConfig::save_max_stempool_size(size);
-                        modal.close();
-                    }
-                };
-
-                // Continue on Enter key press.
-                View::on_enter_key(ui, || {
-                    on_save();
-                });
-
                 ui.columns(2, |columns| {
                     columns[0].vertical_centered_justified(|ui| {
                         View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
@@ -447,7 +440,9 @@ impl PoolSetup {
                         });
                     });
                     columns[1].vertical_centered_justified(|ui| {
-                        View::button(ui, t!("modal.save"), Colors::white_or_black(false), on_save);
+                        View::button(ui, t!("modal.save"), Colors::white_or_black(false), || {
+                            on_save(self);
+                        });
                     });
                 });
                 ui.add_space(6.0);
@@ -480,6 +475,13 @@ impl PoolSetup {
 
     /// Draw maximum total weight of transactions [`Modal`] content.
     fn max_weight_modal(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
+        let on_save = |c: &mut PoolSetup| {
+            if let Ok(weight) = c.max_weight_edit.parse::<u64>() {
+                NodeConfig::save_mineable_max_weight(weight);
+                modal.close();
+            }
+        };
+
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.max_tx_weight"))
@@ -488,8 +490,11 @@ impl PoolSetup {
             ui.add_space(8.0);
 
             // Draw tx weight text edit.
-            let mut mac_weight_edit_opts = TextEditOptions::new(Id::from(modal.id)).h_center();
-            View::text_edit(ui, cb, &mut self.max_weight_edit, &mut mac_weight_edit_opts);
+            let mut edit = TextEdit::new(Id::from(modal.id)).h_center();
+            edit.ui(ui, &mut self.max_weight_edit, cb);
+            if edit.enter_pressed {
+                on_save(self);
+            }
 
             // Show error when specified value is not valid or reminder to restart enabled node.
             if self.max_weight_edit.parse::<u64>().is_err() {
@@ -507,19 +512,6 @@ impl PoolSetup {
                 // Setup spacing between buttons.
                 ui.spacing_mut().item_spacing = egui::Vec2::new(8.0, 0.0);
 
-                // Save button callback.
-                let on_save = || {
-                    if let Ok(weight) = self.max_weight_edit.parse::<u64>() {
-                        NodeConfig::save_mineable_max_weight(weight);
-                        modal.close();
-                    }
-                };
-
-                // Continue on Enter key press.
-                View::on_enter_key(ui, || {
-                    on_save();
-                });
-
                 ui.columns(2, |columns| {
                     columns[0].vertical_centered_justified(|ui| {
                         View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
@@ -528,7 +520,9 @@ impl PoolSetup {
                         });
                     });
                     columns[1].vertical_centered_justified(|ui| {
-                        View::button(ui, t!("modal.save"), Colors::white_or_black(false), on_save);
+                        View::button(ui, t!("modal.save"), Colors::white_or_black(false), || {
+                            on_save(self);
+                        });
                     });
                 });
                 ui.add_space(6.0);

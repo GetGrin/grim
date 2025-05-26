@@ -139,7 +139,7 @@ impl<Platform: PlatformCallbacks> App<Platform> {
                 }
 
                 // Show soft keyboard content.
-                self.keyboard_content.ui(ctx);
+                self.keyboard_content.window_ui(ctx);
 
                 // Provide incoming data to wallets.
                 if let Some(data) = crate::consume_incoming_data() {

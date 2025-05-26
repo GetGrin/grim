@@ -17,13 +17,10 @@ use grin_util::ZeroingString;
 
 use crate::gui::Colors;
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Modal, View};
-use crate::gui::views::types::TextEditOptions;
+use crate::gui::views::{Modal, TextEdit, View};
 
 /// Initial wallet creation [`Modal`] content.
 pub struct AddWalletModal {
-    /// Flag to check if it's first draw to focus on first field.
-    first_draw: bool,
     /// Wallet name.
     pub name_edit: String,
     /// Password to encrypt created wallet.
@@ -33,7 +30,6 @@ pub struct AddWalletModal {
 impl Default for AddWalletModal {
     fn default() -> Self {
         Self {
-            first_draw: true,
             name_edit: t!("wallets.default_wallet"),
             pass_edit: "".to_string(),
         }
@@ -47,26 +43,27 @@ impl AddWalletModal {
               modal: &Modal,
               cb: &dyn PlatformCallbacks,
               mut on_input: impl FnMut(String, ZeroingString)) {
-        ui.add_space(6.0);
-        
-        let mut enter_pressed = false;
+        let mut on_next = |m: &mut AddWalletModal| {
+            let name = m.name_edit.clone();
+            let pass = m.pass_edit.clone();
+            if name.is_empty() || pass.is_empty() {
+                return;
+            }
+            modal.close();
+            on_input(name, ZeroingString::from(pass));
+        };
         ui.vertical_centered(|ui| {
+            ui.add_space(6.0);
             ui.label(RichText::new(t!("wallets.name"))
                 .size(17.0)
                 .color(Colors::gray()));
             ui.add_space(8.0);
 
             // Show wallet name text edit.
-            let mut name_edit_opts = TextEditOptions::new(Id::from(modal.id).with("name"))
-                .no_focus();
-            if self.first_draw {
-                self.first_draw = false;
-                name_edit_opts.focus = true;
-            }
-            View::text_edit(ui, cb, &mut self.name_edit, &mut name_edit_opts);
-            View::on_enter_key(ui, || {
-                name_edit_opts.enter_pressed = name_edit_opts.focus;
-            });
+            let mut name_input = TextEdit::new(Id::from(modal.id).with("name"))
+                .focus(Modal::first_draw());
+            
+            name_input.ui(ui, &mut self.name_edit, cb);
 
             ui.add_space(8.0);
             ui.label(RichText::new(t!("wallets.pass"))
@@ -74,16 +71,17 @@ impl AddWalletModal {
                 .color(Colors::gray()));
             ui.add_space(8.0);
 
-            // Draw wallet password text edit.
-            let mut pass_text_edit_opts = TextEditOptions::new(Id::from(modal.id).with("pass"))
+            // Show wallet password text edit.
+            let mut pass_input = TextEdit::new(Id::from(modal.id).with("pass"))
                 .password()
-                .no_focus();
-            if name_edit_opts.enter_pressed {
-                pass_text_edit_opts.focus = true;
+                .focus(false);
+            if name_input.enter_pressed {
+                pass_input.focus_request();
             }
-            View::text_edit(ui, cb, &mut self.pass_edit, &mut pass_text_edit_opts);
-            enter_pressed = pass_text_edit_opts.enter_pressed;
-
+            pass_input.ui(ui, &mut self.pass_edit, cb);
+            if pass_input.enter_pressed {
+                (on_next)(self);
+            }
             ui.add_space(12.0);
         });
 
@@ -100,25 +98,9 @@ impl AddWalletModal {
                     });
                 });
                 columns[1].vertical_centered_justified(|ui| {
-                    let mut on_next = || {
-                        let name = self.name_edit.clone();
-                        let pass = self.pass_edit.clone();
-                        if name.is_empty() || pass.is_empty() {
-                            return;
-                        }
-                        modal.close();
-                        on_input(name, ZeroingString::from(pass));
-                    };
-
-                    // Go to next creation step on Enter button press.
-                    View::on_enter_key(ui, || {
-                        (on_next)();
+                    View::button(ui, t!("continue"), Colors::white_or_black(false), || {
+                        (on_next)(self);
                     });
-                    if enter_pressed {
-                        (on_next)();
-                    }
-
-                    View::button(ui, t!("continue"), Colors::white_or_black(false), on_next);
                 });
             });
             ui.add_space(6.0);

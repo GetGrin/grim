@@ -14,12 +14,12 @@
 
 use egui::{Id, RichText};
 
-use crate::gui::Colors;
 use crate::gui::icons::{CLOCK_COUNTDOWN, GRAPH, TIMER, WATCH};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Modal, View};
-use crate::gui::views::network::settings::NetworkSettings;
-use crate::gui::views::types::{ModalContainer, ModalPosition, TextEditOptions};
+use crate::gui::views::types::{ModalContainer, ModalPosition};
+use crate::gui::views::{Modal, TextEdit, View};
+use crate::gui::Colors;
+use crate::gui::views::network::NetworkSettings;
 use crate::node::NodeConfig;
 
 /// Dandelion server setup section content.
@@ -155,6 +155,14 @@ impl DandelionSetup {
 
     /// Draw epoch duration [`Modal`] content.
     fn epoch_modal(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
+        // Save button callback.
+        let on_save = |c: &mut DandelionSetup| {
+            if let Ok(epoch) = c.epoch_edit.parse::<u16>() {
+                NodeConfig::save_dandelion_epoch(epoch);
+                modal.close();
+            }
+        };
+
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.epoch_duration"))
@@ -163,8 +171,11 @@ impl DandelionSetup {
             ui.add_space(8.0);
 
             // Draw epoch text edit.
-            let mut epoch_edit_opts = TextEditOptions::new(Id::from(modal.id)).h_center();
-            View::text_edit(ui, cb, &mut self.epoch_edit, &mut epoch_edit_opts);
+            let mut epoch_edit = TextEdit::new(Id::from(modal.id)).h_center();
+            epoch_edit.ui(ui, &mut self.epoch_edit, cb);
+            if epoch_edit.enter_pressed {
+                on_save(self);
+            }
 
             // Show error when specified value is not valid or reminder to restart enabled node.
             if self.epoch_edit.parse::<u16>().is_err() {
@@ -183,19 +194,6 @@ impl DandelionSetup {
             // Setup spacing between buttons.
             ui.spacing_mut().item_spacing = egui::Vec2::new(8.0, 0.0);
 
-            // Save button callback.
-            let on_save = || {
-                if let Ok(epoch) = self.epoch_edit.parse::<u16>() {
-                    NodeConfig::save_dandelion_epoch(epoch);
-                    modal.close();
-                }
-            };
-
-            // Continue on Enter key press.
-            View::on_enter_key(ui, || {
-                on_save();
-            });
-
             ui.columns(2, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
                     View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
@@ -204,7 +202,9 @@ impl DandelionSetup {
                     });
                 });
                 columns[1].vertical_centered_justified(|ui| {
-                    View::button(ui, t!("modal.save"), Colors::white_or_black(false), on_save);
+                    View::button(ui, t!("modal.save"), Colors::white_or_black(false), || {
+                        on_save(self);
+                    });
                 });
             });
             ui.add_space(6.0);
@@ -233,6 +233,14 @@ impl DandelionSetup {
 
     /// Draw epoch duration [`Modal`] content.
     fn embargo_modal(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
+        // Save button callback.
+        let on_save = |c: &mut DandelionSetup| {
+            if let Ok(embargo) = c.embargo_edit.parse::<u16>() {
+                NodeConfig::save_dandelion_embargo(embargo);
+                modal.close();
+            }
+        };
+
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.embargo_timer"))
@@ -241,8 +249,11 @@ impl DandelionSetup {
             ui.add_space(8.0);
 
             // Draw embargo text edit.
-            let mut embargo_edit_opts = TextEditOptions::new(Id::from(modal.id)).h_center();
-            View::text_edit(ui, cb, &mut self.embargo_edit, &mut embargo_edit_opts);
+            let mut embargo_edit = TextEdit::new(Id::from(modal.id)).h_center();
+            embargo_edit.ui(ui, &mut self.embargo_edit, cb);
+            if embargo_edit.enter_pressed {
+                on_save(self);
+            }
 
             // Show error when specified value is not valid or reminder to restart enabled node.
             if self.embargo_edit.parse::<u16>().is_err() {
@@ -261,19 +272,6 @@ impl DandelionSetup {
             // Setup spacing between buttons.
             ui.spacing_mut().item_spacing = egui::Vec2::new(8.0, 0.0);
 
-            // Save button callback.
-            let on_save = || {
-                if let Ok(embargo) = self.embargo_edit.parse::<u16>() {
-                    NodeConfig::save_dandelion_embargo(embargo);
-                    modal.close();
-                }
-            };
-
-            // Continue on Enter key press.
-            View::on_enter_key(ui, || {
-                on_save();
-            });
-
             ui.columns(2, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
                     View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
@@ -282,7 +280,9 @@ impl DandelionSetup {
                     });
                 });
                 columns[1].vertical_centered_justified(|ui| {
-                    View::button(ui, t!("modal.save"), Colors::white_or_black(false), on_save);
+                    View::button(ui, t!("modal.save"), Colors::white_or_black(false), || {
+                        on_save(self);
+                    });
                 });
             });
             ui.add_space(6.0);
@@ -312,6 +312,14 @@ impl DandelionSetup {
 
     /// Draw aggregation period [`Modal`] content.
     fn aggregation_modal(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
+        // Save button callback.
+        let on_save = |c: &mut DandelionSetup| {
+            if let Ok(embargo) = c.aggregation_edit.parse::<u16>() {
+                NodeConfig::save_dandelion_aggregation(embargo);
+                modal.close();
+            }
+        };
+
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.aggregation_period"))
@@ -320,8 +328,11 @@ impl DandelionSetup {
             ui.add_space(8.0);
 
             // Draw aggregation period text edit.
-            let mut aggregation_edit_opts = TextEditOptions::new(Id::from(modal.id)).h_center();
-            View::text_edit(ui, cb, &mut self.aggregation_edit, &mut aggregation_edit_opts);
+            let mut aggregation_edit = TextEdit::new(Id::from(modal.id)).h_center();
+            aggregation_edit.ui(ui, &mut self.aggregation_edit, cb);
+            if aggregation_edit.enter_pressed {
+                on_save(self);
+            }
 
             // Show error when specified value is not valid or reminder to restart enabled node.
             if self.aggregation_edit.parse::<u16>().is_err() {
@@ -340,19 +351,6 @@ impl DandelionSetup {
             // Setup spacing between buttons.
             ui.spacing_mut().item_spacing = egui::Vec2::new(8.0, 0.0);
 
-            // Save button callback.
-            let on_save = || {
-                if let Ok(embargo) = self.aggregation_edit.parse::<u16>() {
-                    NodeConfig::save_dandelion_aggregation(embargo);
-                    modal.close();
-                }
-            };
-
-            // Continue on Enter key press.
-            View::on_enter_key(ui, || {
-                on_save();
-            });
-
             ui.columns(2, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
                     View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
@@ -361,7 +359,9 @@ impl DandelionSetup {
                     });
                 });
                 columns[1].vertical_centered_justified(|ui| {
-                    View::button(ui, t!("modal.save"), Colors::white_or_black(false), on_save);
+                    View::button(ui, t!("modal.save"), Colors::white_or_black(false), || {
+                        on_save(self);
+                    });
                 });
             });
             ui.add_space(6.0);
@@ -391,6 +391,14 @@ impl DandelionSetup {
 
     /// Draw stem phase probability [`Modal`] content.
     fn stem_prob_modal(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
+        // Save button callback.
+        let on_save = |c: &mut DandelionSetup| {
+            if let Ok(prob) = c.stem_prob_edit.parse::<u8>() {
+                NodeConfig::save_stem_probability(prob);
+                modal.close();
+            }
+        };
+
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.stem_probability"))
@@ -399,8 +407,11 @@ impl DandelionSetup {
             ui.add_space(8.0);
 
             // Draw stem phase probability text edit.
-            let mut stem_prob_edit_opts = TextEditOptions::new(Id::from(modal.id)).h_center();
-            View::text_edit(ui, cb, &mut self.stem_prob_edit, &mut stem_prob_edit_opts);
+            let mut stem_prob_edit = TextEdit::new(Id::from(modal.id)).h_center();
+            stem_prob_edit.ui(ui, &mut self.stem_prob_edit, cb);
+            if stem_prob_edit.enter_pressed {
+                on_save(self);
+            }
 
             // Show error when specified value is not valid or reminder to restart enabled node.
             if self.stem_prob_edit.parse::<u8>().is_err() {
@@ -419,19 +430,6 @@ impl DandelionSetup {
             // Setup spacing between buttons.
             ui.spacing_mut().item_spacing = egui::Vec2::new(8.0, 0.0);
 
-            // Save button callback.
-            let on_save = || {
-                if let Ok(prob) = self.stem_prob_edit.parse::<u8>() {
-                    NodeConfig::save_stem_probability(prob);
-                    modal.close();
-                }
-            };
-
-            // Continue on Enter key press.
-            View::on_enter_key(ui, || {
-                on_save();
-            });
-
             ui.columns(2, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
                     View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
@@ -440,7 +438,9 @@ impl DandelionSetup {
                     });
                 });
                 columns[1].vertical_centered_justified(|ui| {
-                    View::button(ui, t!("modal.save"), Colors::white_or_black(false), on_save);
+                    View::button(ui, t!("modal.save"), Colors::white_or_black(false), || {
+                        on_save(self);
+                    });
                 });
             });
             ui.add_space(6.0);

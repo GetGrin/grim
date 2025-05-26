@@ -19,8 +19,8 @@ use grin_util::ZeroingString;
 use crate::gui::Colors;
 use crate::gui::icons::{EYE, LIFEBUOY, STETHOSCOPE, TRASH, WRENCH};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Modal, View};
-use crate::gui::views::types::{ModalPosition, TextEditOptions};
+use crate::gui::views::{Modal, TextEdit, View};
+use crate::gui::views::types::ModalPosition;
 use crate::node::Node;
 use crate::wallet::types::ConnectionMethod;
 use crate::wallet::Wallet;
@@ -182,6 +182,18 @@ impl RecoverySettings {
                                 wallet: &Wallet,
                                 modal: &Modal,
                                 cb: &dyn PlatformCallbacks) {
+        let on_next = |c: &mut RecoverySettings| {
+            match wallet.get_recovery(c.pass_edit.clone()) {
+                Ok(phrase) => {
+                    c.wrong_pass = false;
+                    c.recovery_phrase = Some(phrase);
+                }
+                Err(_) => {
+                    c.wrong_pass = true;
+                }
+            }
+        };
+
         ui.add_space(6.0);
         if self.recovery_phrase.is_some() {
             ui.vertical_centered(|ui| {
@@ -205,8 +217,12 @@ impl RecoverySettings {
 
                 // Draw current wallet password text edit.
                 let pass_edit_id = Id::from(modal.id).with(wallet.get_config().id);
-                let mut pass_edit_opts = TextEditOptions::new(pass_edit_id).password();
-                View::text_edit(ui, cb, &mut self.pass_edit, &mut pass_edit_opts);
+                let mut pass_edit = TextEdit::new(pass_edit_id)
+                    .password();
+                pass_edit.ui(ui, &mut self.pass_edit, cb);
+                if pass_edit.enter_pressed {
+                    on_next(self);
+                }
 
                 // Show information when password is empty or wrong.
                 if self.pass_edit.is_empty() {
@@ -236,22 +252,8 @@ impl RecoverySettings {
                         });
                     });
                     columns[1].vertical_centered_justified(|ui| {
-                        let mut on_next = || {
-                            match wallet.get_recovery(self.pass_edit.clone()) {
-                                Ok(phrase) => {
-                                    self.wrong_pass = false;
-                                    self.recovery_phrase = Some(phrase);
-                                }
-                                Err(_) => {
-                                    self.wrong_pass = true;
-                                }
-                            }
-                        };
-                        View::on_enter_key(ui, || {
-                            (on_next)();
-                        });
                         View::button(ui, "OK".to_owned(), Colors::white_or_black(false), || {
-                            on_next();
+                            on_next(self);
                         });
                     });
                 });

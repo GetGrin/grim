@@ -46,6 +46,8 @@ pub struct AppConfig {
 
     /// Locale code for i18n.
     lang: Option<String>,
+    /// Flag to use English locale layout on keyboard.
+    english_keyboard: Option<bool>,
 
     /// Flag to check if dark theme should be used, use system settings if not set.
     use_dark_theme: Option<bool>,
@@ -64,6 +66,7 @@ impl Default for AppConfig {
             x: None,
             y: None,
             lang: None,
+            english_keyboard: None,
             use_dark_theme: None,
         }
     }
@@ -210,6 +213,20 @@ impl AppConfig {
             return Some(r_config.lang.clone().unwrap())
         }
         None
+    }
+
+    /// Toggle English locale layout. for software keyboard.
+    pub fn toggle_english_keyboard() {
+        let english = Self::english_keyboard();
+        let mut w_app_config = Settings::app_config_to_update();
+        w_app_config.english_keyboard = Some(!english);
+        w_app_config.save();
+    }
+
+    /// Check if English locale layout should be used for software keyboard.
+    pub fn english_keyboard() -> bool {
+        let r_config = Settings::app_config_to_read();
+        r_config.english_keyboard.unwrap_or(false)
     }
 
     /// Check if integrated node warning is needed for Android.

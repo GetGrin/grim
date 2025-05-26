@@ -17,8 +17,7 @@ use egui::{Id, RichText};
 
 use crate::gui::Colors;
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{CameraContent, Modal, View};
-use crate::gui::views::types::TextEditOptions;
+use crate::gui::views::{CameraContent, Modal, TextEdit, View};
 use crate::tor::{Tor, TorBridge, TorConfig};
 use crate::wallet::Wallet;
 
@@ -160,16 +159,16 @@ impl TransportSettingsModal {
                 let bin_edit_id = Id::from(modal.id)
                     .with(wallet.get_config().id)
                     .with("_bin_edit");
-                let mut bin_edit_opts = TextEditOptions::new(bin_edit_id)
+                let mut bin_edit = TextEdit::new(bin_edit_id)
                     .paste()
-                    .no_focus();
+                    .focus(false);
                 let bin_edit_before = self.bridge_bin_path_edit.clone();
                 ui.vertical_centered(|ui| {
                     ui.label(RichText::new(t!("transport.bin_file"))
                         .size(17.0)
                         .color(Colors::inactive_text()));
                     ui.add_space(6.0);
-                    View::text_edit(ui, cb, &mut self.bridge_bin_path_edit, &mut bin_edit_opts);
+                    bin_edit.ui(ui, &mut self.bridge_bin_path_edit, cb);
                     ui.add_space(6.0);
                 });
 
@@ -178,20 +177,19 @@ impl TransportSettingsModal {
                 let conn_edit_id = Id::from(modal.id)
                     .with(wallet.get_config().id)
                     .with("_conn_edit");
-                let mut conn_edit_opts = TextEditOptions::new(conn_edit_id)
+                let mut conn_edit = TextEdit::new(conn_edit_id)
                     .paste()
-                    .no_focus()
+                    .focus(false)
                     .scan_qr();
                 ui.vertical_centered(|ui| {
                     ui.label(RichText::new(t!("transport.conn_line"))
                         .size(17.0)
                         .color(Colors::inactive_text()));
                     ui.add_space(6.0);
-                    View::text_edit(ui, cb, &mut self.bridge_conn_line_edit, &mut conn_edit_opts);
+                    conn_edit.ui(ui, &mut self.bridge_conn_line_edit, cb);
                     // Check if scan button was pressed.
-                    if conn_edit_opts.scan_pressed {
+                    if conn_edit.scan_pressed {
                         modal.disable_closing();
-                        conn_edit_opts.scan_pressed = false;
                         self.bridge_qr_scan_content = Some(CameraContent::default());
                     }
                 });

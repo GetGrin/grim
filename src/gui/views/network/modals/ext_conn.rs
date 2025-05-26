@@ -14,16 +14,14 @@
 
 use egui::{Id, RichText};
 use url::Url;
+
 use crate::gui::Colors;
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Modal, View};
-use crate::gui::views::types::TextEditOptions;
+use crate::gui::views::{Modal, TextEdit, View};
 use crate::wallet::{ConnectionsConfig, ExternalConnection};
 
 /// Content to create or update external wallet connection.
 pub struct ExternalConnectionModal {
-    /// Flag to check if [`Modal`] was just opened to focus on input field.
-    first_modal_launch: bool,
     /// External connection URL value for [`Modal`].
     ext_node_url_edit: String,
     /// External connection API secret value for [`Modal`].
@@ -33,8 +31,6 @@ pub struct ExternalConnectionModal {
     /// Editing external connection identifier for [`Modal`].
     ext_conn_id: Option<i64>,
 }
-
-
 
 impl ExternalConnectionModal {
     /// Network [`Modal`] identifier.
@@ -50,7 +46,6 @@ impl ExternalConnectionModal {
             ("".to_string(), "".to_string(), None)
         };
         Self {
-            first_modal_launch: true,
             ext_node_url_edit,
             ext_node_secret_edit,
             ext_node_url_error: false,
@@ -64,23 +59,54 @@ impl ExternalConnectionModal {
               cb: &dyn PlatformCallbacks,
               modal: &Modal,
               on_save: impl Fn(ExternalConnection)) {
-        ui.add_space(6.0);
+        // Add connection button callback.
+        let on_add = |ui: &mut egui::Ui, m: &mut ExternalConnectionModal| {
+            let url = if !m.ext_node_url_edit.starts_with("http") {
+                format!("http://{}", m.ext_node_url_edit)
+            } else {
+                m.ext_node_url_edit.clone()
+            };
+            let error = Url::parse(url.trim()).is_err();
+            m.ext_node_url_error = error;
+            if !error {
+                let secret = if m.ext_node_secret_edit.is_empty() {
+                    None
+                } else {
+                    Some(m.ext_node_secret_edit.clone())
+                };
+
+                // Update or create new connection.
+                let mut ext_conn = ExternalConnection::new(url, secret);
+                if let Some(id) = m.ext_conn_id {
+                    ext_conn.id = id;
+                }
+                ConnectionsConfig::add_ext_conn(ext_conn.clone());
+                ExternalConnection::check(Some(ext_conn.id), ui.ctx());
+                on_save(ext_conn);
+
+                // Close modal.
+                m.ext_node_url_edit = "".to_string();
+                m.ext_node_secret_edit = "".to_string();
+                m.ext_node_url_error = false;
+                modal.close();
+            }
+        };
+
         ui.vertical_centered(|ui| {
+            ui.add_space(6.0);
             ui.label(RichText::new(t!("wallets.node_url"))
                 .size(17.0)
                 .color(Colors::gray()));
             ui.add_space(8.0);
 
             // Draw node URL text edit.
-            let url_edit_id = Id::from(modal.id).with(self.ext_conn_id);
-            let mut url_edit_opts = TextEditOptions::new(url_edit_id).paste().no_focus();
-            if self.first_modal_launch {
-                self.first_modal_launch = false;
-                url_edit_opts.focus = true;
-            }
-            View::text_edit(ui, cb, &mut self.ext_node_url_edit, &mut url_edit_opts);
-            ui.add_space(8.0);
+            let url_edit_id = Id::from(modal.id).with(self.ext_conn_id).with("node_url");
+            let mut url_edit = TextEdit::new(url_edit_id)
+                .paste()
+                .focus(Modal::first_draw());
+            url_edit.ui(ui, &mut self.ext_node_url_edit, cb);
 
+            ui.add_space(8.0);
             ui.label(RichText::new(t!("wallets.node_secret"))
                 .size(17.0)
                 .color(Colors::gray()));
@@ -88,8 +114,17 @@ impl ExternalConnectionModal {
 
             // Draw node API secret text edit.
             let secret_edit_id = Id::from(modal.id).with(self.ext_conn_id).with("node_secret");
-            let mut secret_edit_opts = TextEditOptions::new(secret_edit_id).paste().no_focus();
-            View::text_edit(ui, cb, &mut self.ext_node_secret_edit, &mut secret_edit_opts);
+            let mut secret_edit = TextEdit::new(secret_edit_id)
+                .password()
+                .paste()
+                .focus(false);
+            if url_edit.enter_pressed {
+                secret_edit.focus_request();
+            }
+            secret_edit.ui(ui, &mut self.ext_node_secret_edit, cb);
+            if secret_edit.enter_pressed {
+                (on_add)(ui, self);
+            }
 
             // Show error when specified URL is not valid.
             if self.ext_node_url_error {
@@ -117,52 +152,13 @@ impl ExternalConnectionModal {
                     });
                 });
                 columns[1].vertical_centered_justified(|ui| {
-                    // Add connection button callback.
-                    let mut on_add = |ui: &mut egui::Ui| {
-                        if !self.ext_node_url_edit.starts_with("http") {
-                            self.ext_node_url_edit = format!("http://{}", self.ext_node_url_edit)
-                        }
-                        let error = Url::parse(self.ext_node_url_edit.as_str()).is_err();
-                        self.ext_node_url_error = error;
-                        if !error {
-                            let url = self.ext_node_url_edit.to_owned();
-                            let secret = if self.ext_node_secret_edit.is_empty() {
-                                None
-                            } else {
-                                Some(self.ext_node_secret_edit.to_owned())
-                            };
-
-                            // Update or create new connection.
-                            let mut ext_conn = ExternalConnection::new(url, secret);
-                            if let Some(id) = self.ext_conn_id {
-                                ext_conn.id = id;
-                            }
-                            ConnectionsConfig::add_ext_conn(ext_conn.clone());
-                            ExternalConnection::check(Some(ext_conn.id), ui.ctx());
-                            on_save(ext_conn);
-
-                            // Close modal.
-                            self.ext_node_url_edit = "".to_string();
-                            self.ext_node_secret_edit = "".to_string();
-                            self.ext_node_url_error = false;
-                            modal.close();
-                        }
-                    };
-
-                    // Handle Enter key press.
-                    let mut enter = false;
-                    View::on_enter_key(ui, || {
-                        enter = true;
-                    });
-                    if enter {
-                        (on_add)(ui);
-                    }
-
                     View::button_ui(ui, if self.ext_conn_id.is_some() {
                         t!("modal.save")
                     } else {
                         t!("modal.add")
-                    }, Colors::white_or_black(false), on_add);
+                    }, Colors::white_or_black(false), |ui| {
+                        (on_add)(ui, self);
+                    });
                 });
             });
             ui.add_space(6.0);

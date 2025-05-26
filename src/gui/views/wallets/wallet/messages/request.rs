@@ -21,8 +21,7 @@ use grin_wallet_libwallet::Error;
 
 use crate::gui::Colors;
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Modal, View};
-use crate::gui::views::types::TextEditOptions;
+use crate::gui::views::{Modal, TextEdit, View};
 use crate::gui::views::wallets::wallet::WalletTransactionModal;
 use crate::wallet::types::WalletTransaction;
 use crate::wallet::Wallet;
@@ -163,10 +162,10 @@ impl MessageRequestModal {
         ui.add_space(8.0);
 
         // Draw request amount text input.
-        let amount_edit_id = Id::from(modal.id).with(wallet.get_config().id);
-        let mut amount_edit_opts = TextEditOptions::new(amount_edit_id).h_center();
+        let mut amount_edit = TextEdit::new(Id::from(modal.id).with(wallet.get_config().id))
+            .h_center();
         let amount_edit_before = self.amount_edit.clone();
-        View::text_edit(ui, cb, &mut self.amount_edit, &mut amount_edit_opts);
+        amount_edit.ui(ui, &mut self.amount_edit, cb);
 
         // Check value if input was changed.
         if amount_edit_before != self.amount_edit {

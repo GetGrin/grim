@@ -17,8 +17,7 @@ use grin_util::ZeroingString;
 
 use crate::gui::Colors;
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Modal, View};
-use crate::gui::views::types::TextEditOptions;
+use crate::gui::views::{Modal, TextEdit, View};
 use crate::wallet::Wallet;
 
 /// Wallet opening [`Modal`] content.
@@ -51,19 +50,35 @@ impl OpenWalletModal {
               modal: &Modal,
               cb: &dyn PlatformCallbacks,
               mut on_continue: impl FnMut(Wallet, Option<String>)) {
-        ui.add_space(6.0);
-        
-        let mut enter_pressed = false;
+        // Callback for button to continue.
+        let mut on_continue = |m: &mut OpenWalletModal| {
+            let pass = m.pass_edit.clone();
+            if pass.is_empty() {
+                return;
+            }
+            match m.wallet.open(ZeroingString::from(pass)) {
+                Ok(_) => {
+                    m.pass_edit = "".to_string();
+                    modal.close();
+                    on_continue(m.wallet.clone(), m.data.clone());
+                }
+                Err(_) => m.wrong_pass = true
+            }
+        };
+
         ui.vertical_centered(|ui| {
+            ui.add_space(6.0);
             ui.label(RichText::new(t!("wallets.pass"))
                 .size(17.0)
                 .color(Colors::gray()));
             ui.add_space(8.0);
 
             // Show password input.
-            let mut pass_edit_opts = TextEditOptions::new(Id::from(modal.id)).password();
-            View::text_edit(ui, cb, &mut self.pass_edit, &mut pass_edit_opts);
-            enter_pressed = pass_edit_opts.enter_pressed;
+            let mut pass_edit = TextEdit::new(Id::from(modal.id).with("pass_edit")).password();
+            pass_edit.ui(ui, &mut self.pass_edit, cb);
+            if pass_edit.enter_pressed {
+                (on_continue)(self);
+            }
 
             // Show information when password is empty.
             if self.pass_edit.is_empty() {
@@ -94,31 +109,9 @@ impl OpenWalletModal {
                     });
                 });
                 columns[1].vertical_centered_justified(|ui| {
-                    // Callback for button to continue.
-                    let mut on_continue = || {
-                        let pass = self.pass_edit.clone();
-                        if pass.is_empty() {
-                            return;
-                        }
-                        match self.wallet.open(ZeroingString::from(pass)) {
-                            Ok(_) => {
-                                self.pass_edit = "".to_string();
-                                modal.close();
-                                on_continue(self.wallet.clone(), self.data.clone());
-                            }
-                            Err(_) => self.wrong_pass = true
-                        }
-                    };
-
-                    // Continue on Enter key press.
-                    View::on_enter_key(ui, || {
-                        (on_continue)();
+                    View::button(ui, t!("continue"), Colors::white_or_black(false), || {
+                        (on_continue)(self);
                     });
-                    if enter_pressed {
-                        (on_continue)();
-                    }
-
-                    View::button(ui, t!("continue"), Colors::white_or_black(false), on_continue);
                 });
             });
             ui.add_space(6.0);

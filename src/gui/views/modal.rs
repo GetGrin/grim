@@ -40,6 +40,8 @@ pub struct Modal {
     closeable: Arc<AtomicBool>,
     /// Title text.
     title: Option<String>,
+    /// Flag to check first content render.
+    first_draw: Arc<AtomicBool>,
 }
 
 impl Modal {
@@ -55,6 +57,7 @@ impl Modal {
             position: ModalPosition::Center,
             closeable: Arc::new(AtomicBool::new(true)),
             title: None,
+            first_draw: Arc::new(AtomicBool::new(true)),
         }
     }
 
@@ -74,7 +77,6 @@ impl Modal {
     pub fn close(&self) {
         let mut w_nav = MODAL_STATE.write();
         w_nav.modal = None;
-        // Hide keyboard.
         KeyboardContent::hide();
     }
 
@@ -157,13 +159,22 @@ impl Modal {
 
     /// Set title text for current opened [`Modal`].
     pub fn set_title(title: String) {
-        // Save state.
         let mut w_state = MODAL_STATE.write();
         if w_state.modal.is_some() {
             let mut modal = w_state.modal.clone().unwrap();
             modal.title = Some(title.to_uppercase());
             w_state.modal = Some(modal);
         }
+    }
+
+    /// Check for first [`Modal`] content rendering.
+    pub fn first_draw() -> bool {
+        if Self::opened().is_none() {
+            return false;
+        }
+        let r_state = MODAL_STATE.read();
+        let modal = r_state.modal.as_ref().unwrap();
+        modal.first_draw.load(Ordering::Relaxed)
     }
 
     /// Draw opened [`Modal`] content.
@@ -247,6 +258,13 @@ impl Modal {
 
         // Always show main content window above background window.
         ctx.move_to_top(layer_id);
+        
+        // Setup first draw flag.
+        if Self::first_draw() {
+            let r_state = MODAL_STATE.read();
+            let modal = r_state.modal.as_ref().unwrap();
+            modal.first_draw.store(false, Ordering::Relaxed);
+        }
     }
 
     /// Get [`egui::Window`] position based on [`ModalPosition`].

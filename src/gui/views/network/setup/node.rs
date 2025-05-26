@@ -15,15 +15,15 @@
 use egui::{Id, RichText};
 use grin_core::global::ChainTypes;
 
-use crate::AppConfig;
-use crate::gui::Colors;
 use crate::gui::icons::{CLOCK_CLOCKWISE, COMPUTER_TOWER, PLUG, POWER, SHIELD, SHIELD_SLASH};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Modal, View};
-use crate::gui::views::network::NetworkContent;
 use crate::gui::views::network::settings::NetworkSettings;
-use crate::gui::views::types::{ModalContainer, ModalPosition, TextEditOptions};
+use crate::gui::views::network::NetworkContent;
+use crate::gui::views::types::{ModalContainer, ModalPosition};
+use crate::gui::views::{Modal, TextEdit, View};
+use crate::gui::Colors;
 use crate::node::{Node, NodeConfig};
+use crate::AppConfig;
 
 /// Integrated node general setup section content.
 pub struct NodeSetup {
@@ -280,6 +280,22 @@ impl NodeSetup {
 
     /// Draw API port [`Modal`] content.
     fn api_port_modal(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
+        let on_save = |c: &mut NodeSetup| {
+            // Check if port is available.
+            let (api_ip, _) = NodeConfig::get_api_ip_port();
+            let available = NodeConfig::is_api_port_available(&api_ip, &c.api_port_edit);
+            c.api_port_available_edit = available;
+            if available {
+                // Save port at config if it's available.
+                NodeConfig::save_api_address(&api_ip, &c.api_port_edit);
+                if Node::is_running() {
+                    Node::restart();
+                }
+                c.is_api_port_available = true;
+                modal.close();
+            }
+        };
+
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.api_port"))
@@ -288,8 +304,11 @@ impl NodeSetup {
             ui.add_space(6.0);
 
             // Draw API port text edit.
-            let mut api_port_edit_opts = TextEditOptions::new(Id::from(modal.id)).h_center();
-            View::text_edit(ui, cb, &mut self.api_port_edit, &mut api_port_edit_opts);
+            let mut api_port_edit = TextEdit::new(Id::from(modal.id)).h_center();
+            api_port_edit.ui(ui, &mut self.api_port_edit, cb);
+            if api_port_edit.enter_pressed {
+                on_save(self);
+            }
 
             // Show error when specified port is unavailable or reminder to restart enabled node.
             if !self.api_port_available_edit {
@@ -308,31 +327,6 @@ impl NodeSetup {
             // Setup spacing between buttons.
             ui.spacing_mut().item_spacing = egui::Vec2::new(8.0, 0.0);
 
-            // Save button callback.
-            let mut on_save = || {
-                // Check if port is available.
-                let (api_ip, _) = NodeConfig::get_api_ip_port();
-                let available = NodeConfig::is_api_port_available(&api_ip, &self.api_port_edit);
-                self.api_port_available_edit = available;
-
-                if available {
-                    // Save port at config if it's available.
-                    NodeConfig::save_api_address(&api_ip, &self.api_port_edit);
-
-                    if Node::is_running() {
-                        Node::restart();
-                    }
-
-                    self.is_api_port_available = true;
-                    modal.close();
-                }
-            };
-
-            // Continue on Enter key press.
-            View::on_enter_key(ui, || {
-                on_save();
-            });
-
             ui.columns(2, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
                     View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
@@ -340,7 +334,9 @@ impl NodeSetup {
                     });
                 });
                 columns[1].vertical_centered_justified(|ui| {
-                    View::button(ui, t!("modal.save"), Colors::white_or_black(false), on_save);
+                    View::button(ui, t!("modal.save"), Colors::white_or_black(false), || {
+                        on_save(self);
+                    });
                 });
             });
             ui.add_space(6.0);
@@ -383,6 +379,19 @@ impl NodeSetup {
 
     /// Draw API secret token [`Modal`] content.
     fn secret_modal(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
+        let on_save = |c: &mut NodeSetup| {
+            let secret = c.secret_edit.clone();
+            match modal.id {
+                API_SECRET_MODAL => {
+                    NodeConfig::save_api_secret(&secret);
+                }
+                _ => {
+                    NodeConfig::save_foreign_api_secret(&secret);
+                }
+            };
+            modal.close();
+        };
+
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             let description = match modal.id {
@@ -393,8 +402,14 @@ impl NodeSetup {
             ui.add_space(8.0);
 
             // Draw API secret token value text edit.
-            let mut secret_edit_opts = TextEditOptions::new(Id::from(modal.id)).copy().paste();
-            View::text_edit(ui, cb, &mut self.secret_edit, &mut secret_edit_opts);
+            let mut secret_edit = TextEdit::new(Id::from(modal.id))
+                .copy()
+                .paste();
+            secret_edit.ui(ui, &mut self.secret_edit, cb);
+            if secret_edit.enter_pressed {
+                on_save(self);
+            }
+
             ui.add_space(6.0);
 
             // Show reminder to restart enabled node.
@@ -413,25 +428,6 @@ impl NodeSetup {
             // Setup spacing between buttons.
             ui.spacing_mut().item_spacing = egui::Vec2::new(8.0, 0.0);
 
-            // Save button callback.
-            let on_save = || {
-                let secret = self.secret_edit.clone();
-                match modal.id {
-                    API_SECRET_MODAL => {
-                        NodeConfig::save_api_secret(&secret);
-                    }
-                    _ => {
-                        NodeConfig::save_foreign_api_secret(&secret);
-                    }
-                };
-                modal.close();
-            };
-
-            // Continue on Enter key press.
-            View::on_enter_key(ui, || {
-                on_save();
-            });
-
             ui.columns(2, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
                     View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
@@ -439,7 +435,9 @@ impl NodeSetup {
                     });
                 });
                 columns[1].vertical_centered_justified(|ui| {
-                    View::button(ui, t!("modal.save"), Colors::white_or_black(false), on_save);
+                    View::button(ui, t!("modal.save"), Colors::white_or_black(false), || {
+                        on_save(self);
+                    });
                 });
             });
             ui.add_space(6.0);
@@ -475,6 +473,14 @@ impl NodeSetup {
 
     /// Draw FTL [`Modal`] content.
     fn ftl_modal(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
+        // Save button callback.
+        let on_save = |c: &mut NodeSetup| {
+            if let Ok(ftl) = c.ftl_edit.parse::<u64>() {
+                NodeConfig::save_ftl(ftl);
+                modal.close();
+            }
+        };
+
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.ftl"))
@@ -483,8 +489,11 @@ impl NodeSetup {
             ui.add_space(8.0);
 
             // Draw ftl value text edit.
-            let mut ftl_edit_opts = TextEditOptions::new(Id::from(modal.id)).h_center();
-            View::text_edit(ui, cb, &mut self.ftl_edit, &mut ftl_edit_opts);
+            let mut ftl_edit = TextEdit::new(Id::from(modal.id)).h_center();
+            ftl_edit.ui(ui, &mut self.ftl_edit, cb);
+            if ftl_edit.enter_pressed {
+                on_save(self);
+            }
 
             // Show error when specified value is not valid or reminder to restart enabled node.
             if self.ftl_edit.parse::<u64>().is_err() {
@@ -503,19 +512,6 @@ impl NodeSetup {
             // Setup spacing between buttons.
             ui.spacing_mut().item_spacing = egui::Vec2::new(8.0, 0.0);
 
-            // Save button callback.
-            let on_save = || {
-                if let Ok(ftl) = self.ftl_edit.parse::<u64>() {
-                    NodeConfig::save_ftl(ftl);
-                    modal.close();
-                }
-            };
-
-            // Continue on Enter key press.
-            View::on_enter_key(ui, || {
-                on_save();
-            });
-
             ui.columns(2, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
                     View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
@@ -524,7 +520,9 @@ impl NodeSetup {
                     });
                 });
                 columns[1].vertical_centered_justified(|ui| {
-                    View::button(ui, t!("modal.save"), Colors::white_or_black(false), on_save);
+                    View::button(ui, t!("modal.save"), Colors::white_or_black(false), || {
+                        on_save(self);
+                    });
                 });
             });
             ui.add_space(6.0);

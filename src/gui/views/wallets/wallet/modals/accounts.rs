@@ -19,8 +19,7 @@ use grin_core::core::amount_to_hr_string;
 use crate::gui::Colors;
 use crate::gui::icons::{CHECK, CHECK_FAT, FOLDER_USER, PATH};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Modal, View};
-use crate::gui::views::types::TextEditOptions;
+use crate::gui::views::{Modal, TextEdit, View};
 use crate::gui::views::wallets::wallet::types::GRIN;
 use crate::wallet::types::WalletAccount;
 use crate::wallet::{Wallet, WalletConfig};
@@ -66,6 +65,20 @@ impl WalletAccountsModal {
               modal: &Modal,
               cb: &dyn PlatformCallbacks) {
         if self.account_creating {
+            let on_create = |m: &mut WalletAccountsModal| {
+                if m.account_label_edit.is_empty() {
+                    return;
+                }
+                let label = &m.account_label_edit;
+                match wallet.create_account(label) {
+                    Ok(_) => {
+                        let _ = wallet.set_active_account(label);
+                        modal.close();
+                    },
+                    Err(_) => m.account_creation_error = true
+                };
+            };
+
             ui.add_space(6.0);
             ui.vertical_centered(|ui| {
                 ui.label(RichText::new(t!("wallets.new_account_desc"))
@@ -74,11 +87,13 @@ impl WalletAccountsModal {
                 ui.add_space(8.0);
 
                 // Draw account name edit.
-                let text_edit_id = Id::from(modal.id).with(wallet.get_config().id);
-                let mut text_edit_opts = TextEditOptions::new(text_edit_id);
-                View::text_edit(ui, cb, &mut self.account_label_edit, &mut text_edit_opts);
+                let mut name_edit = TextEdit::new(Id::from(modal.id).with(wallet.get_config().id));
+                name_edit.ui(ui, &mut self.account_label_edit, cb);
+                if name_edit.enter_pressed {
+                    on_create(self);
+                }
 
-                // Show error occurred during account creation..
+                // Show error occurred during account creation.
                 if self.account_creation_error {
                     ui.add_space(12.0);
                     ui.label(RichText::new(t!("error"))
@@ -100,25 +115,9 @@ impl WalletAccountsModal {
                     });
                 });
                 columns[1].vertical_centered_justified(|ui| {
-                    // Create button callback.
-                    let mut on_create = || {
-                        if !self.account_label_edit.is_empty() {
-                            let label = &self.account_label_edit;
-                            match wallet.create_account(label) {
-                                Ok(_) => {
-                                    let _ = wallet.set_active_account(label);
-                                    modal.close();
-                                },
-                                Err(_) => self.account_creation_error = true
-                            };
-                        }
-                    };
-
-                    View::on_enter_key(ui, || {
-                        (on_create)();
+                    View::button(ui, t!("create"), Colors::white_or_black(false), || {
+                        on_create(self);
                     });
-
-                    View::button(ui, t!("create"), Colors::white_or_black(false), on_create);
                 });
             });
             ui.add_space(6.0);

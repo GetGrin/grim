@@ -17,8 +17,8 @@ use egui::{Id, RichText};
 use crate::gui::Colors;
 use crate::gui::icons::PENCIL;
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Modal, Content, View};
-use crate::gui::views::types::{ModalContainer, ModalPosition, TextEditOptions};
+use crate::gui::views::{Modal, Content, View, TextEdit};
+use crate::gui::views::types::{ModalContainer, ModalPosition};
 use crate::wallet::Mnemonic;
 use crate::wallet::types::{PhraseMode, PhraseSize, PhraseWord};
 
@@ -242,6 +242,26 @@ impl MnemonicSetup {
 
     /// Draw word input [`Modal`] content.
     fn word_modal_ui(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
+        let on_save = |c: &mut MnemonicSetup| {
+            // Insert word checking validity.
+            let word = &c.word_edit.trim().to_string();
+            c.valid_word_edit = c.mnemonic.insert(c.word_index_edit, word);
+            if !c.valid_word_edit {
+                return;
+            }
+            // Close modal or go to next word to edit.
+            let next_word = c.mnemonic.get(c.word_index_edit + 1);
+            let close_modal = next_word.is_none() ||
+                (!next_word.as_ref().unwrap().text.is_empty() &&
+                    next_word.unwrap().valid);
+            if close_modal {
+                modal.close();
+            } else {
+                c.word_index_edit += 1;
+                c.word_edit = String::from("");
+            }
+        };
+
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("wallets.enter_word", "number" => self.word_index_edit + 1))
@@ -250,10 +270,11 @@ impl MnemonicSetup {
             ui.add_space(8.0);
 
             // Draw word value text edit.
-            let mut text_edit_opts = TextEditOptions::new(
-                Id::from(modal.id).with(self.word_index_edit)
-            );
-            View::text_edit(ui, cb, &mut self.word_edit, &mut text_edit_opts);
+            let mut word_edit = TextEdit::new(Id::from(modal.id).with(self.word_index_edit));
+            word_edit.ui(ui, &mut self.word_edit, cb);
+            if word_edit.enter_pressed {
+                on_save(self);
+            }
 
             // Show error when specified word is not valid.
             if !self.valid_word_edit {
@@ -278,32 +299,10 @@ impl MnemonicSetup {
                     });
                 });
                 columns[1].vertical_centered_justified(|ui| {
-                    // Callback to save the word.
-                    let mut save = || {
-                        // Insert word checking validity.
-                        let word = &self.word_edit.trim().to_string();
-                        self.valid_word_edit = self.mnemonic.insert(self.word_index_edit, word);
-                        if !self.valid_word_edit {
-                            return;
-                        }
-                        // Close modal or go to next word to edit.
-                        let next_word = self.mnemonic.get(self.word_index_edit + 1);
-                        let close_modal = next_word.is_none() ||
-                            (!next_word.as_ref().unwrap().text.is_empty() &&
-                            next_word.unwrap().valid);
-                        if close_modal {
-                            modal.close();
-                        } else {
-                            self.word_index_edit += 1;
-                            self.word_edit = String::from("");
-                        }
-                    };
-                    // Call save on Enter key press.
-                    View::on_enter_key(ui, || {
-                        (save)();
-                    });
                     // Show save button.
-                    View::button(ui, t!("continue"), Colors::white_or_black(false), save);
+                    View::button(ui, t!("continue"), Colors::white_or_black(false), || {
+                        on_save(self);
+                    });
                 });
             });
             ui.add_space(6.0);

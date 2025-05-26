@@ -12,24 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::sync::atomic::{AtomicI32, Ordering};
 use lazy_static::lazy_static;
+use std::sync::atomic::{AtomicI32, Ordering};
 
-use egui::{Align, Button, CursorIcon, Layout, lerp, PointerState, Rect, Response, Rgba, RichText, Sense, SizeHint, Spinner, TextBuffer, TextStyle, TextureHandle, TextureOptions, Widget, UiBuilder};
-use egui::epaint::{Color32, FontId, PathShape, PathStroke, RectShape, Rounding, Stroke};
 use egui::epaint::text::TextWrapping;
+use egui::epaint::{Color32, FontId, PathShape, PathStroke, RectShape, Rounding, Stroke};
 use egui::load::SizedTexture;
 use egui::os::OperatingSystem;
 use egui::text::{LayoutJob, TextFormat};
-use egui::text_edit::TextEditState;
+use egui::{lerp, Button, CursorIcon, PointerState, Rect, Response, Rgba, RichText, Sense, SizeHint, Spinner, TextureHandle, TextureOptions, UiBuilder, Widget};
 use egui_extras::image::load_svg_bytes_with_size;
 
-use crate::AppConfig;
+use crate::gui::icons::{CHECK_SQUARE, SQUARE};
+use crate::gui::views::types::LinePosition;
 use crate::gui::Colors;
-use crate::gui::icons::{CHECK_SQUARE, CLIPBOARD_TEXT, COPY, EYE, EYE_SLASH, SCAN, SQUARE};
-use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{KeyboardContent, KeyboardInput};
-use crate::gui::views::types::{LinePosition, TextEditOptions};
+use crate::AppConfig;
 
 pub struct View;
 
@@ -88,13 +85,6 @@ impl View {
     pub fn window_size(ctx: &egui::Context) -> (f32, f32) {
         let rect = ctx.screen_rect();
         (rect.width(), rect.height())
-    }
-
-    /// Callback on Enter key press event.
-    pub fn on_enter_key(ui: &mut egui::Ui, cb: impl FnOnce()) {
-        if ui.ctx().input(|i| i.key_pressed(egui::Key::Enter)) {
-            (cb)();
-        }
     }
 
     /// Calculate margin for far left view based on display insets (cutouts).
@@ -159,7 +149,7 @@ impl View {
         }
     }
 
-    /// Draw horizontally centered sub-title with space below.
+    /// Draw horizontally centered subtitle with space below.
     pub fn sub_title(ui: &mut egui::Ui, text: String) {
         ui.vertical_centered_justified(|ui| {
             ui.label(RichText::new(text.to_uppercase()).size(16.0).color(Colors::text(false)));
@@ -367,162 +357,6 @@ impl View {
             };
             Self::line(ui, LinePosition::LEFT, &r, Colors::item_stroke());
         });
-    }
-
-    /// Default height of [`egui::TextEdit`] view.
-    const TEXT_EDIT_HEIGHT: f32 = 37.0;
-
-    /// Draw [`egui::TextEdit`] widget.
-    pub fn text_edit(ui: &mut egui::Ui,
-                     cb: &dyn PlatformCallbacks,
-                     value: &mut String,
-                     options: &mut TextEditOptions) {
-        let mut layout_rect = ui.available_rect_before_wrap();
-        layout_rect.set_height(Self::TEXT_EDIT_HEIGHT);
-        ui.allocate_ui_with_layout(layout_rect.size(), Layout::right_to_left(Align::Center), |ui| {
-            // Setup password button.
-            let mut show_pass = false;
-            if options.password {
-                // Set password button state value.
-                let show_pass_id = egui::Id::new(options.id).with("_show_pass");
-                show_pass = ui.data(|data| {
-                    data.get_temp(show_pass_id)
-                }).unwrap_or(true);
-                // Draw button to show/hide current password.
-                let eye_icon = if show_pass { EYE } else { EYE_SLASH };
-                let mut changed = false;
-                View::button(ui, eye_icon.to_string(), Colors::white_or_black(false), || {
-                    show_pass = !show_pass;
-                    changed = true;
-                });
-                // Save state if changed.
-                if changed {
-                    ui.data_mut(|data| {
-                        data.insert_temp(show_pass_id, show_pass);
-                    });
-                }
-                ui.add_space(8.0);
-            }
-
-            // Setup copy button.
-            if options.copy {
-                let copy_icon = COPY.to_string();
-                View::button(ui, copy_icon, Colors::white_or_black(false), || {
-                    cb.copy_string_to_buffer(value.clone());
-                });
-                ui.add_space(8.0);
-            }
-
-            // Setup paste button.
-            if options.paste {
-                let paste_icon = CLIPBOARD_TEXT.to_string();
-                View::button(ui, paste_icon, Colors::white_or_black(false), || {
-                    *value = cb.get_string_from_buffer();
-                });
-                ui.add_space(8.0);
-            }
-
-            // Setup scan QR code button.
-            if options.scan_qr {
-                let scan_icon = SCAN.to_string();
-                View::button(ui, scan_icon, Colors::white_or_black(false), || {
-                    cb.start_camera();
-                    options.scan_pressed = true;
-                });
-                ui.add_space(8.0);
-            }
-
-            let layout_size = ui.available_size();
-            ui.allocate_ui_with_layout(layout_size, Layout::left_to_right(Align::Center), |ui| {
-                // Setup text edit size.
-                let mut edit_rect = ui.available_rect_before_wrap();
-                edit_rect.set_height(Self::TEXT_EDIT_HEIGHT);
-
-                // Show text edit.
-                let text_edit_resp = egui::TextEdit::singleline(value)
-                    .id(options.id)
-                    .margin(egui::Vec2::new(2.0, 0.0))
-                    .font(TextStyle::Heading)
-                    .min_size(edit_rect.size())
-                    .horizontal_align(if options.h_center { Align::Center } else { Align::Min })
-                    .vertical_align(Align::Center)
-                    .password(show_pass)
-                    .cursor_at_end(true)
-                    .ui(ui);
-                // Store focusing state on click or from options.
-                let focus_id = egui::Id::new("focused_input");
-                if text_edit_resp.clicked() || options.focus {
-                    ui.data_mut(|data| {
-                        data.insert_temp(focus_id, options.id);
-                    });
-                }
-                let focus = ui.data(|data| {
-                    data.get_temp(focus_id)
-                }).unwrap_or(egui::Id::from(""));
-                if focus == options.id {
-                    text_edit_resp.request_focus();
-                    KeyboardContent::show();
-                }
-                // Apply text from software input.
-                if text_edit_resp.has_focus() {
-                    options.focus = true;
-                    options.enter_pressed = Self::on_soft_input(ui, options.id, false, value);
-                }
-            });
-        });
-    }
-
-    /// Apply soft keyboard input data to provided String, returns `true` if Enter was pressed.
-    fn on_soft_input(ui: &mut egui::Ui, id: egui::Id, multiline: bool, value: &mut String) -> bool {
-        if let Some(input) = KeyboardContent::consume_action() {
-            let mut enter_pressed = false;
-            let mut state = TextEditState::load(ui.ctx(), id).unwrap();
-            match state.cursor.char_range() {
-                None => {}
-                Some(range) => {
-                    let mut r = range.clone();
-                    let mut index = r.primary.index;
-                    match input {
-                        KeyboardInput::TEXT(text) => {
-                            value.insert_text(text.as_str(), index);
-                            index = index + 1;
-                        }
-                        KeyboardInput::CLEAR => {
-                            if index != 0 {
-                                *value = {
-                                    let part1: String = value.chars()
-                                        .skip(0)
-                                        .take(index - 1)
-                                        .collect();
-                                    let part2: String = value.chars()
-                                        .skip(index)
-                                        .take(value.len() - index)
-                                        .collect();
-                                    format!("{}{}", part1, part2)
-                                };
-                                index = index - 1;
-                            }
-                        }
-                        KeyboardInput::ENTER => {
-                            if multiline {
-                                value.insert_text("\n", index);
-                                index = index + 1;
-                            } else {
-                                enter_pressed = true;
-                            }
-                        }
-                    }
-                    // Setup cursor index.
-                    r.primary.index = index;
-                    r.secondary.index = r.primary.index;
-
-                    state.cursor.set_char_range(Some(r));
-                    TextEditState::store(state, ui.ctx(), id);
-                }
-            }
-            return enter_pressed;
-        }
-        false
     }
 
     /// Calculate item background/button rounding based on item index.

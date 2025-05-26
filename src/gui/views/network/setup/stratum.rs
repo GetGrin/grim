@@ -18,9 +18,9 @@ use grin_chain::SyncStatus;
 use crate::gui::Colors;
 use crate::gui::icons::{BARBELL, HARD_DRIVES, PLUG, POWER, TIMER};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Modal, View};
+use crate::gui::views::{Modal, TextEdit, View};
 use crate::gui::views::network::settings::NetworkSettings;
-use crate::gui::views::types::{ModalContainer, ModalPosition, TextEditOptions};
+use crate::gui::views::types::{ModalContainer, ModalPosition};
 use crate::gui::views::wallets::modals::WalletsModal;
 use crate::node::{Node, NodeConfig};
 use crate::wallet::{WalletConfig, WalletList};
@@ -286,6 +286,24 @@ impl StratumSetup {
 
     /// Draw stratum port [`Modal`] content.
     fn port_modal(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
+        let on_save = |c: &mut StratumSetup| {
+            // Check if port is available.
+            let (stratum_ip, _) = NodeConfig::get_stratum_address();
+            let available = NodeConfig::is_stratum_port_available(
+                &stratum_ip,
+                &c.stratum_port_edit
+            );
+            c.stratum_port_available_edit = available;
+
+            // Save port at config if it's available.
+            if available {
+                NodeConfig::save_stratum_address(&stratum_ip, &c.stratum_port_edit);
+
+                c.is_port_available = true;
+                modal.close();
+            }
+        };
+
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.stratum_port"))
@@ -294,8 +312,11 @@ impl StratumSetup {
             ui.add_space(8.0);
 
             // Draw stratum port text edit.
-            let mut text_edit_opts = TextEditOptions::new(Id::from(modal.id)).h_center();
-            View::text_edit(ui, cb, &mut self.stratum_port_edit, &mut text_edit_opts);
+            let mut edit = TextEdit::new(Id::from(modal.id)).h_center();
+            edit.ui(ui, &mut self.stratum_port_edit, cb);
+            if edit.enter_pressed {
+                on_save(self);
+            }
 
             // Show error when specified port is unavailable.
             if !self.stratum_port_available_edit {
@@ -314,30 +335,6 @@ impl StratumSetup {
                 // Setup spacing between buttons.
                 ui.spacing_mut().item_spacing = egui::Vec2::new(8.0, 0.0);
 
-                // Save button callback.
-                let mut on_save = || {
-                    // Check if port is available.
-                    let (stratum_ip, _) = NodeConfig::get_stratum_address();
-                    let available = NodeConfig::is_stratum_port_available(
-                        &stratum_ip,
-                        &self.stratum_port_edit
-                    );
-                    self.stratum_port_available_edit = available;
-
-                    // Save port at config if it's available.
-                    if available {
-                        NodeConfig::save_stratum_address(&stratum_ip, &self.stratum_port_edit);
-
-                        self.is_port_available = true;
-                        modal.close();
-                    }
-                };
-
-                // Continue on Enter key press.
-                View::on_enter_key(ui, || {
-                    on_save();
-                });
-
                 ui.columns(2, |columns| {
                     columns[0].vertical_centered_justified(|ui| {
                         View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
@@ -346,7 +343,9 @@ impl StratumSetup {
                         });
                     });
                     columns[1].vertical_centered_justified(|ui| {
-                        View::button(ui, t!("modal.save"), Colors::white_or_black(false), on_save);
+                        View::button(ui, t!("modal.save"), Colors::white_or_black(false), || {
+                            on_save(self);
+                        });
                     });
                 });
                 ui.add_space(6.0);
@@ -383,6 +382,13 @@ impl StratumSetup {
 
     /// Draw attempt time [`Modal`] content.
     fn attempt_modal(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
+        let on_save = |c: &mut StratumSetup| {
+            if let Ok(time) = c.attempt_time_edit.parse::<u32>() {
+                NodeConfig::save_stratum_attempt_time(time);
+                modal.close();
+            }
+        };
+
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.attempt_time"))
@@ -391,8 +397,11 @@ impl StratumSetup {
             ui.add_space(8.0);
 
             // Draw attempt time text edit.
-            let mut text_edit_opts = TextEditOptions::new(Id::from(modal.id)).h_center();
-            View::text_edit(ui, cb, &mut self.attempt_time_edit, &mut text_edit_opts);
+            let mut edit = TextEdit::new(Id::from(modal.id)).h_center();
+            edit.ui(ui, &mut self.attempt_time_edit, cb);
+            if edit.enter_pressed {
+                on_save(self);
+            }
 
             // Show error when specified value is not valid or reminder to restart enabled node.
             if self.attempt_time_edit.parse::<u32>().is_err() {
@@ -411,19 +420,6 @@ impl StratumSetup {
             // Setup spacing between buttons.
             ui.spacing_mut().item_spacing = egui::Vec2::new(8.0, 0.0);
 
-            // Save button callback.
-            let on_save = || {
-                if let Ok(time) = self.attempt_time_edit.parse::<u32>() {
-                    NodeConfig::save_stratum_attempt_time(time);
-                    modal.close();
-                }
-            };
-
-            // Continue on Enter key press.
-            View::on_enter_key(ui, || {
-                on_save();
-            });
-
             ui.columns(2, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
                     View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
@@ -432,7 +428,9 @@ impl StratumSetup {
                     });
                 });
                 columns[1].vertical_centered_justified(|ui| {
-                    View::button(ui, t!("modal.save"), Colors::white_or_black(false), on_save);
+                    View::button(ui, t!("modal.save"), Colors::white_or_black(false), || {
+                        on_save(self);
+                    });
                 });
             });
             ui.add_space(6.0);
@@ -463,6 +461,13 @@ impl StratumSetup {
 
     /// Draw minimum acceptable share difficulty [`Modal`] content.
     fn min_diff_modal(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
+        let on_save = |c: &mut StratumSetup| {
+            if let Ok(diff) = c.min_share_diff_edit.parse::<u64>() {
+                NodeConfig::save_stratum_min_share_diff(diff);
+                modal.close();
+            }
+        };
+
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network_settings.min_share_diff"))
@@ -471,8 +476,11 @@ impl StratumSetup {
             ui.add_space(8.0);
 
             // Draw share difficulty text edit.
-            let mut text_edit_opts = TextEditOptions::new(Id::from(modal.id)).h_center();
-            View::text_edit(ui, cb, &mut self.min_share_diff_edit, &mut text_edit_opts);
+            let mut edit = TextEdit::new(Id::from(modal.id)).h_center();
+            edit.ui(ui, &mut self.min_share_diff_edit, cb);
+            if edit.enter_pressed {
+                on_save(self);
+            }
 
             // Show error when specified value is not valid or reminder to restart enabled node.
             if self.min_share_diff_edit.parse::<u64>().is_err() {
@@ -491,19 +499,6 @@ impl StratumSetup {
             // Setup spacing between buttons.
             ui.spacing_mut().item_spacing = egui::Vec2::new(8.0, 0.0);
 
-            // Save button callback.
-            let on_save = || {
-                if let Ok(diff) = self.min_share_diff_edit.parse::<u64>() {
-                    NodeConfig::save_stratum_min_share_diff(diff);
-                    modal.close();
-                }
-            };
-
-            // Continue on Enter key press.
-            View::on_enter_key(ui, || {
-                on_save();
-            });
-
             ui.columns(2, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
                     View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
@@ -512,7 +507,9 @@ impl StratumSetup {
                     });
                 });
                 columns[1].vertical_centered_justified(|ui| {
-                    View::button(ui, t!("modal.save"), Colors::white_or_black(false), on_save);
+                    View::button(ui, t!("modal.save"), Colors::white_or_black(false), || {
+                        on_save(self);
+                    });
                 });
             });
             ui.add_space(6.0);

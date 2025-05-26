@@ -21,17 +21,13 @@ use parking_lot::RwLock;
 
 use crate::gui::Colors;
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{CameraContent, Modal, View};
-use crate::gui::views::types::TextEditOptions;
+use crate::gui::views::{CameraContent, Modal, TextEdit, View};
 use crate::gui::views::wallets::wallet::WalletTransactionModal;
 use crate::wallet::types::WalletTransaction;
 use crate::wallet::Wallet;
 
 /// Transport sending [`Modal`] content.
 pub struct TransportSendModal {
-    /// Flag to focus on first input field after opening.
-    first_draw: bool,
-
     /// Flag to check if transaction is sending to show progress.
     sending: bool,
     /// Flag to check if there is an error to repeat.
@@ -57,7 +53,6 @@ impl TransportSendModal {
     /// Create new instance from provided address.
     pub fn new(addr: Option<String>) -> Self {
         Self {
-            first_draw: true,
             sending: false,
             error: false,
             send_result: Arc::new(RwLock::new(None)),
@@ -100,8 +95,7 @@ impl TransportSendModal {
         ui.add_space(6.0);
         // Draw QR code scanner content if requested.
         if let Some(scanner) = self.address_scan_content.as_mut() {
-            let mut on_stop = || {
-                self.first_draw = true;
+            let on_stop = || {
                 cb.stop_camera();
                 modal.enable_closing();
             };
@@ -150,13 +144,11 @@ impl TransportSendModal {
 
         // Draw amount text edit.
         let amount_edit_id = Id::from(modal.id).with("amount").with(wallet.get_config().id);
-        let mut amount_edit_opts = TextEditOptions::new(amount_edit_id).h_center().no_focus();
+        let mut amount_edit = TextEdit::new(amount_edit_id)
+            .h_center()
+            .focus(Modal::first_draw());
         let amount_edit_before = self.amount_edit.clone();
-        if self.first_draw {
-            self.first_draw = false;
-            amount_edit_opts.focus = true;
-        }
-        View::text_edit(ui, cb, &mut self.amount_edit, &mut amount_edit_opts);
+        amount_edit.ui(ui, &mut self.amount_edit, cb);
         ui.add_space(8.0);
 
         // Check value if input was changed.
@@ -173,7 +165,7 @@ impl TransportSendModal {
                                 return;
                             }
                         } else {
-                            // Check input after ".".
+                            // Check input after `.`.
                             let parts = self.amount_edit.split(".").collect::<Vec<&str>>();
                             if parts.len() == 2 && parts[1].len() > 9 {
                                 self.amount_edit = amount_edit_before;
@@ -211,15 +203,17 @@ impl TransportSendModal {
         // Draw address text edit.
         let addr_edit_before = self.address_edit.clone();
         let address_edit_id = Id::from(modal.id).with("_address").with(wallet.get_config().id);
-        let mut address_edit_opts = TextEditOptions::new(address_edit_id)
+        let mut address_edit = TextEdit::new(address_edit_id)
             .paste()
-            .no_focus()
+            .focus(false)
             .scan_qr();
-        View::text_edit(ui, cb, &mut self.address_edit, &mut address_edit_opts);
+        if amount_edit.enter_pressed {
+            address_edit.focus_request();
+        }
+        address_edit.ui(ui, &mut self.address_edit, cb);
         // Check if scan button was pressed.
-        if address_edit_opts.scan_pressed {
+        if address_edit.scan_pressed {
             modal.disable_closing();
-            address_edit_opts.scan_pressed = false;
             self.address_scan_content = Some(CameraContent::default());
         }
         ui.add_space(12.0);
@@ -227,6 +221,11 @@ impl TransportSendModal {
         // Check value if input was changed.
         if addr_edit_before != self.address_edit {
             self.address_error = false;
+        }
+
+        // Send on Enter press.
+        if address_edit.enter_pressed {
+            self.send(wallet, modal);
         }
 
         // Setup spacing between buttons.
