@@ -67,15 +67,15 @@ impl ModalContainer for WalletCreation {
         match modal.id {
             QR_CODE_PHRASE_SCAN_MODAL => {
                 if let Some(content) = self.scan_modal_content.as_mut() {
-                    content.ui(ui, modal, cb, |result| {
+                    content.ui(ui, cb, |result| {
                         match result {
                             QrScanResult::Text(text) => {
                                 self.mnemonic_setup.mnemonic.import(&text);
-                                modal.close();
+                                Modal::close();
                             }
                             QrScanResult::SeedQR(text) => {
                                 self.mnemonic_setup.mnemonic.import(&text);
-                                modal.close();
+                                Modal::close();
                             }
                             _ => {}
                         }

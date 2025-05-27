@@ -255,7 +255,7 @@ impl MnemonicSetup {
                 (!next_word.as_ref().unwrap().text.is_empty() &&
                     next_word.unwrap().valid);
             if close_modal {
-                modal.close();
+                Modal::close();
             } else {
                 c.word_index_edit += 1;
                 c.word_edit = String::from("");
@@ -295,7 +295,7 @@ impl MnemonicSetup {
                 columns[0].vertical_centered_justified(|ui| {
                     View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                         // Close modal.
-                        modal.close();
+                        Modal::close();
                     });
                 });
                 columns[1].vertical_centered_justified(|ui| {

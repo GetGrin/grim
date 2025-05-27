@@ -84,7 +84,7 @@ impl TransportSettingsModal {
                         View::button(ui, t!("close"), Colors::white_or_black(false), || {
                             on_stop();
                             self.bridge_qr_scan_content = None;
-                            modal.close();
+                            Modal::close();
                         });
                     });
                     cols[1].vertical_centered_justified(|ui| {
@@ -246,7 +246,7 @@ impl TransportSettingsModal {
                         Tor::rebuild_client();
                     }
                 }
-                modal.close();
+                Modal::close();
             });
         });
         ui.add_space(6.0);

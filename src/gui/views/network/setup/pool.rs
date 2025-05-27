@@ -162,7 +162,7 @@ impl PoolSetup {
         let on_save = |c: &mut PoolSetup| {
             if let Ok(fee) = c.fee_base_edit.parse::<u64>() {
                 NodeConfig::save_base_fee(fee);
-                modal.close();
+                Modal::close();
             }
         };
 
@@ -200,7 +200,7 @@ impl PoolSetup {
                     columns[0].vertical_centered_justified(|ui| {
                         View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                             // Close modal.
-                            modal.close();
+                            Modal::close();
                         });
                     });
                     columns[1].vertical_centered_justified(|ui| {
@@ -241,7 +241,7 @@ impl PoolSetup {
         let on_save = |c: &mut PoolSetup| {
             if let Ok(period) = c.reorg_period_edit.parse::<u32>() {
                 NodeConfig::save_reorg_cache_period(period);
-                modal.close();
+                Modal::close();
             }
         };
 
@@ -279,7 +279,7 @@ impl PoolSetup {
                     columns[0].vertical_centered_justified(|ui| {
                         View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                             // Close modal.
-                            modal.close();
+                            Modal::close();
                         });
                     });
                     columns[1].vertical_centered_justified(|ui| {
@@ -319,7 +319,7 @@ impl PoolSetup {
         let on_save = |c: &mut PoolSetup| {
             if let Ok(size) = c.pool_size_edit.parse::<usize>() {
                 NodeConfig::save_max_pool_size(size);
-                modal.close();
+                Modal::close();
             }
         };
 
@@ -357,7 +357,7 @@ impl PoolSetup {
                     columns[0].vertical_centered_justified(|ui| {
                         View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                             // Close modal.
-                            modal.close();
+                            Modal::close();
                         });
                     });
                     columns[1].vertical_centered_justified(|ui| {
@@ -399,7 +399,7 @@ impl PoolSetup {
         let on_save = |c: &mut PoolSetup| {
             if let Ok(size) = c.stempool_size_edit.parse::<usize>() {
                 NodeConfig::save_max_stempool_size(size);
-                modal.close();
+                Modal::close();
             }
         };
 
@@ -437,7 +437,7 @@ impl PoolSetup {
                     columns[0].vertical_centered_justified(|ui| {
                         View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                             // Close modal.
-                            modal.close();
+                            Modal::close();
                         });
                     });
                     columns[1].vertical_centered_justified(|ui| {
@@ -479,7 +479,7 @@ impl PoolSetup {
         let on_save = |c: &mut PoolSetup| {
             if let Ok(weight) = c.max_weight_edit.parse::<u64>() {
                 NodeConfig::save_mineable_max_weight(weight);
-                modal.close();
+                Modal::close();
             }
         };
 
@@ -517,7 +517,7 @@ impl PoolSetup {
                     columns[0].vertical_centered_justified(|ui| {
                         View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                             // Close modal.
-                            modal.close();
+                            Modal::close();
                         });
                     });
                     columns[1].vertical_centered_justified(|ui| {

@@ -82,7 +82,7 @@ impl WalletConnectionModal {
                         _ => {
                             View::item_button(ui, View::item_rounding(0, 1, true), CHECK, None, || {
                                 on_select(ConnectionMethod::Integrated);
-                                modal.close();
+                                Modal::close();
                             });
                         }
                     }
@@ -118,7 +118,7 @@ impl WalletConnectionModal {
                                         on_select(
                                             ConnectionMethod::External(conn.id, conn.url.clone())
                                         );
-                                        modal.close();
+                                        Modal::close();
                                     });
                                 } else {
                                     ui.add_space(12.0);
@@ -140,7 +140,7 @@ impl WalletConnectionModal {
         // Show button to close modal.
         ui.vertical_centered_justified(|ui| {
             View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
-                modal.close();
+                Modal::close();
             });
         });
         ui.add_space(6.0);

@@ -284,7 +284,7 @@ impl P2PSetup {
                     Node::restart();
                 }
                 c.is_port_available = true;
-                modal.close();
+                Modal::close();
             }
         };
 
@@ -321,7 +321,7 @@ impl P2PSetup {
                     columns[0].vertical_centered_justified(|ui| {
                         View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                             // Close modal.
-                            modal.close();
+                            Modal::close();
                         });
                     });
                     columns[1].vertical_centered_justified(|ui| {
@@ -429,7 +429,7 @@ impl P2PSetup {
                 }
 
                 c.is_port_available = true;
-                modal.close();
+                Modal::close();
             }
         };
 
@@ -467,7 +467,7 @@ impl P2PSetup {
                     columns[0].vertical_centered_justified(|ui| {
                         View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                             // Close modal.
-                            modal.close();
+                            Modal::close();
                         });
                     });
                     columns[1].vertical_centered_justified(|ui| {
@@ -534,7 +534,7 @@ impl P2PSetup {
         let on_save = |c: &mut P2PSetup| {
             if let Ok(ban_window) = c.ban_window_edit.parse::<i64>() {
                 NodeConfig::save_p2p_ban_window(ban_window);
-                modal.close();
+                Modal::close();
             }
         };
 
@@ -572,7 +572,7 @@ impl P2PSetup {
             ui.columns(2, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
                     View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
-                        modal.close();
+                        Modal::close();
                     });
                 });
                 columns[1].vertical_centered_justified(|ui| {
@@ -613,7 +613,7 @@ impl P2PSetup {
         let on_save = |c: &mut P2PSetup| {
             if let Ok(max_inbound) = c.max_inbound_count.parse::<u32>() {
                 NodeConfig::save_max_inbound_peers(max_inbound);
-                modal.close();
+                Modal::close();
             }
         };
 
@@ -651,7 +651,7 @@ impl P2PSetup {
             ui.columns(2, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
                     View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
-                        modal.close();
+                        Modal::close();
                     });
                 });
                 columns[1].vertical_centered_justified(|ui| {
@@ -691,7 +691,7 @@ impl P2PSetup {
         let on_save = |c: &mut P2PSetup| {
             if let Ok(max_outbound) = c.max_outbound_count.parse::<u32>() {
                 NodeConfig::save_max_outbound_peers(max_outbound);
-                modal.close();
+                Modal::close();
             }
         };
 
@@ -730,7 +730,7 @@ impl P2PSetup {
                 columns[0].vertical_centered_justified(|ui| {
                     View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                         // Close modal.
-                        modal.close();
+                        Modal::close();
                     });
                 });
                 columns[1].vertical_centered_justified(|ui| {

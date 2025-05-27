@@ -145,10 +145,10 @@ impl WalletMessages {
                     SCAN_QR_MODAL => {
                         let mut result = None;
                         if let Some(content) = self.scan_modal_content.as_mut() {
-                            Modal::ui(ui.ctx(), |ui, modal| {
-                                content.ui(ui, modal, cb, |res| {
+                            Modal::ui(ui.ctx(), |ui, _| {
+                                content.ui(ui, cb, |res| {
                                     result = Some(res.clone());
-                                    modal.close();
+                                    Modal::close();
                                 });
                             });
                         }

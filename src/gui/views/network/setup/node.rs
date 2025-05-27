@@ -292,7 +292,7 @@ impl NodeSetup {
                     Node::restart();
                 }
                 c.is_api_port_available = true;
-                modal.close();
+                Modal::close();
             }
         };
 
@@ -330,7 +330,7 @@ impl NodeSetup {
             ui.columns(2, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
                     View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
-                        modal.close();
+                        Modal::close();
                     });
                 });
                 columns[1].vertical_centered_justified(|ui| {
@@ -389,7 +389,7 @@ impl NodeSetup {
                     NodeConfig::save_foreign_api_secret(&secret);
                 }
             };
-            modal.close();
+            Modal::close();
         };
 
         ui.add_space(6.0);
@@ -431,7 +431,7 @@ impl NodeSetup {
             ui.columns(2, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
                     View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
-                        modal.close();
+                        Modal::close();
                     });
                 });
                 columns[1].vertical_centered_justified(|ui| {
@@ -477,7 +477,7 @@ impl NodeSetup {
         let on_save = |c: &mut NodeSetup| {
             if let Ok(ftl) = c.ftl_edit.parse::<u64>() {
                 NodeConfig::save_ftl(ftl);
-                modal.close();
+                Modal::close();
             }
         };
 
@@ -516,7 +516,7 @@ impl NodeSetup {
                 columns[0].vertical_centered_justified(|ui| {
                     View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                         // Close modal.
-                        modal.close();
+                        Modal::close();
                     });
                 });
                 columns[1].vertical_centered_justified(|ui| {

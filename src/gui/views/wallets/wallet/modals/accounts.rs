@@ -73,7 +73,7 @@ impl WalletAccountsModal {
                 match wallet.create_account(label) {
                     Ok(_) => {
                         let _ = wallet.set_active_account(label);
-                        modal.close();
+                        Modal::close();
                     },
                     Err(_) => m.account_creation_error = true
                 };
@@ -111,7 +111,7 @@ impl WalletAccountsModal {
                 columns[0].vertical_centered_justified(|ui| {
                     View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                         // Close modal.
-                        modal.close();
+                        Modal::close();
                     });
                 });
                 columns[1].vertical_centered_justified(|ui| {
@@ -138,7 +138,7 @@ impl WalletAccountsModal {
                             ui.add_space(4.0);
                         }
                         let acc = self.accounts.get(index).unwrap();
-                        account_item_ui(ui, modal, wallet, acc, index, size);
+                        account_item_ui(ui, wallet, acc, index, size);
                         if index == size - 1 {
                             ui.add_space(4.0);
                         }
@@ -156,7 +156,7 @@ impl WalletAccountsModal {
             ui.columns(2, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
                     View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
-                        modal.close();
+                        Modal::close();
                     });
                 });
                 columns[1].vertical_centered_justified(|ui| {
@@ -175,7 +175,6 @@ const ACCOUNT_ITEM_HEIGHT: f32 = 75.0;
 
 /// Draw account item.
 fn account_item_ui(ui: &mut egui::Ui,
-                   modal: &Modal,
                    wallet: &Wallet,
                    acc: &WalletAccount,
                    index: usize,
@@ -201,7 +200,7 @@ fn account_item_ui(ui: &mut egui::Ui,
                 let button_rounding = View::item_rounding(index, size, true);
                 View::item_button(ui, button_rounding, CHECK, None, || {
                     let _ = wallet.set_active_account(&acc.label);
-                    modal.close();
+                    Modal::close();
                 });
             } else {
                 ui.add_space(12.0);

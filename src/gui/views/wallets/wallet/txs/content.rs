@@ -253,8 +253,8 @@ impl WalletTransactions {
                         });
                     }
                     CANCEL_TX_CONFIRMATION_MODAL => {
-                        Modal::ui(ui.ctx(), |ui, modal| {
-                            self.cancel_confirmation_modal(ui, wallet, modal);
+                        Modal::ui(ui.ctx(), |ui, _| {
+                            self.cancel_confirmation_modal(ui, wallet);
                         });
                     }
                     _ => {}
@@ -463,7 +463,7 @@ impl WalletTransactions {
     }
 
     /// Confirmation [`Modal`] to cancel transaction.
-    fn cancel_confirmation_modal(&mut self, ui: &mut egui::Ui, wallet: &Wallet, modal: &Modal) {
+    fn cancel_confirmation_modal(&mut self, ui: &mut egui::Ui, wallet: &Wallet) {
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             // Setup confirmation text.
@@ -473,7 +473,7 @@ impl WalletTransactions {
                 .filter(|tx| tx.data.id == self.confirm_cancel_tx_id.unwrap())
                 .collect::<Vec<WalletTransaction>>();
             if txs.is_empty() {
-                modal.close();
+                Modal::close();
                 return;
             }
             let tx = txs.get(0).unwrap();
@@ -501,14 +501,14 @@ impl WalletTransactions {
                 columns[0].vertical_centered_justified(|ui| {
                     View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                         self.confirm_cancel_tx_id = None;
-                        modal.close();
+                        Modal::close();
                     });
                 });
                 columns[1].vertical_centered_justified(|ui| {
                     View::button(ui, "OK".to_string(), Colors::white_or_black(false), || {
                         wallet.cancel(self.confirm_cancel_tx_id.unwrap());
                         self.confirm_cancel_tx_id = None;
-                        modal.close();
+                        Modal::close();
                     });
                 });
             });

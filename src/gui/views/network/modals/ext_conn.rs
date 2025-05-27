@@ -88,7 +88,7 @@ impl ExternalConnectionModal {
                 m.ext_node_url_edit = "".to_string();
                 m.ext_node_secret_edit = "".to_string();
                 m.ext_node_url_error = false;
-                modal.close();
+                Modal::close();
             }
         };
 
@@ -148,7 +148,7 @@ impl ExternalConnectionModal {
                         self.ext_node_url_edit = "".to_string();
                         self.ext_node_secret_edit = "".to_string();
                         self.ext_node_url_error = false;
-                        modal.close();
+                        Modal::close();
                     });
                 });
                 columns[1].vertical_centered_justified(|ui| {

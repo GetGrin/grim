@@ -49,7 +49,7 @@ impl AddWalletModal {
             if name.is_empty() || pass.is_empty() {
                 return;
             }
-            modal.close();
+            Modal::close();
             on_input(name, ZeroingString::from(pass));
         };
         ui.vertical_centered(|ui| {
@@ -94,7 +94,7 @@ impl AddWalletModal {
                 columns[0].vertical_centered_justified(|ui| {
                     View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                         // Close modal.
-                        modal.close();
+                        Modal::close();
                     });
                 });
                 columns[1].vertical_centered_justified(|ui| {

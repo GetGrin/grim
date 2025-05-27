@@ -74,7 +74,7 @@ impl WalletsModal {
                     for wallet in wallets.list() {
                         // Draw wallet list item.
                         self.wallet_item_ui(ui, wallet, || {
-                            modal.close();
+                            Modal::close();
                             on_select(wallet.clone(), data.clone());
                         });
                         ui.add_space(5.0);
@@ -90,7 +90,7 @@ impl WalletsModal {
         ui.vertical_centered_justified(|ui| {
             View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                 self.data = None;
-                modal.close();
+                Modal::close();
             });
         });
         ui.add_space(6.0);

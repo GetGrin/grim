@@ -109,8 +109,8 @@ impl WalletTransport {
                         }
                     }
                     QR_ADDRESS_MODAL => {
-                        Modal::ui(ui.ctx(), |ui, modal| {
-                            self.qr_address_modal_ui(ui, modal, cb);
+                        Modal::ui(ui.ctx(), |ui, _| {
+                            self.qr_address_modal_ui(ui, cb);
                         });
                     }
                     _ => {}
@@ -316,7 +316,6 @@ impl WalletTransport {
     /// Draw QR code image address [`Modal`] content.
     fn qr_address_modal_ui(&mut self,
                            ui: &mut egui::Ui,
-                           modal: &Modal,
                            cb: &dyn PlatformCallbacks) {
         ui.add_space(6.0);
 
@@ -324,14 +323,14 @@ impl WalletTransport {
         if let Some(content) = self.qr_address_content.as_mut() {
             content.ui(ui, cb);
         } else {
-            modal.close();
+            Modal::close();
             return;
         }
 
         ui.vertical_centered_justified(|ui| {
             View::button(ui, t!("close"), Colors::white_or_black(false), || {
                 self.qr_address_content = None;
-                modal.close();
+                Modal::close();
             });
         });
         ui.add_space(6.0);

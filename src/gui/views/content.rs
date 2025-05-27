@@ -89,9 +89,9 @@ impl ModalContainer for Content {
                 cb: &dyn PlatformCallbacks) {
         match modal.id {
             Self::EXIT_CONFIRMATION_MODAL => self.exit_modal_content(ui, modal, cb),
-            Self::SETTINGS_MODAL => self.settings_modal_ui(ui, modal),
-            ANDROID_INTEGRATED_NODE_WARNING_MODAL => self.android_warning_modal_ui(ui, modal),
-            CRASH_REPORT_MODAL => self.crash_report_modal_ui(ui, modal, cb),
+            Self::SETTINGS_MODAL => self.settings_modal_ui(ui),
+            ANDROID_INTEGRATED_NODE_WARNING_MODAL => self.android_warning_modal_ui(ui),
+            CRASH_REPORT_MODAL => self.crash_report_modal_ui(ui, cb),
             _ => {}
         }
     }
@@ -189,7 +189,7 @@ impl Content {
             if !Node::is_running() {
                 self.exit_allowed = true;
                 cb.exit();
-                modal.close();
+                Modal::close();
             }
             ui.add_space(16.0);
             ui.vertical_centered(|ui| {
@@ -215,7 +215,7 @@ impl Content {
             ui.columns(2, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
                     View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
-                        modal.close();
+                        Modal::close();
                     });
                 });
                 columns[1].vertical_centered_justified(|ui| {
@@ -223,7 +223,7 @@ impl Content {
                         if !Node::is_running() {
                             self.exit_allowed = true;
                             cb.exit();
-                            modal.close();
+                            Modal::close();
                         } else {
                             Node::stop(true);
                             modal.disable_closing();
@@ -247,7 +247,7 @@ impl Content {
     }
 
     /// Draw creating wallet name/password input [`Modal`] content.
-    pub fn settings_modal_ui(&mut self, ui: &mut egui::Ui, modal: &Modal) {
+    pub fn settings_modal_ui(&mut self, ui: &mut egui::Ui) {
         ui.add_space(6.0);
 
         // Show theme selection.
@@ -268,7 +268,7 @@ impl Content {
         // Draw available list of languages to select.
         let locales = rust_i18n::available_locales!();
         for (index, locale) in locales.iter().enumerate() {
-            Self::language_item_ui(locale, ui, index, locales.len(), modal);
+            Self::language_item_ui(locale, ui, index, locales.len());
         }
 
         ui.add_space(8.0);
@@ -276,7 +276,7 @@ impl Content {
         // Show button to close modal.
         ui.vertical_centered_justified(|ui| {
             View::button(ui, t!("close"), Colors::white_or_black(false), || {
-                modal.close();
+                Modal::close();
             });
         });
         ui.add_space(6.0);
@@ -309,7 +309,7 @@ impl Content {
     }
 
     /// Draw language selection item content.
-    fn language_item_ui(locale: &str, ui: &mut egui::Ui, index: usize, len: usize, modal: &Modal) {
+    fn language_item_ui(locale: &str, ui: &mut egui::Ui, index: usize, len: usize) {
         // Setup layout size.
         let mut rect = ui.available_rect_before_wrap();
         rect.set_height(50.0);
@@ -334,7 +334,7 @@ impl Content {
                 View::item_button(ui, View::item_rounding(index, len, true), CHECK, None, || {
                     rust_i18n::set_locale(locale);
                     AppConfig::save_locale(locale);
-                    modal.close();
+                    Modal::close();
                 });
             } else {
                 ui.add_space(14.0);
@@ -363,7 +363,7 @@ impl Content {
     }
 
     /// Draw content for integrated node warning [`Modal`] on Android.
-    fn android_warning_modal_ui(&mut self, ui: &mut egui::Ui, modal: &Modal) {
+    fn android_warning_modal_ui(&mut self, ui: &mut egui::Ui) {
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("network.android_warning"))
@@ -374,17 +374,14 @@ impl Content {
         ui.vertical_centered_justified(|ui| {
             View::button(ui, t!("continue"), Colors::white_or_black(false), || {
                 AppConfig::show_android_integrated_node_warning();
-                modal.close();
+                Modal::close();
             });
         });
         ui.add_space(6.0);
     }
 
     /// Draw content for integrated node warning [`Modal`] on Android.
-    fn crash_report_modal_ui(&mut self,
-                             ui: &mut egui::Ui,
-                             modal: &Modal,
-                             cb: &dyn PlatformCallbacks) {
+    fn crash_report_modal_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("crash_report_warning"))
@@ -399,7 +396,7 @@ impl Content {
                     let _ = cb.share_data(name, data.as_bytes().to_vec());
                 }
                 Settings::delete_crash_report();
-                modal.close();
+                Modal::close();
             });
         });
         ui.add_space(8.0);
@@ -408,7 +405,7 @@ impl Content {
         ui.vertical_centered_justified(|ui| {
             View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                 Settings::delete_crash_report();
-                modal.close();
+                Modal::close();
             });
         });
         ui.add_space(6.0);

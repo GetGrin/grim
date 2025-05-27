@@ -117,7 +117,7 @@ impl TransportSendModal {
                         View::button(ui, t!("close"), Colors::white_or_black(false), || {
                             on_stop();
                             self.address_scan_content = None;
-                            modal.close();
+                            Modal::close();
                         });
                     });
                     cols[1].vertical_centered_justified(|ui| {
@@ -235,7 +235,7 @@ impl TransportSendModal {
         ui.columns(2, |columns| {
             columns[0].vertical_centered_justified(|ui| {
                 View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
-                    self.close(modal);
+                    self.close();
                 });
             });
             columns[1].vertical_centered_justified(|ui| {
@@ -263,7 +263,7 @@ impl TransportSendModal {
         ui.columns(2, |columns| {
             columns[0].vertical_centered_justified(|ui| {
                 View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
-                   self.close(modal);
+                   self.close();
                 });
             });
             columns[1].vertical_centered_justified(|ui| {
@@ -276,7 +276,7 @@ impl TransportSendModal {
     }
 
     /// Close modal and clear data.
-    fn close(&mut self, modal: &Modal) {
+    fn close(&mut self) {
         self.amount_edit = "".to_string();
         self.address_edit = "".to_string();
 
@@ -286,7 +286,7 @@ impl TransportSendModal {
         self.tx_info_content = None;
         self.address_scan_content = None;
 
-        modal.close();
+        Modal::close();
     }
 
     /// Send entered amount to address.

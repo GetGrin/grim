@@ -107,7 +107,7 @@ impl WalletTransactionModal {
         // Check values and setup transaction data.
         let wallet_data = wallet.get_data();
         if wallet_data.is_none() {
-            modal.close();
+            Modal::close();
             return;
         }
         let data = wallet_data.unwrap();
@@ -116,7 +116,7 @@ impl WalletTransactionModal {
             .filter(|tx| tx.data.id == self.tx_id)
             .collect::<Vec<WalletTransaction>>();
         if txs.is_empty() {
-            modal.close();
+            Modal::close();
             return;
         }
         let tx = txs.get(0).unwrap();
@@ -141,7 +141,7 @@ impl WalletTransactionModal {
                     cols[0].vertical_centered_justified(|ui| {
                         View::button(ui, t!("close"), Colors::white_or_black(false), || {
                             self.qr_code_content = None;
-                            modal.close();
+                            Modal::close();
                         });
                     });
                     cols[1].vertical_centered_justified(|ui| {
@@ -158,7 +158,7 @@ impl WalletTransactionModal {
                         View::button(ui, t!("close"), Colors::white_or_black(false), || {
                             cb.stop_camera();
                             self.scan_qr_content = None;
-                            modal.close();
+                            Modal::close();
                         });
                     });
                     cols[1].vertical_centered_justified(|ui| {
@@ -177,7 +177,7 @@ impl WalletTransactionModal {
                 // Show button to close modal.
                 ui.vertical_centered_justified(|ui| {
                     View::button(ui, t!("close"), Colors::white_or_black(false), || {
-                        modal.close();
+                        Modal::close();
                     });
                 });
             }
@@ -483,7 +483,7 @@ impl WalletTransactionModal {
                         if tx.can_finalize {
                             self.show_finalization = true;
                         } else {
-                            modal.close();
+                            Modal::close();
                         }
                     });
                 });

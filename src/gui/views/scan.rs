@@ -42,7 +42,6 @@ impl CameraScanModal {
     /// Draw [`Modal`] content.
     pub fn ui(&mut self,
               ui: &mut egui::Ui,
-              modal: &Modal,
               cb: &dyn PlatformCallbacks,
               mut on_result: impl FnMut(&QrScanResult)) {
         // Show scan result if exists or show camera content while scanning.
@@ -75,7 +74,7 @@ impl CameraScanModal {
                 View::button(ui, copy_text, Colors::white_or_black(false), || {
                     cb.copy_string_to_buffer(result_text.to_string());
                     self.qr_scan_result = None;
-                    modal.close();
+                    Modal::close();
                 });
             });
             ui.add_space(10.0);
@@ -90,7 +89,7 @@ impl CameraScanModal {
                     View::button(ui, t!("close"), Colors::white_or_black(false), || {
                         self.qr_scan_result = None;
                         self.camera_content = None;
-                        modal.close();
+                        Modal::close();
                     });
                 });
                 columns[1].vertical_centered_justified(|ui| {
@@ -120,7 +119,7 @@ impl CameraScanModal {
                     View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                         cb.stop_camera();
                         self.camera_content = None;
-                        modal.close();
+                        Modal::close();
                     });
                 });
             }

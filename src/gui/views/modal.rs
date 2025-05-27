@@ -73,10 +73,11 @@ impl Modal {
         w_state.modal.as_mut().unwrap().position = position;
     }
 
-    /// Close [`Modal`] by clearing its state..
-    pub fn close(&self) {
+    /// Close [`Modal`] by clearing its state.
+    pub fn close() {
         let mut w_nav = MODAL_STATE.write();
         w_nav.modal = None;
+        // Hide keyboard.
         KeyboardContent::hide();
     }
 
@@ -116,14 +117,8 @@ impl Modal {
     /// Remove [`Modal`] from [`ModalState`] if it's showing and can be closed.
     /// Return `false` if modal existed in state before call.
     pub fn on_back() -> bool {
-        let mut w_state = MODAL_STATE.write();
-
-        // If Modal is showing and closeable, remove it from state.
-        if w_state.modal.is_some() {
-            let modal = w_state.modal.as_ref().unwrap();
-            if modal.is_closeable() {
-                w_state.modal = None;
-            }
+        if Self::opened().is_some() {
+            Self::close();
             return false;
         }
         true

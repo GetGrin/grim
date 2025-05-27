@@ -69,7 +69,7 @@ impl ModalContainer for NetworkSettings {
                 modal: &Modal,
                 _: &dyn PlatformCallbacks) {
         match modal.id {
-            RESET_SETTINGS_CONFIRMATION_MODAL => reset_settings_confirmation_modal(ui, modal),
+            RESET_SETTINGS_CONFIRMATION_MODAL => reset_settings_confirmation_modal(ui),
             _ => {}
         }
     }
@@ -230,7 +230,7 @@ fn reset_settings_ui(ui: &mut egui::Ui) {
 }
 
 /// Confirmation to reset settings to default values.
-fn reset_settings_confirmation_modal(ui: &mut egui::Ui, modal: &Modal) {
+fn reset_settings_confirmation_modal(ui: &mut egui::Ui) {
     ui.add_space(6.0);
     ui.vertical_centered(|ui| {
         let reset_text = format!("{}?", t!("network_settings.reset_settings_desc"));
@@ -249,12 +249,12 @@ fn reset_settings_confirmation_modal(ui: &mut egui::Ui, modal: &Modal) {
             columns[0].vertical_centered_justified(|ui| {
                 View::button(ui, t!("network_settings.reset"), Colors::white_or_black(false), || {
                     NodeConfig::reset_to_default();
-                    modal.close();
+                    Modal::close();
                 });
             });
             columns[1].vertical_centered_justified(|ui| {
                 View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
-                    modal.close();
+                    Modal::close();
                 });
             });
         });

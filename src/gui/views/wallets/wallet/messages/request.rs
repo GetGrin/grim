@@ -194,7 +194,7 @@ impl MessageRequestModal {
                 View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                     self.amount_edit = "".to_string();
                     self.request_error = None;
-                    modal.close();
+                    Modal::close();
                 });
             });
             columns[1].vertical_centered_justified(|ui| {

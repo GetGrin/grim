@@ -59,7 +59,7 @@ impl OpenWalletModal {
             match m.wallet.open(ZeroingString::from(pass)) {
                 Ok(_) => {
                     m.pass_edit = "".to_string();
-                    modal.close();
+                    Modal::close();
                     on_continue(m.wallet.clone(), m.data.clone());
                 }
                 Err(_) => m.wrong_pass = true
@@ -105,7 +105,7 @@ impl OpenWalletModal {
                 columns[0].vertical_centered_justified(|ui| {
                     View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                         // Close modal.
-                        modal.close();
+                        Modal::close();
                     });
                 });
                 columns[1].vertical_centered_justified(|ui| {

@@ -159,7 +159,7 @@ impl DandelionSetup {
         let on_save = |c: &mut DandelionSetup| {
             if let Ok(epoch) = c.epoch_edit.parse::<u16>() {
                 NodeConfig::save_dandelion_epoch(epoch);
-                modal.close();
+                Modal::close();
             }
         };
 
@@ -198,7 +198,7 @@ impl DandelionSetup {
                 columns[0].vertical_centered_justified(|ui| {
                     View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                         // Close modal.
-                        modal.close();
+                        Modal::close();
                     });
                 });
                 columns[1].vertical_centered_justified(|ui| {
@@ -237,7 +237,7 @@ impl DandelionSetup {
         let on_save = |c: &mut DandelionSetup| {
             if let Ok(embargo) = c.embargo_edit.parse::<u16>() {
                 NodeConfig::save_dandelion_embargo(embargo);
-                modal.close();
+                Modal::close();
             }
         };
 
@@ -276,7 +276,7 @@ impl DandelionSetup {
                 columns[0].vertical_centered_justified(|ui| {
                     View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                         // Close modal.
-                        modal.close();
+                        Modal::close();
                     });
                 });
                 columns[1].vertical_centered_justified(|ui| {
@@ -316,7 +316,7 @@ impl DandelionSetup {
         let on_save = |c: &mut DandelionSetup| {
             if let Ok(embargo) = c.aggregation_edit.parse::<u16>() {
                 NodeConfig::save_dandelion_aggregation(embargo);
-                modal.close();
+                Modal::close();
             }
         };
 
@@ -355,7 +355,7 @@ impl DandelionSetup {
                 columns[0].vertical_centered_justified(|ui| {
                     View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                         // Close modal.
-                        modal.close();
+                        Modal::close();
                     });
                 });
                 columns[1].vertical_centered_justified(|ui| {
@@ -395,7 +395,7 @@ impl DandelionSetup {
         let on_save = |c: &mut DandelionSetup| {
             if let Ok(prob) = c.stem_prob_edit.parse::<u8>() {
                 NodeConfig::save_stem_probability(prob);
-                modal.close();
+                Modal::close();
             }
         };
 
@@ -434,7 +434,7 @@ impl DandelionSetup {
                 columns[0].vertical_centered_justified(|ui| {
                     View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                         // Close modal.
-                        modal.close();
+                        Modal::close();
                     });
                 });
                 columns[1].vertical_centered_justified(|ui| {

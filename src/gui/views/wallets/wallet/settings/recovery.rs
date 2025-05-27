@@ -153,8 +153,8 @@ impl RecoverySettings {
                         });
                     }
                     DELETE_CONFIRMATION_MODAL => {
-                        Modal::ui(ui.ctx(), |ui, modal| {
-                            self.deletion_modal_ui(ui, wallet, modal);
+                        Modal::ui(ui.ctx(), |ui, _| {
+                            self.deletion_modal_ui(ui, wallet);
                         });
                     }
                     _ => {}
@@ -205,7 +205,7 @@ impl RecoverySettings {
             ui.vertical_centered_justified(|ui| {
                 View::button(ui, t!("close"), Colors::white_or_black(false), || {
                     self.recovery_phrase = None;
-                    modal.close();
+                    Modal::close();
                 });
             });
         } else {
@@ -248,7 +248,7 @@ impl RecoverySettings {
                     columns[0].vertical_centered_justified(|ui| {
                         View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                             self.recovery_phrase = None;
-                            modal.close();
+                            Modal::close();
                         });
                     });
                     columns[1].vertical_centered_justified(|ui| {
@@ -265,8 +265,7 @@ impl RecoverySettings {
     /// Draw wallet deletion [`Modal`] content.
     fn deletion_modal_ui(&mut self,
                          ui: &mut egui::Ui,
-                         wallet: &Wallet,
-                         modal: &Modal) {
+                         wallet: &Wallet) {
         ui.add_space(8.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("wallets.delete_conf"))
@@ -283,13 +282,13 @@ impl RecoverySettings {
             ui.columns(2, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
                     View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
-                        modal.close();
+                        Modal::close();
                     });
                 });
                 columns[1].vertical_centered_justified(|ui| {
                     View::button(ui, t!("delete"), Colors::white_or_black(false), || {
                         wallet.delete_wallet();
-                        modal.close();
+                        Modal::close();
                     });
                 });
             });

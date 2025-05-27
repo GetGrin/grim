@@ -300,7 +300,7 @@ impl StratumSetup {
                 NodeConfig::save_stratum_address(&stratum_ip, &c.stratum_port_edit);
 
                 c.is_port_available = true;
-                modal.close();
+                Modal::close();
             }
         };
 
@@ -339,7 +339,7 @@ impl StratumSetup {
                     columns[0].vertical_centered_justified(|ui| {
                         View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                             // Close modal.
-                            modal.close();
+                            Modal::close();
                         });
                     });
                     columns[1].vertical_centered_justified(|ui| {
@@ -385,7 +385,7 @@ impl StratumSetup {
         let on_save = |c: &mut StratumSetup| {
             if let Ok(time) = c.attempt_time_edit.parse::<u32>() {
                 NodeConfig::save_stratum_attempt_time(time);
-                modal.close();
+                Modal::close();
             }
         };
 
@@ -424,7 +424,7 @@ impl StratumSetup {
                 columns[0].vertical_centered_justified(|ui| {
                     View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                         // Close modal.
-                        modal.close();
+                        Modal::close();
                     });
                 });
                 columns[1].vertical_centered_justified(|ui| {
@@ -464,7 +464,7 @@ impl StratumSetup {
         let on_save = |c: &mut StratumSetup| {
             if let Ok(diff) = c.min_share_diff_edit.parse::<u64>() {
                 NodeConfig::save_stratum_min_share_diff(diff);
-                modal.close();
+                Modal::close();
             }
         };
 
@@ -503,7 +503,7 @@ impl StratumSetup {
                 columns[0].vertical_centered_justified(|ui| {
                     View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                         // Close modal.
-                        modal.close();
+                        Modal::close();
                     });
                 });
                 columns[1].vertical_centered_justified(|ui| {

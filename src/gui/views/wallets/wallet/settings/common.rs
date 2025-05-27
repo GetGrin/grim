@@ -175,7 +175,7 @@ impl CommonSettings {
         let on_save = |c: &mut CommonSettings| {
             if !c.name_edit.is_empty() {
                 wallet.change_name(c.name_edit.clone());
-                modal.close();
+                Modal::close();
             }
         };
 
@@ -203,7 +203,7 @@ impl CommonSettings {
                 columns[0].vertical_centered_justified(|ui| {
                     View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                         // Close modal.
-                        modal.close();
+                        Modal::close();
                     });
                 });
                 columns[1].vertical_centered_justified(|ui| {
@@ -235,7 +235,7 @@ impl CommonSettings {
                     c.old_pass_edit = "".to_string();
                     c.new_pass_edit = "".to_string();
                     // Close modal.
-                    modal.close();
+                    Modal::close();
                 }
                 Err(_) => c.wrong_pass = true
             }
@@ -298,7 +298,7 @@ impl CommonSettings {
                 columns[0].vertical_centered_justified(|ui| {
                     View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                         // Close modal.
-                        modal.close();
+                        Modal::close();
                     });
                 });
                 columns[1].vertical_centered_justified(|ui| {
@@ -320,7 +320,7 @@ impl CommonSettings {
         let on_save = |c: &mut CommonSettings| {
             if let Ok(min_conf) = c.min_confirmations_edit.parse::<u64>() {
                 wallet.update_min_confirmations(min_conf);
-                modal.close();
+                Modal::close();
             }
         };
 
@@ -357,7 +357,7 @@ impl CommonSettings {
                 columns[0].vertical_centered_justified(|ui| {
                     View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                         // Close modal.
-                        modal.close();
+                        Modal::close();
                     });
                 });
                 columns[1].vertical_centered_justified(|ui| {
