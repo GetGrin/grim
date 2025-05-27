@@ -162,7 +162,7 @@ impl TextEdit {
                     if self.enter_pressed {
                         KeyboardContent::unshift();
                     }
-                    KeyboardContent::show(self.numeric);
+                    KeyboardContent::show_window(self.numeric);
                 }
             });
         });

@@ -78,12 +78,8 @@ impl<Platform: PlatformCallbacks> App<Platform> {
         // Handle Esc keyboard key event and platform Back button key event.
         let back_pressed = BACK_BUTTON_PRESSED.load(Ordering::Relaxed);
         if back_pressed || ctx.input_mut(|i| i.consume_key(Modifiers::NONE, egui::Key::Escape)) {
-            // Hide keyboard or pass event to content.
-            if KeyboardContent::showing() {
-                KeyboardContent::hide();
-            } else {
-                self.content.on_back(&self.platform);
-            }
+            // Pass event to content.
+            self.content.on_back(&self.platform);
             if back_pressed {
                 BACK_BUTTON_PRESSED.store(false, Ordering::Relaxed);
             }
