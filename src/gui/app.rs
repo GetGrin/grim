@@ -14,7 +14,7 @@
 
 use std::sync::atomic::{AtomicBool, Ordering};
 use lazy_static::lazy_static;
-use egui::{Align, Context, CursorIcon, Layout, Modifiers, ResizeDirection, Rounding, Stroke, UiBuilder, ViewportCommand};
+use egui::{Align, Context, CornerRadius, CursorIcon, Layout, Modifiers, ResizeDirection, Stroke, UiBuilder, ViewportCommand, StrokeKind};
 use egui::epaint::{RectShape};
 
 use crate::AppConfig;
@@ -163,9 +163,10 @@ impl<Platform: PlatformCallbacks> App<Platform> {
             r
         };
         let content_bg = RectShape::new(content_bg_rect,
-                                        Rounding::ZERO,
+                                        CornerRadius::ZERO,
                                         Colors::fill_lite(),
-                                        View::default_stroke());
+                                        View::default_stroke(),
+                                        StrokeKind::Middle);
         // Draw content background.
         ui.painter().add(content_bg);
 
@@ -174,7 +175,7 @@ impl<Platform: PlatformCallbacks> App<Platform> {
             content_rect = content_rect.shrink(Content::WINDOW_FRAME_MARGIN);
         }
         // Draw window content.
-        ui.allocate_new_ui(UiBuilder::new().max_rect(content_rect), |ui| {
+        ui.scope_builder(UiBuilder::new().max_rect(content_rect), |ui| {
             // Draw window title.
             self.window_title_ui(ui, is_fullscreen);
             ui.add_space(-1.0);
@@ -217,7 +218,7 @@ impl<Platform: PlatformCallbacks> App<Platform> {
             rect.max.y = rect.min.y + View::get_top_inset() + TitlePanel::HEIGHT;
             rect
         };
-        let title_bg = RectShape::filled(title_rect, Rounding::ZERO, Colors::yellow());
+        let title_bg = RectShape::filled(title_rect, CornerRadius::ZERO, Colors::yellow());
         ui.painter().add(title_bg);
     }
 
@@ -236,15 +237,15 @@ impl<Platform: PlatformCallbacks> App<Platform> {
         };
         let is_mac = egui::os::OperatingSystem::from_target_os() == egui::os::OperatingSystem::Mac;
         let window_title_bg = RectShape::new(title_bg_rect, if is_fullscreen || is_mac {
-            Rounding::ZERO
+            CornerRadius::ZERO
         } else {
-            Rounding {
-                nw: 8.0,
-                ne: 8.0,
-                sw: 0.0,
-                se: 0.0,
+            CornerRadius {
+                nw: 8.0 as u8,
+                ne: 8.0 as u8,
+                sw: 0.0 as u8,
+                se: 0.0 as u8,
             }
-        }, Colors::yellow_dark(), Stroke::new(1.0, Colors::STROKE));
+        }, Colors::yellow_dark(), Stroke::new(1.0, Colors::STROKE), StrokeKind::Middle);
         // Draw title background.
         ui.painter().add(window_title_bg);
 
@@ -294,7 +295,7 @@ impl<Platform: PlatformCallbacks> App<Platform> {
             Colors::title(true),
         );
 
-        ui.allocate_new_ui(UiBuilder::new().max_rect(title_rect), |ui| {
+        ui.scope_builder(UiBuilder::new().max_rect(title_rect), |ui| {
             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                 // Draw button to close window.
                 View::title_button_small(ui, X, |_| {

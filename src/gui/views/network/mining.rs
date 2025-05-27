@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::{RichText, Rounding, ScrollArea};
+use egui::{RichText, CornerRadius, ScrollArea, StrokeKind};
 use egui::scroll_area::ScrollBarVisibility;
 use grin_chain::SyncStatus;
 use grin_servers::WorkerStats;
@@ -190,13 +190,17 @@ impl NodeTab for NetworkMining {
 const WORKER_ITEM_HEIGHT: f32 = 76.0;
 
 /// Draw worker statistics item.
-fn worker_item_ui(ui: &mut egui::Ui, ws: &WorkerStats, rounding: Rounding) {
+fn worker_item_ui(ui: &mut egui::Ui, ws: &WorkerStats, rounding: CornerRadius) {
     ui.horizontal_wrapped(|ui| {
         ui.vertical_centered_justified(|ui| {
             // Draw round background.
             let mut rect = ui.available_rect_before_wrap();
             rect.set_height(WORKER_ITEM_HEIGHT);
-            ui.painter().rect(rect, rounding, Colors::white_or_black(false), View::item_stroke());
+            ui.painter().rect(rect,
+                              rounding,
+                              Colors::white_or_black(false),
+                              View::item_stroke(),
+                              StrokeKind::Middle);
 
             ui.add_space(2.0);
             ui.horizontal(|ui| {

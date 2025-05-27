@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::{RichText, Rounding, ScrollArea, vec2};
+use egui::{RichText, CornerRadius, ScrollArea, vec2, StrokeKind};
 use egui::scroll_area::ScrollBarVisibility;
 use grin_core::consensus::{DAY_HEIGHT, GRIN_BASE, HOUR_SEC, REWARD};
 use grin_servers::{DiffBlock, ServerStats};
@@ -138,7 +138,7 @@ fn blocks_ui(ui: &mut egui::Ui, stats: &ServerStats) {
 }
 
 /// Draw block difficulty item.
-fn block_item_ui(ui: &mut egui::Ui, db: &DiffBlock, rounding: Rounding) {
+fn block_item_ui(ui: &mut egui::Ui, db: &DiffBlock, rounding: CornerRadius) {
     let mut rect = ui.available_rect_before_wrap();
     rect.set_height(BLOCK_ITEM_HEIGHT);
     ui.allocate_ui(rect.size(), |ui| {
@@ -150,7 +150,11 @@ fn block_item_ui(ui: &mut egui::Ui, db: &DiffBlock, rounding: Rounding) {
                 // Draw round background.
                 rect.min += vec2(8.0, 0.0);
                 rect.max -= vec2(8.0, 0.0);
-                ui.painter().rect(rect, rounding, Colors::white_or_black(false), View::item_stroke());
+                ui.painter().rect(rect,
+                                  rounding,
+                                  Colors::white_or_black(false),
+                                  View::item_stroke(),
+                                  StrokeKind::Middle);
 
                 // Draw block hash.
                 ui.horizontal(|ui| {

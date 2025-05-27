@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::{Align, Layout, RichText, Rounding};
+use egui::{Align, Layout, RichText, CornerRadius, StrokeKind};
 
 use crate::AppConfig;
 use crate::gui::Colors;
@@ -113,7 +113,7 @@ impl ConnectionsContent {
                         View::item_button(ui, button_rounding, TRASH, None, || {
                             ConnectionsConfig::remove_ext_conn(conn.id);
                         });
-                        View::item_button(ui, Rounding::default(), PENCIL, None, || {
+                        View::item_button(ui, CornerRadius::default(), PENCIL, None, || {
                             self.show_add_ext_conn_modal(Some(conn.clone()));
                         });
                     });
@@ -128,7 +128,7 @@ impl ConnectionsContent {
         let mut rect = ui.available_rect_before_wrap();
         rect.set_height(78.0);
         let rounding = View::item_rounding(0, 1, false);
-        ui.painter().rect(rect, rounding, Colors::fill(), View::item_stroke());
+        ui.painter().rect(rect, rounding, Colors::fill(), View::item_stroke(), StrokeKind::Middle);
 
         ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
             // Draw custom button.
@@ -137,11 +137,11 @@ impl ConnectionsContent {
             // Draw buttons to start/stop node.
             if Node::get_error().is_none() {
                 if !Node::is_running() {
-                    View::item_button(ui, Rounding::default(), POWER, Some(Colors::green()), || {
+                    View::item_button(ui, CornerRadius::default(), POWER, Some(Colors::green()), || {
                         Node::start();
                     });
                 } else if !Node::is_starting() && !Node::is_stopping() && !Node::is_restarting() {
-                    View::item_button(ui, Rounding::default(), POWER, Some(Colors::red()), || {
+                    View::item_button(ui, CornerRadius::default(), POWER, Some(Colors::red()), || {
                         Node::stop(false);
                     });
                 }
@@ -200,7 +200,11 @@ impl ConnectionsContent {
         // Draw round background.
         let bg_rect = rect.clone();
         let item_rounding = View::item_rounding(index, len, false);
-        ui.painter().rect(bg_rect, item_rounding, Colors::fill(), View::item_stroke());
+        ui.painter().rect(bg_rect,
+                          item_rounding,
+                          Colors::fill(),
+                          View::item_stroke(),
+                          StrokeKind::Middle);
 
         ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
             // Draw provided buttons.

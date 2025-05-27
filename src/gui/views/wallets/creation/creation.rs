@@ -115,10 +115,10 @@ impl WalletCreation {
         egui::TopBottomPanel::bottom("wallet_creation_step_panel")
             .frame(egui::Frame {
                 inner_margin: Margin {
-                    left: View::far_left_inset_margin(ui) + View::TAB_ITEMS_PADDING,
-                    right: View::get_right_inset() + View::TAB_ITEMS_PADDING,
-                    top: View::TAB_ITEMS_PADDING,
-                    bottom: View::get_bottom_inset() + View::TAB_ITEMS_PADDING,
+                    left: (View::far_left_inset_margin(ui) + View::TAB_ITEMS_PADDING) as i8,
+                    right: (View::get_right_inset() + View::TAB_ITEMS_PADDING) as i8,
+                    top: View::TAB_ITEMS_PADDING as i8,
+                    bottom: (View::get_bottom_inset() + View::TAB_ITEMS_PADDING) as i8,
                 },
                 fill: Colors::fill_deep(),
                 ..Default::default()
@@ -143,10 +143,10 @@ impl WalletCreation {
         egui::CentralPanel::default()
             .frame(egui::Frame {
                 inner_margin: Margin {
-                    left: View::far_left_inset_margin(ui) + 4.0,
-                    right: View::get_right_inset() + 4.0,
-                    top: 3.0,
-                    bottom: 4.0,
+                    left: (View::far_left_inset_margin(ui) + 4.0) as i8,
+                    right: (View::get_right_inset() + 4.0) as i8,
+                    top: 3.0 as i8,
+                    bottom: 4.0 as i8,
                 },
                 ..Default::default()
             })

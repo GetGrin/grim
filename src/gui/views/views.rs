@@ -16,11 +16,12 @@ use lazy_static::lazy_static;
 use std::sync::atomic::{AtomicI32, Ordering};
 
 use egui::epaint::text::TextWrapping;
-use egui::epaint::{Color32, FontId, PathShape, PathStroke, RectShape, Rounding, Stroke};
+use egui::epaint::{Color32, FontId, PathShape, PathStroke, RectShape, Stroke};
 use egui::load::SizedTexture;
 use egui::os::OperatingSystem;
 use egui::text::{LayoutJob, TextFormat};
-use egui::{lerp, Button, CursorIcon, PointerState, Rect, Response, Rgba, RichText, Sense, SizeHint, Spinner, TextureHandle, TextureOptions, UiBuilder, Widget};
+use egui::{lerp, Button, CornerRadius, CursorIcon, PointerState, Rect, Response, Rgba, RichText, Sense, SizeHint, Spinner, StrokeKind, TextureHandle, TextureOptions, UiBuilder, Widget};
+use egui::emath::GuiRounding;
 use egui_extras::image::load_svg_bytes_with_size;
 
 use crate::gui::icons::{CHECK_SQUARE, SQUARE};
@@ -187,7 +188,7 @@ impl View {
             ui.style_mut().visuals.widgets.inactive.bg_stroke = Stroke::NONE;
             ui.style_mut().visuals.widgets.hovered.bg_stroke = Stroke::NONE;
             ui.style_mut().visuals.widgets.active.bg_stroke = Stroke::NONE;
-            ui.style_mut().visuals.widgets.active.rounding = Rounding::default();
+            ui.style_mut().visuals.widgets.active.corner_radius = CornerRadius::default();
             ui.style_mut().visuals.widgets.active.expansion = 0.0;
 
             // Setup text.
@@ -310,7 +311,7 @@ impl View {
 
     /// Draw list item [`Button`] with provided rounding.
     pub fn item_button(ui: &mut egui::Ui,
-                       rounding: Rounding,
+                       rounding: CornerRadius,
                        text: &'static str,
                        color: Option<Color32>,
                        action: impl FnOnce()) {
@@ -339,7 +340,7 @@ impl View {
 
             // Show button.
             let br = Button::new(RichText::new(text).size(20.0).color(text_color))
-                .rounding(rounding)
+                .corner_radius(rounding)
                 .min_size(button_size)
                 .ui(ui)
                 .on_hover_cursor(CursorIcon::PointingHand);
@@ -360,7 +361,7 @@ impl View {
     }
 
     /// Calculate item background/button rounding based on item index.
-    pub fn item_rounding(index: usize, len: usize, is_button: bool) -> Rounding {
+    pub fn item_rounding(index: usize, len: usize, is_button: bool) -> CornerRadius {
         let corners = if is_button {
             if len == 1 {
                 [false, true, true, false]
@@ -382,11 +383,11 @@ impl View {
                 [false, false, false, false]
             }
         };
-        Rounding {
-            nw: if corners[0] { 8.0 } else { 0.0 },
-            ne: if corners[1] { 8.0 } else { 0.0 },
-            sw: if corners[3] { 8.0 } else { 0.0 },
-            se: if corners[2] { 8.0 } else { 0.0 },
+        CornerRadius {
+            nw: if corners[0] { 8.0 as u8 } else { 0.0 as u8 },
+            ne: if corners[1] { 8.0 as u8 } else { 0.0 as u8 },
+            sw: if corners[3] { 8.0 as u8 } else { 0.0 as u8 },
+            se: if corners[2] { 8.0 as u8 } else { 0.0 as u8 },
         }
     }
 
@@ -398,16 +399,16 @@ impl View {
         let rect = ui.available_rect_before_wrap();
 
         // Create background shape.
-        let mut bg_shape = RectShape::new(rect, Rounding {
-            nw: if r[0] { 8.0 } else { 0.0 },
-            ne: if r[1] { 8.0 } else { 0.0 },
-            sw: if r[2] { 8.0 } else { 0.0 },
-            se: if r[3] { 8.0 } else { 0.0 },
-        }, Colors::fill_lite(), Self::item_stroke());
-        let bg_idx = ui.painter().add(bg_shape);
+        let mut bg_shape = RectShape::new(rect, CornerRadius {
+            nw: if r[0] { 8.0 as u8 } else { 0.0 as u8 },
+            ne: if r[1] { 8.0 as u8 } else { 0.0 as u8 },
+            sw: if r[2] { 8.0 as u8 } else { 0.0 as u8 },
+            se: if r[3] { 8.0 as u8 } else { 0.0 as u8 },
+        }, Colors::fill_lite(), Self::item_stroke(), StrokeKind::Middle);
+        let bg_idx = ui.painter().add(bg_shape.clone());
 
         // Draw box content.
-        let content_resp = ui.allocate_new_ui(UiBuilder::new().max_rect(rect), |ui| {
+        let content_resp = ui.scope_builder(UiBuilder::new().max_rect(rect), |ui| {
             ui.vertical_centered_justified(|ui| {
                 ui.add_space(4.0);
                 ui.scope(|ui| {
@@ -447,7 +448,7 @@ impl View {
             let side_margin = 28.0;
             rect.min += egui::emath::vec2(side_margin, ui.available_height() / 2.0 - height / 2.0);
             rect.max -= egui::emath::vec2(side_margin, 0.0);
-            ui.allocate_new_ui(UiBuilder::new().max_rect(rect), |ui| {
+            ui.scope_builder(UiBuilder::new().max_rect(rect), |ui| {
                 (content)(ui);
             });
         });
@@ -506,7 +507,7 @@ impl View {
         let (line_rect, _) = ui.allocate_exact_size(line_size, Sense::hover());
         let painter = ui.painter();
         painter.hline(line_rect.x_range(),
-                      painter.round_to_pixel(line_rect.center().y),
+                      line_rect.center().y.round_to_pixels(painter.pixels_per_point()),
                       Stroke { width: 1.0, color });
     }
 
@@ -556,7 +557,7 @@ impl View {
                      name: &str,
                      svg: &[u8],
                      size: Option<SizeHint>) -> TextureHandle {
-        let color_img = load_svg_bytes_with_size(svg, size).unwrap();
+        let color_img = load_svg_bytes_with_size(svg, size, &usvg::Options::default()).unwrap();
         // Create image texture.
         let texture_handle = ui.ctx().load_texture(name,
                                                    color_img.clone(),
@@ -605,7 +606,7 @@ impl View {
         if resp.clicked() || resp.dragged() {
             on_click();
         }
-        let shape = RectShape::filled(resp.rect, Rounding::ZERO, Colors::semi_transparent());
+        let shape = RectShape::filled(resp.rect, CornerRadius::ZERO, Colors::semi_transparent());
         ui.painter().add(shape);
     }
 

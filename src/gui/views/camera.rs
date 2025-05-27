@@ -78,7 +78,7 @@ impl CameraContent {
                 r.min.x = r.max.x - 52.0;
                 r
             };
-            ui.allocate_new_ui(UiBuilder::new().max_rect(r), |ui| {
+            ui.scope_builder(UiBuilder::new().max_rect(r), |ui| {
                 let rotate_img = CAMERA_ROTATE.to_string();
                 View::button(ui, rotate_img, Colors::white_or_black(false), || {
                     cb.switch_camera();

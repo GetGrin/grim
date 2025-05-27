@@ -15,7 +15,7 @@
 use std::fs;
 use std::sync::atomic::{AtomicBool, Ordering};
 use egui::os::OperatingSystem;
-use egui::{Align, Layout, RichText};
+use egui::{Align, Layout, RichText, StrokeKind};
 use lazy_static::lazy_static;
 
 use crate::gui::Colors;
@@ -317,7 +317,11 @@ impl Content {
         // Draw round background.
         let bg_rect = rect.clone();
         let item_rounding = View::item_rounding(index, len, false);
-        ui.painter().rect(bg_rect, item_rounding, Colors::fill(), View::item_stroke());
+        ui.painter().rect(bg_rect,
+                          item_rounding,
+                          Colors::fill(),
+                          View::item_stroke(),
+                          StrokeKind::Middle);
 
         ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
             // Draw button to select language.

@@ -13,7 +13,7 @@
 // limitations under the License.
 
 use egui::scroll_area::ScrollBarVisibility;
-use egui::{Align, Layout, RichText, ScrollArea};
+use egui::{Align, Layout, RichText, ScrollArea, StrokeKind};
 
 use crate::gui::Colors;
 use crate::gui::icons::{CHECK, CHECK_FAT, COMPUTER_TOWER, FOLDER_OPEN, GLOBE_SIMPLE, PLUGS_CONNECTED};
@@ -108,7 +108,11 @@ impl WalletsModal {
         let mut rect = ui.available_rect_before_wrap();
         rect.set_height(78.0);
         let rounding = View::item_rounding(0, 1, false);
-        ui.painter().rect(rect, rounding, Colors::fill(), View::hover_stroke());
+        ui.painter().rect(rect,
+                          rounding,
+                          Colors::fill(),
+                          View::hover_stroke(),
+                          StrokeKind::Middle);
 
         ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
             if self.can_open {

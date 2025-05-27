@@ -13,7 +13,7 @@
 // limitations under the License.
 
 use std::time::Duration;
-use egui::{Align, Id, Layout, Margin, RichText, Rounding, ScrollArea};
+use egui::{Align, CornerRadius, Id, Layout, Margin, RichText, ScrollArea, StrokeKind};
 use egui::scroll_area::ScrollBarVisibility;
 
 use crate::AppConfig;
@@ -182,10 +182,10 @@ impl WalletsContent {
             egui::TopBottomPanel::bottom("wallets_bottom_panel")
                 .frame(egui::Frame {
                     inner_margin: Margin {
-                        left: View::far_left_inset_margin(ui) + View::TAB_ITEMS_PADDING,
-                        right: View::far_right_inset_margin(ui) + View::TAB_ITEMS_PADDING,
-                        top: View::TAB_ITEMS_PADDING,
-                        bottom: View::get_bottom_inset() + View::TAB_ITEMS_PADDING,
+                        left: (View::far_left_inset_margin(ui) + View::TAB_ITEMS_PADDING) as i8,
+                        right: (View::far_right_inset_margin(ui) + View::TAB_ITEMS_PADDING) as i8,
+                        top: View::TAB_ITEMS_PADDING as i8,
+                        bottom: (View::get_bottom_inset() + View::TAB_ITEMS_PADDING) as i8,
                     },
                     fill: Colors::fill(),
                     ..Default::default()
@@ -226,10 +226,10 @@ impl WalletsContent {
                 .resizable(false)
                 .frame(egui::Frame {
                     inner_margin: Margin {
-                        left: View::far_left_inset_margin(ui) + 4.0,
-                        right: View::far_right_inset_margin(ui) + 4.0,
-                        top: 3.0,
-                        bottom: 4.0,
+                        left: (View::far_left_inset_margin(ui) + 4.0) as i8,
+                        right: (View::far_right_inset_margin(ui) + 4.0) as i8,
+                        top: 3.0 as i8,
+                        bottom: 4.0 as i8,
                     },
                     fill: Colors::fill_deep(),
                     ..Default::default()
@@ -536,12 +536,12 @@ impl WalletsContent {
         let mut rect = ui.available_rect_before_wrap();
         rect.set_height(78.0);
         let rounding = View::item_rounding(0, 1, false);
-        let (bg, stroke) = if current {
-            (Colors::fill_deep(), View::item_stroke())
+        let bg = if current {
+            Colors::fill_deep()
         } else {
-            (Colors::fill(), View::hover_stroke())
+            Colors::fill()
         };
-        ui.painter().rect(rect, rounding, bg, stroke);
+        ui.painter().rect(rect, rounding, bg, View::item_stroke(), StrokeKind::Middle);
 
         ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
             if !wallet.is_open() {
@@ -551,7 +551,7 @@ impl WalletsContent {
                 });
                 if !wallet.syncing() {
                     let mut show_selection = false;
-                    View::item_button(ui, Rounding::default(), GLOBE, None, || {
+                    View::item_button(ui, CornerRadius::default(), GLOBE, None, || {
                         self.wallet_content = Some(WalletContent::new(wallet.clone(), None));
                         self.conn_selection_content = Some(
                             WalletConnectionModal::new(wallet.get_current_connection())
@@ -577,7 +577,7 @@ impl WalletsContent {
                 // Show button to close opened wallet.
                 if !wallet.is_closing()  {
                     View::item_button(ui, if !current {
-                        Rounding::default()
+                        CornerRadius::default()
                     } else {
                         View::item_rounding(0, 1, true)
                     }, LOCK_KEY, None, || {

@@ -16,7 +16,7 @@ use std::thread;
 use std::sync::Arc;
 use parking_lot::RwLock;
 use egui::scroll_area::ScrollBarVisibility;
-use egui::{Align, Id, Layout, RichText, Rounding, ScrollArea};
+use egui::{Align, Id, Layout, RichText, CornerRadius, ScrollArea, StrokeKind};
 use grin_util::ToHex;
 use grin_core::core::amount_to_hr_string;
 use grin_wallet_libwallet::{Error, Slate, SlateState, TxLogEntryType};
@@ -230,7 +230,7 @@ impl WalletTransactionModal {
         // Draw tx item background.
         let p = ui.painter();
         let r = View::item_rounding(0, 2, false);
-        p.rect(rect, r, Colors::TRANSPARENT, View::item_stroke());
+        p.rect(rect, r, Colors::TRANSPARENT, View::item_stroke(), StrokeKind::Middle);
 
         // Show transaction amount status and time.
         let data = wallet.get_data().unwrap();
@@ -274,7 +274,7 @@ impl WalletTransactionModal {
             // Draw button to cancel transaction.
             if wallet_loaded && tx.can_cancel() {
                 let r = if tx.can_finalize {
-                    Rounding::default()
+                    CornerRadius::default()
                 } else {
                     View::item_rounding(0, 2, true)
                 };
@@ -555,13 +555,13 @@ fn info_item_ui(ui: &mut egui::Ui,
     let bg_rect = rect.clone();
     let mut rounding = View::item_rounding(1, 3, false);
 
-    ui.painter().rect(bg_rect, rounding, Colors::fill(), View::item_stroke());
+    ui.painter().rect(bg_rect, rounding, Colors::fill(), View::item_stroke(), StrokeKind::Middle);
 
     ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
         // Draw button to copy transaction info value.
         if copy {
-            rounding.nw = 0.0;
-            rounding.sw = 0.0;
+            rounding.nw = 0.0 as u8;
+            rounding.sw = 0.0 as u8;
             View::item_button(ui, rounding, COPY, None, || {
                 cb.copy_string_to_buffer(value.clone());
             });

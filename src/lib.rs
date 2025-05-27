@@ -185,7 +185,7 @@ pub fn setup_fonts(ctx: &Context) {
 
     fonts.font_data.insert(
         "phosphor".to_owned(),
-        egui::FontData::from_static(include_bytes!(
+        Arc::new(egui::FontData::from_static(include_bytes!(
             "../fonts/phosphor.ttf"
         )).tweak(egui::FontTweak {
             scale: 1.0,
@@ -193,7 +193,7 @@ pub fn setup_fonts(ctx: &Context) {
             y_offset: 0.0,
             baseline_offset_factor: 0.16,
         }),
-    );
+    ));
     fonts
         .families
         .entry(Proportional)
@@ -202,7 +202,7 @@ pub fn setup_fonts(ctx: &Context) {
 
     fonts.font_data.insert(
         "noto".to_owned(),
-        egui::FontData::from_static(include_bytes!(
+        Arc::new(egui::FontData::from_static(include_bytes!(
             "../fonts/noto_sc_reg.otf"
         )).tweak(egui::FontTweak {
             scale: 1.0,
@@ -210,7 +210,7 @@ pub fn setup_fonts(ctx: &Context) {
             y_offset: 0.0,
             baseline_offset_factor: 0.17,
         }),
-    );
+    ));
     fonts
         .families
         .entry(Proportional)

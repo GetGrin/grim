@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::{Align, Layout, RichText, Rounding};
+use egui::{Align, CornerRadius, Layout, RichText, StrokeKind};
 
 use crate::gui::Colors;
 use crate::gui::icons::{CHECK_CIRCLE, COPY, DOTS_THREE_CIRCLE, EXPORT, GEAR_SIX, GLOBE_SIMPLE, POWER, QR_CODE, SHIELD_CHECKERED, SHIELD_SLASH, WARNING_CIRCLE, X_CIRCLE};
@@ -148,7 +148,11 @@ impl WalletTransport {
         // Draw round background.
         let bg_rect = rect.clone();
         let item_rounding = View::item_rounding(0, 2, false);
-        ui.painter().rect(bg_rect, item_rounding, Colors::fill_lite(), View::item_stroke());
+        ui.painter().rect(bg_rect,
+                          item_rounding,
+                          Colors::fill_lite(),
+                          View::item_stroke(),
+                          StrokeKind::Middle);
 
         ui.vertical(|ui| {
             ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
@@ -168,14 +172,14 @@ impl WalletTransport {
                 let service_id = &wallet.identifier();
                 if  !Tor::is_service_starting(service_id) && wallet.foreign_api_port().is_some() {
                     if !Tor::is_service_running(service_id) {
-                        View::item_button(ui, Rounding::default(), POWER, Some(Colors::green()), || {
+                        View::item_button(ui, CornerRadius::default(), POWER, Some(Colors::green()), || {
                             if let Ok(key) = wallet.secret_key() {
                                 let api_port = wallet.foreign_api_port().unwrap();
                                 Tor::start_service(api_port, key, service_id);
                             }
                         });
                     } else {
-                        View::item_button(ui, Rounding::default(), POWER, Some(Colors::red()), || {
+                        View::item_button(ui, CornerRadius::default(), POWER, Some(Colors::red()), || {
                             Tor::stop_service(service_id);
                         });
                     }
@@ -254,7 +258,11 @@ impl WalletTransport {
         } else {
             View::item_rounding(1, 2, false)
         };
-        ui.painter().rect(bg_rect, item_rounding, Colors::fill_lite(), View::item_stroke());
+        ui.painter().rect(bg_rect,
+                          item_rounding,
+                          Colors::fill_lite(),
+                          View::item_stroke(),
+                          StrokeKind::Middle);
 
         ui.vertical(|ui| {
             ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
@@ -274,7 +282,7 @@ impl WalletTransport {
                 });
 
                 // Show button to enable/disable Tor listener for current wallet.
-                View::item_button(ui, Rounding::default(), COPY, None, || {
+                View::item_button(ui, CornerRadius::default(), COPY, None, || {
                     cb.copy_string_to_buffer(addr.clone());
                 });
 
@@ -338,7 +346,11 @@ impl WalletTransport {
         // Draw round background.
         let bg_rect = rect.clone();
         let item_rounding = View::item_rounding(1, 2, false);
-        ui.painter().rect(bg_rect, item_rounding, Colors::fill(), View::item_stroke());
+        ui.painter().rect(bg_rect,
+                          item_rounding,
+                          Colors::fill(),
+                          View::item_stroke(),
+                          StrokeKind::Middle);
 
         ui.vertical(|ui| {
             ui.allocate_ui_with_layout(rect.size(), Layout::top_down(Align::Center), |ui| {

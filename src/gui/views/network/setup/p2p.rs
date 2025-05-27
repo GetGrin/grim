@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::{Align, Id, Layout, RichText};
+use egui::{Align, Id, Layout, RichText, StrokeKind};
 use grin_core::global::ChainTypes;
 
 use crate::AppConfig;
@@ -775,7 +775,11 @@ fn peer_item_ui(ui: &mut egui::Ui,
     let mut bg_rect = rect.clone();
     bg_rect.min += egui::emath::vec2(6.0, 0.0);
     let item_rounding = View::item_rounding(index, len, false);
-    ui.painter().rect(bg_rect, item_rounding, Colors::white_or_black(false), View::item_stroke());
+    ui.painter().rect(bg_rect,
+                      item_rounding,
+                      Colors::white_or_black(false),
+                      View::item_stroke(),
+                      StrokeKind::Middle);
 
     ui.vertical(|ui| {
         ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {

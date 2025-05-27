@@ -13,7 +13,7 @@
 // limitations under the License.
 
 use std::time::Duration;
-use egui::{Align, Id, Layout, Margin, RichText, ScrollArea};
+use egui::{Align, Id, Layout, Margin, RichText, ScrollArea, StrokeKind};
 use egui::scroll_area::ScrollBarVisibility;
 use grin_chain::SyncStatus;
 use grin_core::core::amount_to_hr_string;
@@ -123,10 +123,10 @@ impl WalletContent {
         egui::TopBottomPanel::top(Id::from("wallet_account").with(wallet.identifier()))
             .frame(egui::Frame {
                 inner_margin: Margin {
-                    left: View::far_left_inset_margin(ui) + 4.0,
-                    right: View::get_right_inset() + 4.0,
-                    top: 4.0,
-                    bottom: 0.0,
+                    left: (View::far_left_inset_margin(ui) + 4.0) as i8,
+                    right: (View::get_right_inset() + 4.0) as i8,
+                    top: 4.0 as i8,
+                    bottom: 0.0 as i8,
                 },
                 fill: Colors::fill(),
                 ..Default::default()
@@ -185,10 +185,10 @@ impl WalletContent {
         egui::TopBottomPanel::bottom("wallet_tabs")
             .frame(egui::Frame {
                 inner_margin: Margin {
-                    left: View::far_left_inset_margin(ui) + View::TAB_ITEMS_PADDING,
-                    right: View::get_right_inset() + View::TAB_ITEMS_PADDING,
-                    top: View::TAB_ITEMS_PADDING,
-                    bottom: View::get_bottom_inset() + View::TAB_ITEMS_PADDING,
+                    left: (View::far_left_inset_margin(ui) + View::TAB_ITEMS_PADDING) as i8,
+                    right: (View::get_right_inset() + View::TAB_ITEMS_PADDING) as i8,
+                    top: View::TAB_ITEMS_PADDING as i8,
+                    bottom: (View::get_bottom_inset() + View::TAB_ITEMS_PADDING) as i8,
                 },
                 fill: Colors::fill(),
                 ..Default::default()
@@ -214,10 +214,10 @@ impl WalletContent {
         egui::CentralPanel::default()
             .frame(egui::Frame {
                 inner_margin:  Margin {
-                    left: View::far_left_inset_margin(ui) + 4.0,
-                    right: View::get_right_inset() + 4.0,
-                    top: 0.0,
-                    bottom: 4.0,
+                    left: (View::far_left_inset_margin(ui) + 4.0) as i8,
+                    right: (View::get_right_inset() + 4.0) as i8,
+                    top: 0.0 as i8,
+                    bottom: 4.0 as i8,
                 },
                 ..Default::default()
             })
@@ -287,7 +287,11 @@ impl WalletContent {
         rect.set_height(75.0);
         // Draw round background.
         let rounding = View::item_rounding(0, 2, false);
-        ui.painter().rect(rect, rounding, Colors::fill_lite(), View::item_stroke());
+        ui.painter().rect(rect,
+                          rounding,
+                          Colors::fill_lite(),
+                          View::item_stroke(),
+                          StrokeKind::Middle);
 
         ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
             // Draw button to show QR code scanner.

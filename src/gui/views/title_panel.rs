@@ -16,7 +16,7 @@ use egui::{Margin, Id, Layout, Align, UiBuilder};
 
 use crate::gui::Colors;
 use crate::gui::views::{Content, View};
-use crate::gui::views::types::{LinePosition, TitleContentType, TitleType};
+use crate::gui::views::types::{TitleContentType, TitleType};
 
 /// Title panel with left/right action buttons and text in the middle.
 pub struct TitlePanel {
@@ -46,10 +46,10 @@ impl TitlePanel {
             .exact_height(Self::HEIGHT + View::get_top_inset())
             .frame(egui::Frame {
                 inner_margin:  Margin {
-                    left: View::far_left_inset_margin(ui),
-                    right: View::far_right_inset_margin(ui),
-                    top: View::get_top_inset(),
-                    bottom: 0.0,
+                    left: View::far_left_inset_margin(ui) as i8,
+                    right: View::far_right_inset_margin(ui) as i8,
+                    top: View::get_top_inset() as i8,
+                    bottom: 0.0 as i8,
                 },
                 ..Default::default()
             })
@@ -72,7 +72,7 @@ impl TitlePanel {
                                 r.max.x -= Self::HEIGHT;
                                 r
                             };
-                            ui.allocate_new_ui(UiBuilder::new().max_rect(content_rect), |ui| {
+                            ui.scope_builder(UiBuilder::new().max_rect(content_rect), |ui| {
                                 Self::title_text_content(ui, content);
                             });
                         }
@@ -84,7 +84,7 @@ impl TitlePanel {
                                 r
                             };
                             // Draw first title content.
-                            ui.allocate_new_ui(UiBuilder::new().max_rect(first_rect), |ui| {
+                            ui.scope_builder(UiBuilder::new().max_rect(first_rect), |ui| {
                                 Self::title_text_content(ui, first);
                             });
 
@@ -95,23 +95,12 @@ impl TitlePanel {
                                 r
                             };
                             // Draw second title content.
-                            ui.allocate_new_ui(UiBuilder::new().max_rect(second_rect), |ui| {
+                            ui.scope_builder(UiBuilder::new().max_rect(second_rect), |ui| {
                                 Self::title_text_content(ui, second);
                             });
                         }
                     }
                 });
-
-                // Draw content divider line.
-                let r = {
-                    let mut r = rect.clone();
-                    r.min.x -= View::far_left_inset_margin(ui);
-                    r.max.x += View::far_right_inset_margin(ui);
-                    r
-                };
-                if Content::is_dual_panel_mode(ui.ctx()) {
-                    View::line(ui, LinePosition::BOTTOM, &r, Colors::stroke());
-                }
             });
     }
 

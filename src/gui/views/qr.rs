@@ -237,14 +237,15 @@ impl QrCodeContent {
         // Create background shape.
         let mut bg_shape = RectShape::new(
             rect,
-            egui::Rounding::default(),
+            egui::CornerRadius::default(),
             egui::Color32::WHITE,
-            egui::Stroke::NONE
+            egui::Stroke::NONE,
+            egui::StrokeKind::Outside
         );
-        let bg_idx = ui.painter().add(bg_shape);
+        let bg_idx = ui.painter().add(bg_shape.clone());
 
         // Draw QR code image content.
-        let mut content_rect = ui.allocate_new_ui(UiBuilder::new().max_rect(rect), |ui| {
+        let mut content_rect = ui.scope_builder(UiBuilder::new().max_rect(rect), |ui| {
             ui.add_space(10.0);
             let size = SizeHint::Size(ui.available_width() as u32, ui.available_width() as u32);
             self.texture_handle = Some(View::svg_image(ui, "qr_code", svg.as_slice(), Some(size)));

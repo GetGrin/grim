@@ -14,7 +14,7 @@
 
 use std::ops::Range;
 use std::time::{SystemTime, UNIX_EPOCH};
-use egui::{Align, Id, Layout, Rect, RichText, Rounding, ScrollArea};
+use egui::{Align, Id, Layout, Rect, RichText, CornerRadius, ScrollArea, StrokeKind};
 use egui::epaint::RectShape;
 use egui::scroll_area::ScrollBarVisibility;
 use grin_core::consensus::COINBASE_MATURITY;
@@ -155,15 +155,15 @@ impl WalletTransactions {
             // Draw tx item background.
             let mut r = View::item_rounding(index, txs.len(), false);
             let p = ui.painter();
-            p.rect(rect, r, Colors::fill_lite(), View::item_stroke());
+            p.rect(rect, r, Colors::fill_lite(), View::item_stroke(), StrokeKind::Middle);
 
             let tx = txs.get(index).unwrap();
             let data = wallet.get_data().unwrap();
             Self::tx_item_ui(ui, tx, rect, &data, |ui| {
                 // Draw button to show transaction info.
                 if tx.data.tx_slate_id.is_some() {
-                    r.nw = 0.0;
-                    r.sw = 0.0;
+                    r.nw = 0.0 as u8;
+                    r.sw = 0.0 as u8;
                     View::item_button(ui, r, FILE_TEXT, None, || {
                         self.show_tx_info_modal(wallet, tx, false);
                     });
@@ -174,7 +174,7 @@ impl WalletTransactions {
                 // Draw button to show transaction finalization.
                 if wallet_loaded && tx.can_finalize {
                     let (icon, color) = (CHECK, Some(Colors::green()));
-                    View::item_button(ui, Rounding::default(), icon, color, || {
+                    View::item_button(ui, CornerRadius::default(), icon, color, || {
                         self.show_tx_info_modal(wallet, tx, true);
                     });
                 }
@@ -182,7 +182,7 @@ impl WalletTransactions {
                 // Draw button to cancel transaction.
                 if wallet_loaded && tx.can_cancel() {
                     let (icon, color) = (PROHIBIT, Some(Colors::red()));
-                    View::item_button(ui, Rounding::default(), icon, color, || {
+                    View::item_button(ui, CornerRadius::default(), icon, color, || {
                         self.confirm_cancel_tx_id = Some(tx.data.id);
                         // Show transaction cancellation confirmation modal.
                         Modal::new(CANCEL_TX_CONFIRMATION_MODAL)
@@ -205,13 +205,13 @@ impl WalletTransactions {
         }
         let rect = ui.available_rect_before_wrap();
         // Draw background.
-        let mut bg = RectShape::new(rect, Rounding {
-            nw: 0.0,
-            ne: 0.0,
-            sw: 8.0,
-            se: 8.0,
-        }, Colors::TRANSPARENT, View::item_stroke());
-        let bg_idx = ui.painter().add(bg);
+        let mut bg = RectShape::new(rect, CornerRadius {
+            nw: 0.0 as u8,
+            ne: 0.0 as u8,
+            sw: 8.0 as u8,
+            se: 8.0 as u8,
+        }, Colors::TRANSPARENT, View::item_stroke(), StrokeKind::Middle);
+        let bg_idx = ui.painter().add(bg.clone());
         let resp = ui.allocate_ui(rect.size(), |ui| {
             ui.vertical_centered_justified(|ui| {
                 // Correct vertical spacing between items.

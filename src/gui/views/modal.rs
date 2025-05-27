@@ -12,17 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use lazy_static::lazy_static;
-use std::sync::Arc;
-use parking_lot::RwLock;
-use std::sync::atomic::{AtomicBool, Ordering};
-use egui::{Align2, RichText, Rounding, Stroke, UiBuilder, Vec2};
 use egui::epaint::{RectShape, Shadow};
 use egui::os::OperatingSystem;
+use egui::{Align2, CornerRadius, RichText, Stroke, UiBuilder, Vec2, StrokeKind};
+use lazy_static::lazy_static;
+use parking_lot::RwLock;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 
-use crate::gui::Colors;
-use crate::gui::views::{Content, KeyboardContent, View};
 use crate::gui::views::types::{ModalPosition, ModalState};
+use crate::gui::views::{Content, KeyboardContent, View};
+use crate::gui::Colors;
 
 lazy_static! {
     /// Showing [`Modal`] state to be accessible from different ui parts.
@@ -242,11 +242,11 @@ impl Modal {
             .frame(egui::Frame {
                 shadow: Shadow {
                     offset: Default::default(),
-                    blur: 30.0,
-                    spread: 3.0,
+                    blur: 30.0 as u8,
+                    spread: 3.0 as u8,
                     color: egui::Color32::from_black_alpha(32),
                 },
-                rounding: Rounding::same(8.0),
+                corner_radius: CornerRadius::same(8.0 as u8),
                 ..Default::default()
             })
             .show(ctx, |ui| {
@@ -301,20 +301,20 @@ impl Modal {
 
         // Create background shape.
         let mut bg_shape = RectShape::new(rect, if self.title.is_none() {
-            Rounding::same(8.0)
+            CornerRadius::same(8.0 as u8)
         } else {
-            Rounding {
-                nw: 0.0,
-                ne: 0.0,
-                sw: 8.0,
-                se: 8.0,
+            CornerRadius {
+                nw: 0.0 as u8,
+                ne: 0.0 as u8,
+                sw: 8.0 as u8,
+                se: 8.0 as u8,
             }
-        }, Colors::fill(), Stroke::NONE);
-        let bg_idx = ui.painter().add(bg_shape);
+        }, Colors::fill(), Stroke::NONE, StrokeKind::Middle);
+        let bg_idx = ui.painter().add(bg_shape.clone());
 
         rect.min += egui::emath::vec2(6.0, 0.0);
         rect.max -= egui::emath::vec2(6.0, 0.0);
-        let resp = ui.allocate_new_ui(UiBuilder::new().max_rect(rect), |ui| {
+        let resp = ui.scope_builder(UiBuilder::new().max_rect(rect), |ui| {
             (add_content)(ui, self);
         }).response;
 
@@ -335,13 +335,13 @@ fn title_ui(title: &String, ui: &mut egui::Ui) {
     let rect = ui.available_rect_before_wrap();
 
     // Create background shape.
-    let mut bg_shape = RectShape::new(rect, Rounding {
-        nw: 8.0,
-        ne: 8.0,
-        sw: 0.0,
-        se: 0.0,
-    }, Colors::yellow(), Stroke::NONE);
-    let bg_idx = ui.painter().add(bg_shape);
+    let mut bg_shape = RectShape::new(rect, CornerRadius {
+        nw: 8.0 as u8,
+        ne: 8.0 as u8,
+        sw: 0.0 as u8,
+        se: 0.0 as u8,
+    }, Colors::yellow(), Stroke::NONE, StrokeKind::Middle);
+    let bg_idx = ui.painter().add(bg_shape.clone());
 
     // Draw title content.
     let resp = ui.vertical_centered(|ui| {

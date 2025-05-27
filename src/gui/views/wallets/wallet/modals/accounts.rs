@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::{Align, Id, Layout, RichText, ScrollArea};
+use egui::{Align, Id, Layout, RichText, ScrollArea, StrokeKind};
 use egui::scroll_area::ScrollBarVisibility;
 use grin_core::core::amount_to_hr_string;
 
@@ -187,7 +187,11 @@ fn account_item_ui(ui: &mut egui::Ui,
     // Draw round background.
     let bg_rect = rect.clone();
     let item_rounding = View::item_rounding(index, size, false);
-    ui.painter().rect(bg_rect, item_rounding, Colors::fill(), View::item_stroke());
+    ui.painter().rect(bg_rect,
+                      item_rounding,
+                      Colors::fill(),
+                      View::item_stroke(),
+                      StrokeKind::Middle);
 
     ui.vertical(|ui| {
         ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {

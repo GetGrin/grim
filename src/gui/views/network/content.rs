@@ -58,10 +58,10 @@ impl NetworkContent {
                 .resizable(false)
                 .frame(egui::Frame {
                     inner_margin: Margin {
-                        left: View::get_left_inset() + View::TAB_ITEMS_PADDING,
-                        right: View::far_right_inset_margin(ui) + View::TAB_ITEMS_PADDING,
-                        top: View::TAB_ITEMS_PADDING,
-                        bottom: View::get_bottom_inset() + View::TAB_ITEMS_PADDING,
+                        left: (View::get_left_inset() + View::TAB_ITEMS_PADDING) as i8,
+                        right: (View::far_right_inset_margin(ui) + View::TAB_ITEMS_PADDING) as i8,
+                        top: View::TAB_ITEMS_PADDING as i8,
+                        bottom: (View::get_bottom_inset() + View::TAB_ITEMS_PADDING) as i8,
                     },
                     fill: Colors::fill(),
                     ..Default::default()
@@ -94,10 +94,10 @@ impl NetworkContent {
                 egui::CentralPanel::default()
                     .frame(egui::Frame {
                         inner_margin: Margin {
-                            left: View::get_left_inset() + 4.0,
-                            right: View::far_right_inset_margin(ui) + 4.0,
-                            top: 3.0,
-                            bottom: 4.0,
+                            left: (View::get_left_inset() + 4.0) as i8,
+                            right: (View::far_right_inset_margin(ui) + 4.0) as i8,
+                            top: 3.0 as i8,
+                            bottom: 4.0 as i8,
                         },
                         ..Default::default()
                     })
@@ -143,14 +143,14 @@ impl NetworkContent {
                         View::get_left_inset() + 4.0
                     } else {
                         0.0
-                    },
+                    } as i8,
                     right: if show_connections {
                         View::far_right_inset_margin(ui) + 4.0
                     } else {
                         0.0
-                    },
-                    top: 3.0,
-                    bottom: 4.0 + View::get_bottom_inset(),
+                    } as i8,
+                    top: 3.0 as i8,
+                    bottom:(4.0 + View::get_bottom_inset()) as i8,
                 },
                 ..Default::default()
             })

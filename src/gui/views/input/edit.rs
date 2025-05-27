@@ -12,8 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use eframe::emath::Align;
-use egui::{Layout, TextBuffer, TextStyle, Widget};
+use egui::{Layout, TextBuffer, TextStyle, Widget, Align};
 use egui::text_edit::TextEditState;
 use crate::gui::Colors;
 use crate::gui::icons::{CLIPBOARD_TEXT, COPY, EYE, EYE_SLASH, SCAN};
@@ -49,7 +48,7 @@ pub struct TextEdit {
 
 impl TextEdit {
     /// Default height of [`egui::TextEdit`] view.
-    const TEXT_EDIT_HEIGHT: f32 = 37.0;
+    const TEXT_EDIT_HEIGHT: f32 = 41.0;
 
     pub fn new(id: egui::Id) -> Self {
         Self {

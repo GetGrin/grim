@@ -12,9 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use eframe::emath::Align;
-use eframe::epaint::{Margin, Shadow};
-use egui::{Align2, Button, Color32, CursorIcon, Layout, Rect, Response, RichText, Vec2, Widget};
+use egui::{Align, Align2, Button, Color32, CursorIcon, Layout, Margin, Rect, Response, RichText, Shadow, Vec2, Widget};
 use lazy_static::lazy_static;
 use parking_lot::RwLock;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -73,15 +71,15 @@ impl KeyboardContent {
             .frame(egui::Frame {
                 shadow: Shadow {
                     offset: Default::default(),
-                    blur: 30.0,
-                    spread: 3.0,
+                    blur: 30.0 as u8,
+                    spread: 3.0 as u8,
                     color: Color32::from_black_alpha(32),
                 },
-                inner_margin:  Margin {
-                    left: View::get_left_inset(),
-                    right: View::get_right_inset(),
-                    top: 1.0,
-                    bottom: View::get_bottom_inset(),
+                inner_margin: Margin {
+                    left: View::get_left_inset() as i8,
+                    right: View::get_right_inset() as i8,
+                    top: 1.0 as i8,
+                    bottom: View::get_bottom_inset() as i8,
                 },
                 fill: Colors::fill(),
                 ..Default::default()
@@ -125,7 +123,7 @@ impl KeyboardContent {
             KeyboardLayout::SYMBOLS => Self::symbols_ui(ui),
             KeyboardLayout::NUMBERS => Self::numbers_ui(ui),
         };
-        ui.add_space(2.0);
+        ui.add_space(1.0);
 
         // Draw bottom keyboard buttons.
         let bottom_size = {
@@ -141,7 +139,7 @@ impl KeyboardContent {
         ui.allocate_ui_with_layout(bottom_size, Layout::right_to_left(Align::Center), |ui| {
             if self.layout == KeyboardLayout::NUMBERS {
                 ui.horizontal_centered(|ui| {
-                    ui.set_max_width(button_width * 2.0 + 1.0);
+                    ui.set_max_width(button_width * 2.0);
                     Self::custom_button_ui(KEY_RETURN.to_string(),
                                            Colors::white_or_black(false),
                                            Some(Colors::green()),
@@ -161,7 +159,7 @@ impl KeyboardContent {
             } else {
                 // Enter key input.
                 ui.horizontal_centered(|ui| {
-                    ui.set_max_width(button_width * 2.0 + 1.0);
+                    ui.set_max_width(button_width * 2.0);
                     Self::custom_button_ui(KEY_RETURN.to_string(),
                                            Colors::white_or_black(false),
                                            Some(Colors::green()),
@@ -255,7 +253,7 @@ impl KeyboardContent {
                 button_rect = Self::input_button_ui(s, !last, &mut columns[index]);
             }
         });
-        ui.add_space(2.0);
+        ui.add_space(1.0);
 
         let tl_1: Vec<&str> = vec!["4", "5", "6", "+"];
         ui.columns(tl_1.len(), |columns| {
@@ -264,7 +262,7 @@ impl KeyboardContent {
                 Self::input_button_ui(s, !last, &mut columns[index]);
             }
         });
-        ui.add_space(2.0);
+        ui.add_space(1.0);
 
         let tl_2: Vec<&str> = vec!["7", "8", "9", BACKSPACE];
         ui.columns(tl_2.len(), |columns| {
@@ -295,7 +293,7 @@ impl KeyboardContent {
                 button_rect = Self::input_button_ui(s, true, &mut columns[index]);
             }
         });
-        ui.add_space(2.0);
+        ui.add_space(1.0);
 
         let tl_1: Vec<&str> = vec!["q", "w", "e", "r", "t", "y", "u", "i", "o", "p", "p1"];
         ui.columns(tl_1.len(), |columns| {
@@ -303,7 +301,7 @@ impl KeyboardContent {
                 Self::input_button_ui(s, true, &mut columns[index]);
             }
         });
-        ui.add_space(2.0);
+        ui.add_space(1.0);
 
         let tl_2: Vec<&str> = vec!["a", "s", "d", "f", "g", "h", "j", "k", "l", "l1", "l2"];
         ui.columns(tl_2.len(), |columns| {
@@ -311,7 +309,7 @@ impl KeyboardContent {
                 Self::input_button_ui(s, true, &mut columns[index]);
             }
         });
-        ui.add_space(2.0);
+        ui.add_space(1.0);
 
         let tl_3: Vec<&str> = vec!["z1", "z", "x", "c", "v", "b", "n", "m", "m1", "m2", "m3"];
         ui.columns(tl_3.len(), |columns| {
@@ -332,7 +330,7 @@ impl KeyboardContent {
                 button_rect = Self::input_button_ui(s, false, &mut columns[index]);
             }
         });
-        ui.add_space(2.0);
+        ui.add_space(1.0);
 
         let tl_1: Vec<&str> = vec!["_", "\\", "|", "~", "<", ">", "№", "√", "π", "•"];
         ui.columns(tl_1.len(), |columns| {
@@ -340,7 +338,7 @@ impl KeyboardContent {
                 Self::input_button_ui(s, false, &mut columns[index]);
             }
         });
-        ui.add_space(2.0);
+        ui.add_space(1.0);
 
         let tl_2: Vec<&str> = vec!["-", "/", ":", ";", "(", ")", "`", "&", "@", "\""];
         ui.columns(tl_2.len(), |columns| {
@@ -348,7 +346,7 @@ impl KeyboardContent {
                 Self::input_button_ui(s, false, &mut columns[index]);
             }
         });
-        ui.add_space(2.0);
+        ui.add_space(1.0);
 
         let tl_3: Vec<&str> = vec![".", ",", "?", "!", "€", "£", "¥", "$", "¢", "ツ"];
         ui.columns(tl_3.len(), |columns| {
@@ -385,7 +383,7 @@ impl KeyboardContent {
                 s.to_string()
             };
             let mut button = Button::new(RichText::new(label.clone()).size(17.0).color(color))
-                .rounding(egui::Rounding::ZERO);
+                .corner_radius(egui::CornerRadius::ZERO);
             if let Some(bg) = bg {
                 button = button.fill(bg);
             }

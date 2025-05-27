@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::{Align, Layout, RichText};
+use egui::{Align, Layout, RichText, StrokeKind};
 
 use crate::gui::Colors;
 use crate::gui::icons::{CHECK, CHECK_CIRCLE, CHECK_FAT, DOTS_THREE_CIRCLE, GLOBE, GLOBE_SIMPLE, PLUS_CIRCLE, X_CIRCLE};
@@ -190,7 +190,11 @@ impl ConnectionSettings {
         // Draw round background.
         let bg_rect = rect.clone();
         let item_rounding = View::item_rounding(index, len, false);
-        ui.painter().rect(bg_rect, item_rounding, Colors::fill(), View::item_stroke());
+        ui.painter().rect(bg_rect,
+                          item_rounding,
+                          Colors::fill(),
+                          View::item_stroke(),
+                          StrokeKind::Middle);
 
         ui.vertical(|ui| {
             ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
