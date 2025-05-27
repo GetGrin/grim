@@ -2,13 +2,13 @@ package mw.gri.android;
 
 import android.annotation.SuppressLint;
 import android.app.*;
-import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.os.*;
+
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
+import androidx.core.content.ContextCompat;
 
 import java.util.List;
 
@@ -32,25 +32,6 @@ public class BackgroundService extends Service {
     public static final String ACTION_START_NODE = "start_node";
     public static final String ACTION_STOP_NODE = "stop_node";
     public static final String ACTION_EXIT = "exit";
-    public static final String ACTION_REFRESH = "refresh";
-    public static final String ACTION_STOP = "stop";
-
-    private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
-        @SuppressLint("RestrictedApi")
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            if (intent.getAction().equals(ACTION_STOP)) {
-                mStopped = true;
-                // Remove actions buttons.
-                mNotificationBuilder.mActions.clear();
-                NotificationManager manager = getSystemService(NotificationManager.class);
-                manager.notify(NOTIFICATION_ID, mNotificationBuilder.build());
-            } else {
-                mHandler.removeCallbacks(mUpdateSyncStatus);
-                mHandler.post(mUpdateSyncStatus);
-            }
-        }
-    };
 
     private final Runnable mUpdateSyncStatus = new Runnable() {
         @SuppressLint("RestrictedApi")
@@ -170,9 +151,6 @@ public class BackgroundService extends Service {
 
         // Update sync status at notification.
         mHandler.post(mUpdateSyncStatus);
-
-        // Register receiver to refresh notifications by intent.
-        registerReceiver(mReceiver, new IntentFilter(ACTION_REFRESH));
     }
 
     @Override
@@ -203,7 +181,6 @@ public class BackgroundService extends Service {
 
         // Stop updating the notification.
         mHandler.removeCallbacks(mUpdateSyncStatus);
-        unregisterReceiver(mReceiver);
         clearNotification();
 
         // Remove service from foreground state.
@@ -226,12 +203,12 @@ public class BackgroundService extends Service {
     }
 
     // Start the service.
-    public static void start(Context context) {
-        if (!isServiceRunning(context)) {
+    public static void start(Context c) {
+        if (!isServiceRunning(c)) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                context.startForegroundService(new Intent(context, BackgroundService.class));
+                ContextCompat.startForegroundService(c, new Intent(c, BackgroundService.class));
             } else {
-                context.startService(new Intent(context, BackgroundService.class));
+                c.startService(new Intent(c, BackgroundService.class));
             }
         }
     }

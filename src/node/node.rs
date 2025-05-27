@@ -749,19 +749,6 @@ pub extern "C" fn Java_mw_gri_android_BackgroundService_canStopNode(
 #[cfg(target_os = "android")]
 #[allow(non_snake_case)]
 #[no_mangle]
-/// Check if node stop is possible.
-pub extern "C" fn Java_mw_gri_android_NotificationActionsReceiver_isNodeRunning(
-    _env: jni::JNIEnv,
-    _class: jni::objects::JObject,
-    _activity: jni::objects::JObject,
-) -> jni::sys::jboolean {
-    return Node::is_running() as jni::sys::jboolean;
-}
-
-#[allow(dead_code)]
-#[cfg(target_os = "android")]
-#[allow(non_snake_case)]
-#[no_mangle]
 /// Start node from Android Java code.
 pub extern "C" fn Java_mw_gri_android_NotificationActionsReceiver_startNode(
     _env: jni::JNIEnv,
@@ -794,7 +781,11 @@ pub extern "C" fn Java_mw_gri_android_NotificationActionsReceiver_stopNodeToExit
     _class: jni::objects::JObject,
     _activity: jni::objects::JObject,
 ) {
-    Node::stop(true);
+    if Node::is_running() {
+        Node::stop(true);
+    } else {
+        NODE_STATE.exit_after_stop.store(true, Ordering::Relaxed);
+    }
 }
 
 #[allow(dead_code)]

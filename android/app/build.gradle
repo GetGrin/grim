@@ -3,14 +3,14 @@ plugins {
 }
 
 android {
-    compileSdk 33
+    compileSdk 35
     ndkVersion '26.0.10792818'
 
     defaultConfig {
         applicationId "mw.gri.android"
         minSdk 24
-        targetSdk 33
-        versionCode 3
+        targetSdk 35
+        versionCode 4
         versionName "0.2.4"
     }
 
@@ -27,7 +27,6 @@ android {
                 storePassword keystoreProperties['storePassword']
             }
         }
-
     }
 
     buildTypes {
@@ -54,14 +53,11 @@ android {
 }
 
 dependencies {
-    implementation 'androidx.appcompat:appcompat:1.6.1'
-
-    // To use the Games Activity library
-    implementation "androidx.games:games-activity:2.0.2"
+    implementation 'androidx.appcompat:appcompat:1.7.0'
 
     // Android Camera
-    implementation 'androidx.camera:camera-core:1.2.3'
-    implementation 'androidx.camera:camera-camera2:1.2.3'
-    implementation 'androidx.camera:camera-lifecycle:1.2.3'
+    implementation 'androidx.camera:camera-core:1.4.2'
+    implementation 'androidx.camera:camera-camera2:1.4.2'
+    implementation 'androidx.camera:camera-lifecycle:1.4.2'
 }
 

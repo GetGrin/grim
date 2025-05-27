@@ -3,6 +3,7 @@ package mw.gri.android;
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.app.NativeActivity;
 import android.content.*;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
@@ -12,12 +13,9 @@ import android.os.Process;
 import android.provider.Settings;
 import android.system.ErrnoException;
 import android.system.Os;
-import android.util.Size;
-import android.view.KeyEvent;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
-import androidx.activity.result.ActivityResultLauncher;
-import androidx.activity.result.contract.ActivityResultContracts;
+
 import androidx.annotation.NonNull;
 import androidx.camera.core.*;
 import androidx.camera.lifecycle.ProcessCameraProvider;
@@ -27,37 +25,41 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.DisplayCutoutCompat;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
-import com.google.androidgamesdk.GameActivity;
+
 import com.google.common.util.concurrent.ListenableFuture;
 
 import java.io.*;
+import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import static android.content.ClipDescription.MIMETYPE_TEXT_HTML;
 import static android.content.ClipDescription.MIMETYPE_TEXT_PLAIN;
 
-public class MainActivity extends GameActivity {
-    public static String STOP_APP_ACTION = "STOP_APP";
+public class MainActivity extends NativeActivity {
+    private static final int FILE_PICK_REQUEST = 1001;
+    private static final int FILE_PERMISSIONS_REQUEST = 1002;
 
     private static final int NOTIFICATIONS_PERMISSION_CODE = 1;
     private static final int CAMERA_PERMISSION_CODE = 2;
+
+    public static final String STOP_APP_ACTION = "STOP_APP_ACTION";
 
     static {
         System.loadLibrary("grim");
     }
 
-    private final BroadcastReceiver mBroadcastReceiver = new BroadcastReceiver() {
+    private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
+        @SuppressLint("RestrictedApi")
         @Override
-        public void onReceive(Context ctx, Intent i) {
-            if (i.getAction().equals(STOP_APP_ACTION)) {
+        public void onReceive(Context context, Intent intent) {
+            if (Objects.equals(intent.getAction(), MainActivity.STOP_APP_ACTION)) {
                 exit();
             }
         }
     };
 
     private final ImageAnalysis mImageAnalysis = new ImageAnalysis.Builder()
-            .setTargetResolution(new Size(640, 480))
             .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
             .build();
 
@@ -65,9 +67,6 @@ public class MainActivity extends GameActivity {
     private ProcessCameraProvider mCameraProvider = null;
     private ExecutorService mCameraExecutor = null;
     private boolean mUseBackCamera = true;
-
-    private ActivityResultLauncher<Intent> mFilePickResult = null;
-    private ActivityResultLauncher<Intent> mOpenFilePermissionsResult = null;
 
     @SuppressLint("UnspecifiedRegisterReceiverFlag")
     @Override
@@ -80,14 +79,15 @@ public class MainActivity extends GameActivity {
         }
 
         // Clear cache on start.
+        String cacheDir = Objects.requireNonNull(getExternalCacheDir()).getPath();
         if (savedInstanceState == null) {
-            Utils.deleteDirectoryContent(new File(getExternalCacheDir().getPath()), false);
+            Utils.deleteDirectoryContent(new File(cacheDir), false);
         }
 
         // Setup environment variables for native code.
         try {
-            Os.setenv("HOME", getExternalFilesDir("").getPath(), true);
-            Os.setenv("XDG_CACHE_HOME", getExternalCacheDir().getPath(), true);
+            Os.setenv("HOME", Objects.requireNonNull(getExternalFilesDir("")).getPath(), true);
+            Os.setenv("XDG_CACHE_HOME", cacheDir, true);
             Os.setenv("ARTI_FS_DISABLE_PERMISSION_CHECKS", "true", true);
         } catch (ErrnoException e) {
             throw new RuntimeException(e);
@@ -95,54 +95,10 @@ public class MainActivity extends GameActivity {
 
         super.onCreate(null);
 
-        // Register receiver to finish activity from the BackgroundService.
-        registerReceiver(mBroadcastReceiver, new IntentFilter(STOP_APP_ACTION));
-
-        // Register associated file opening result.
-        mOpenFilePermissionsResult = registerForActivityResult(
-                new ActivityResultContracts.StartActivityForResult(),
-                result -> {
-                    if (Build.VERSION.SDK_INT >= 30) {
-                        if (Environment.isExternalStorageManager()) {
-                            onFile();
-                        }
-                    } else if (result.getResultCode() == RESULT_OK) {
-                        onFile();
-                    }
-                }
-        );
-        // Register file pick result.
-        mFilePickResult = registerForActivityResult(
-                new ActivityResultContracts.StartActivityForResult(),
-                result -> {
-                    int resultCode = result.getResultCode();
-                    Intent data = result.getData();
-                    if (resultCode == Activity.RESULT_OK) {
-                        String path = "";
-                        if (data != null) {
-                            Uri uri = data.getData();
-                            String name = "pick" + Utils.getFileExtension(uri, this);
-                            File file = new File(getExternalCacheDir(), name);
-                            try (InputStream is = getContentResolver().openInputStream(uri);
-                                 OutputStream os = new FileOutputStream(file)) {
-                                    byte[] buffer = new byte[1024];
-                                    int length;
-                                    while ((length = is.read(buffer)) > 0) {
-                                        os.write(buffer, 0, length);
-                                    }
-                            } catch (Exception e) {
-                                e.printStackTrace();
-                            }
-                            path = file.getPath();
-                        }
-                        onFilePick(path);
-                    } else {
-                        onFilePick("");
-                    }
-                });
+        ContextCompat.registerReceiver(this, mReceiver, new IntentFilter(STOP_APP_ACTION), ContextCompat.RECEIVER_NOT_EXPORTED);
 
         // Listener for display insets (cutouts) to pass values into native code.
-        View content = getWindow().getDecorView().findViewById(android.R.id.content);
+        View content = findViewById(android.R.id.content).getRootView();
         ViewCompat.setOnApplyWindowInsetsListener(content, (v, insets) -> {
             // Get display cutouts.
             DisplayCutoutCompat dc = insets.getDisplayCutout();
@@ -171,7 +127,7 @@ public class MainActivity extends GameActivity {
             return insets;
         });
 
-        findViewById(android.R.id.content).post(() -> {
+        content.post(() -> {
             // Request notifications permissions if needed.
             if (Build.VERSION.SDK_INT >= 33) {
                 String notificationsPermission = Manifest.permission.POST_NOTIFICATIONS;
@@ -190,6 +146,44 @@ public class MainActivity extends GameActivity {
         // Check if intent has data on launch.
         if (savedInstanceState == null) {
             onNewIntent(getIntent());
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        switch (requestCode) {
+            case FILE_PICK_REQUEST:
+                if (Build.VERSION.SDK_INT >= 30) {
+                    if (Environment.isExternalStorageManager()) {
+                        onFile();
+                    }
+                } else if (resultCode == RESULT_OK) {
+                    onFile();
+                }
+            case FILE_PERMISSIONS_REQUEST:
+                if (resultCode == Activity.RESULT_OK) {
+                    String path = "";
+                    if (data != null) {
+                        Uri uri = data.getData();
+                        String name = "pick" + Utils.getFileExtension(uri, this);
+                        File file = new File(getExternalCacheDir(), name);
+                        try (InputStream is = getContentResolver().openInputStream(uri);
+                             OutputStream os = new FileOutputStream(file)) {
+                            byte[] buffer = new byte[1024];
+                            int length;
+                            while ((length = is.read(buffer)) > 0) {
+                                os.write(buffer, 0, length);
+                            }
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                        path = file.getPath();
+                    }
+                    onFilePick(path);
+                } else {
+                    onFilePick("");
+                }
         }
     }
 
@@ -215,7 +209,7 @@ public class MainActivity extends GameActivity {
         if (Build.VERSION.SDK_INT >= 30) {
             if (!Environment.isExternalStorageManager()) {
                 Intent i = new Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION);
-                mOpenFilePermissionsResult.launch(i);
+                startActivityForResult(i, FILE_PERMISSIONS_REQUEST);
                 return;
             }
         }
@@ -269,41 +263,8 @@ public class MainActivity extends GameActivity {
         }
     }
 
-    @Override
-    public boolean dispatchKeyEvent(KeyEvent event) {
-        // To support non-english input.
-        if (event.getAction() == KeyEvent.ACTION_MULTIPLE && event.getKeyCode() == KeyEvent.KEYCODE_UNKNOWN) {
-            if (!event.getCharacters().isEmpty()) {
-                onInput(event.getCharacters());
-                return false;
-            }
-            // Pass any other input values into native code.
-        } else if (event.getAction() == KeyEvent.ACTION_UP &&
-                event.getKeyCode() != KeyEvent.KEYCODE_ENTER &&
-                event.getKeyCode() != KeyEvent.KEYCODE_BACK) {
-            onInput(String.valueOf((char)event.getUnicodeChar()));
-            return false;
-        }
-        return super.dispatchKeyEvent(event);
-    }
-
-    // Provide last entered character from soft keyboard into native code.
-    public native void onInput(String character);
-
     // Implemented into native code to handle display insets change.
     native void onDisplayInsets(int[] cutouts);
-
-    @Override
-    public boolean onKeyDown(int keyCode, KeyEvent event) {
-        if (keyCode == KeyEvent.KEYCODE_BACK) {
-            onBack();
-            return true;
-        }
-        return super.onKeyDown(keyCode, event);
-    }
-
-    // Implemented into native code to handle key code BACK event.
-    public native void onBack();
 
     // Called from native code to exit app.
     public void exit() {
@@ -312,7 +273,6 @@ public class MainActivity extends GameActivity {
 
     @Override
     protected void onDestroy() {
-        unregisterReceiver(mBroadcastReceiver);
         BackgroundService.stop(this);
 
         // Kill process after 3 secs if app was terminated from recent apps to prevent app hang.
@@ -342,14 +302,16 @@ public class MainActivity extends GameActivity {
     // Called from native code to get text from clipboard.
     public String pasteText() {
         ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-        String text;
+        ClipDescription desc = clipboard.getPrimaryClipDescription();
+        ClipData data = clipboard.getPrimaryClip();
+        String text = "";
         if (!(clipboard.hasPrimaryClip())) {
             text = "";
-        } else if (!(clipboard.getPrimaryClipDescription().hasMimeType(MIMETYPE_TEXT_PLAIN))
-                && !(clipboard.getPrimaryClipDescription().hasMimeType(MIMETYPE_TEXT_HTML))) {
+        } else if (desc != null && (!(desc.hasMimeType(MIMETYPE_TEXT_PLAIN))
+                && !(desc.hasMimeType(MIMETYPE_TEXT_HTML)))) {
             text = "";
-        } else {
-            ClipData.Item item = clipboard.getPrimaryClip().getItemAt(0);
+        } else if (data != null) {
+            ClipData.Item item = data.getItemAt(0);
             text = item.getText().toString();
         }
         return text;
@@ -417,7 +379,7 @@ public class MainActivity extends GameActivity {
         }
         // Apply declared configs to CameraX using the same lifecycle owner
         mCameraProvider.unbindAll();
-        mCameraProvider.bindToLifecycle(this, cameraSelector, mImageAnalysis);
+//        mCameraProvider.bindToLifecycle(this, cameraSelector, mImageAnalysis);
     }
 
     // Called from native code to stop camera.
@@ -471,8 +433,8 @@ public class MainActivity extends GameActivity {
         Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
         intent.setType("*/*");
         try {
-            mFilePickResult.launch(Intent.createChooser(intent, "Pick file"));
-        } catch (android.content.ActivityNotFoundException ex) {
+            startActivityForResult(Intent.createChooser(intent, "Pick file"), FILE_PICK_REQUEST);
+        } catch (ActivityNotFoundException ex) {
             onFilePick("");
         }
     }

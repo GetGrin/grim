@@ -70,22 +70,10 @@ fn android_main(app: AndroidApp) {
     let height = app.config().screen_height_dp().unwrap() as f32;
     let size = egui::emath::vec2(width, height);
     let mut options = NativeOptions {
+        android_app: Some(app.clone()),
         viewport: egui::ViewportBuilder::default().with_inner_size(size),
         ..Default::default()
     };
-    // Setup limits that are guaranteed to be compatible with Android devices.
-    options.wgpu_options.device_descriptor = std::sync::Arc::new(|_| {
-        let base_limits = wgpu::Limits::downlevel_webgl2_defaults();
-        wgpu::DeviceDescriptor {
-            memory_hints: wgpu::MemoryHints::default(),
-            label: Some("egui wgpu device"),
-            required_features: wgpu::Features::default(),
-            required_limits: wgpu::Limits {
-                max_texture_dimension_2d: 8192,
-                ..base_limits
-            },
-        }
-    });
     options.event_loop_builder = Some(Box::new(move |builder| {
         builder.with_android_app(app);
     }));

@@ -38,14 +38,15 @@ function build_lib() {
   [[ $1 == "v8" ]] && arch=arm64-v8a
   [[ $1 == "x86" ]] && arch=x86_64
 
-  sed -i -e 's/"rlib"/"cdylib","rlib"/g' Cargo.toml
+  sed -i -e 's/"cdylib","rlib"]/"rlib"]/g' Cargo.toml
+  sed -i -e 's/"rlib"]/"cdylib","rlib"]/g' Cargo.toml
 
   # Fix for https://stackoverflow.com/questions/57193895/error-use-of-undeclared-identifier-pthread-mutex-robust-cargo-build-liblmdb-s
   # Uncomment lines below for the 1st build:
-  #export CPPFLAGS="-DMDB_USE_ROBUST=0" && export CFLAGS="-DMDB_USE_ROBUST=0"
-  #cargo ndk -t ${arch} build --profile release-apk
-  #unset CPPFLAGS && unset CFLAGS
-  cargo ndk -t "${arch}" -o android/app/src/main/jniLibs build --profile release-apk
+  export CPPFLAGS="-DMDB_USE_ROBUST=0" && export CFLAGS="-DMDB_USE_ROBUST=0"
+  cargo ndk -t ${arch} -o android/app/src/main/jniLibs build
+#  unset CPPFLAGS && unset CFLAGS
+#  cargo ndk -t "${arch}" -o android/app/src/main/jniLibs build
   if [ $? -eq 0 ]
   then
     success=1
@@ -53,7 +54,7 @@ function build_lib() {
     success=0
   fi
 
-  sed -i -e 's/"cdylib","rlib"/"rlib"/g' Cargo.toml
+  sed -i -e 's/"cdylib","rlib"]/"rlib"]/g' Cargo.toml
   rm -f Cargo.toml-e
 }
 

@@ -14,14 +14,13 @@
 
 use lazy_static::lazy_static;
 use std::sync::atomic::{AtomicI32, Ordering};
-
+use egui::emath::GuiRounding;
 use egui::epaint::text::TextWrapping;
 use egui::epaint::{Color32, FontId, PathShape, PathStroke, RectShape, Stroke};
 use egui::load::SizedTexture;
 use egui::os::OperatingSystem;
 use egui::text::{LayoutJob, TextFormat};
-use egui::{lerp, Button, CornerRadius, CursorIcon, PointerState, Rect, Response, Rgba, RichText, Sense, SizeHint, Spinner, StrokeKind, TextureHandle, TextureOptions, UiBuilder, Widget};
-use egui::emath::GuiRounding;
+use egui::{lerp, Button, CornerRadius, CursorIcon, Rect, Response, Rgba, RichText, Sense, SizeHint, Spinner, StrokeKind, TextureHandle, TextureOptions, UiBuilder, Widget};
 use egui_extras::image::load_svg_bytes_with_size;
 
 use crate::gui::icons::{CHECK_SQUARE, SQUARE};
@@ -158,19 +157,6 @@ impl View {
         ui.add_space(4.0);
     }
 
-    /// Temporary click optimization for touch screens, return `true` if it was clicked.
-    fn touched(ui: &mut egui::Ui, resp: Response) -> bool {
-        let drag_resp = resp.interact(Sense::click_and_drag());
-        // Clear pointer event if dragging is out of button area
-        if drag_resp.dragged() && !ui.rect_contains_pointer(drag_resp.rect) {
-            ui.input_mut(|i| i.pointer = PointerState::default());
-        }
-        if drag_resp.drag_stopped() || drag_resp.clicked() || drag_resp.secondary_clicked() {
-            return true;
-        }
-        false
-    }
-
     /// Draw big size title button.
     pub fn title_button_big(ui: &mut egui::Ui, icon: &str, action: impl FnOnce(&mut egui::Ui)) {
         Self::title_button(ui, 22.0, icon, action);
@@ -199,8 +185,8 @@ impl View {
                 .ui(ui)
                 .on_hover_cursor(CursorIcon::PointingHand);
             br.surrender_focus();
-            if Self::touched(ui, br) {
-                (action)(ui);
+            if br.clicked() {
+                action(ui);
             }
         });
     }
@@ -239,8 +225,8 @@ impl View {
 
             let br = button.ui(ui).on_hover_cursor(CursorIcon::PointingHand);
             br.surrender_focus();
-            if Self::touched(ui, br) {
-                (action)(ui);
+            if br.clicked() {
+                action(ui);
             }
         });
     }
@@ -258,8 +244,8 @@ impl View {
     /// Draw [`Button`] with specified background fill color and default text color.
     pub fn button(ui: &mut egui::Ui, text: String, fill: Color32, action: impl FnOnce()) {
         let br = Self::button_resp(ui, text, Colors::text_button(), fill);
-        if Self::touched(ui, br) {
-            (action)();
+        if br.clicked() {
+            action();
         }
     }
 
@@ -270,8 +256,8 @@ impl View {
                                fill: Color32,
                                action: impl FnOnce()) {
         let br = Self::button_resp(ui, text, text_color, fill);
-        if Self::touched(ui, br) {
-            (action)();
+        if br.clicked() {
+            action();
         }
     }
 
@@ -282,8 +268,8 @@ impl View {
                                   fill: Color32,
                                   action: impl FnOnce(&mut egui::Ui)) {
         let br = Self::button_resp(ui, text, text_color, fill);
-        if Self::touched(ui, br) {
-            (action)(ui);
+        if br.clicked() {
+            action(ui);
         }
     }
 
@@ -304,8 +290,8 @@ impl View {
             .fill(fill)
             .ui(ui)
             .on_hover_cursor(CursorIcon::PointingHand);
-        if Self::touched(ui, br) {
-            (action)(ui);
+        if br.clicked() {
+            action(ui);
         }
     }
 
@@ -345,8 +331,8 @@ impl View {
                 .ui(ui)
                 .on_hover_cursor(CursorIcon::PointingHand);
             br.surrender_focus();
-            if Self::touched(ui, br.clone()) {
-                (action)();
+            if br.clicked() {
+                action();
             }
 
             // Draw stroke.
@@ -449,7 +435,7 @@ impl View {
             rect.min += egui::emath::vec2(side_margin, ui.available_height() / 2.0 - height / 2.0);
             rect.max -= egui::emath::vec2(side_margin, 0.0);
             ui.scope_builder(UiBuilder::new().max_rect(rect), |ui| {
-                (content)(ui);
+                content(ui);
             });
         });
     }
@@ -468,7 +454,7 @@ impl View {
     }
 
     /// Draw the button that looks like checkbox with callback on check.
-    pub fn checkbox(ui: &mut egui::Ui, checked: bool, text: String, callback: impl FnOnce()) {
+    pub fn checkbox(ui: &mut egui::Ui, checked: bool, text: String, action: impl FnOnce()) {
         let (text_value, color) = match checked {
             true => (format!("{} {}", CHECK_SQUARE, text), Colors::text_button()),
             false => (format!("{} {}", SQUARE, text), Colors::checkbox())
@@ -480,8 +466,8 @@ impl View {
             .fill(Colors::TRANSPARENT)
             .ui(ui)
             .on_hover_cursor(CursorIcon::PointingHand);
-        if Self::touched(ui, br) {
-            (callback)();
+        if br.clicked() {
+            action();
         }
     }
 
@@ -494,7 +480,7 @@ impl View {
             // Draw radio button.
             let mut response = ui.radio(*current == value, text)
                 .on_hover_cursor(CursorIcon::PointingHand);
-            if Self::touched(ui, response.clone()) && *current != value {
+            if response.clicked() && *current != value {
                 *current = value;
                 response.mark_changed();
             }

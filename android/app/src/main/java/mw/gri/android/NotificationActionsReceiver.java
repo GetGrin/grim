@@ -4,23 +4,18 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 
+import java.util.Objects;
+
 public class NotificationActionsReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent i) {
         String a = i.getAction();
-        if (a.equals(BackgroundService.ACTION_START_NODE)) {
+        if (Objects.equals(a, BackgroundService.ACTION_START_NODE)) {
             startNode();
-            context.sendBroadcast(new Intent(BackgroundService.ACTION_REFRESH));
-        } else if (a.equals(BackgroundService.ACTION_STOP_NODE)) {
+        } else if (Objects.equals(a, BackgroundService.ACTION_STOP_NODE)) {
             stopNode();
-            context.sendBroadcast(new Intent(BackgroundService.ACTION_REFRESH));
         } else {
-            if (isNodeRunning()) {
-                stopNodeToExit();
-                context.sendBroadcast(new Intent(BackgroundService.ACTION_REFRESH));
-            } else {
-                context.sendBroadcast(new Intent(MainActivity.STOP_APP_ACTION));
-            }
+            stopNodeToExit();
         }
     }
 
@@ -30,6 +25,4 @@ public class NotificationActionsReceiver extends BroadcastReceiver {
     native void stopNode();
     // Stop node and exit from the app.
     native void stopNodeToExit();
-    // Check if node is running.
-    native boolean isNodeRunning();
 }
