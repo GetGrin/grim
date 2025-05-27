@@ -296,7 +296,7 @@ impl P2PSetup {
             ui.add_space(8.0);
 
             // Draw p2p port text edit.
-            let mut edit = TextEdit::new(Id::from(modal.id)).h_center();
+            let mut edit = TextEdit::new(Id::from(modal.id)).h_center().numeric();
             edit.ui(ui, &mut self.port_edit, cb);
             if edit.enter_pressed {
                 on_save(self);
@@ -546,7 +546,7 @@ impl P2PSetup {
             ui.add_space(8.0);
 
             // Draw ban window text edit.
-            let mut edit = TextEdit::new(Id::from(modal.id)).h_center();
+            let mut edit = TextEdit::new(Id::from(modal.id)).h_center().numeric();
             edit.ui(ui, &mut self.ban_window_edit, cb);
             if edit.enter_pressed {
                 on_save(self);
@@ -625,7 +625,7 @@ impl P2PSetup {
             ui.add_space(8.0);
 
             // Draw maximum number of inbound peers text edit.
-            let mut edit = TextEdit::new(Id::from(modal.id)).h_center();
+            let mut edit = TextEdit::new(Id::from(modal.id)).h_center().numeric();
             edit.ui(ui, &mut self.max_inbound_count, cb);
             if edit.enter_pressed {
                 on_save(self);
@@ -703,7 +703,7 @@ impl P2PSetup {
             ui.add_space(8.0);
 
             // Draw maximum number of outbound peers text edit.
-            let mut edit = TextEdit::new(Id::from(modal.id)).h_center();
+            let mut edit = TextEdit::new(Id::from(modal.id)).h_center().numeric();
             edit.ui(ui, &mut self.max_outbound_count, cb);
             if edit.enter_pressed {
                 on_save(self);

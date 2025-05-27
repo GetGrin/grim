@@ -174,9 +174,11 @@ impl PoolSetup {
             ui.add_space(8.0);
 
             // Draw fee base text edit.
-            TextEdit::new(Id::from(modal.id))
-                .h_center()
-                .ui(ui, &mut self.fee_base_edit, cb);
+            let mut edit = TextEdit::new(Id::from(modal.id)).h_center().numeric();
+            edit.ui(ui, &mut self.fee_base_edit, cb);
+            if edit.enter_pressed {
+                on_save(self);
+            }
 
             // Show error when specified value is not valid or reminder to restart enabled node.
             if self.fee_base_edit.parse::<u64>().is_err() {
@@ -251,7 +253,7 @@ impl PoolSetup {
             ui.add_space(8.0);
 
             // Draw reorg period text edit.
-            let mut edit = TextEdit::new(Id::from(modal.id)).h_center();
+            let mut edit = TextEdit::new(Id::from(modal.id)).h_center().numeric();
             edit.ui(ui, &mut self.reorg_period_edit, cb);
             if edit.enter_pressed {
                 on_save(self);
@@ -329,8 +331,7 @@ impl PoolSetup {
             ui.add_space(8.0);
 
             // Draw pool size text edit.
-            let mut edit = TextEdit::new(Id::from(modal.id))
-                .h_center();
+            let mut edit = TextEdit::new(Id::from(modal.id)).h_center().numeric();
             edit.ui(ui, &mut self.pool_size_edit, cb);
             if edit.enter_pressed {
                 on_save(self);
@@ -410,7 +411,7 @@ impl PoolSetup {
             ui.add_space(8.0);
 
             // Draw stempool size text edit.
-            let mut edit = TextEdit::new(Id::from(modal.id)).h_center();
+            let mut edit = TextEdit::new(Id::from(modal.id)).h_center().numeric();
             edit.ui(ui, &mut self.stempool_size_edit, cb);
             if edit.enter_pressed {
                 on_save(self);
@@ -490,7 +491,7 @@ impl PoolSetup {
             ui.add_space(8.0);
 
             // Draw tx weight text edit.
-            let mut edit = TextEdit::new(Id::from(modal.id)).h_center();
+            let mut edit = TextEdit::new(Id::from(modal.id)).h_center().numeric();
             edit.ui(ui, &mut self.max_weight_edit, cb);
             if edit.enter_pressed {
                 on_save(self);

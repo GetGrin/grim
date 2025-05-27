@@ -171,7 +171,7 @@ impl DandelionSetup {
             ui.add_space(8.0);
 
             // Draw epoch text edit.
-            let mut epoch_edit = TextEdit::new(Id::from(modal.id)).h_center();
+            let mut epoch_edit = TextEdit::new(Id::from(modal.id)).h_center().numeric();
             epoch_edit.ui(ui, &mut self.epoch_edit, cb);
             if epoch_edit.enter_pressed {
                 on_save(self);
@@ -249,7 +249,7 @@ impl DandelionSetup {
             ui.add_space(8.0);
 
             // Draw embargo text edit.
-            let mut embargo_edit = TextEdit::new(Id::from(modal.id)).h_center();
+            let mut embargo_edit = TextEdit::new(Id::from(modal.id)).h_center().numeric();
             embargo_edit.ui(ui, &mut self.embargo_edit, cb);
             if embargo_edit.enter_pressed {
                 on_save(self);
@@ -328,7 +328,7 @@ impl DandelionSetup {
             ui.add_space(8.0);
 
             // Draw aggregation period text edit.
-            let mut aggregation_edit = TextEdit::new(Id::from(modal.id)).h_center();
+            let mut aggregation_edit = TextEdit::new(Id::from(modal.id)).h_center().numeric();
             aggregation_edit.ui(ui, &mut self.aggregation_edit, cb);
             if aggregation_edit.enter_pressed {
                 on_save(self);
@@ -407,7 +407,7 @@ impl DandelionSetup {
             ui.add_space(8.0);
 
             // Draw stem phase probability text edit.
-            let mut stem_prob_edit = TextEdit::new(Id::from(modal.id)).h_center();
+            let mut stem_prob_edit = TextEdit::new(Id::from(modal.id)).h_center().numeric();
             stem_prob_edit.ui(ui, &mut self.stem_prob_edit, cb);
             if stem_prob_edit.enter_pressed {
                 on_save(self);

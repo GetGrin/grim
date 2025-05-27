@@ -312,7 +312,7 @@ impl StratumSetup {
             ui.add_space(8.0);
 
             // Draw stratum port text edit.
-            let mut edit = TextEdit::new(Id::from(modal.id)).h_center();
+            let mut edit = TextEdit::new(Id::from(modal.id)).h_center().numeric();
             edit.ui(ui, &mut self.stratum_port_edit, cb);
             if edit.enter_pressed {
                 on_save(self);
@@ -397,7 +397,7 @@ impl StratumSetup {
             ui.add_space(8.0);
 
             // Draw attempt time text edit.
-            let mut edit = TextEdit::new(Id::from(modal.id)).h_center();
+            let mut edit = TextEdit::new(Id::from(modal.id)).h_center().numeric();
             edit.ui(ui, &mut self.attempt_time_edit, cb);
             if edit.enter_pressed {
                 on_save(self);
@@ -476,7 +476,7 @@ impl StratumSetup {
             ui.add_space(8.0);
 
             // Draw share difficulty text edit.
-            let mut edit = TextEdit::new(Id::from(modal.id)).h_center();
+            let mut edit = TextEdit::new(Id::from(modal.id)).h_center().numeric();
             edit.ui(ui, &mut self.min_share_diff_edit, cb);
             if edit.enter_pressed {
                 on_save(self);

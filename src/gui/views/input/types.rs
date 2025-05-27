@@ -15,7 +15,7 @@
 /// Software keyboard input type.
 #[derive(Clone, PartialOrd, PartialEq)]
 pub enum KeyboardLayout {
-    TEXT, SYMBOLS
+    TEXT, SYMBOLS, NUMBERS
 }
 
 /// Software keyboard input event.

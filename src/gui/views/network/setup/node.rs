@@ -304,7 +304,7 @@ impl NodeSetup {
             ui.add_space(6.0);
 
             // Draw API port text edit.
-            let mut api_port_edit = TextEdit::new(Id::from(modal.id)).h_center();
+            let mut api_port_edit = TextEdit::new(Id::from(modal.id)).h_center().numeric();
             api_port_edit.ui(ui, &mut self.api_port_edit, cb);
             if api_port_edit.enter_pressed {
                 on_save(self);
@@ -489,7 +489,7 @@ impl NodeSetup {
             ui.add_space(8.0);
 
             // Draw ftl value text edit.
-            let mut ftl_edit = TextEdit::new(Id::from(modal.id)).h_center();
+            let mut ftl_edit = TextEdit::new(Id::from(modal.id)).h_center().numeric();
             ftl_edit.ui(ui, &mut self.ftl_edit, cb);
             if ftl_edit.enter_pressed {
                 on_save(self);

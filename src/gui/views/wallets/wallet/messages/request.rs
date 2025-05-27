@@ -70,6 +70,38 @@ impl MessageRequestModal {
             return;
         }
 
+        // Setup callback on continue.
+        let on_continue = |m: &mut MessageRequestModal| {
+            if m.amount_edit.is_empty() {
+                return;
+            }
+            if let Ok(a) = amount_from_hr_string(m.amount_edit.as_str()) {
+                modal.disable_closing();
+                // Setup data for request.
+                let wallet = wallet.clone();
+                let invoice = m.invoice.clone();
+                let result = m.request_result.clone();
+                // Send request at another thread.
+                m.request_loading = true;
+                thread::spawn(move || {
+                    let res = if invoice {
+                        wallet.issue_invoice(a)
+                    } else {
+                        wallet.send(a, None)
+                    };
+                    let mut w_result = result.write();
+                    *w_result = Some(res);
+                });
+            } else {
+                let err = if m.invoice {
+                    t!("wallets.invoice_slatepack_err")
+                } else {
+                    t!("wallets.send_slatepack_err")
+                };
+                m.request_error = Some(err);
+            }
+        };
+
         ui.add_space(6.0);
 
         // Draw content on request loading.
@@ -79,74 +111,6 @@ impl MessageRequestModal {
         }
 
         // Draw amount input content.
-        self.amount_input_ui(ui, wallet, modal, cb);
-
-        // Show request creation error.
-        if let Some(err) = &self.request_error {
-            ui.add_space(12.0);
-            ui.vertical_centered(|ui| {
-                ui.label(RichText::new(err)
-                    .size(17.0)
-                    .color(Colors::red()));
-            });
-        }
-
-        ui.add_space(12.0);
-
-        // Setup spacing between buttons.
-        ui.spacing_mut().item_spacing = egui::Vec2::new(8.0, 0.0);
-
-        ui.columns(2, |columns| {
-            columns[0].vertical_centered_justified(|ui| {
-                View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
-                    self.amount_edit = "".to_string();
-                    self.request_error = None;
-                    modal.close();
-                });
-            });
-            columns[1].vertical_centered_justified(|ui| {
-                // Button to create Slatepack message request.
-                View::button(ui, t!("continue"), Colors::white_or_black(false), || {
-                    if self.amount_edit.is_empty() {
-                        return;
-                    }
-                    if let Ok(a) = amount_from_hr_string(self.amount_edit.as_str()) {
-                        modal.disable_closing();
-                        // Setup data for request.
-                        let wallet = wallet.clone();
-                        let invoice = self.invoice.clone();
-                        let result = self.request_result.clone();
-                        // Send request at another thread.
-                        self.request_loading = true;
-                        thread::spawn(move || {
-                            let res = if invoice {
-                                wallet.issue_invoice(a)
-                            } else {
-                                wallet.send(a, None)
-                            };
-                            let mut w_result = result.write();
-                            *w_result = Some(res);
-                        });
-                    } else {
-                        let err = if self.invoice {
-                            t!("wallets.invoice_slatepack_err")
-                        } else {
-                            t!("wallets.send_slatepack_err")
-                        };
-                        self.request_error = Some(err);
-                    }
-                });
-            });
-        });
-        ui.add_space(6.0);
-    }
-
-    /// Draw amount input content.
-    fn amount_input_ui(&mut self,
-                       ui: &mut egui::Ui,
-                       wallet: &Wallet,
-                       modal: &Modal,
-                       cb: &dyn PlatformCallbacks) {
         ui.vertical_centered(|ui| {
             let enter_text = if self.invoice {
                 t!("wallets.enter_amount_receive")
@@ -162,10 +126,14 @@ impl MessageRequestModal {
         ui.add_space(8.0);
 
         // Draw request amount text input.
-        let mut amount_edit = TextEdit::new(Id::from(modal.id).with(wallet.get_config().id))
-            .h_center();
         let amount_edit_before = self.amount_edit.clone();
+        let mut amount_edit = TextEdit::new(Id::from(modal.id).with(wallet.get_config().id))
+            .h_center()
+            .numeric();
         amount_edit.ui(ui, &mut self.amount_edit, cb);
+        if amount_edit.enter_pressed {
+            on_continue(self);
+        }
 
         // Check value if input was changed.
         if amount_edit_before != self.amount_edit {
@@ -205,6 +173,38 @@ impl MessageRequestModal {
                 }
             }
         }
+
+        // Show request creation error.
+        if let Some(err) = &self.request_error {
+            ui.add_space(12.0);
+            ui.vertical_centered(|ui| {
+                ui.label(RichText::new(err)
+                    .size(17.0)
+                    .color(Colors::red()));
+            });
+        }
+
+        ui.add_space(12.0);
+
+        // Setup spacing between buttons.
+        ui.spacing_mut().item_spacing = egui::Vec2::new(8.0, 0.0);
+
+        ui.columns(2, |columns| {
+            columns[0].vertical_centered_justified(|ui| {
+                View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
+                    self.amount_edit = "".to_string();
+                    self.request_error = None;
+                    modal.close();
+                });
+            });
+            columns[1].vertical_centered_justified(|ui| {
+                // Button to create Slatepack message request.
+                View::button(ui, t!("continue"), Colors::white_or_black(false), || {
+                    on_continue(self);
+                });
+            });
+        });
+        ui.add_space(6.0);
     }
 
     /// Draw loading request content.

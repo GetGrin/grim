@@ -332,7 +332,7 @@ impl CommonSettings {
             ui.add_space(8.0);
 
             // Minimum amount of confirmations text edit.
-            let mut min_confirmations_edit = TextEdit::new(Id::from(modal.id)).h_center();
+            let mut min_confirmations_edit = TextEdit::new(Id::from(modal.id)).h_center().numeric();
             min_confirmations_edit.ui(ui, &mut self.min_confirmations_edit, cb);
             if min_confirmations_edit.enter_pressed {
                 on_save(self);

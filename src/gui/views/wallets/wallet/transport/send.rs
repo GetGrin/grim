@@ -146,6 +146,7 @@ impl TransportSendModal {
         let amount_edit_id = Id::from(modal.id).with("amount").with(wallet.get_config().id);
         let mut amount_edit = TextEdit::new(amount_edit_id)
             .h_center()
+            .numeric()
             .focus(Modal::first_draw());
         let amount_edit_before = self.amount_edit.clone();
         amount_edit.ui(ui, &mut self.amount_edit, cb);

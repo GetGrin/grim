@@ -39,13 +39,13 @@ lazy_static! {
 /// Software keyboard content.
 pub struct KeyboardContent {
     /// Keyboard layout.
-    mode: KeyboardLayout
+    layout: KeyboardLayout
 }
 
 impl Default for KeyboardContent {
     fn default() -> Self {
         Self {
-            mode: KeyboardLayout::TEXT,
+            layout: KeyboardLayout::TEXT,
         }
     }
 }
@@ -53,10 +53,13 @@ impl Default for KeyboardContent {
 impl KeyboardContent {
     /// Maximum keyboard content width.
     const MAX_WIDTH: f32 = 600.0;
+    /// Maximum numbers layout width.
+    const MAX_WIDTH_NUMBERS: f32 = 400.0;
 
     /// Draw keyboard content as separate [`Window`].
     pub fn window_ui(&mut self, ctx: &egui::Context) {
         if !KeyboardContent::window_showing() {
+            self.layout = KeyboardLayout::TEXT;
             return;
         }
         let width = ctx.screen_rect().width();
@@ -78,7 +81,7 @@ impl KeyboardContent {
                     left: View::get_left_inset(),
                     right: View::get_right_inset(),
                     top: 1.0,
-                    bottom: View::get_bottom_inset() + 1.0,
+                    bottom: View::get_bottom_inset(),
                 },
                 fill: Colors::fill(),
                 ..Default::default()
@@ -88,7 +91,12 @@ impl KeyboardContent {
                 // Calculate content width.
                 let side_insets = View::get_left_inset() + View::get_right_inset();
                 let available_width = width - side_insets;
-                let w = f32::min(available_width, Self::MAX_WIDTH);
+                let w = f32::min(available_width, if self.layout == KeyboardLayout::NUMBERS {
+                    Self::MAX_WIDTH_NUMBERS
+                } else {
+                    Self::MAX_WIDTH
+                });
+                // Draw content.
                 View::max_width_ui(ui, w, |ui| {
                     self.ui(ui);
                 });
@@ -105,9 +113,17 @@ impl KeyboardContent {
         // Setup vertical padding inside buttons.
         ui.style_mut().spacing.button_padding = egui::vec2(0.0, 8.0);
 
-        let button_rect = match self.mode {
+        // Set numbers layout type if passed on opening.
+        if NUMERIC.load(Ordering::Relaxed) {
+            self.layout = KeyboardLayout::NUMBERS;
+        } else if self.layout == KeyboardLayout::NUMBERS {
+            self.layout = KeyboardLayout::TEXT;
+        }
+
+        let button_rect = match self.layout {
             KeyboardLayout::TEXT => Self::text_ui(ui),
             KeyboardLayout::SYMBOLS => Self::symbols_ui(ui),
+            KeyboardLayout::NUMBERS => Self::numbers_ui(ui),
         };
         ui.add_space(2.0);
 
@@ -117,91 +133,157 @@ impl KeyboardContent {
             r.set_width(ui.available_width());
             r.size()
         };
-        let button_width = ui.available_width() / if self.mode != KeyboardLayout::SYMBOLS {
-            11.0
-        } else {
-            10.0
+        let button_width = ui.available_width() / match self.layout {
+            KeyboardLayout::TEXT => 11.0,
+            KeyboardLayout::SYMBOLS => 10.0,
+            KeyboardLayout::NUMBERS => 4.0,
         };
         ui.allocate_ui_with_layout(bottom_size, Layout::right_to_left(Align::Center), |ui| {
-            // Enter key input.
-            ui.horizontal_centered(|ui| {
-                ui.set_max_width(button_width * 2.0 + 1.0);
-                Self::custom_button_ui(KEY_RETURN.to_string(),
-                                       Colors::white_or_black(false),
-                                       Some(Colors::green()),
-                                       ui,
-                                       |_| {
-                                            Self::input_event(KeyboardEvent::ENTER);
-                                        });
-            });
-            // Backspace key input.
-            ui.horizontal_centered(|ui| {
-                ui.set_max_width(button_width * 1.0);
-                Self::custom_button_ui(BACKSPACE.to_string(),
-                                       Colors::red(),
-                                       Some(Colors::fill_lite()),
-                                       ui,
-                                       |_| {
-                                           Self::input_event(KeyboardEvent::CLEAR);
-                                       });
-            });
-            // Space key input.
-            ui.horizontal_centered(|ui| {
-                ui.set_max_width(button_width * 4.0);
-                Self::custom_button_ui(" ".to_string(), Colors::inactive_text(), None, ui, |l| {
-                    Self::input_event(KeyboardEvent::TEXT(l));
+            if self.layout == KeyboardLayout::NUMBERS {
+                ui.horizontal_centered(|ui| {
+                    ui.set_max_width(button_width * 2.0 + 1.0);
+                    Self::custom_button_ui(KEY_RETURN.to_string(),
+                                           Colors::white_or_black(false),
+                                           Some(Colors::green()),
+                                           ui,
+                                           |_| {
+                                               Self::input_event(KeyboardEvent::ENTER);
+                                           });
                 });
-            });
-            if self.mode != KeyboardLayout::SYMBOLS {
-                // Switch to english and back.
                 ui.horizontal_centered(|ui| {
                     ui.set_max_width(button_width);
-                    Self::custom_button_ui(GLOBE_SIMPLE.to_string(),
-                                           Colors::text_button(),
+                    Self::input_button_ui("0", true, ui);
+                });
+                ui.horizontal_centered(|ui| {
+                    ui.set_max_width(button_width);
+                    Self::input_button_ui(".", false, ui);
+                });
+            } else {
+                // Enter key input.
+                ui.horizontal_centered(|ui| {
+                    ui.set_max_width(button_width * 2.0 + 1.0);
+                    Self::custom_button_ui(KEY_RETURN.to_string(),
+                                           Colors::white_or_black(false),
+                                           Some(Colors::green()),
+                                           ui,
+                                           |_| {
+                                               Self::input_event(KeyboardEvent::ENTER);
+                                           });
+                });
+                // Backspace key input.
+                ui.horizontal_centered(|ui| {
+                    ui.set_max_width(button_width * 1.0);
+                    Self::custom_button_ui(BACKSPACE.to_string(),
+                                           Colors::red(),
                                            Some(Colors::fill_lite()),
                                            ui,
                                            |_| {
-                                               AppConfig::toggle_english_keyboard()
+                                               Self::input_event(KeyboardEvent::CLEAR);
                                            });
                 });
-                // Shift key input.
+                // Space key input.
                 ui.horizontal_centered(|ui| {
-                    ui.set_max_width(button_width);
-                    let uppercase = UPPERCASE.load(Ordering::Relaxed);
-                    let color = if uppercase {
-                        Colors::yellow_dark()
+                    ui.set_max_width(button_width * 4.0);
+                    Self::custom_button_ui(" ".to_string(), Colors::inactive_text(), None, ui, |l| {
+                        Self::input_event(KeyboardEvent::TEXT(l));
+                    });
+                });
+                if self.layout == KeyboardLayout::TEXT {
+                    // Switch to english and back.
+                    ui.horizontal_centered(|ui| {
+                        ui.set_max_width(button_width);
+                        Self::custom_button_ui(GLOBE_SIMPLE.to_string(),
+                                               Colors::text_button(),
+                                               Some(Colors::fill_lite()),
+                                               ui,
+                                               |_| {
+                                                   AppConfig::toggle_english_keyboard()
+                                               });
+                    });
+                    // Shift key input.
+                    ui.horizontal_centered(|ui| {
+                        ui.set_max_width(button_width);
+                        let uppercase = UPPERCASE.load(Ordering::Relaxed);
+                        let color = if uppercase {
+                            Colors::yellow_dark()
+                        } else {
+                            Colors::inactive_text()
+                        };
+                        Self::custom_button_ui(ARROW_FAT_UP.to_string(),
+                                               color,
+                                               Some(Colors::fill_lite()),
+                                               ui, |_| {
+                                UPPERCASE.store(!uppercase, Ordering::Relaxed);
+                            });
+                    });
+                }
+                // Switch to symbols and back.
+                ui.horizontal_centered(|ui| {
+                    let label = if self.layout == KeyboardLayout::SYMBOLS {
+                        let q = t!("keyboard.q", locale = Self::locale().as_str());
+                        let w = t!("keyboard.w", locale = Self::locale().as_str());
+                        let e = t!("keyboard.e", locale = Self::locale().as_str());
+                        format!("{}{}{}", q, w, e).to_uppercase()
                     } else {
-                        Colors::inactive_text()
+                        "!@ツ".to_string()
                     };
-                    Self::custom_button_ui(ARROW_FAT_UP.to_string(),
-                                           color,
+                    let mut mode = self.layout.clone();
+                    Self::custom_button_ui(label,
+                                           Colors::text(false),
                                            Some(Colors::fill_lite()),
-                                           ui, |_| {
-                            UPPERCASE.store(!uppercase, Ordering::Relaxed);
-                        });
+                                           ui,
+                                           |_| {
+                                               if self.layout == KeyboardLayout::SYMBOLS {
+                                                   mode = KeyboardLayout::TEXT;
+                                               } else {
+                                                   mode = KeyboardLayout::SYMBOLS;
+                                               }
+                                           });
+                    self.layout = mode;
                 });
             }
-            // Switch to symbols and back.
-            ui.horizontal_centered(|ui| {
-                let label = if self.mode == KeyboardLayout::SYMBOLS {
-                    let q = t!("keyboard.q", locale = Self::locale().as_str());
-                    let w = t!("keyboard.w", locale = Self::locale().as_str());
-                    let e = t!("keyboard.e", locale = Self::locale().as_str());
-                    format!("{}{}{}", q, w, e).to_uppercase()
-                } else {
-                    "?/ツ".to_string()
-                };
-                let mut mode = self.mode.clone();
-                Self::custom_button_ui(label, Colors::text(false), Some(Colors::fill_lite()), ui, |_| {
-                    if self.mode == KeyboardLayout::SYMBOLS {
-                        mode = KeyboardLayout::TEXT;
-                    } else {
-                        mode = KeyboardLayout::SYMBOLS;
-                    }
-                });
-                self.mode = mode;
-            });
         });
+    }
+
+    /// Draw numbers content returning button [`Rect`].
+    fn numbers_ui(ui: &mut egui::Ui) -> Rect {
+        let mut button_rect = ui.available_rect_before_wrap();
+        let tl_0: Vec<&str> = vec!["1", "2", "3", "-"];
+        ui.columns(tl_0.len(), |columns| {
+            for (index, s) in tl_0.iter().enumerate() {
+                let last = index == tl_0.len() - 1;
+                button_rect = Self::input_button_ui(s, !last, &mut columns[index]);
+            }
+        });
+        ui.add_space(2.0);
+
+        let tl_1: Vec<&str> = vec!["4", "5", "6", "+"];
+        ui.columns(tl_1.len(), |columns| {
+            for (index, s) in tl_1.iter().enumerate() {
+                let last = index == tl_1.len() - 1;
+                Self::input_button_ui(s, !last, &mut columns[index]);
+            }
+        });
+        ui.add_space(2.0);
+
+        let tl_2: Vec<&str> = vec!["7", "8", "9", BACKSPACE];
+        ui.columns(tl_2.len(), |columns| {
+            for (index, s) in tl_2.iter().enumerate() {
+                if index == tl_2.len() - 1 {
+                    Self::custom_button_ui(BACKSPACE.to_string(),
+                                           Colors::red(),
+                                           Some(Colors::fill_lite()),
+                                           &mut columns[index],
+                                           |_| {
+                                               Self::input_event(KeyboardEvent::CLEAR);
+                                           });
+                } else {
+                    Self::input_button_ui(s, true, &mut columns[index]);
+                }
+            }
+        });
+
+        button_rect
     }
 
     /// Draw text content returning button [`Rect`].
