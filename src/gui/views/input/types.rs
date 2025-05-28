@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
+
 /// Software keyboard input type.
 #[derive(Clone, PartialOrd, PartialEq)]
 pub enum KeyboardLayout {
@@ -22,4 +25,28 @@ pub enum KeyboardLayout {
 #[derive(Clone)]
 pub enum KeyboardEvent {
     TEXT(String), CLEAR, ENTER
+}
+
+/// Software keyboard Window State.
+#[derive(Clone)]
+pub struct KeyboardState {
+    /// Last input event.
+    pub last_event: Arc<Option<KeyboardEvent>>,
+    /// Current layout.
+    pub layout: Arc<KeyboardLayout>,
+    /// Flag to enter uppercase symbol first.
+    pub shift: Arc<AtomicBool>,
+    /// Flag to show window.
+    pub show: Arc<AtomicBool>,
+}
+
+impl Default for KeyboardState {
+    fn default() -> Self {
+        Self {
+            last_event: Arc::new(None),
+            layout: Arc::new(KeyboardLayout::TEXT),
+            shift: Arc::new(AtomicBool::new(false)),
+            show: Arc::new(AtomicBool::new(false)),
+        }
+    }
 }

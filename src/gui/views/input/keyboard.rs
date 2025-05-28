@@ -15,35 +15,31 @@
 use egui::{Align, Align2, Button, Color32, CursorIcon, Layout, Margin, Rect, Response, RichText, Shadow, Vec2, Widget};
 use lazy_static::lazy_static;
 use parking_lot::RwLock;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
 use crate::gui::icons::{ARROW_FAT_UP, BACKSPACE, GLOBE_SIMPLE, KEY_RETURN};
-use crate::gui::views::{KeyboardEvent, KeyboardLayout, View};
+use crate::gui::views::{KeyboardEvent, KeyboardLayout, KeyboardState, View};
 use crate::gui::Colors;
 use crate::AppConfig;
 
 lazy_static! {
-    /// Last input event.
-    static ref LAST_EVENT: Arc<RwLock<Option<KeyboardEvent >>> = Arc::new(RwLock::new(None));
-    /// Flag to show keyboard [`egui::Window`].
-    static ref SHOW_WINDOW: AtomicBool = AtomicBool::new(false);
-    /// Flag to enable text shifting.
-    static ref UPPERCASE: AtomicBool = AtomicBool::new(false);
-    /// Flag to show numeric layout.
-    static ref NUMERIC: AtomicBool = AtomicBool::new(false);
+    /// Keyboard window state.
+    static ref WINDOW_STATE: Arc<RwLock<KeyboardState >> = Arc::new(
+        RwLock::new(KeyboardState::default())
+    );
 }
 
 /// Software keyboard content.
 pub struct KeyboardContent {
-    /// Keyboard layout.
-    layout: KeyboardLayout
+    /// Keyboard content state.
+    state: KeyboardState,
 }
 
 impl Default for KeyboardContent {
     fn default() -> Self {
         Self {
-            layout: KeyboardLayout::TEXT,
+            state: KeyboardState::default(),
         }
     }
 }
@@ -56,9 +52,13 @@ impl KeyboardContent {
 
     /// Draw keyboard content as separate [`Window`].
     pub fn window_ui(&mut self, ctx: &egui::Context) {
+        // Setup state.
         if !KeyboardContent::window_showing() {
-            self.layout = KeyboardLayout::TEXT;
+            self.state = KeyboardState::default();
             return;
+        } else {
+            let r_state = WINDOW_STATE.read();
+            self.state = (*r_state).clone();
         }
         let width = ctx.screen_rect().width();
         let layer_id = egui::Window::new("soft_keyboard")
@@ -86,18 +86,22 @@ impl KeyboardContent {
             })
             .show(ctx, |ui| {
                 ui.set_min_width(width);
+                let numeric = *self.state.layout == KeyboardLayout::NUMBERS;
                 // Calculate content width.
                 let side_insets = View::get_left_inset() + View::get_right_inset();
                 let available_width = width - side_insets;
-                let w = f32::min(available_width, if self.layout == KeyboardLayout::NUMBERS {
+                let w = f32::min(available_width, if numeric {
                     Self::MAX_WIDTH_NUMBERS
                 } else {
                     Self::MAX_WIDTH
                 });
                 // Draw content.
                 View::max_width_ui(ui, w, |ui| {
-                    self.ui(ui);
+                    self.ui(numeric, ui);
                 });
+                // Save state.
+                let mut w_state = WINDOW_STATE.write();
+                *w_state = self.state.clone();
             }).unwrap().response.layer_id;
 
         // Always show keyboard above others windows.
@@ -105,12 +109,12 @@ impl KeyboardContent {
     }
 
     /// Draw keyboard content.
-    pub fn ui(&mut self, ui: &mut egui::Ui) {
-        let numeric = NUMERIC.load(Ordering::Relaxed);
+    pub fn ui(&mut self, numeric: bool, ui: &mut egui::Ui) {
+        // Setup layout.
         if numeric {
-            self.layout = KeyboardLayout::NUMBERS;
-        } else if self.layout == KeyboardLayout::NUMBERS {
-            self.layout = KeyboardLayout::TEXT;
+            self.state.layout = Arc::new(KeyboardLayout::NUMBERS);
+        } else if *self.state.layout == KeyboardLayout::NUMBERS {
+            self.state.layout = Arc::new(KeyboardLayout::TEXT);
         }
 
         // Setup spacing between buttons.
@@ -123,10 +127,10 @@ impl KeyboardContent {
         });
 
         // Draw input buttons.
-        let button_rect = match self.layout {
-            KeyboardLayout::TEXT => Self::text_ui(ui),
-            KeyboardLayout::SYMBOLS => Self::symbols_ui(ui),
-            KeyboardLayout::NUMBERS => Self::numbers_ui(ui),
+        let button_rect = match *self.state.layout {
+            KeyboardLayout::TEXT => self.text_ui(ui),
+            KeyboardLayout::SYMBOLS => self.symbols_ui(ui),
+            KeyboardLayout::NUMBERS => self.numbers_ui(ui),
         };
 
         // Draw bottom keyboard buttons.
@@ -135,119 +139,132 @@ impl KeyboardContent {
             r.set_width(ui.available_width());
             r.size()
         };
-        let button_width = ui.available_width() / match self.layout {
+        let button_width = ui.available_width() / match *self.state.layout {
             KeyboardLayout::TEXT => 11.0,
             KeyboardLayout::SYMBOLS => 10.0,
             KeyboardLayout::NUMBERS => 4.0,
         };
         ui.allocate_ui_with_layout(bottom_size, Layout::right_to_left(Align::Center), |ui| {
-            match self.layout {
+            match *self.state.layout {
                 KeyboardLayout::TEXT => {
                     // Enter key input.
                     ui.horizontal_centered(|ui| {
                         ui.set_max_width(button_width * 2.0);
-                        Self::custom_button_ui(KEY_RETURN.to_string(),
+                        self.custom_button_ui(KEY_RETURN.to_string(),
                                                Colors::white_or_black(false),
                                                Some(Colors::green()),
                                                ui,
-                                               |_| {
-                                                   Self::input_event(KeyboardEvent::ENTER);
+                                               |_, c| {
+                                                   c.state.last_event =
+                                                       Arc::new(Some(KeyboardEvent::ENTER));
                                                });
                     });
                     // Custom input key.
                     ui.horizontal_centered(|ui| {
                         ui.set_max_width(button_width);
-                        Self::input_button_ui("m3", true, ui);
+                        self.input_button_ui("m3", true, ui);
                     });
                     // Space key input.
                     ui.horizontal_centered(|ui| {
                         ui.set_max_width(button_width * 4.0);
-                        Self::custom_button_ui(" ".to_string(), Colors::inactive_text(), None, ui, |l| {
-                            Self::input_event(KeyboardEvent::TEXT(l));
-                        });
+                        self.custom_button_ui(" ".to_string(),
+                                              Colors::inactive_text(),
+                                              None,
+                                              ui,
+                                              |l, c| {
+                                                  c.state.last_event =
+                                                      Arc::new(Some(KeyboardEvent::TEXT(l)));
+                                              });
                     });
                     // Custom input key.
                     ui.horizontal_centered(|ui| {
                         ui.set_max_width(button_width);
-                        Self::input_button_ui("z1", true, ui);
+                        self.input_button_ui("z1", true, ui);
                     });
                     // Switch to english and back.
                     ui.horizontal_centered(|ui| {
                         ui.set_max_width(button_width);
-                        Self::custom_button_ui(GLOBE_SIMPLE.to_string(),
+                        self.custom_button_ui(GLOBE_SIMPLE.to_string(),
                                                Colors::text_button(),
                                                Some(Colors::fill_lite()),
                                                ui,
-                                               |_| {
+                                               |_, _| {
                                                    AppConfig::toggle_english_keyboard()
                                                });
                     });
                     // Switch to symbols layout.
-                    Self::custom_button_ui("!@ツ".to_string(),
+                    self.custom_button_ui("!@ツ".to_string(),
                                            Colors::text_button(),
                                            Some(Colors::fill_lite()),
                                            ui,
-                                           |_| {
-                                               self.layout = KeyboardLayout::SYMBOLS;
+                                           |_, c| {
+                                               c.state.layout = Arc::new(KeyboardLayout::SYMBOLS);
                                            });
                 }
                 KeyboardLayout::SYMBOLS => {
                     // Enter key input.
                     ui.horizontal_centered(|ui| {
                         ui.set_max_width(button_width * 2.0);
-                        Self::custom_button_ui(KEY_RETURN.to_string(),
+                        self.custom_button_ui(KEY_RETURN.to_string(),
                                                Colors::white_or_black(false),
                                                Some(Colors::green()),
                                                ui,
-                                               |_| {
-                                                   Self::input_event(KeyboardEvent::ENTER);
+                                               |_, c| {
+                                                   c.state.last_event =
+                                                       Arc::new(Some(KeyboardEvent::ENTER));
                                                });
                     });
                     // Custom input key.
                     ui.horizontal_centered(|ui| {
                         ui.set_max_width(button_width);
-                        Self::input_button_ui("ツ", false, ui);
+                        self.input_button_ui("ツ", false, ui);
                     });
                     // Space key input.
                     ui.horizontal_centered(|ui| {
                         ui.set_max_width(button_width * 4.0);
-                        Self::custom_button_ui(" ".to_string(), Colors::inactive_text(), None, ui, |l| {
-                            Self::input_event(KeyboardEvent::TEXT(l));
-                        });
+                        self.custom_button_ui(" ".to_string(),
+                                              Colors::inactive_text(),
+                                              None,
+                                              ui,
+                                              |l, c| {
+                                                  c.state.last_event =
+                                                      Arc::new(Some(KeyboardEvent::TEXT(l)));
+                                              });
                     });
                     // Switch to text layout.
                     let label = {
-                        let q = t!("keyboard.q", locale = Self::locale().as_str());
-                        let w = t!("keyboard.w", locale = Self::locale().as_str());
-                        let e = t!("keyboard.e", locale = Self::locale().as_str());
+                        let q = t!("keyboard.q", locale = Self::input_locale().as_str());
+                        let w = t!("keyboard.w", locale = Self::input_locale().as_str());
+                        let e = t!("keyboard.e", locale = Self::input_locale().as_str());
                         format!("{}{}{}", q, w, e).to_uppercase()
                     };
-                    Self::custom_button_ui(label,
-                                           Colors::text_button(),
-                                           Some(Colors::fill_lite()),
-                                           ui,
-                                           |_| {
-                                               self.layout = KeyboardLayout::TEXT;
-                                           });
+                    self.custom_button_ui(label,
+                                          Colors::text_button(),
+                                          Some(Colors::fill_lite()),
+                                          ui,
+                                          |_, c| {
+                                              c.state.layout = Arc::new(KeyboardLayout::TEXT);
+                                          });
                 }
                 KeyboardLayout::NUMBERS => {
                     ui.horizontal_centered(|ui| {
                         ui.set_max_width(button_width * 2.0);
-                        Self::custom_button_ui(KEY_RETURN.to_string(),
-                                               Colors::white_or_black(false),
-                                               Some(Colors::green()),
-                                               ui,
-                                               |_| {
-                                                   Self::input_event(KeyboardEvent::ENTER);
-                                               });
+                        self.custom_button_ui(KEY_RETURN.to_string(),
+                                              Colors::white_or_black(false),
+                                              Some(Colors::green()),
+                                              ui,
+                                              |_, c| {
+                                                  c.state.last_event =
+                                                      Arc::new(Some(KeyboardEvent::ENTER));
+                                              });
                     });
                     ui.horizontal_centered(|ui| {
                         ui.set_max_width(button_width);
-                        Self::input_button_ui("0", true, ui);
+                        self.input_button_ui("0", true, ui);
                     });
                     ui.horizontal_centered(|ui| {
                         ui.set_max_width(button_width);
-                        Self::input_button_ui(".", false, ui);
+                        self.input_button_ui(".", false, ui);
                     });
                 }
             }
@@ -255,13 +272,13 @@ impl KeyboardContent {
     }
 
     /// Draw numbers content returning button [`Rect`].
-    fn numbers_ui(ui: &mut egui::Ui) -> Rect {
+    fn numbers_ui(&mut self, ui: &mut egui::Ui) -> Rect {
         let mut button_rect = ui.available_rect_before_wrap();
         let tl_0: Vec<&str> = vec!["1", "2", "3", "+"];
         ui.columns(tl_0.len(), |columns| {
             for (index, s) in tl_0.iter().enumerate() {
                 let last = index == tl_0.len() - 1;
-                button_rect = Self::input_button_ui(s, !last, &mut columns[index]);
+                button_rect = self.input_button_ui(s, !last, &mut columns[index]);
             }
         });
 
@@ -269,7 +286,7 @@ impl KeyboardContent {
         ui.columns(tl_1.len(), |columns| {
             for (index, s) in tl_1.iter().enumerate() {
                 let last = index == tl_1.len() - 1;
-                Self::input_button_ui(s, !last, &mut columns[index]);
+                self.input_button_ui(s, !last, &mut columns[index]);
             }
         });
 
@@ -277,15 +294,16 @@ impl KeyboardContent {
         ui.columns(tl_2.len(), |columns| {
             for (index, s) in tl_2.iter().enumerate() {
                 if index == tl_2.len() - 1 {
-                    Self::custom_button_ui(BACKSPACE.to_string(),
+                    self.custom_button_ui(BACKSPACE.to_string(),
                                            Colors::red(),
                                            Some(Colors::fill_lite()),
                                            &mut columns[index],
-                                           |_| {
-                                               Self::input_event(KeyboardEvent::CLEAR);
+                                           |_, c| {
+                                               c.state.last_event =
+                                                   Arc::new(Some(KeyboardEvent::CLEAR));
                                            });
                 } else {
-                    Self::input_button_ui(s, true, &mut columns[index]);
+                    self.input_button_ui(s, true, &mut columns[index]);
                 }
             }
         });
@@ -294,26 +312,26 @@ impl KeyboardContent {
     }
 
     /// Draw text content returning button [`Rect`].
-    fn text_ui(ui: &mut egui::Ui) -> Rect {
+    fn text_ui(&mut self, ui: &mut egui::Ui) -> Rect {
         let mut button_rect = ui.available_rect_before_wrap();
         let tl_0: Vec<&str> = vec!["1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "01"];
         ui.columns(tl_0.len(), |columns| {
             for (index, s) in tl_0.iter().enumerate() {
-                button_rect = Self::input_button_ui(s, true, &mut columns[index]);
+                button_rect = self.input_button_ui(s, true, &mut columns[index]);
             }
         });
 
         let tl_1: Vec<&str> = vec!["q", "w", "e", "r", "t", "y", "u", "i", "o", "p", "p1"];
         ui.columns(tl_1.len(), |columns| {
             for (index, s) in tl_1.iter().enumerate() {
-                Self::input_button_ui(s, true, &mut columns[index]);
+                self.input_button_ui(s, true, &mut columns[index]);
             }
         });
 
         let tl_2: Vec<&str> = vec!["a", "s", "d", "f", "g", "h", "j", "k", "l", "l1", "l2"];
         ui.columns(tl_2.len(), |columns| {
             for (index, s) in tl_2.iter().enumerate() {
-                Self::input_button_ui(s, true, &mut columns[index]);
+                self.input_button_ui(s, true, &mut columns[index]);
             }
         });
 
@@ -322,28 +340,30 @@ impl KeyboardContent {
         ui.columns(tl_3.len(), |columns| {
             for (index, s) in tl_3.iter().enumerate() {
                 if index == 0 {
-                    let uppercase = UPPERCASE.load(Ordering::Relaxed);
-                    let color = if uppercase {
+                    let shift = self.state.shift.load(Ordering::Relaxed);
+                    let color = if shift {
                         Colors::yellow_dark()
                     } else {
                         Colors::inactive_text()
                     };
-                    Self::custom_button_ui(ARROW_FAT_UP.to_string(),
+                    self.custom_button_ui(ARROW_FAT_UP.to_string(),
                                            color,
                                            Some(Colors::fill_lite()),
-                                           &mut columns[index], |_| {
-                            UPPERCASE.store(!uppercase, Ordering::Relaxed);
+                                           &mut columns[index],
+                                          |_, c| {
+                                              c.state.shift.store(!shift, Ordering::Relaxed);
                         });
                 } else if index == tl_3.len() - 1 {
-                    Self::custom_button_ui(BACKSPACE.to_string(),
+                    self.custom_button_ui(BACKSPACE.to_string(),
                                            Colors::red(),
                                            Some(Colors::fill_lite()),
                                            &mut columns[index],
-                                           |_| {
-                                               Self::input_event(KeyboardEvent::CLEAR);
+                                           |_, c| {
+                                               c.state.last_event =
+                                                   Arc::new(Some(KeyboardEvent::CLEAR));
                                            });
                 } else {
-                    Self::input_button_ui(s, true, &mut columns[index]);
+                    self.input_button_ui(s, true, &mut columns[index]);
                 }
             }
         });
@@ -352,26 +372,26 @@ impl KeyboardContent {
     }
 
     /// Draw symbols content returning button [`Rect`].
-    fn symbols_ui(ui: &mut egui::Ui) -> Rect {
+    fn symbols_ui(&mut self, ui: &mut egui::Ui) -> Rect {
         let mut button_rect = ui.available_rect_before_wrap();
         let tl_0: Vec<&str> = vec!["[", "]", "{", "}", "#", "%", "^", "*", "+", "="];
         ui.columns(tl_0.len(), |columns| {
             for (index, s) in tl_0.iter().enumerate() {
-                button_rect = Self::input_button_ui(s, false, &mut columns[index]);
+                button_rect = self.input_button_ui(s, false, &mut columns[index]);
             }
         });
 
         let tl_1: Vec<&str> = vec!["_", "\\", "|", "~", "<", ">", "№", "√", "π", "•"];
         ui.columns(tl_1.len(), |columns| {
             for (index, s) in tl_1.iter().enumerate() {
-                Self::input_button_ui(s, false, &mut columns[index]);
+                self.input_button_ui(s, false, &mut columns[index]);
             }
         });
 
         let tl_2: Vec<&str> = vec!["-", "/", ":", ";", "(", ")", "`", "&", "@", "\""];
         ui.columns(tl_2.len(), |columns| {
             for (index, s) in tl_2.iter().enumerate() {
-                Self::input_button_ui(s, false, &mut columns[index]);
+                self.input_button_ui(s, false, &mut columns[index]);
             }
         });
 
@@ -379,15 +399,16 @@ impl KeyboardContent {
         ui.columns(tl_3.len(), |columns| {
             for (index, s) in tl_3.iter().enumerate() {
                 if index == tl_3.len() - 1 {
-                    Self::custom_button_ui(BACKSPACE.to_string(),
+                    self.custom_button_ui(BACKSPACE.to_string(),
                                            Colors::red(),
                                            Some(Colors::fill_lite()),
                                            &mut columns[index],
-                                           |_| {
-                                               Self::input_event(KeyboardEvent::CLEAR);
+                                           |_, c| {
+                                               c.state.last_event =
+                                                   Arc::new(Some(KeyboardEvent::CLEAR));
                                            });
                 } else {
-                    Self::input_button_ui(s, false, &mut columns[index]);
+                    self.input_button_ui(s, false, &mut columns[index]);
                 }
             }
         });
@@ -396,11 +417,12 @@ impl KeyboardContent {
     }
 
     /// Draw custom keyboard button.
-    fn custom_button_ui(s: String,
+    fn custom_button_ui(&mut self,
+                        s: String,
                         color: Color32,
                         bg: Option<Color32>,
                         ui: &mut egui::Ui,
-                        mut cb: impl FnMut(String)) -> Response {
+                        cb: impl FnOnce(String, &mut KeyboardContent)) -> Response {
         ui.vertical_centered_justified(|ui| {
             // Disable expansion on click/hover.
             ui.style_mut().visuals.widgets.hovered.expansion = 0.0;
@@ -414,7 +436,8 @@ impl KeyboardContent {
             ui.visuals_mut().widgets.hovered.bg_stroke = View::item_stroke();
             ui.visuals_mut().widgets.active.bg_stroke = View::hover_stroke();
 
-            let label = if UPPERCASE.load(Ordering::Relaxed) {
+            let shift = self.state.shift.load(Ordering::Relaxed);
+            let label = if shift {
                 s.to_uppercase()
             } else {
                 s.to_string()
@@ -426,27 +449,27 @@ impl KeyboardContent {
             }
             let resp = button.ui(ui).on_hover_cursor(CursorIcon::PointingHand);
             if resp.clicked() {
-                (cb)(label);
+                cb(label, self);
             }
         }).response
     }
 
     /// Draw input button.
-    fn input_button_ui(s: &str, translate: bool, ui: &mut egui::Ui) -> Rect {
+    fn input_button_ui(&mut self, s: &str, translate: bool, ui: &mut egui::Ui) -> Rect {
         let value = if translate {
-            t!(format!("keyboard.{}", s).as_str(), locale = Self::locale().as_str())
+            t!(format!("keyboard.{}", s).as_str(), locale = Self::input_locale().as_str())
         } else {
             s.to_string()
         };
-        let rect = Self::custom_button_ui(value, Colors::text_button(), None, ui, |l| {
-            Self::input_event(KeyboardEvent::TEXT(l));
-            UPPERCASE.store(false, Ordering::Relaxed);
+        let rect = self.custom_button_ui(value, Colors::text_button(), None, ui, |l, c| {
+            c.state.last_event = Arc::new(Some(KeyboardEvent::TEXT(l)));
+            c.state.shift.store(false, Ordering::Relaxed);
         }).rect;
         rect
     }
 
     /// Get input locale.
-    fn locale() -> String {
+    fn input_locale() -> String {
         let english = AppConfig::english_keyboard();
         if english {
             "en".to_string()
@@ -455,50 +478,45 @@ impl KeyboardContent {
         }
     }
 
-    /// Save keyboard event to consume later.
-    fn input_event(event: KeyboardEvent) {
-        let mut w_input = LAST_EVENT.write();
-        *w_input = Some(event);
-    }
-
     /// Check last keyboard input event.
     pub fn consume_event() -> Option<KeyboardEvent> {
         let empty = {
-            let r_input = LAST_EVENT.read();
-            r_input.is_none()
+            let r_state = WINDOW_STATE.read();
+            r_state.last_event.is_none()
         };
         if !empty {
-            let mut w_input = LAST_EVENT.write();
-            let res = w_input.clone();
-            *w_input = None;
-            return res;
+            let mut w_state = WINDOW_STATE.write();
+            let event = w_state.last_event.as_ref().clone().unwrap();
+            w_state.last_event = Arc::new(None);
+            return Some(event);
         }
         None
     }
 
     /// Check if keyboard is showing.
     pub fn window_showing() -> bool {
-        SHOW_WINDOW.load(Ordering::Relaxed)
+        let r_state = WINDOW_STATE.read();
+        r_state.show.load(Ordering::Relaxed)
     }
 
     /// Show keyboard.
     pub fn show_window(numeric: bool) {
-        NUMERIC.store(numeric, Ordering::Relaxed);
-        SHOW_WINDOW.store(true, Ordering::Relaxed);
+        let mut w_state = WINDOW_STATE.write();
+        if numeric {
+            w_state.layout = Arc::new(KeyboardLayout::NUMBERS);
+        }
+        w_state.show.store(true, Ordering::Relaxed);
     }
 
-    /// Emulate Shift key pressing.
-    pub fn shift() {
-        UPPERCASE.store(true, Ordering::Relaxed);
-    }
-
-    /// Emulate Shift key pressing.
+    /// Emulate stop of Shift key press.
     pub fn unshift() {
-        UPPERCASE.store(false, Ordering::Relaxed);
+        let r_state = WINDOW_STATE.read();
+        r_state.shift.store(false, Ordering::Relaxed);
     }
 
-    /// Hide keyboard.
-    pub fn hide() {
-        SHOW_WINDOW.store(false, Ordering::Relaxed);
+    /// Hide keyboard window.
+    pub fn hide_window() {
+        let r_state = WINDOW_STATE.read();
+        r_state.show.store(false, Ordering::Relaxed);
     }
 }

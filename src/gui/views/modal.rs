@@ -78,7 +78,7 @@ impl Modal {
         let mut w_nav = MODAL_STATE.write();
         w_nav.modal = None;
         // Hide keyboard.
-        KeyboardContent::hide();
+        KeyboardContent::hide_window();
     }
 
     /// Setup possibility to close [`Modal`].

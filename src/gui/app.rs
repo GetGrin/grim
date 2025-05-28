@@ -81,7 +81,7 @@ impl<Platform: PlatformCallbacks> App<Platform> {
             if Modal::on_back() {
                 self.content.on_back(&self.platform);
             } else if KeyboardContent::window_showing() {
-                KeyboardContent::hide();
+                KeyboardContent::hide_window();
             }
             if back_pressed {
                 BACK_BUTTON_PRESSED.store(false, Ordering::Relaxed);
