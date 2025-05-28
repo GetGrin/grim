@@ -14,14 +14,14 @@
 
 use egui::epaint::{RectShape, Shadow};
 use egui::os::OperatingSystem;
-use egui::{Align2, CornerRadius, RichText, Stroke, UiBuilder, Vec2, StrokeKind};
+use egui::{Align2, CornerRadius, RichText, Stroke, StrokeKind, UiBuilder, Vec2};
 use lazy_static::lazy_static;
 use parking_lot::RwLock;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
 use crate::gui::views::types::{ModalPosition, ModalState};
-use crate::gui::views::{Content, KeyboardContent, View};
+use crate::gui::views::{Content, View};
 use crate::gui::Colors;
 
 lazy_static! {
@@ -77,8 +77,6 @@ impl Modal {
     pub fn close() {
         let mut w_nav = MODAL_STATE.write();
         w_nav.modal = None;
-        // Hide keyboard.
-        KeyboardContent::hide_window();
     }
 
     /// Setup possibility to close [`Modal`].

@@ -12,17 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::sync::atomic::{AtomicBool, Ordering};
+use egui::epaint::RectShape;
+use egui::{Align, Context, CornerRadius, CursorIcon, Layout, Modifiers, ResizeDirection, Stroke, StrokeKind, UiBuilder, ViewportCommand};
 use lazy_static::lazy_static;
-use egui::{Align, Context, CornerRadius, CursorIcon, Layout, Modifiers, ResizeDirection, Stroke, UiBuilder, ViewportCommand, StrokeKind};
-use egui::epaint::{RectShape};
+use std::sync::atomic::{AtomicBool, Ordering};
 
-use crate::AppConfig;
-use crate::gui::Colors;
 use crate::gui::icons::{ARROWS_IN, ARROWS_OUT, CARET_DOWN, MOON, SUN, X};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Content, KeyboardContent, Modal, TitlePanel, View};
+use crate::gui::views::{Content, Modal, TitlePanel, View};
+use crate::gui::Colors;
 use crate::wallet::ExternalConnection;
+use crate::AppConfig;
 
 lazy_static! {
     /// State to check if platform Back button was pressed.
@@ -36,8 +36,6 @@ pub struct App<Platform> {
 
     /// Main content.
     content: Content,
-    /// Keyboard content.
-    keyboard_content: KeyboardContent,
 
     /// Last window resize direction.
     resize_direction: Option<ResizeDirection>,
@@ -50,7 +48,6 @@ impl<Platform: PlatformCallbacks> App<Platform> {
         Self {
             platform,
             content: Content::default(),
-            keyboard_content: KeyboardContent::default(),
             resize_direction: None,
             first_draw: true
         }
@@ -80,8 +77,6 @@ impl<Platform: PlatformCallbacks> App<Platform> {
         if back_pressed || ctx.input_mut(|i| i.consume_key(Modifiers::NONE, egui::Key::Escape)) {
             if Modal::on_back() {
                 self.content.on_back(&self.platform);
-            } else if KeyboardContent::window_showing() {
-                KeyboardContent::hide_window();
             }
             if back_pressed {
                 BACK_BUTTON_PRESSED.store(false, Ordering::Relaxed);
@@ -136,9 +131,6 @@ impl<Platform: PlatformCallbacks> App<Platform> {
                     Self::title_panel_bg(ui, false);
                     self.content.ui(ui, &self.platform);
                 }
-
-                // Show soft keyboard content.
-                self.keyboard_content.window_ui(ctx);
 
                 // Provide incoming data to wallets.
                 if let Some(data) = crate::consume_incoming_data() {

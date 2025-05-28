@@ -36,8 +36,6 @@ pub struct KeyboardState {
     pub layout: Arc<KeyboardLayout>,
     /// Flag to enter uppercase symbol first.
     pub shift: Arc<AtomicBool>,
-    /// Flag to show window.
-    pub show: Arc<AtomicBool>,
 }
 
 impl Default for KeyboardState {
@@ -46,7 +44,6 @@ impl Default for KeyboardState {
             last_event: Arc::new(None),
             layout: Arc::new(KeyboardLayout::TEXT),
             shift: Arc::new(AtomicBool::new(false)),
-            show: Arc::new(AtomicBool::new(false)),
         }
     }
 }

@@ -51,15 +51,7 @@ impl KeyboardContent {
     const MAX_WIDTH_NUMBERS: f32 = 400.0;
 
     /// Draw keyboard content as separate [`Window`].
-    pub fn window_ui(&mut self, ctx: &egui::Context) {
-        // Setup state.
-        if !KeyboardContent::window_showing() {
-            self.state = KeyboardState::default();
-            return;
-        } else {
-            let r_state = WINDOW_STATE.read();
-            self.state = (*r_state).clone();
-        }
+    pub fn window_ui(&mut self, numeric: bool, ctx: &egui::Context) {
         let width = ctx.screen_rect().width();
         let layer_id = egui::Window::new("soft_keyboard")
             .title_bar(false)
@@ -86,7 +78,11 @@ impl KeyboardContent {
             })
             .show(ctx, |ui| {
                 ui.set_min_width(width);
-                let numeric = *self.state.layout == KeyboardLayout::NUMBERS;
+                // Setup state.
+                {
+                    let r_state = WINDOW_STATE.read();
+                    self.state = (*r_state).clone();
+                }
                 // Calculate content width.
                 let side_insets = View::get_left_inset() + View::get_right_inset();
                 let available_width = width - side_insets;
@@ -493,30 +489,9 @@ impl KeyboardContent {
         None
     }
 
-    /// Check if keyboard is showing.
-    pub fn window_showing() -> bool {
-        let r_state = WINDOW_STATE.read();
-        r_state.show.load(Ordering::Relaxed)
-    }
-
-    /// Show keyboard.
-    pub fn show_window(numeric: bool) {
-        let mut w_state = WINDOW_STATE.write();
-        if numeric {
-            w_state.layout = Arc::new(KeyboardLayout::NUMBERS);
-        }
-        w_state.show.store(true, Ordering::Relaxed);
-    }
-
     /// Emulate stop of Shift key press.
     pub fn unshift() {
         let r_state = WINDOW_STATE.read();
         r_state.shift.store(false, Ordering::Relaxed);
-    }
-
-    /// Hide keyboard window.
-    pub fn hide_window() {
-        let r_state = WINDOW_STATE.read();
-        r_state.show.store(false, Ordering::Relaxed);
     }
 }
