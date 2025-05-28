@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::{Align, Align2, Button, Color32, CursorIcon, Layout, Margin, Rect, Response, RichText, Shadow, Vec2, Widget};
+use egui::{Align, Align2, Button, Color32, CursorIcon, Layout, Margin, Rect, Response, RichText, Sense, Shadow, Vec2, Widget};
 use lazy_static::lazy_static;
 use parking_lot::RwLock;
 use std::sync::atomic::Ordering;
@@ -438,8 +438,14 @@ impl KeyboardContent {
             if let Some(bg) = bg {
                 button = button.fill(bg);
             }
+            // Setup long press/touch.
+            let long_press = s == BACKSPACE;
+            if long_press {
+                button = button.sense(Sense::click_and_drag());
+            }
+            // Draw button.
             let resp = button.ui(ui).on_hover_cursor(CursorIcon::PointingHand);
-            if resp.clicked() {
+            if resp.clicked() || resp.long_touched() || resp.dragged() {
                 cb(label, self);
             }
         }).response
