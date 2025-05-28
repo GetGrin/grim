@@ -325,8 +325,7 @@ keyboard:
   k: k
   l: l
   l1: \
-  l2: '?'
-  z1: ','
+  l2: ':'
   z: z
   x: x
   c: c
@@ -334,6 +333,6 @@ keyboard:
   b: b
   n: n
   m: m
-  m1: .
-  m2: ':'
+  m1: ','
+  m2: .
   m3: /

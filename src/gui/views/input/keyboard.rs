@@ -162,7 +162,7 @@ impl KeyboardContent {
                     });
                     // Space key input.
                     ui.horizontal_centered(|ui| {
-                        ui.set_max_width(button_width * 4.0);
+                        ui.set_max_width(button_width * 5.0);
                         self.custom_button_ui(" ".to_string(),
                                               Colors::inactive_text(),
                                               None,
@@ -171,11 +171,6 @@ impl KeyboardContent {
                                                   c.state.last_event =
                                                       Arc::new(Some(KeyboardEvent::TEXT(l)));
                                               });
-                    });
-                    // Custom input key.
-                    ui.horizontal_centered(|ui| {
-                        ui.set_max_width(button_width);
-                        self.input_button_ui("z1", true, ui);
                     });
                     // Switch to english and back.
                     ui.horizontal_centered(|ui| {

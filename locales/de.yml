@@ -303,18 +303,18 @@ keyboard:
   8: 8
   9: 9
   0: 0
-  01: '-'  
+  01: ß
   q: q
   w: w
   e: e
   r: r
   t: t
-  y: y
+  y: z
   u: u
   i: i
   o: o
   p: p
-  p1: '"'
+  p1: ü
   a: a
   s: s
   d: d
@@ -324,16 +324,15 @@ keyboard:
   j: j
   k: k
   l: l
-  l1: \
-  l2: '?'
-  z1: ','
-  z: z
+  l1: ö
+  l2: ä
+  z: y
   x: x
   c: c
   v: v
   b: b
   n: n
   m: m
-  m1: .
-  m2: ':'
-  m3: /
+  m1: ','
+  m2: .
+  m3: '/'
