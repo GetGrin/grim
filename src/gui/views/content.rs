@@ -239,10 +239,8 @@ impl Content {
 
     /// Handle Back key event.
     pub fn on_back(&mut self, cb: &dyn PlatformCallbacks) {
-        if Modal::on_back() {
-            if self.wallets.on_back(cb) {
-                Self::show_exit_modal()
-            }
+        if self.wallets.on_back(cb) {
+            Self::show_exit_modal()
         }
     }
 
