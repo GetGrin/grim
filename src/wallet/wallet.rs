@@ -12,42 +12,42 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::{fs, thread};
+use futures::channel::oneshot;
+use parking_lot::RwLock;
+use rand::Rng;
+use serde_json::{json, Value};
 use std::fs::File;
 use std::io::Write;
 use std::net::{SocketAddr, TcpListener};
 use std::path::PathBuf;
-use std::sync::{Arc, mpsc};
-use parking_lot::RwLock;
 use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
+use std::sync::{mpsc, Arc};
 use std::thread::Thread;
 use std::time::Duration;
-use futures::channel::oneshot;
-use serde_json::{json, Value};
+use std::{fs, thread};
 
 use grin_api::{ApiServer, Router};
 use grin_chain::SyncStatus;
-use grin_core::global;
 use grin_keychain::{ExtKeychain, Identifier, Keychain};
-use grin_util::{Mutex, ToHex};
 use grin_util::secp::SecretKey;
 use grin_util::types::ZeroingString;
+use grin_util::{Mutex, ToHex};
 use grin_wallet_api::Owner;
 use grin_wallet_controller::command::parse_slatepack;
 use grin_wallet_controller::controller;
 use grin_wallet_controller::controller::ForeignAPIHandlerV2;
-use grin_wallet_impls::{DefaultLCProvider, DefaultWalletImpl, HTTPNodeClient};
-use grin_wallet_libwallet::{address, Error, InitTxArgs, IssueInvoiceTxArgs, NodeClient, RetrieveTxQueryArgs, RetrieveTxQuerySortField, RetrieveTxQuerySortOrder, Slate, SlatepackAddress, SlateState, SlateVersion, StatusMessage, TxLogEntry, TxLogEntryType, VersionedSlate, WalletInst, WalletLCProvider};
+use grin_wallet_impls::{DefaultLCProvider, DefaultWalletImpl, HTTPNodeClient, LMDBBackend};
 use grin_wallet_libwallet::api_impl::owner::{cancel_tx, retrieve_summary_info, retrieve_txs};
+use grin_wallet_libwallet::{address, Error, InitTxArgs, IssueInvoiceTxArgs, NodeClient, RetrieveTxQueryArgs, RetrieveTxQuerySortField, RetrieveTxQuerySortOrder, Slate, SlateState, SlateVersion, SlatepackAddress, StatusMessage, TxLogEntry, TxLogEntryType, VersionedSlate, WalletBackend, WalletInitStatus, WalletInst, WalletLCProvider};
 use grin_wallet_util::OnionV3Address;
-use rand::Rng;
 
-use crate::AppConfig;
 use crate::node::{Node, NodeConfig};
 use crate::tor::Tor;
-use crate::wallet::{ConnectionsConfig, Mnemonic, WalletConfig};
+use crate::wallet::seed::WalletSeed;
 use crate::wallet::store::TxHeightStore;
-use crate::wallet::types::{ConnectionMethod, WalletAccount, WalletData, WalletInstance, WalletTransaction};
+use crate::wallet::types::{ConnectionMethod, PhraseMode, WalletAccount, WalletData, WalletInstance, WalletTransaction};
+use crate::wallet::{ConnectionsConfig, Mnemonic, WalletConfig};
+use crate::AppConfig;
 
 /// Contains wallet instance, configuration and state, handles wallet commands.
 #[derive(Clone)]
@@ -132,18 +132,32 @@ impl Wallet {
         mnemonic: &Mnemonic,
         conn_method: &ConnectionMethod
     ) -> Result<Wallet, Error> {
-        let mut config = WalletConfig::create(name.clone(), conn_method);
+        let config = WalletConfig::create(name.clone(), conn_method);
         let w = Wallet::new(config.clone());
         {
-            let instance = Self::create_wallet_instance(&mut config)?;
-            let mut w_lock = instance.lock();
-            let p = w_lock.lc_provider()?;
-            p.create_wallet(None,
-                            Some(ZeroingString::from(mnemonic.get_phrase())),
-                            mnemonic.size().entropy_size(),
-                            password.clone(),
-                            false,
-            )?;
+            // create directory if it doesn't exist
+            fs::create_dir_all(config.get_data_path())
+                .map_err(|_| Error::IO("Directory creation error".to_string()))?;
+            // Create seed file.
+            let _ = WalletSeed::init_file(config.seed_path().as_str(),
+                                          ZeroingString::from(mnemonic.get_phrase()),
+                                          password.clone())
+                .map_err(|_| Error::IO("Seed file creation error".to_string()))?;
+            let node_client = Self::create_node_client(&config)?;
+            let mut wallet: LMDBBackend<'static, HTTPNodeClient, ExtKeychain> =
+                match LMDBBackend::new(config.get_data_path().as_str(), node_client) {
+                    Err(_) => {
+                        return Err(Error::Lifecycle("DB creation error".to_string()).into());
+                    }
+                    Ok(d) => d,
+                };
+            // Save init status of this wallet, to determine whether it needs a full UTXO scan
+            let mut batch = wallet.batch_no_mask()?;
+            match mnemonic.mode() {
+                PhraseMode::Generate => batch.save_init_status(WalletInitStatus::InitNoScanning)?,
+                PhraseMode::Import => batch.save_init_status(WalletInitStatus::InitNeedsScanning)?,
+            }
+            batch.commit()?;
         }
         Ok(w)
     }
@@ -157,18 +171,8 @@ impl Wallet {
         None
     }
 
-    /// Create [`WalletInstance`] from provided [`WalletConfig`].
-    fn create_wallet_instance(config: &mut WalletConfig) -> Result<WalletInstance, Error> {
-        // Assume global chain type has already been initialized.
-        let chain_type = config.chain_type;
-        if !global::GLOBAL_CHAIN_TYPE.is_init() {
-            global::init_global_chain_type(chain_type);
-        } else {
-            global::set_global_chain_type(chain_type);
-            global::set_local_chain_type(chain_type);
-        }
-
-        // Setup node client.
+    /// Create [`HTTPNodeClient`] from provided config.
+    fn create_node_client(config: &WalletConfig) -> Result<HTTPNodeClient, Error> {
         let integrated = || {
             let api_url = format!("http://{}", NodeConfig::get_api_address());
             let api_secret = NodeConfig::get_api_secret(true);
@@ -183,7 +187,13 @@ impl Wallet {
         } else {
             integrated()
         };
-        let node_client = HTTPNodeClient::new(&node_api_url, node_secret)?;
+        Ok(HTTPNodeClient::new(&node_api_url, node_secret)?)
+    }
+
+    /// Create [`WalletInstance`] from provided [`WalletConfig`].
+    fn create_wallet_instance(config: &mut WalletConfig) -> Result<WalletInstance, Error> {
+        // Setup node client.
+        let node_client = Self::create_node_client(config)?;
 
         // Create wallet instance.
         let wallet = Self::inst_wallet::<
@@ -208,7 +218,7 @@ impl Wallet {
         let mut wallet = Box::new(DefaultWalletImpl::<'static, C>::new(node_client).unwrap())
             as Box<dyn WalletInst<'static, L, C, K>>;
         let lc = wallet.lc_provider()?;
-        lc.set_top_level_directory(config.get_data_path().as_str())?;
+        lc.set_top_level_directory(config.get_wallet_path().as_str())?;
         Ok(Arc::new(Mutex::new(wallet)))
     }
 
@@ -1065,7 +1075,7 @@ impl Wallet {
                 thread::sleep(Duration::from_millis(100));
             }
             // Remove wallet files.
-            let _ = fs::remove_dir_all(wallet_delete.get_config().get_data_path());
+            let _ = fs::remove_dir_all(wallet_delete.get_config().get_wallet_path());
             // Mark wallet as deleted.
             wallet_delete.deleted.store(true, Ordering::Relaxed);
             // Start sync to close thread.

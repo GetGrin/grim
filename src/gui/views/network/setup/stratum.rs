@@ -73,7 +73,7 @@ impl Default for StratumSetup {
         // Setup mining rewards wallet name and identifier.
         let mut wallet_id = NodeConfig::get_stratum_wallet_id();
         let wallet_name = if let Some(id) = wallet_id {
-            WalletConfig::name_by_id(id)
+            WalletConfig::read_name_by_id(id)
         } else {
             None
         };
@@ -115,7 +115,7 @@ impl ModalContainer for StratumSetup {
                 self.wallets_modal.ui(ui, modal, &mut self.wallets, cb, |wallet, _| {
                     let id = wallet.get_config().id;
                     NodeConfig::save_stratum_wallet_id(id);
-                    self.wallet_name = WalletConfig::name_by_id(id);
+                    self.wallet_name = WalletConfig::read_name_by_id(id);
                 })
             },
             STRATUM_PORT_MODAL => self.port_modal(ui, modal, cb),

@@ -588,7 +588,7 @@ impl Handler {
                     let mut state = self.current_state.write();
                     let wallet_listener_url = if !config.burn_reward {
                         if let Ok(id) = config.wallet_listener_url.parse::<i64>() {
-                            if let Some(port) = WalletConfig::api_port_by_id(id) {
+                            if let Some(port) = WalletConfig::read_api_port_by_id(id) {
                                 let url = format!("http://127.0.0.1:{}", port);
                                 Some(url)
                             } else {

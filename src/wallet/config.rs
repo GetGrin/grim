@@ -50,10 +50,16 @@ pub struct WalletConfig {
 
 /// Base wallets directory name.
 const BASE_DIR_NAME: &'static str = "wallets";
+/// Base wallets directory name.
+const DB_DIR_NAME: &'static str = "db";
+/// Wallet data directory name.
+const DATA_DIR_NAME: &'static str = "wallet_data";
 /// Wallet configuration file name.
 const CONFIG_FILE_NAME: &'static str = "grim-wallet.toml";
 /// Slatepacks directory name.
 const SLATEPACKS_DIR_NAME: &'static str = "slatepacks";
+/// Seed file name.
+const SEED_FILE: &str = "wallet.seed";
 
 /// Default value of minimal amount of confirmations.
 const MIN_CONFIRMATIONS_DEFAULT: u64 = 10;
@@ -98,7 +104,7 @@ impl WalletConfig {
     }
 
     /// Get wallet name by provided identifier.
-    pub fn name_by_id(id: i64) -> Option<String> {
+    pub fn read_name_by_id(id: i64) -> Option<String> {
         let mut wallet_dir = WalletConfig::get_base_path(AppConfig::chain_type());
         wallet_dir.push(id.to_string());
         if let Some(cfg) = Self::load(wallet_dir) {
@@ -108,7 +114,7 @@ impl WalletConfig {
     }
 
     /// Get wallet API port by provided identifier.
-    pub fn api_port_by_id(id: i64) -> Option<u16> {
+    pub fn read_api_port_by_id(id: i64) -> Option<u16> {
         let mut wallet_dir = WalletConfig::get_base_path(AppConfig::chain_type());
         wallet_dir.push(id.to_string());
         if let Some(cfg) = Self::load(wallet_dir) {
@@ -157,25 +163,38 @@ impl WalletConfig {
         config_path
     }
 
-    /// Get current wallet data path.
-    pub fn get_data_path(&self) -> String {
+    /// Get current wallet path.
+    pub fn get_wallet_path(&self) -> String {
         let chain_type = AppConfig::chain_type();
         let mut data_path = Self::get_base_path(chain_type);
         data_path.push(self.id.to_string());
         data_path.to_str().unwrap().to_string()
     }
 
+    /// Get wallet data path.
+    pub fn get_data_path(&self) -> String {
+        let mut data_path = PathBuf::from(self.get_wallet_path());
+        data_path.push(DATA_DIR_NAME);
+        data_path.to_str().unwrap().to_string()
+    }
+
+    /// Get wallet seed path.
+    pub fn seed_path(&self) -> String {
+        let mut path = PathBuf::from(self.get_data_path());
+        path.push(SEED_FILE);
+        path.to_str().unwrap().to_string()
+    }
+
     /// Get wallet database data path.
     pub fn get_db_path(&self) -> String {
         let mut path = PathBuf::from(self.get_data_path());
-        path.push("wallet_data");
-        path.push("db");
+        path.push(DB_DIR_NAME);
         path.to_str().unwrap().to_string()
     }
 
     /// Get Slatepacks data path for current wallet.
     pub fn get_slatepack_path(&self, slate: &Slate) -> PathBuf {
-        let mut path = PathBuf::from(self.get_data_path());
+        let mut path = PathBuf::from(self.get_wallet_path());
         path.push(SLATEPACKS_DIR_NAME);
         if !path.exists() {
             let _ = fs::create_dir_all(path.clone());

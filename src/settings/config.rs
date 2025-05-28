@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use grin_core::global;
 use grin_core::global::ChainTypes;
 use serde_derive::{Deserialize, Serialize};
 use crate::gui::views::Content;
@@ -117,6 +118,12 @@ impl AppConfig {
                 let mut w_conn_config = Settings::conn_config_to_update();
                 *w_conn_config = ConnectionsConfig::for_chain_type(chain_type);
             }
+        }
+        if !global::GLOBAL_CHAIN_TYPE.is_init() {
+            global::init_global_chain_type(*chain_type);
+        } else {
+            global::set_global_chain_type(*chain_type);
+            global::set_local_chain_type(*chain_type);
         }
     }
 

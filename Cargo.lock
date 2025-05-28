@@ -3551,6 +3551,7 @@ dependencies = [
  "qrcodegen",
  "rand 0.9.1",
  "rfd",
+ "ring",
  "rkv",
  "rqrr",
  "rust-i18n",

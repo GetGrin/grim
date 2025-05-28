@@ -21,7 +21,7 @@ use parking_lot::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use grin_config::ConfigError;
-
+use grin_core::global;
 use crate::node::NodeConfig;
 use crate::settings::AppConfig;
 use crate::tor::TorConfig;
@@ -62,7 +62,15 @@ impl Settings {
         let tor_config_path = Settings::config_path(TorConfig::FILE_NAME, None);
         let tor_config = Self::init_config::<TorConfig>(tor_config_path);
 
+        // Setup chain type.
         let chain_type = &app_config.chain_type;
+        if !global::GLOBAL_CHAIN_TYPE.is_init() {
+            global::init_global_chain_type(*chain_type);
+        } else {
+            global::set_global_chain_type(*chain_type);
+            global::set_local_chain_type(*chain_type);
+        }
+
         Self {
             node_config: Arc::new(RwLock::new(NodeConfig::for_chain_type(chain_type))),
             conn_config: Arc::new(RwLock::new(ConnectionsConfig::for_chain_type(chain_type))),
