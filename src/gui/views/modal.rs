@@ -14,14 +14,14 @@
 
 use egui::epaint::{RectShape, Shadow};
 use egui::os::OperatingSystem;
-use egui::{Align2, CornerRadius, RichText, Stroke, StrokeKind, UiBuilder, Vec2};
+use egui::{Align2, CornerRadius, Order, RichText, Stroke, StrokeKind, UiBuilder, Vec2};
 use lazy_static::lazy_static;
 use parking_lot::RwLock;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
 use crate::gui::views::types::{ModalPosition, ModalState};
-use crate::gui::views::{Content, View};
+use crate::gui::views::{Content, KeyboardContent, View};
 use crate::gui::Colors;
 
 lazy_static! {
@@ -109,6 +109,7 @@ impl Modal {
     /// Set [`Modal`] instance into state to show at ui.
     pub fn show(self) {
         let mut w_nav = MODAL_STATE.write();
+        self.first_draw.store(true, Ordering::Relaxed);
         w_nav.modal = Some(self);
     }
 
@@ -225,7 +226,7 @@ impl Modal {
 
         // Show main content window at given position.
         let (content_align, content_offset) = self.modal_position();
-        let layer_id = egui::Window::new("modal_window")
+        let res = egui::Window::new("modal_window")
             .title_bar(false)
             .resizable(false)
             .collapsible(false)
@@ -247,13 +248,22 @@ impl Modal {
                     title_ui(title, ui);
                 }
                 self.content_ui(ui, add_content);
-            }).unwrap().response.layer_id;
-        
+                
+            }).unwrap().response;
+
+        // Show modal or keyboard window above others.
+        ctx.move_to_top(res.layer_id);
+        let keyboard_showing = if let Some(l) = ctx.top_layer_id() {
+            l.id == egui::Id::new(KeyboardContent::WINDOW_ID)
+        } else {
+            false
+        };
+        if keyboard_showing {
+            ctx.move_to_top(egui::LayerId::new(Order::Middle, egui::Id::new(KeyboardContent::WINDOW_ID)))
+        }
+
         // Setup first draw flag.
         if Self::first_draw() {
-            // Always show main content window above background window.
-            ctx.move_to_top(layer_id);
-
             let r_state = MODAL_STATE.read();
             let modal = r_state.modal.as_ref().unwrap();
             modal.first_draw.store(false, Ordering::Relaxed);

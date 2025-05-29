@@ -125,7 +125,7 @@ impl TextEdit {
                 let mut edit_rect = ui.available_rect_before_wrap();
                 edit_rect.set_height(Self::TEXT_EDIT_HEIGHT);
 
-                // Setup focused input value.
+                // Setup focused input value to avoid dismiss when click on keyboard.
                 let focused_input_id = egui::Id::new("focused_input_id");
                 let focused = ui.data(|data| {
                     data.get_temp(focused_input_id)

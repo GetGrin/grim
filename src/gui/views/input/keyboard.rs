@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::string::ToString;
 use egui::{Align, Align2, Button, Color32, CursorIcon, Layout, Margin, Rect, Response, RichText, Sense, Shadow, Vec2, Widget};
 use lazy_static::lazy_static;
 use parking_lot::RwLock;
@@ -50,10 +51,13 @@ impl KeyboardContent {
     /// Maximum numbers layout width.
     const MAX_WIDTH_NUMBERS: f32 = 400.0;
 
+    /// Keyboard window id.
+    pub const WINDOW_ID: &'static str = "soft_keyboard_window";
+
     /// Draw keyboard content as separate [`Window`].
     pub fn window_ui(&mut self, numeric: bool, ctx: &egui::Context) {
         let width = ctx.screen_rect().width();
-        let layer_id = egui::Window::new("soft_keyboard")
+        let layer_id = egui::Window::new(Self::WINDOW_ID)
             .title_bar(false)
             .resizable(false)
             .collapsible(false)
