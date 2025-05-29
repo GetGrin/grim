@@ -17,11 +17,12 @@ use egui::scroll_area::ScrollBarVisibility;
 
 use crate::AppConfig;
 use crate::gui::Colors;
-use crate::gui::icons::{ARROWS_COUNTER_CLOCKWISE, BRIEFCASE, DATABASE, DOTS_THREE_OUTLINE_VERTICAL, FACTORY, FADERS, GAUGE, POWER};
+use crate::gui::icons::{ARROWS_COUNTER_CLOCKWISE, ARROW_LEFT, BRIEFCASE, DATABASE, DOTS_THREE_OUTLINE_VERTICAL, FACTORY, FADERS, GAUGE, GEAR, POWER};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Content, TitlePanel, View};
 use crate::gui::views::network::{ConnectionsContent, NetworkMetrics, NetworkMining, NetworkNode, NetworkSettings};
 use crate::gui::views::network::types::{NodeTab, NodeTabType};
+use crate::gui::views::settings::SettingsContent;
 use crate::gui::views::types::{LinePosition, TitleContentType, TitleType};
 use crate::node::{Node, NodeConfig, NodeError};
 use crate::wallet::ExternalConnection;
@@ -32,6 +33,9 @@ pub struct NetworkContent {
     node_tab_content: Box<dyn NodeTab>,
     /// Connections content.
     connections: ConnectionsContent,
+
+    /// Application settings content.
+    settings_content: Option<SettingsContent>,
 }
 
 impl Default for NetworkContent {
@@ -39,12 +43,14 @@ impl Default for NetworkContent {
         Self {
             node_tab_content: Box::new(NetworkNode::default()),
             connections: ConnectionsContent::default(),
+            settings_content: None,
         }
     }
 }
 
 impl NetworkContent {
     pub fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
+        let show_settings = self.showing_settings();
         let show_connections = AppConfig::show_connections_network_panel();
         let dual_panel = Content::is_dual_panel_mode(ui.ctx());
 
@@ -52,8 +58,8 @@ impl NetworkContent {
         self.title_ui(ui, dual_panel, show_connections);
 
         // Show integrated node tabs content.
-        if !show_connections {
-            egui::TopBottomPanel::bottom("node_tabs")
+        if !show_connections && !show_settings {
+            egui::TopBottomPanel::bottom("network_tabs_content")
                 .min_height(0.5)
                 .resizable(false)
                 .frame(egui::Frame {
@@ -83,14 +89,14 @@ impl NetworkContent {
                 });
         }
 
-        // Show integrated node tab content.
-        egui::SidePanel::right("node_tab_content")
+        // Show settings or integrated node content.
+        egui::SidePanel::right("network_side_content")
             .resizable(false)
             .exact_width(ui.available_width())
             .frame(egui::Frame {
                 ..Default::default()
             })
-            .show_animated_inside(ui, !show_connections, |ui| {
+            .show_animated_inside(ui, show_settings || !show_connections, |ui| {
                 egui::CentralPanel::default()
                     .frame(egui::Frame {
                         inner_margin: Margin {
@@ -103,7 +109,11 @@ impl NetworkContent {
                     })
                     .show_inside(ui, |ui| {
                         let rect = ui.available_rect_before_wrap();
-                        if self.node_tab_content.get_type() != NodeTabType::Settings {
+                        if let Some(c) = &mut self.settings_content {
+                            View::max_width_ui(ui, Content::SIDE_PANEL_WIDTH * 1.3, |ui| {
+                                c.ui(ui);
+                            });
+                        } else if self.node_tab_content.get_type() != NodeTabType::Settings {
                             View::max_width_ui(ui, Content::SIDE_PANEL_WIDTH * 1.3, |ui| {
                                 let node_err = Node::get_error();
                                 if let Some(err) = node_err {
@@ -192,6 +202,11 @@ impl NetworkContent {
         }
     }
 
+    /// Check if application settings content is showing.
+    pub fn showing_settings(&self) -> bool {
+        self.settings_content.is_some()
+    }
+
     /// Draw tab buttons at bottom of the screen.
     fn tabs_ui(&mut self, ui: &mut egui::Ui) {
         ui.vertical_centered(|ui| {
@@ -229,11 +244,15 @@ impl NetworkContent {
 
     /// Draw title content.
     fn title_ui(&mut self, ui: &mut egui::Ui, dual_panel: bool, show_connections: bool) {
+        let show_settings = self.showing_settings();
+
         // Setup values for title panel.
         let title_text = self.node_tab_content.get_type().title();
         let subtitle_text = Node::get_sync_status_text();
         let not_syncing = Node::not_syncing();
-        let title_content = if !show_connections {
+        let title_content = if show_settings {
+            TitleContentType::Title(t!("settings"))
+        } else if !show_connections {
             TitleContentType::WithSubTitle(title_text, subtitle_text, !not_syncing)
         } else {
             TitleContentType::Title(t!("network.connections"))
@@ -241,16 +260,24 @@ impl NetworkContent {
 
         // Draw title panel.
         TitlePanel::new(Id::from("network_title_panel")).ui(TitleType::Single(title_content), |ui| {
-            if !show_connections {
+            if show_settings {
+                View::title_button_big(ui, ARROW_LEFT, |_| {
+                    self.settings_content = None;
+                });
+            } else if !show_connections {
                 View::title_button_big(ui, DOTS_THREE_OUTLINE_VERTICAL, |ui| {
                     AppConfig::toggle_show_connections_network_panel();
                     if AppConfig::show_connections_network_panel() {
                         ExternalConnection::check(None, ui.ctx());
                     }
                 });
+            } else if !dual_panel {
+                View::title_button_big(ui, GEAR, |_| {
+                    self.settings_content = Some(SettingsContent::default());
+                });
             }
         }, |ui| {
-            if !dual_panel {
+            if !dual_panel && !show_settings {
                 View::title_button_big(ui, BRIEFCASE, |_| {
                     Content::toggle_network_panel();
                 });

@@ -12,31 +12,35 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use egui::os::OperatingSystem;
+use egui::RichText;
+use lazy_static::lazy_static;
 use std::fs;
 use std::sync::atomic::{AtomicBool, Ordering};
-use egui::os::OperatingSystem;
-use egui::{Align, Layout, RichText, StrokeKind};
-use lazy_static::lazy_static;
 
-use crate::gui::Colors;
+use crate::gui::icons::FILE_X;
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Modal, View};
+use crate::gui::views::network::NetworkContent;
 use crate::gui::views::types::{ModalContainer, ModalPosition};
+use crate::gui::views::wallets::WalletsContent;
+use crate::gui::views::{Modal, View};
+use crate::gui::Colors;
 use crate::node::Node;
 use crate::{AppConfig, Settings};
-use crate::gui::icons::{CHECK, CHECK_FAT, FILE_X};
-use crate::gui::views::network::NetworkContent;
-use crate::gui::views::wallets::WalletsContent;
 
 lazy_static! {
     /// Global state to check if [`NetworkContent`] panel is open.
     static ref NETWORK_PANEL_OPEN: AtomicBool = AtomicBool::new(false);
+
+    /// Global state to check if [`NetworkContent`] panel is open.
+    static ref SETTINGS_PANEL_OPEN: AtomicBool = AtomicBool::new(false);
 }
 
 /// Contains main ui content, handles side panel state.
 pub struct Content {
     /// Side panel [`NetworkContent`] content.
     network: NetworkContent,
+
     /// Central panel [`WalletsContent`] content.
     pub wallets: WalletsContent,
 
@@ -70,7 +74,6 @@ impl Default for Content {
             first_draw: true,
             allowed_modal_ids: vec![
                 Self::EXIT_CONFIRMATION_MODAL,
-                Self::SETTINGS_MODAL,
                 ANDROID_INTEGRATED_NODE_WARNING_MODAL,
                 CRASH_REPORT_MODAL
             ],
@@ -89,7 +92,6 @@ impl ModalContainer for Content {
                 cb: &dyn PlatformCallbacks) {
         match modal.id {
             Self::EXIT_CONFIRMATION_MODAL => self.exit_modal_content(ui, modal, cb),
-            Self::SETTINGS_MODAL => self.settings_modal_ui(ui),
             ANDROID_INTEGRATED_NODE_WARNING_MODAL => self.android_warning_modal_ui(ui),
             CRASH_REPORT_MODAL => self.crash_report_modal_ui(ui, cb),
             _ => {}
@@ -100,8 +102,6 @@ impl ModalContainer for Content {
 impl Content {
     /// Identifier for exit confirmation [`Modal`].
     pub const EXIT_CONFIRMATION_MODAL: &'static str = "exit_confirmation_modal";
-    /// Identifier for wallet opening [`Modal`].
-    pub const SETTINGS_MODAL: &'static str = "settings_modal";
 
     /// Default width of side panel at application UI.
     pub const SIDE_PANEL_WIDTH: f32 = 400.0;
@@ -114,7 +114,10 @@ impl Content {
         self.current_modal_ui(ui, cb);
 
         let dual_panel = Self::is_dual_panel_mode(ui.ctx());
-        let (is_panel_open, panel_width) = network_panel_state_width(ui.ctx(), dual_panel);
+        let (is_panel_open, mut panel_width) = network_panel_state_width(ui.ctx(), dual_panel);
+        if self.network.showing_settings() {
+            panel_width = ui.available_width();
+        }
 
         // Show network content.
         egui::SidePanel::left("network_panel")
@@ -242,122 +245,6 @@ impl Content {
         if self.wallets.on_back(cb) {
             Self::show_exit_modal()
         }
-    }
-
-    /// Draw creating wallet name/password input [`Modal`] content.
-    pub fn settings_modal_ui(&mut self, ui: &mut egui::Ui) {
-        ui.add_space(6.0);
-
-        // Show theme selection.
-        Self::theme_selection_ui(ui);
-
-        ui.add_space(8.0);
-        View::horizontal_line(ui, Colors::item_stroke());
-        ui.add_space(6.0);
-
-        ui.vertical_centered(|ui| {
-            ui.label(RichText::new(format!("{}:", t!("language")))
-                .size(16.0)
-                .color(Colors::gray())
-            );
-        });
-        ui.add_space(8.0);
-
-        // Draw available list of languages to select.
-        let locales = rust_i18n::available_locales!();
-        for (index, locale) in locales.iter().enumerate() {
-            Self::language_item_ui(locale, ui, index, locales.len());
-        }
-
-        ui.add_space(8.0);
-
-        // Show button to close modal.
-        ui.vertical_centered_justified(|ui| {
-            View::button(ui, t!("close"), Colors::white_or_black(false), || {
-                Modal::close();
-            });
-        });
-        ui.add_space(6.0);
-    }
-
-    /// Draw theme selection content.
-    fn theme_selection_ui(ui: &mut egui::Ui) {
-        ui.vertical_centered(|ui| {
-            ui.label(RichText::new(t!("theme")).size(16.0).color(Colors::gray()));
-        });
-
-        let saved_use_dark = AppConfig::dark_theme().unwrap_or(false);
-        let mut selected_use_dark = saved_use_dark;
-
-        ui.add_space(8.0);
-        ui.columns(2, |columns| {
-            columns[0].vertical_centered(|ui| {
-                View::radio_value(ui, &mut selected_use_dark, false, t!("light"));
-            });
-            columns[1].vertical_centered(|ui| {
-                View::radio_value(ui, &mut selected_use_dark, true, t!("dark"));
-            })
-        });
-        ui.add_space(8.0);
-
-        if saved_use_dark != selected_use_dark {
-            AppConfig::set_dark_theme(selected_use_dark);
-            crate::setup_visuals(ui.ctx());
-        }
-    }
-
-    /// Draw language selection item content.
-    fn language_item_ui(locale: &str, ui: &mut egui::Ui, index: usize, len: usize) {
-        // Setup layout size.
-        let mut rect = ui.available_rect_before_wrap();
-        rect.set_height(50.0);
-
-        // Draw round background.
-        let bg_rect = rect.clone();
-        let item_rounding = View::item_rounding(index, len, false);
-        ui.painter().rect(bg_rect,
-                          item_rounding,
-                          Colors::fill(),
-                          View::item_stroke(),
-                          StrokeKind::Middle);
-
-        ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
-            // Draw button to select language.
-            let is_current = if let Some(lang) = AppConfig::locale() {
-                lang == locale
-            } else {
-                rust_i18n::locale() == locale
-            };
-            if !is_current {
-                View::item_button(ui, View::item_rounding(index, len, true), CHECK, None, || {
-                    rust_i18n::set_locale(locale);
-                    AppConfig::save_locale(locale);
-                    Modal::close();
-                });
-            } else {
-                ui.add_space(14.0);
-                ui.label(RichText::new(CHECK_FAT).size(20.0).color(Colors::green()));
-                ui.add_space(14.0);
-            }
-
-            let layout_size = ui.available_size();
-            ui.allocate_ui_with_layout(layout_size, Layout::left_to_right(Align::Center), |ui| {
-                ui.add_space(12.0);
-                ui.vertical(|ui| {
-                    // Draw language name.
-                    ui.add_space(12.0);
-                    let color = if is_current {
-                        Colors::title(false)
-                    } else {
-                        Colors::gray()
-                    };
-                    ui.label(RichText::new(t!("lang_name", locale = locale))
-                        .size(17.0)
-                        .color(color));
-                    ui.add_space(3.0);
-                });
-            });
-        });
     }
 
     /// Draw content for integrated node warning [`Modal`] on Android.

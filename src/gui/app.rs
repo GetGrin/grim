@@ -59,8 +59,10 @@ impl<Platform: PlatformCallbacks> App<Platform> {
         if View::is_desktop() {
             self.platform.set_context(ctx);
         }
-        // Check connections availability.
-        ExternalConnection::check(None, ctx);
+        // Check connections availability at dual panel mode.
+        if Content::is_dual_panel_mode(ctx) && AppConfig::show_connections_network_panel() {
+            ExternalConnection::check(None, ctx);
+        }
         // Setup visuals.
         crate::setup_visuals(ctx);
     }
