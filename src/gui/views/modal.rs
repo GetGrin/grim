@@ -14,14 +14,14 @@
 
 use egui::epaint::{RectShape, Shadow};
 use egui::os::OperatingSystem;
-use egui::{Align2, CornerRadius, Order, RichText, Stroke, StrokeKind, UiBuilder, Vec2};
+use egui::{Align2, CornerRadius, RichText, Stroke, StrokeKind, UiBuilder, Vec2};
 use lazy_static::lazy_static;
 use parking_lot::RwLock;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
 use crate::gui::views::types::{ModalPosition, ModalState};
-use crate::gui::views::{Content, KeyboardContent, View};
+use crate::gui::views::{Content, View};
 use crate::gui::Colors;
 
 lazy_static! {
@@ -49,6 +49,8 @@ impl Modal {
     const DEFAULT_MARGIN: f32 = 8.0;
     /// Maximum width of the content.
     const DEFAULT_WIDTH: f32 = Content::SIDE_PANEL_WIDTH - (2.0 * Self::DEFAULT_MARGIN);
+    /// Modal content [`egui::Window`] id.
+    pub const WINDOW_ID: &'static str = "modal_window";
 
     /// Create closeable [`Modal`] with center position.
     pub fn new(id: &'static str) -> Self {
@@ -226,7 +228,7 @@ impl Modal {
 
         // Show main content window at given position.
         let (content_align, content_offset) = self.modal_position();
-        let res = egui::Window::new("modal_window")
+        egui::Window::new(Self::WINDOW_ID)
             .title_bar(false)
             .resizable(false)
             .collapsible(false)
@@ -248,19 +250,7 @@ impl Modal {
                     title_ui(title, ui);
                 }
                 self.content_ui(ui, add_content);
-                
-            }).unwrap().response;
-
-        // Show modal or keyboard window above others.
-        ctx.move_to_top(res.layer_id);
-        let keyboard_showing = if let Some(l) = ctx.top_layer_id() {
-            l.id == egui::Id::new(KeyboardContent::WINDOW_ID)
-        } else {
-            false
-        };
-        if keyboard_showing {
-            ctx.move_to_top(egui::LayerId::new(Order::Middle, egui::Id::new(KeyboardContent::WINDOW_ID)))
-        }
+            });
 
         // Setup first draw flag.
         if Self::first_draw() {

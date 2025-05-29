@@ -13,21 +13,14 @@
 // limitations under the License.
 
 use egui::epaint::RectShape;
-use egui::{Align, Context, CornerRadius, CursorIcon, Layout, Modifiers, ResizeDirection, Stroke, StrokeKind, UiBuilder, ViewportCommand};
-use lazy_static::lazy_static;
-use std::sync::atomic::{AtomicBool, Ordering};
+use egui::{Align, Context, CornerRadius, CursorIcon, LayerId, Layout, Modifiers, Order, ResizeDirection, Stroke, StrokeKind, UiBuilder, ViewportCommand};
 
 use crate::gui::icons::{ARROWS_IN, ARROWS_OUT, CARET_DOWN, MOON, SUN, X};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Content, Modal, TitlePanel, View};
+use crate::gui::views::{Content, KeyboardContent, Modal, TitlePanel, View};
 use crate::gui::Colors;
 use crate::wallet::ExternalConnection;
 use crate::AppConfig;
-
-lazy_static! {
-    /// State to check if platform Back button was pressed.
-    static ref BACK_BUTTON_PRESSED: AtomicBool = AtomicBool::new(false);
-}
 
 /// Implements ui entry point and contains platform-specific callbacks.
 pub struct App<Platform> {
@@ -75,13 +68,9 @@ impl<Platform: PlatformCallbacks> App<Platform> {
         }
 
         // Handle Esc keyboard key event.
-        let back_pressed = BACK_BUTTON_PRESSED.load(Ordering::Relaxed);
-        if back_pressed || ctx.input_mut(|i| i.consume_key(Modifiers::NONE, egui::Key::Escape)) {
+        if ctx.input_mut(|i| i.consume_key(Modifiers::NONE, egui::Key::Escape)) {
             if Modal::on_back() {
                 self.content.on_back(&self.platform);
-            }
-            if back_pressed {
-                BACK_BUTTON_PRESSED.store(false, Ordering::Relaxed);
             }
             // Request repaint to update previous content.
             ctx.request_repaint();
@@ -146,6 +135,17 @@ impl<Platform: PlatformCallbacks> App<Platform> {
         if self.platform.user_attention_required() &&
             ctx.input(|i| i.viewport().focused.unwrap_or(true)) {
             self.platform.clear_user_attention();
+        }
+
+        // Show modal or keyboard window above others.
+        ctx.move_to_top(LayerId::new(Order::Middle, egui::Id::new(Modal::WINDOW_ID)));
+        let keyboard_showing = if let Some(l) = ctx.top_layer_id() {
+            l.id == egui::Id::new(KeyboardContent::WINDOW_ID)
+        } else {
+            false
+        };
+        if keyboard_showing {
+            ctx.move_to_top(LayerId::new(Order::Middle, egui::Id::new(KeyboardContent::WINDOW_ID)));
         }
     }
 
