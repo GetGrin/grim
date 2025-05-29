@@ -248,12 +248,12 @@ impl Modal {
                 }
                 self.content_ui(ui, add_content);
             }).unwrap().response.layer_id;
-
-        // Always show main content window above background window.
-        ctx.move_to_top(layer_id);
         
         // Setup first draw flag.
         if Self::first_draw() {
+            // Always show main content window above background window.
+            ctx.move_to_top(layer_id);
+
             let r_state = MODAL_STATE.read();
             let modal = r_state.modal.as_ref().unwrap();
             modal.first_draw.store(false, Ordering::Relaxed);

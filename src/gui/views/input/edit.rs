@@ -23,27 +23,29 @@ use crate::gui::views::{KeyboardEvent, View};
 /// Text input content.
 pub struct TextEdit {
     /// View identifier.
-    pub id: egui::Id,
+    id: egui::Id,
     /// Check if horizontal centering is needed.
-    pub h_center: bool,
+    h_center: bool,
     /// Check if focus is needed.
-    pub focus: bool,
+    focus: bool,
     /// Check if focus request was passed.
     focus_request: bool,
     /// Hide letters and draw button to show/hide letters.
-    pub password: bool,
+    password: bool,
     /// Show copy button.
-    pub copy: bool,
+    copy: bool,
     /// Show paste button.
-    pub paste: bool,
+    paste: bool,
     /// Show button to scan QR code into text.
-    pub scan_qr: bool,
+    scan_qr: bool,
     /// Callback when scan button was pressed.
     pub scan_pressed: bool,
     /// Callback when Enter key was pressed.
     pub enter_pressed: bool,
     /// Flag to enter only numbers.
-    pub numeric: bool,
+    numeric: bool,
+    /// Flag to not show soft keyboard.
+    no_soft_keyboard: bool,
 }
 
 impl TextEdit {
@@ -63,6 +65,7 @@ impl TextEdit {
             scan_pressed: false,
             enter_pressed: false,
             numeric: false,
+            no_soft_keyboard: false,
         }
     }
 
@@ -161,7 +164,9 @@ impl TextEdit {
                     if self.enter_pressed {
                         KeyboardContent::unshift();
                     }
-                    KeyboardContent::default().window_ui(self.numeric, ui.ctx());
+                    if !self.no_soft_keyboard {
+                        KeyboardContent::default().window_ui(self.numeric, ui.ctx());
+                    }
                 }
             });
         });
@@ -300,6 +305,12 @@ impl TextEdit {
     pub fn scan_qr(mut self) -> Self {
         self.scan_qr = true;
         self.scan_pressed = false;
+        self
+    }
+
+    /// Do not show soft keyboard for input.
+    pub fn no_soft_keyboard(mut self) -> Self {
+        self.no_soft_keyboard = true;
         self
     }
 }

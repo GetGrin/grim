@@ -160,6 +160,7 @@ impl TransportSettingsModal {
                     .with(wallet.get_config().id)
                     .with("_bin_edit");
                 let mut bin_edit = TextEdit::new(bin_edit_id)
+                    .no_soft_keyboard()
                     .paste()
                     .focus(false);
                 let bin_edit_before = self.bridge_bin_path_edit.clone();
@@ -178,6 +179,7 @@ impl TransportSettingsModal {
                     .with(wallet.get_config().id)
                     .with("_conn_edit");
                 let mut conn_edit = TextEdit::new(conn_edit_id)
+                    .no_soft_keyboard()
                     .paste()
                     .focus(false)
                     .scan_qr();

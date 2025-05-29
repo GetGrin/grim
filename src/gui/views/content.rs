@@ -31,9 +31,6 @@ use crate::{AppConfig, Settings};
 lazy_static! {
     /// Global state to check if [`NetworkContent`] panel is open.
     static ref NETWORK_PANEL_OPEN: AtomicBool = AtomicBool::new(false);
-
-    /// Global state to check if [`NetworkContent`] panel is open.
-    static ref SETTINGS_PANEL_OPEN: AtomicBool = AtomicBool::new(false);
 }
 
 /// Contains main ui content, handles side panel state.
