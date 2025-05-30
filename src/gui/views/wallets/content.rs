@@ -176,24 +176,22 @@ impl ContentContainer for WalletsContent {
         // Show title panel.
         self.title_ui(ui, dual_panel, showing_wallet, cb);
 
-        if showing_wallet {
-            egui::SidePanel::right("wallet_panel")
-                .resizable(false)
-                .exact_width(if list_hidden {
-                    content_width
-                } else {
-                    content_width - Content::SIDE_PANEL_WIDTH
-                })
-                .frame(egui::Frame {
-                    ..Default::default()
-                })
-                .show_inside(ui, |ui| {
-                    // Show opened wallet content.
-                    if let Some(content) = self.wallet_content.as_mut() {
-                        content.ui(ui, cb);
-                    }
-                });
-        }
+        egui::SidePanel::right("wallet_panel")
+            .resizable(false)
+            .exact_width(if list_hidden {
+                content_width
+            } else {
+                content_width - Content::SIDE_PANEL_WIDTH
+            })
+            .frame(egui::Frame {
+                ..Default::default()
+            })
+            .show_animated_inside(ui, showing_wallet, |ui| {
+                // Show opened wallet content.
+                if let Some(content) = self.wallet_content.as_mut() {
+                    content.ui(ui, cb);
+                }
+            });
 
         if !list_hidden {
             egui::TopBottomPanel::bottom("wallets_bottom_panel")
@@ -233,32 +231,32 @@ impl ContentContainer for WalletsContent {
                     };
                     View::line(ui, LinePosition::TOP, &r, Colors::stroke());
                 });
-
-            egui::SidePanel::left("wallet_list_panel")
-                .exact_width(if dual_panel && showing_wallet {
-                    Content::SIDE_PANEL_WIDTH
-                } else {
-                    content_width
-                })
-                .resizable(false)
-                .frame(egui::Frame {
-                    inner_margin: Margin {
-                        left: (View::far_left_inset_margin(ui) + 4.0) as i8,
-                        right: (View::far_right_inset_margin(ui) + 4.0) as i8,
-                        top: 3.0 as i8,
-                        bottom: 4.0 as i8,
-                    },
-                    fill: Colors::fill_deep(),
-                    ..Default::default()
-                })
-                .show_inside(ui, |ui| {
-                    if !dual_panel && !showing_wallet {
-                        ui.ctx().request_repaint_after(Duration::from_millis(1000));
-                    }
-                    // Show wallet list.
-                    self.wallet_list_ui(ui);
-                });
         }
+
+        egui::SidePanel::left("wallet_list_panel")
+            .exact_width(if dual_panel && showing_wallet {
+                Content::SIDE_PANEL_WIDTH
+            } else {
+                content_width
+            })
+            .resizable(false)
+            .frame(egui::Frame {
+                inner_margin: Margin {
+                    left: (View::far_left_inset_margin(ui) + 4.0) as i8,
+                    right: (View::far_right_inset_margin(ui) + 4.0) as i8,
+                    top: 3.0 as i8,
+                    bottom: 4.0 as i8,
+                },
+                fill: Colors::fill_deep(),
+                ..Default::default()
+            })
+            .show_animated_inside(ui, !list_hidden, |ui| {
+                if !dual_panel && !showing_wallet {
+                    ui.ctx().request_repaint_after(Duration::from_millis(1000));
+                }
+                // Show wallet list.
+                self.wallet_list_ui(ui);
+            });
 
         egui::CentralPanel::default()
             .frame(egui::Frame {
