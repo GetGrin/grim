@@ -70,14 +70,15 @@ impl ContentContainer for MnemonicSetup {
         true
     }
 
-    fn container_ui(&mut self, ui: &mut egui::Ui, _: &dyn PlatformCallbacks) {
-        
+    fn container_ui(&mut self, _: &mut egui::Ui, _: &dyn PlatformCallbacks) {
     }
 }
 
 impl MnemonicSetup {
     /// Draw content for phrase import step.
     pub fn import_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
+        self.ui(ui, cb);
+
         ui.add_space(10.0);
 
         // Show mode and type setup.
@@ -88,10 +89,12 @@ impl MnemonicSetup {
         ui.add_space(6.0);
 
         // Show words setup.
-        self.word_list_ui(ui, self.mnemonic.mode() == PhraseMode::Import);
+        self.word_list_ui(ui, true);
     }
     /// Draw content for phrase confirmation step.
     pub fn confirm_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
+        self.ui(ui, cb);
+
         ui.add_space(4.0);
         ui.vertical_centered(|ui| {
             let text = format!("{}:", t!("wallets.recovery_phrase"));

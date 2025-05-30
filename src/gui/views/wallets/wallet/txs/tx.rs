@@ -63,7 +63,7 @@ impl WalletTransactionModal {
     /// Create new content instance with [`Wallet`] from provided [`WalletTransaction`].
     pub fn new(tx_id: Option<u32>, show_finalization: bool) -> Self {
         Self {
-            tx_id: tx_id.unwrap(),
+            tx_id: tx_id.unwrap_or(0),
             response_edit: None,
             finalize_edit: "".to_string(),
             finalize_error: false,

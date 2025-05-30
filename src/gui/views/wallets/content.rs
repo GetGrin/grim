@@ -157,13 +157,6 @@ impl ContentContainer for WalletsContent {
     }
 
     fn container_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
-        self.content_ui(ui, cb);
-    }
-}
-
-impl WalletsContent {
-    /// Draw wallets content.
-    fn content_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         if let Some(data) = crate::consume_incoming_data() {
             if !data.is_empty() {
                 self.on_data(ui, Some(data));
@@ -320,7 +313,9 @@ impl WalletsContent {
                 }
             });
     }
+}
 
+impl WalletsContent {
     /// Check if opened wallet is showing.
     pub fn showing_wallet(&self) -> bool {
         if let Some(wallet_content) = &self.wallet_content {

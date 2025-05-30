@@ -69,32 +69,7 @@ impl ContentContainer for WalletContent {
         true
     }
 
-    fn container_ui(&mut self, _: &mut egui::Ui, _: &dyn PlatformCallbacks) {}
-}
-
-impl WalletContent {
-    /// Create new instance with optional data.
-    pub fn new(wallet: Wallet, data: Option<String>) -> Self {
-        let accounts_modal = WalletAccountsModal::new(wallet.accounts());
-        let mut content = Self {
-            wallet,
-            accounts_modal_content: accounts_modal,
-            qr_scan_content: None,
-            current_tab: Box::new(WalletTransactions::default()),
-        };
-        if data.is_some() {
-            content.on_data(data);
-        }
-        content
-    }
-
-    /// Handle data from deeplink or opened file.
-    pub fn on_data(&mut self, data: Option<String>) {
-        self.current_tab = Box::new(WalletMessages::new(data));
-    }
-
-    /// Draw wallet content.
-    pub fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
+    fn container_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         ui.ctx().request_repaint_after(Duration::from_millis(1000));
 
         let dual_panel = Content::is_dual_panel_mode(ui.ctx());
@@ -261,6 +236,28 @@ impl WalletContent {
                     View::line(ui, LinePosition::LEFT, &rect, Colors::item_stroke());
                 }
             });
+    }
+}
+
+impl WalletContent {
+    /// Create new instance with optional data.
+    pub fn new(wallet: Wallet, data: Option<String>) -> Self {
+        let accounts_modal = WalletAccountsModal::new(wallet.accounts());
+        let mut content = Self {
+            wallet,
+            accounts_modal_content: accounts_modal,
+            qr_scan_content: None,
+            current_tab: Box::new(WalletTransactions::default()),
+        };
+        if data.is_some() {
+            content.on_data(data);
+        }
+        content
+    }
+
+    /// Handle data from deeplink or opened file.
+    pub fn on_data(&mut self, data: Option<String>) {
+        self.current_tab = Box::new(WalletMessages::new(data));
     }
 
     /// Check when to block tabs navigation on sync progress.
