@@ -253,7 +253,7 @@ impl WalletTransactions {
                         });
                     }
                     CANCEL_TX_CONFIRMATION_MODAL => {
-                        Modal::ui(ui.ctx(), cb, |ui, _, cb| {
+                        Modal::ui(ui.ctx(), cb, |ui, _, _| {
                             self.cancel_confirmation_modal(ui, wallet);
                         });
                     }

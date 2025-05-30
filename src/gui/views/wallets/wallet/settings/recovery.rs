@@ -21,6 +21,7 @@ use crate::gui::icons::{EYE, LIFEBUOY, STETHOSCOPE, TRASH, WRENCH};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, TextEdit, View};
 use crate::gui::views::types::ModalPosition;
+use crate::gui::views::wallets::wallet::types::WalletContentContainer;
 use crate::node::Node;
 use crate::wallet::types::ConnectionMethod;
 use crate::wallet::Wallet;
@@ -41,21 +42,30 @@ const RECOVERY_PHRASE_MODAL: &'static str = "recovery_phrase_modal";
 /// Identifier to confirm wallet deletion [`Modal`].
 const DELETE_CONFIRMATION_MODAL: &'static str = "delete_wallet_confirmation_modal";
 
-impl Default for RecoverySettings {
-    fn default() -> Self {
-        Self {
-            wrong_pass: false,
-            pass_edit: "".to_string(),
-            recovery_phrase: None,
+impl WalletContentContainer for RecoverySettings {
+    fn modal_ids(&self) -> Vec<&'static str> {
+        vec![
+            RECOVERY_PHRASE_MODAL,
+            DELETE_CONFIRMATION_MODAL
+        ]
+    }
+
+    fn modal_ui(&mut self,
+                ui: &mut egui::Ui,
+                wallet: &Wallet,
+                modal: &Modal, cb: &dyn PlatformCallbacks) {
+        match modal.id {
+            RECOVERY_PHRASE_MODAL => {
+                self.recovery_phrase_modal_ui(ui, wallet, modal, cb);
+            }
+            DELETE_CONFIRMATION_MODAL => {
+                self.deletion_modal_ui(ui, wallet);
+            }
+            _ => {}
         }
     }
-}
 
-impl RecoverySettings {
-    pub fn ui(&mut self, ui: &mut egui::Ui, wallet: &Wallet, cb: &dyn PlatformCallbacks) {
-        // Show modal content for this ui container.
-        self.modal_content_ui(ui, wallet, cb);
-
+    fn container_ui(&mut self, ui: &mut egui::Ui, wallet: &Wallet, _: &dyn PlatformCallbacks) {
         ui.add_space(10.0);
         View::horizontal_line(ui, Colors::stroke());
         ui.add_space(6.0);
@@ -97,8 +107,8 @@ impl RecoverySettings {
                                       format!("{} {}", LIFEBUOY, t!("wallets.recover")),
                                       Colors::green(),
                                       Colors::white_or_black(false), || {
-                wallet.delete_db(true);
-            });
+                    wallet.delete_db(true);
+                });
             ui.add_space(6.0);
             ui.label(RichText::new(t!("wallets.restore_wallet_desc"))
                 .size(16.0)
@@ -129,40 +139,27 @@ impl RecoverySettings {
                                       format!("{} {}", TRASH, t!("wallets.delete")),
                                       Colors::red(),
                                       Colors::white_or_black(false), || {
-                Modal::new(DELETE_CONFIRMATION_MODAL)
-                    .position(ModalPosition::Center)
-                    .title(t!("confirmation"))
-                    .show();
-            });
+                    Modal::new(DELETE_CONFIRMATION_MODAL)
+                        .position(ModalPosition::Center)
+                        .title(t!("confirmation"))
+                        .show();
+                });
             ui.add_space(8.0);
         });
     }
+}
 
-    /// Draw [`Modal`] content for this ui container.
-    fn modal_content_ui(&mut self,
-                        ui: &mut egui::Ui,
-                        wallet: &Wallet,
-                        cb: &dyn PlatformCallbacks) {
-        match Modal::opened() {
-            None => {}
-            Some(id) => {
-                match id {
-                    RECOVERY_PHRASE_MODAL => {
-                        Modal::ui(ui.ctx(), cb, |ui, modal, cb| {
-                            self.recovery_phrase_modal_ui(ui, wallet, modal, cb);
-                        });
-                    }
-                    DELETE_CONFIRMATION_MODAL => {
-                        Modal::ui(ui.ctx(), cb, |ui, _, _| {
-                            self.deletion_modal_ui(ui, wallet);
-                        });
-                    }
-                    _ => {}
-                }
-            }
+impl Default for RecoverySettings {
+    fn default() -> Self {
+        Self {
+            wrong_pass: false,
+            pass_edit: "".to_string(),
+            recovery_phrase: None,
         }
     }
+}
 
+impl RecoverySettings {
     /// Show recovery phrase [`Modal`].
     fn show_recovery_phrase_modal(&mut self) {
         // Setup modal values.

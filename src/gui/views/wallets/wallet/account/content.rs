@@ -19,115 +19,79 @@ use grin_core::core::amount_to_hr_string;
 
 use crate::gui::icons::{FOLDER_USER, PACKAGE, SCAN, SPINNER, USERS_THREE};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::types::{ContentContainer, ModalPosition};
-use crate::gui::views::wallets::wallet::modals::WalletAccountsModal;
-use crate::gui::views::wallets::wallet::types::GRIN;
+use crate::gui::views::wallets::wallet::account::list::WalletAccountsContent;
+use crate::gui::views::wallets::wallet::types::{WalletContentContainer, GRIN};
 use crate::gui::views::{CameraContent, Content, Modal, View};
 use crate::gui::Colors;
+use crate::gui::views::types::ModalPosition;
+use crate::gui::views::wallets::wallet::account::create::CreateAccountContent;
 use crate::wallet::{Wallet, WalletConfig};
 
 /// Wallet account panel content.
 pub struct AccountContent {
-    /// Wallet instance.
-    wallet: Wallet,
+    /// Account list content.
+    accounts_content: Option<WalletAccountsContent>,
 
-    /// Wallet accounts [`Modal`] content.
-    accounts_modal_content: WalletAccountsModal,
+    /// Account creation [`Modal`] content.
+    create_account_content: CreateAccountContent,
 
     /// QR code scan content.
     qr_scan_content: Option<CameraContent>,
 }
 
-/// Identifier for account list [`Modal`].
-const ACCOUNT_LIST_MODAL: &'static str = "account_list_modal";
+/// Account creation [`Modal`] identifier.
+const CREATE_MODAL_ID: &'static str = "create_account_modal";
 
-impl ContentContainer for AccountContent {
+impl WalletContentContainer for AccountContent {
     fn modal_ids(&self) -> Vec<&'static str> {
         vec![
-            ACCOUNT_LIST_MODAL,
+            CREATE_MODAL_ID
         ]
     }
 
-    fn modal_ui(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
+    fn modal_ui(&mut self, ui: &mut egui::Ui, wallet: &Wallet, modal: &Modal, cb: &dyn PlatformCallbacks) {
         match modal.id {
-            ACCOUNT_LIST_MODAL => {
-                self.accounts_modal_content.ui(ui, &self.wallet, modal, cb);
-            }
+            CREATE_MODAL_ID => self.create_account_content.ui(ui, wallet, modal, cb),
             _ => {}
         }
     }
 
-    fn on_back(&mut self, _: &dyn PlatformCallbacks) -> bool {
-        true
-    }
-
-    fn container_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
+    fn container_ui(&mut self, ui: &mut egui::Ui, wallet: &Wallet, cb: &dyn PlatformCallbacks) {
         if self.qr_scan_content.is_some() {
-            if let Some(result) = self.qr_scan_content.as_ref().unwrap().qr_scan_result() {
-                // match result {
-                //     QrScanResult::Address(address) => {
-                //         self.current_tab =
-                //             Box::new(WalletTransport::new(Some(address.to_string())));
-                //     }
-                //     _ => {
-                //         self.current_tab =
-                //             Box::new(WalletMessages::new(Some(result.text())))
-                //     }
-                // }
-                // Stop camera and close scanning.
-                cb.stop_camera();
-                self.qr_scan_content = None;
-            } else {
-                View::max_width_ui(ui, Content::SIDE_PANEL_WIDTH, |ui| {
-                    self.qr_scan_content.as_mut().unwrap().ui(ui, cb);
-                    ui.add_space(6.0);
-                    ui.vertical_centered_justified(|ui| {
-                        View::button(ui, t!("close"), Colors::white_or_black(false), || {
-                            cb.stop_camera();
-                            self.qr_scan_content = None;
-                        });
-                    });
-                    ui.add_space(6.0);
-                });
-            }
+            self.qr_scan_ui(ui, wallet, cb);
         } else {
             View::max_width_ui(ui, Content::SIDE_PANEL_WIDTH * 1.3, |ui| {
-                self.account_ui(ui, cb);
+                if self.accounts_content.is_some() {
+                    self.list_ui(ui, wallet);
+                } else {
+                    self.account_ui(ui, wallet, cb);
+                }
             });
         }
     }
 }
 
-impl AccountContent {
-    /// Create new wallet account content.
-    pub fn new(wallet: Wallet) -> Self {
-        let accounts_modal = WalletAccountsModal::new(wallet.accounts());
+impl Default for AccountContent {
+    fn default() -> Self {
         Self {
-            wallet,
-            accounts_modal_content: accounts_modal,
+            accounts_content: None,
+            create_account_content: CreateAccountContent::default(),
             qr_scan_content: None,
         }
     }
+}
 
-    /// Check if QR code scanner is showing.
-    pub fn qr_scan_showing(&self) -> bool {
-        self.qr_scan_content.is_some()
-    }
-
-    /// Close QR code scanner.
-    pub fn close_qr_scan(&mut self) {
-        self.qr_scan_content = None;
-    }
-
+impl AccountContent {
     /// Draw wallet account content.
     fn account_ui(&mut self,
                   ui: &mut egui::Ui,
+                  wallet: &Wallet,
                   cb: &dyn PlatformCallbacks) {
         // Check wallet data.
-        if self.wallet.get_data().is_none() {
+        if wallet.get_data().is_none() {
             return;
         }
-        let data = self.wallet.get_data().unwrap();
+        let data = wallet.get_data().unwrap();
 
         let mut rect = ui.available_rect_before_wrap();
         rect.set_height(75.0);
@@ -148,11 +112,18 @@ impl AccountContent {
 
             // Draw button to show list of accounts.
             View::item_button(ui, View::item_rounding(1, 3, true), USERS_THREE, None, || {
-                self.accounts_modal_content = WalletAccountsModal::new(self.wallet.accounts());
-                Modal::new(ACCOUNT_LIST_MODAL)
-                    .position(ModalPosition::CenterTop)
-                    .title(t!("wallets.accounts"))
-                    .show();
+                let accounts = wallet.accounts();
+                if accounts.len() == 1 {
+                    self.create_account_content = CreateAccountContent::default();
+                    Modal::new(CREATE_MODAL_ID)
+                        .position(ModalPosition::CenterTop)
+                        .title(t!("wallets.accounts"))
+                        .show();
+                } else {
+                    self.accounts_content = Some(
+                        WalletAccountsContent::new(accounts, wallet.get_config().account)
+                    );
+                }
             });
 
             let layout_size = ui.available_size();
@@ -172,7 +143,7 @@ impl AccountContent {
                     ui.add_space(-2.0);
 
                     // Show account label.
-                    let account = self.wallet.get_config().account;
+                    let account = wallet.get_config().account;
                     let default_acc_label = WalletConfig::DEFAULT_ACCOUNT_LABEL.to_string();
                     let acc_label = if account == default_acc_label {
                         t!("wallets.default_account")
@@ -183,15 +154,15 @@ impl AccountContent {
                     View::ellipsize_text(ui, acc_text, 15.0, Colors::text(false));
 
                     // Show confirmed height or sync progress.
-                    let status_text = if !self.wallet.syncing() {
+                    let status_text = if !wallet.syncing() {
                         format!("{} {}", PACKAGE, data.info.last_confirmed_height)
                     } else {
-                        let info_progress = self.wallet.info_sync_progress();
+                        let info_progress = wallet.info_sync_progress();
                         if info_progress == 100 || info_progress == 0 {
                             format!("{} {}", SPINNER, t!("wallets.wallet_loading"))
                         } else {
-                            if self.wallet.is_repairing() {
-                                let rep_progress = self.wallet.repairing_progress();
+                            if wallet.is_repairing() {
+                                let rep_progress = wallet.repairing_progress();
                                 if rep_progress == 0 {
                                     format!("{} {}", SPINNER, t!("wallets.wallet_checking"))
                                 } else {
@@ -212,9 +183,104 @@ impl AccountContent {
                                        status_text,
                                        15.0,
                                        Colors::gray(),
-                                       self.wallet.syncing());
+                                       wallet.syncing());
                 })
             });
         });
+    }
+
+    /// Draw account list content.
+    fn list_ui(&mut self, ui: &mut egui::Ui, wallet: &Wallet) {
+        if let Some(accounts) = self.accounts_content.as_mut() {
+            let mut selected = false;
+            accounts.ui(ui, |acc| {
+                let _ = wallet.set_active_account(&acc.label);
+                selected = true;
+            });
+            if selected {
+                self.accounts_content = None;
+                return;
+            }
+        } else {
+            return;
+        }
+
+        ui.add_space(2.0);
+        View::horizontal_line(ui, Colors::item_stroke());
+        ui.add_space(6.0);
+
+        // Setup spacing between buttons.
+        ui.spacing_mut().item_spacing = egui::Vec2::new(8.0, 0.0);
+
+        // Show modal buttons.
+        ui.columns(2, |columns| {
+            columns[0].vertical_centered_justified(|ui| {
+                View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
+                    self.accounts_content = None;
+                });
+            });
+            columns[1].vertical_centered_justified(|ui| {
+                View::button(ui, t!("modal.add"), Colors::white_or_black(false), || {
+                    self.accounts_content = None;
+                    self.create_account_content = CreateAccountContent::default();
+                    Modal::new(CREATE_MODAL_ID)
+                        .position(ModalPosition::CenterTop)
+                        .title(t!("wallets.accounts"))
+                        .show();
+                });
+            });
+        });
+        ui.add_space(6.0);
+    }
+
+    /// Draw QR code scanner content.
+    fn qr_scan_ui(&mut self, ui: &mut egui::Ui, _: &Wallet, cb: &dyn PlatformCallbacks) {
+        if let Some(_) = self.qr_scan_content.as_ref().unwrap().qr_scan_result() {
+            // match result {
+            //     QrScanResult::Address(address) => {
+            //         self.current_tab =
+            //             Box::new(WalletTransport::new(Some(address.to_string())));
+            //     }
+            //     _ => {
+            //         self.current_tab =
+            //             Box::new(WalletMessages::new(Some(result.text())))
+            //     }
+            // }
+            // Stop camera and close scanning.
+            cb.stop_camera();
+            self.qr_scan_content = None;
+        } else {
+            View::max_width_ui(ui, Content::SIDE_PANEL_WIDTH, |ui| {
+                self.qr_scan_content.as_mut().unwrap().ui(ui, cb);
+                ui.add_space(6.0);
+                ui.vertical_centered_justified(|ui| {
+                    View::button(ui, t!("close"), Colors::white_or_black(false), || {
+                        cb.stop_camera();
+                        self.qr_scan_content = None;
+                    });
+                });
+                ui.add_space(6.0);
+            });
+        }
+    }
+
+    /// Check if account list is showing.
+    pub fn account_list_showing(&self) -> bool {
+        self.accounts_content.is_some()
+    }
+
+    /// Close account list.
+    pub fn close_account_list(&mut self) {
+        self.accounts_content = None;
+    }
+
+    /// Check if QR code scanner is showing.
+    pub fn qr_scan_showing(&self) -> bool {
+        self.qr_scan_content.is_some()
+    }
+
+    /// Close QR code scanner.
+    pub fn close_qr_scan(&mut self) {
+        self.qr_scan_content = None;
     }
 }

@@ -14,12 +14,35 @@
 
 use crate::gui::icons::{FOLDER_LOCK, FOLDER_OPEN, SPINNER, WARNING_CIRCLE};
 use crate::gui::platform::PlatformCallbacks;
+use crate::gui::views::Modal;
 use crate::wallet::Wallet;
 
 /// GRIN coin symbol.
 pub const GRIN: &str = "ツ";
 /// Hint for Slatepack message input.
 pub const SLATEPACK_MESSAGE_HINT: &'static str = "BEGINSLATEPACK.\n...\n...\n...\nENDSLATEPACK.";
+
+/// Content container to simplify modals management and navigation.
+pub trait WalletContentContainer {
+    /// List of allowed [`Modal`] identifiers.
+    fn modal_ids(&self) -> Vec<&'static str>;
+    /// Draw modal content.
+    fn modal_ui(&mut self, ui: &mut egui::Ui, wallet: &Wallet, modal: &Modal, cb: &dyn PlatformCallbacks);
+    /// Draw container content.
+    fn container_ui(&mut self, ui: &mut egui::Ui, wallet: &Wallet, cb: &dyn PlatformCallbacks);
+    /// Draw content, to call by parent container.
+    fn ui(&mut self, ui: &mut egui::Ui, wallet: &Wallet, cb: &dyn PlatformCallbacks) {
+        // Draw modal content.
+        if let Some(id) = Modal::opened() {
+            if self.modal_ids().contains(&id) {
+                Modal::ui(ui.ctx(), cb, |ui, modal, cb| {
+                    self.modal_ui(ui, wallet, modal, cb);
+                });
+            }
+        }
+        self.container_ui(ui, wallet, cb);
+    }
+}
 
 /// Wallet tab content interface.
 pub trait WalletTab {

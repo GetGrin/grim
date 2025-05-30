@@ -19,6 +19,7 @@ use crate::gui::icons::{CLOCK_COUNTDOWN, PASSWORD, PENCIL};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, TextEdit, View};
 use crate::gui::views::types::ModalPosition;
+use crate::gui::views::wallets::wallet::types::WalletContentContainer;
 use crate::wallet::Wallet;
 
 /// Common wallet settings content.
@@ -44,24 +45,35 @@ const PASS_EDIT_MODAL: &'static str = "wallet_pass_edit_modal";
 /// Identifier for minimum confirmations [`Modal`].
 const MIN_CONFIRMATIONS_EDIT_MODAL: &'static str = "wallet_min_conf_edit_modal";
 
-impl Default for CommonSettings {
-    fn default() -> Self {
-        Self {
-            name_edit: "".to_string(),
-            wrong_pass: false,
-            old_pass_edit: "".to_string(),
-            new_pass_edit: "".to_string(),
-            min_confirmations_edit: "".to_string(),
+impl WalletContentContainer for CommonSettings {
+    fn modal_ids(&self) -> Vec<&'static str> {
+        vec![
+            NAME_EDIT_MODAL,
+            PASS_EDIT_MODAL,
+            MIN_CONFIRMATIONS_EDIT_MODAL
+        ]
+    }
+
+    fn modal_ui(&mut self,
+                ui: &mut egui::Ui,
+                wallet: &Wallet,
+                modal: &Modal,
+                cb: &dyn PlatformCallbacks) {
+        match modal.id {
+            NAME_EDIT_MODAL => {
+                self.name_modal_ui(ui, wallet, modal, cb);
+            }
+            PASS_EDIT_MODAL => {
+                self.pass_modal_ui(ui, wallet, modal, cb);
+            }
+            MIN_CONFIRMATIONS_EDIT_MODAL => {
+                self.min_conf_modal_ui(ui, wallet, modal, cb);
+            }
+            _ => {}
         }
     }
-}
 
-impl CommonSettings {
-    /// Draw common wallet settings content.
-    pub fn ui(&mut self, ui: &mut egui::Ui, wallet: &Wallet, cb: &dyn PlatformCallbacks) {
-        // Show modal content for this container.
-        self.modal_content_ui(ui, wallet, cb);
-
+    fn container_ui(&mut self, ui: &mut egui::Ui, wallet: &Wallet, _: &dyn PlatformCallbacks) {
         ui.vertical_centered(|ui| {
             let config = wallet.get_config();
             // Show wallet name.
@@ -135,37 +147,21 @@ impl CommonSettings {
             ui.add_space(6.0);
         });
     }
+}
 
-    /// Draw [`Modal`] content for this ui container.
-    fn modal_content_ui(&mut self,
-                        ui: &mut egui::Ui,
-                        wallet: &Wallet,
-                        cb: &dyn PlatformCallbacks) {
-        match Modal::opened() {
-            None => {}
-            Some(id) => {
-                match id {
-                    NAME_EDIT_MODAL => {
-                        Modal::ui(ui.ctx(), cb, |ui, modal, cb| {
-                            self.name_modal_ui(ui, wallet, modal, cb);
-                        });
-                    }
-                    PASS_EDIT_MODAL => {
-                        Modal::ui(ui.ctx(), cb, |ui, modal, cb| {
-                            self.pass_modal_ui(ui, wallet, modal, cb);
-                        });
-                    }
-                    MIN_CONFIRMATIONS_EDIT_MODAL => {
-                        Modal::ui(ui.ctx(), cb, |ui, modal, cb| {
-                            self.min_conf_modal_ui(ui, wallet, modal, cb);
-                        });
-                    }
-                    _ => {}
-                }
-            }
+impl Default for CommonSettings {
+    fn default() -> Self {
+        Self {
+            name_edit: "".to_string(),
+            wrong_pass: false,
+            old_pass_edit: "".to_string(),
+            new_pass_edit: "".to_string(),
+            min_confirmations_edit: "".to_string(),
         }
     }
+}
 
+impl CommonSettings {
     /// Draw wallet name [`Modal`] content.
     fn name_modal_ui(&mut self,
                      ui: &mut egui::Ui,

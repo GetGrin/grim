@@ -13,8 +13,10 @@
 // limitations under the License.
 
 use crate::gui::platform::PlatformCallbacks;
+use crate::gui::views::types::ContentContainer;
 use crate::gui::views::wallets::{CommonSettings, ConnectionSettings, RecoverySettings};
 use crate::gui::views::wallets::types::{WalletTab, WalletTabType};
+use crate::gui::views::wallets::wallet::types::WalletContentContainer;
 use crate::wallet::Wallet;
 
 /// Wallet settings tab content.
@@ -48,8 +50,20 @@ impl WalletTab for WalletSettings {
           cb: &dyn PlatformCallbacks) {
         // Show common wallet setup.
         self.common_setup.ui(ui, wallet, cb);
+
         // Show wallet connections setup.
-        self.conn_setup.wallet_ui(ui, wallet, cb);
+        self.conn_setup.method = wallet.get_current_connection();
+        let method = self.conn_setup.method.clone();
+        self.conn_setup.ui(ui, cb);
+        if method != self.conn_setup.method {
+            wallet.update_connection(&self.conn_setup.method);
+            // Reopen wallet if connection changed.
+            if !wallet.reopen_needed() {
+                wallet.set_reopen(true);
+                wallet.close();
+            }
+        }
+
         // Show wallet recovery setup.
         self.recovery_setup.ui(ui, wallet, cb);
     }

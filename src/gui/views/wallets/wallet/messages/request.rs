@@ -106,7 +106,7 @@ impl MessageRequestModal {
 
         // Draw content on request loading.
         if self.request_loading {
-            self.loading_request_ui(ui, wallet, modal);
+            self.loading_request_ui(ui, modal);
             return;
         }
 
@@ -208,7 +208,7 @@ impl MessageRequestModal {
     }
 
     /// Draw loading request content.
-    fn loading_request_ui(&mut self, ui: &mut egui::Ui, wallet: &Wallet, modal: &Modal) {
+    fn loading_request_ui(&mut self, ui: &mut egui::Ui, modal: &Modal) {
         ui.add_space(34.0);
         ui.vertical_centered(|ui| {
             View::big_loading_spinner(ui);

@@ -148,6 +148,11 @@ impl ContentContainer for WalletsContent {
                     content.close_qr_scan();
                     return false;
                 }
+                // Close account list.
+                if content.account_list_showing() {
+                    content.close_qr_scan();
+                    return false;
+                }
                 // Close opened wallet.
                 self.wallet_content = None;
                 return false;
@@ -384,6 +389,10 @@ impl WalletsContent {
         let show_list = AppConfig::show_wallets_at_dual_panel();
         let showing_settings = self.showing_settings();
         let creating_wallet = self.creating_wallet();
+        let account_list_showing = show_wallet && self.wallet_content
+            .as_ref()
+            .unwrap()
+            .account_list_showing();
         let qr_scan = {
             let mut scan = false;
             if show_wallet {
@@ -396,7 +405,9 @@ impl WalletsContent {
             || (dual_panel && !show_list)) && !creating_wallet && !showing_settings {
             let wallet_content = self.wallet_content.as_ref().unwrap();
             let wallet_tab_type = wallet_content.current_tab.get_type();
-            let title_text = if qr_scan {
+            let title_text = if account_list_showing {
+                t!("wallets.accounts")
+            } else if qr_scan {
                 t!("scan_qr")
             } else {
                 wallet_tab_type.name()
@@ -422,7 +433,11 @@ impl WalletsContent {
             if dual_title {
                 let wallet_content = self.wallet_content.as_ref().unwrap();
                 let wallet_tab_type = wallet_content.current_tab.get_type();
-                let wallet_title_text = wallet_tab_type.name();
+                let wallet_title_text = if account_list_showing {
+                    t!("wallets.accounts")
+                } else {
+                    wallet_tab_type.name()
+                };
                 let wallet_title_content = if wallet_tab_type == WalletTabType::Settings {
                     TitleContentType::Title(wallet_title_text)
                 } else {
@@ -445,6 +460,7 @@ impl WalletsContent {
                 });
             } else if show_wallet && !dual_panel {
                 View::title_button_big(ui, ARROW_LEFT, |_| {
+                    // Close QR code scanner.
                     let wallet_qr_scan = self.wallet_content
                         .as_ref()
                         .unwrap()
@@ -454,7 +470,11 @@ impl WalletsContent {
                         self.wallet_content.as_mut().unwrap().close_qr_scan();
                         return;
                     }
-                    self.wallet_content = None;
+                    // Close account list.
+                    if account_list_showing {
+                        self.wallet_content.as_mut().unwrap().close_account_list();
+                        return;
+                    }
                 });
             } else if self.creating_wallet() {
                 let mut close = false;

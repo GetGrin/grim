@@ -358,7 +358,7 @@ impl WalletCreationContent {
                 if Node::is_running() && !Content::is_dual_panel_mode(ui.ctx()) {
                     ui.ctx().request_repaint_after(Node::STATS_UPDATE_DELAY);
                 }
-                self.network_setup.content_ui(ui, cb);
+                self.network_setup.ui(ui, cb);
             }
         }
     }

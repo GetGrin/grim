@@ -78,7 +78,7 @@ impl TransportSendModal {
 
         // Draw sending content, progress or an error.
         if self.sending {
-            self.progress_ui(ui, wallet);
+            self.progress_ui(ui);
         } else if self.error {
             self.error_ui(ui, wallet, modal);
         } else {
@@ -320,7 +320,7 @@ impl TransportSendModal {
     }
 
     /// Draw sending progress content.
-    fn progress_ui(&mut self, ui: &mut egui::Ui, wallet: &Wallet) {
+    fn progress_ui(&mut self, ui: &mut egui::Ui) {
         ui.add_space(16.0);
         ui.vertical_centered(|ui| {
             View::small_loading_spinner(ui);

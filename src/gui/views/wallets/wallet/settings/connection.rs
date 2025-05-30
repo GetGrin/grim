@@ -14,15 +14,15 @@
 
 use egui::{Align, Layout, RichText, StrokeKind};
 
-use crate::gui::Colors;
 use crate::gui::icons::{CHECK, CHECK_CIRCLE, CHECK_FAT, DOTS_THREE_CIRCLE, GLOBE, GLOBE_SIMPLE, PLUS_CIRCLE, X_CIRCLE};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Modal, View};
-use crate::gui::views::network::ConnectionsContent;
 use crate::gui::views::network::modals::ExternalConnectionModal;
+use crate::gui::views::network::ConnectionsContent;
 use crate::gui::views::types::{ContentContainer, ModalPosition};
-use crate::wallet::{ConnectionsConfig, ExternalConnection, Wallet};
+use crate::gui::views::{Modal, View};
+use crate::gui::Colors;
 use crate::wallet::types::ConnectionMethod;
+use crate::wallet::{ConnectionsConfig, ExternalConnection};
 
 /// Wallet connection settings content.
 pub struct ConnectionSettings {
@@ -65,32 +65,7 @@ impl ContentContainer for ConnectionSettings {
         true
     }
 
-    fn container_ui(&mut self, _: &mut egui::Ui, _: &dyn PlatformCallbacks) {}
-}
-
-impl ConnectionSettings {
-    /// Draw existing wallet connection setup content.
-    pub fn wallet_ui(&mut self, ui: &mut egui::Ui, wallet: &Wallet, cb: &dyn PlatformCallbacks) {
-        self.method = wallet.get_current_connection();
-
-        // Draw setup content.
-        let changed = self.content_ui(ui, cb);
-
-        if changed {
-            wallet.update_connection(&self.method);
-            // Reopen wallet if connection changed.
-            if !wallet.reopen_needed() {
-                wallet.set_reopen(true);
-                wallet.close();
-            }
-        }
-    }
-
-    /// Draw connection setup content, returning `true` if connection was changed.
-    pub fn content_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) -> bool {
-        self.ui(ui, cb);
-        let mut changed = false;
-
+    fn container_ui(&mut self, ui: &mut egui::Ui, _: &dyn PlatformCallbacks) {
         ui.add_space(2.0);
         View::sub_title(ui, format!("{} {}", GLOBE, t!("wallets.conn_method")));
         View::horizontal_line(ui, Colors::stroke());
@@ -104,7 +79,6 @@ impl ConnectionSettings {
                 if !is_current_method {
                     View::item_button(ui, View::item_rounding(0, 1, true), CHECK, None, || {
                         self.method = ConnectionMethod::Integrated;
-                        changed = true;
                     });
                 } else {
                     ui.add_space(14.0);
@@ -163,15 +137,15 @@ impl ConnectionSettings {
                         };
                         Self::ext_conn_item_ui(ui, c, is_current, i, ext_size, || {
                             self.method = ConnectionMethod::External(c.id, c.url.clone());
-                            changed = true;
                         });
                     });
                 }
             }
         });
-        changed
     }
+}
 
+impl ConnectionSettings {
     /// Draw external connection item content.
     fn ext_conn_item_ui(ui: &mut egui::Ui,
                         conn: &ExternalConnection,

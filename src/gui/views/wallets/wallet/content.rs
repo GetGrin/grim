@@ -30,6 +30,7 @@ use crate::node::Node;
 use crate::wallet::types::ConnectionMethod;
 use crate::wallet::{ExternalConnection, Wallet};
 use crate::AppConfig;
+use crate::gui::views::wallets::wallet::types::WalletContentContainer;
 
 /// Wallet content.
 pub struct WalletContent {
@@ -38,19 +39,16 @@ pub struct WalletContent {
     /// Current tab content to show.
     pub current_tab: Box<dyn WalletTab>,
 
+    /// Account panel content.
     account_content: AccountContent,
 }
 
 impl ContentContainer for WalletContent {
-    fn modal_ids(&self) -> Vec<&'static str> {
-        vec![]
-    }
+    fn modal_ids(&self) -> Vec<&'static str> { vec![] }
 
     fn modal_ui(&mut self, _: &mut egui::Ui, _: &Modal, _: &dyn PlatformCallbacks) {}
 
-    fn on_back(&mut self, _: &dyn PlatformCallbacks) -> bool {
-        true
-    }
+    fn on_back(&mut self, _: &dyn PlatformCallbacks) -> bool { true }
 
     fn container_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         ui.ctx().request_repaint_after(Duration::from_millis(1000));
@@ -62,11 +60,11 @@ impl ContentContainer for WalletContent {
         let wallet_id = wallet.identifier();
         let data = wallet.get_data();
         let show_qr_scan = self.account_content.qr_scan_showing();
-        let hide_tabs = Self::block_navigation_on_sync(wallet);
+        let block_nav = Self::block_navigation_on_sync(wallet);
 
         // Show wallet account panel not on settings tab when navigation is not blocked and QR code
         // scanner is not showing and wallet data is not empty.
-        let mut show_account = self.current_tab.get_type() != WalletTabType::Settings && !hide_tabs
+        let mut show_account = self.current_tab.get_type() != WalletTabType::Settings && !block_nav
             && !wallet.sync_error() && data.is_some();
         if wallet.get_current_connection() == ConnectionMethod::Integrated && !Node::is_running() {
             show_account = false;
@@ -89,7 +87,7 @@ impl ContentContainer for WalletContent {
             })
             .show_animated_inside(ui, show_account, |ui| {
                 let rect = ui.available_rect_before_wrap();
-                self.account_content.ui(ui, cb);
+                self.account_content.ui(ui, wallet, cb);
                 // Draw content divider lines.
                 let r = {
                     let mut r = rect.clone();
@@ -105,7 +103,7 @@ impl ContentContainer for WalletContent {
             });
 
         // Show wallet tabs.
-        let show_tabs = !hide_tabs && !self.account_content.qr_scan_showing();
+        let show_tabs = !block_nav && !self.qr_scan_showing() && !self.account_list_showing();
         egui::TopBottomPanel::bottom("wallet_tabs")
             .frame(egui::Frame {
                 inner_margin: Margin {
@@ -148,7 +146,7 @@ impl ContentContainer for WalletContent {
             .show_inside(ui, |ui| {
                 let rect = ui.available_rect_before_wrap();
                 let tab_type = self.current_tab.get_type();
-                let show_sync = (tab_type != WalletTabType::Settings || hide_tabs) &&
+                let show_sync = (tab_type != WalletTabType::Settings || block_nav) &&
                     sync_ui(ui, &self.wallet);
                 if !show_sync {
                     if tab_type != WalletTabType::Txs {
@@ -175,11 +173,12 @@ impl ContentContainer for WalletContent {
                     r.max.y += 4.0;
                     r
                 };
-                // Draw cover when QR code scanner is active.
-                if show_qr_scan {
-                    View::content_cover_ui(ui, rect, "wallet_tab", || {
+                // Draw cover when account list or QR code scanner is active.
+                if !show_sync && (self.account_list_showing() || self.qr_scan_showing()) {
+                    View::content_cover_ui(ui, rect, "wallet_content_cover", || {
                         cb.stop_camera();
                         self.account_content.close_qr_scan();
+                        self.account_content.close_account_list();
                     });
                 }
                 // Draw content divider line.
@@ -193,7 +192,7 @@ impl ContentContainer for WalletContent {
 impl WalletContent {
     /// Create new instance with optional data.
     pub fn new(wallet: Wallet, data: Option<String>) -> Self {
-        let account_content =  AccountContent::new(wallet.clone());
+        let account_content = AccountContent::default();
         let mut content = Self {
             wallet,
             current_tab: Box::new(WalletTransactions::default()),
@@ -203,6 +202,16 @@ impl WalletContent {
             content.on_data(data);
         }
         content
+    }
+
+    /// Check account list is showing.
+    pub fn account_list_showing(&self) -> bool {
+        self.account_content.account_list_showing()
+    }
+
+    /// Close QR code scanner.
+    pub fn close_account_list(&mut self) {
+        self.account_content.close_account_list();
     }
 
     /// Check if QR code scanner is opened.
