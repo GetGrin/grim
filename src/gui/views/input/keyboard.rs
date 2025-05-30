@@ -499,4 +499,11 @@ impl KeyboardContent {
         let r_state = WINDOW_STATE.read();
         r_state.shift.store(false, Ordering::Relaxed);
     }
+
+    /// Reset keyboard window state.
+    pub fn reset_window_state() {
+        let mut w_state = WINDOW_STATE.write();
+        w_state.layout = Arc::new(KeyboardLayout::TEXT);
+        // *w_state = KeyboardState::default();
+    }
 }

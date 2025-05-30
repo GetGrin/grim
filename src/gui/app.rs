@@ -141,6 +141,10 @@ impl<Platform: PlatformCallbacks> App<Platform> {
         if keyboard_showing {
             ctx.move_to_top(LayerId::new(Order::Middle, egui::Id::new(KeyboardContent::WINDOW_ID)));
         }
+        // Reset keyboard state for newly opened modal.
+        if Modal::first_draw() {
+            KeyboardContent::reset_window_state();
+        }
     }
 
     /// Draw custom desktop window frame content.

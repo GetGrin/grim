@@ -149,6 +149,11 @@ impl TextEdit {
                     text_edit_resp.request_focus();
                 }
 
+                // Reset keyboard state for newly focused.
+                if clicked || self.focus_request {
+                    KeyboardContent::reset_window_state();
+                }
+
                 // Apply text from software input.
                 if text_edit_resp.has_focus() {
                     ui.data_mut(|data| {
