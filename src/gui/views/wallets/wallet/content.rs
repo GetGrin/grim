@@ -44,11 +44,12 @@ pub struct WalletContent {
 }
 
 impl ContentContainer for WalletContent {
-    fn modal_ids(&self) -> Vec<&'static str> { vec![] }
+    fn modal_ids(&self) -> Vec<&'static str> {
+        vec![]
+    }
 
-    fn modal_ui(&mut self, _: &mut egui::Ui, _: &Modal, _: &dyn PlatformCallbacks) {}
-
-    fn on_back(&mut self, _: &dyn PlatformCallbacks) -> bool { true }
+    fn modal_ui(&mut self, _: &mut egui::Ui, _: &Modal, _: &dyn PlatformCallbacks) {
+    }
 
     fn container_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         ui.ctx().request_repaint_after(Duration::from_millis(1000));

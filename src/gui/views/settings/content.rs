@@ -44,10 +44,6 @@ impl ContentContainer for SettingsContent {
     fn modal_ui(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
     }
 
-    fn on_back(&mut self, cb: &dyn PlatformCallbacks) -> bool {
-        true
-    }
-
     fn container_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         ui.add_space(6.0);
 

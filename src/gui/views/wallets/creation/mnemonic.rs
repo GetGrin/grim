@@ -66,10 +66,6 @@ impl ContentContainer for MnemonicSetup {
         }
     }
 
-    fn on_back(&mut self, _: &dyn PlatformCallbacks) -> bool {
-        true
-    }
-
     fn container_ui(&mut self, _: &mut egui::Ui, _: &dyn PlatformCallbacks) {
     }
 }
@@ -78,34 +74,8 @@ impl MnemonicSetup {
     /// Draw content for phrase import step.
     pub fn import_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         self.ui(ui, cb);
-
         ui.add_space(10.0);
 
-        // Show mode and type setup.
-        self.mode_type_ui(ui);
-
-        ui.add_space(12.0);
-        View::horizontal_line(ui, Colors::item_stroke());
-        ui.add_space(6.0);
-
-        // Show words setup.
-        self.word_list_ui(ui, true);
-    }
-    /// Draw content for phrase confirmation step.
-    pub fn confirm_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
-        self.ui(ui, cb);
-
-        ui.add_space(4.0);
-        ui.vertical_centered(|ui| {
-            let text = format!("{}:", t!("wallets.recovery_phrase"));
-            ui.label(RichText::new(text).size(16.0).color(Colors::gray()));
-        });
-        ui.add_space(4.0);
-        self.word_list_ui(ui, true);
-    }
-
-    /// Draw mode and size setup.
-    fn mode_type_ui(&mut self, ui: &mut egui::Ui) {
         // Show mode setup.
         let mut mode = self.mnemonic.mode();
         ui.columns(2, |columns| {
@@ -146,6 +116,25 @@ impl MnemonicSetup {
         if size != self.mnemonic.size() {
             self.mnemonic.set_size(size);
         }
+
+        ui.add_space(12.0);
+        View::horizontal_line(ui, Colors::item_stroke());
+        ui.add_space(6.0);
+
+        // Show words setup.
+        self.word_list_ui(ui, true);
+    }
+    /// Draw content for phrase confirmation step.
+    pub fn confirm_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
+        self.ui(ui, cb);
+
+        ui.add_space(4.0);
+        ui.vertical_centered(|ui| {
+            let text = format!("{}:", t!("wallets.recovery_phrase"));
+            ui.label(RichText::new(text).size(16.0).color(Colors::gray()));
+        });
+        ui.add_space(4.0);
+        self.word_list_ui(ui, true);
     }
 
     /// Draw grid of words for mnemonic phrase.

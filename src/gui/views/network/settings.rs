@@ -70,10 +70,6 @@ impl ContentContainer for NetworkSettings {
         }
     }
 
-    fn on_back(&mut self, _: &dyn PlatformCallbacks) -> bool {
-        true
-    }
-
     fn container_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         ScrollArea::vertical()
             .id_salt("node_settings_scroll")

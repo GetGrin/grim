@@ -121,10 +121,6 @@ impl ContentContainer for StratumSetup {
         }
     }
 
-    fn on_back(&mut self, _: &dyn PlatformCallbacks) -> bool {
-        true
-    }
-
     fn container_ui(&mut self, ui: &mut egui::Ui, _: &dyn PlatformCallbacks) {
         View::sub_title(ui, format!("{} {}", HARD_DRIVES, t!("network_mining.server")));
         View::horizontal_line(ui, Colors::stroke());

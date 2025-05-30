@@ -80,10 +80,6 @@ impl ContentContainer for DandelionSetup {
         }
     }
 
-    fn on_back(&mut self, _: &dyn PlatformCallbacks) -> bool {
-        true
-    }
-
     fn container_ui(&mut self, ui: &mut egui::Ui, _: &dyn PlatformCallbacks) {
         View::sub_title(ui, format!("{} {}", GRAPH, "Dandelion"));
         View::horizontal_line(ui, Colors::stroke());

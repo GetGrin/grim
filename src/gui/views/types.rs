@@ -57,8 +57,6 @@ pub trait ContentContainer {
     fn modal_ids(&self) -> Vec<&'static str>;
     /// Draw modal content.
     fn modal_ui(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks);
-    /// Handle back key action, return `false` when consumed inside container.
-    fn on_back(&mut self, cb: &dyn PlatformCallbacks) -> bool;
     /// Draw container content.
     fn container_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks);
     /// Draw content, to call by parent container.

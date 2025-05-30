@@ -58,10 +58,6 @@ impl ContentContainer for ConnectionsContent {
         }
     }
 
-    fn on_back(&mut self, _: &dyn PlatformCallbacks) -> bool {
-        true
-    }
-
     fn container_ui(&mut self, ui: &mut egui::Ui, _: &dyn PlatformCallbacks) {
         ui.add_space(2.0);
 

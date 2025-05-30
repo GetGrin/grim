@@ -88,33 +88,7 @@ impl ContentContainer for Content {
         }
     }
 
-    fn on_back(&mut self, cb: &dyn PlatformCallbacks) -> bool {
-        if Modal::on_back() {
-            if self.wallets.on_back(cb) {
-                Self::show_exit_modal();
-                return false;
-            }
-        }
-        true
-    }
-
     fn container_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
-        self.content_ui(ui, cb);
-    }
-}
-
-impl Content {
-    /// Default width of side panel at application UI.
-    pub const SIDE_PANEL_WIDTH: f32 = 400.0;
-    /// Desktop window title height.
-    pub const WINDOW_TITLE_HEIGHT: f32 = 38.0;
-    /// Margin of window frame at desktop.
-    pub const WINDOW_FRAME_MARGIN: f32 = 6.0;
-
-    /// Identifier for exit confirmation [`Modal`].
-    pub const EXIT_CONFIRMATION_MODAL: &'static str = "exit_confirmation_modal";
-
-    fn content_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         let dual_panel = Self::is_dual_panel_mode(ui.ctx());
         let (is_panel_open, mut panel_width) = network_panel_state_width(ui.ctx(), dual_panel);
         if self.network.showing_settings() {
@@ -150,13 +124,36 @@ impl Content {
                     .title(t!("crash_report"))
                     .show();
             } else if OperatingSystem::from_target_os() == OperatingSystem::Android &&
-                    AppConfig::android_integrated_node_warning_needed() {
-                    Modal::new(ANDROID_INTEGRATED_NODE_WARNING_MODAL)
-                        .title(t!("network.node"))
-                        .show();
+                AppConfig::android_integrated_node_warning_needed() {
+                Modal::new(ANDROID_INTEGRATED_NODE_WARNING_MODAL)
+                    .title(t!("network.node"))
+                    .show();
             }
             self.first_draw = false;
         }
+    }
+}
+
+impl Content {
+    /// Default width of side panel at application UI.
+    pub const SIDE_PANEL_WIDTH: f32 = 400.0;
+    /// Desktop window title height.
+    pub const WINDOW_TITLE_HEIGHT: f32 = 38.0;
+    /// Margin of window frame at desktop.
+    pub const WINDOW_FRAME_MARGIN: f32 = 6.0;
+
+    /// Identifier for exit confirmation [`Modal`].
+    pub const EXIT_CONFIRMATION_MODAL: &'static str = "exit_confirmation_modal";
+
+    /// Called to navigate back, return `true` if action was not consumed.
+    pub fn on_back(&mut self, cb: &dyn PlatformCallbacks) -> bool {
+        if Modal::on_back() {
+            if self.wallets.on_back(cb) {
+                Self::show_exit_modal();
+                return false;
+            }
+        }
+        true
     }
 
     /// Check if ui can show [`NetworkContent`] and [`WalletsContent`] at same time.

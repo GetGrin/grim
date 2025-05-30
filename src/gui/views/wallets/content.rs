@@ -127,40 +127,6 @@ impl ContentContainer for WalletsContent {
         }
     }
 
-    fn on_back(&mut self, cb: &dyn PlatformCallbacks) -> bool {
-        if self.showing_settings() {
-            // Close settings.
-            self.settings_content = None;
-            return false;
-        } else if self.creating_wallet() {
-            // Close wallet creation.
-            let creation = self.creation_content.as_mut().unwrap();
-            if creation.on_back() {
-                self.creation_content = None;
-            }
-            return false;
-        } else {
-            if self.showing_wallet() {
-                let content = self.wallet_content.as_mut().unwrap();
-                // Close opened QR code scanner.
-                if content.qr_scan_showing() {
-                    cb.stop_camera();
-                    content.close_qr_scan();
-                    return false;
-                }
-                // Close account list.
-                if content.account_list_showing() {
-                    content.close_qr_scan();
-                    return false;
-                }
-                // Close opened wallet.
-                self.wallet_content = None;
-                return false;
-            }
-        }
-        true
-    }
-
     fn container_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         if let Some(data) = crate::consume_incoming_data() {
             if !data.is_empty() {
@@ -319,6 +285,39 @@ impl ContentContainer for WalletsContent {
 }
 
 impl WalletsContent {
+    /// Called to navigate back, return `true` if action was not consumed.
+    pub fn on_back(&mut self, cb: &dyn PlatformCallbacks) -> bool {
+        if self.showing_settings() {
+            // Close settings.
+            self.settings_content = None;
+            return false;
+        } else if self.creating_wallet() {
+            // Close wallet creation.
+            let creation = self.creation_content.as_mut().unwrap();
+            if creation.on_back() {
+                self.creation_content = None;
+            }
+            return false;
+        } else if self.showing_wallet() {
+            let content = self.wallet_content.as_mut().unwrap();
+            // Close opened QR code scanner.
+            if content.qr_scan_showing() {
+                cb.stop_camera();
+                content.close_qr_scan();
+                return false;
+            }
+            // Close account list.
+            if content.account_list_showing() {
+                content.close_qr_scan();
+                return false;
+            }
+            // Close opened wallet.
+            self.wallet_content = None;
+            return false;
+        }
+        true
+    }
+
     /// Check if opened wallet is showing.
     pub fn showing_wallet(&self) -> bool {
         if let Some(wallet_content) = &self.wallet_content {
@@ -358,7 +357,11 @@ impl WalletsContent {
                 self.show_opening_modal(w, data);
             }
         } else {
-            self.show_wallet_selection_modal(data);
+            self.wallet_selection_content = WalletsModal::new(None, data, true);
+            Modal::new(SELECT_WALLET_MODAL)
+                .position(ModalPosition::Center)
+                .title(t!("network_settings.choose_wallet"))
+                .show();
         }
     }
 
@@ -368,15 +371,6 @@ impl WalletsContent {
         Modal::new(ADD_WALLET_MODAL)
             .position(ModalPosition::CenterTop)
             .title(t!("wallets.add"))
-            .show();
-    }
-
-    /// Show wallet selection with provided optional data.
-    fn show_wallet_selection_modal(&mut self, data: Option<String>) {
-        self.wallet_selection_content = WalletsModal::new(None, data, true);
-        Modal::new(SELECT_WALLET_MODAL)
-            .position(ModalPosition::Center)
-            .title(t!("network_settings.choose_wallet"))
             .show();
     }
 
@@ -475,6 +469,7 @@ impl WalletsContent {
                         self.wallet_content.as_mut().unwrap().close_account_list();
                         return;
                     }
+                    self.wallet_content = None;
                 });
             } else if self.creating_wallet() {
                 let mut close = false;

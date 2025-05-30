@@ -86,11 +86,8 @@ impl ContentContainer for WalletCreationContent {
         }
     }
 
-    fn on_back(&mut self, _: &dyn PlatformCallbacks) -> bool {
-        true
+    fn container_ui(&mut self, _: &mut egui::Ui, _: &dyn PlatformCallbacks) {
     }
-
-    fn container_ui(&mut self, _: &mut egui::Ui, _: &dyn PlatformCallbacks) {}
 }
 
 impl WalletCreationContent {
