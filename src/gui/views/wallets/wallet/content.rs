@@ -12,25 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::time::Duration;
-use egui::{Align, Id, Layout, Margin, RichText, ScrollArea, StrokeKind};
 use egui::scroll_area::ScrollBarVisibility;
+use egui::{Id, Margin, RichText, ScrollArea};
 use grin_chain::SyncStatus;
-use grin_core::core::amount_to_hr_string;
+use std::time::Duration;
 
-use crate::AppConfig;
-use crate::gui::Colors;
-use crate::gui::icons::{ARROWS_CLOCKWISE, BRIDGE, CAMERA_ROTATE, CHAT_CIRCLE_TEXT, FOLDER_USER, GEAR_FINE, GRAPH, PACKAGE, POWER, SCAN, SPINNER, USERS_THREE};
+use crate::gui::icons::{ARROWS_CLOCKWISE, BRIDGE, CHAT_CIRCLE_TEXT, GEAR_FINE, GRAPH, POWER};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Modal, Content, View, CameraContent};
-use crate::gui::views::types::{LinePosition, ContentContainer, ModalPosition, QrScanResult};
-use crate::gui::views::wallets::{WalletTransactions, WalletMessages, WalletTransport};
-use crate::gui::views::wallets::types::{GRIN, WalletTab, WalletTabType};
-use crate::gui::views::wallets::wallet::modals::WalletAccountsModal;
+use crate::gui::views::types::{ContentContainer, LinePosition};
+use crate::gui::views::wallets::types::{WalletTab, WalletTabType};
+use crate::gui::views::wallets::wallet::account::AccountContent;
 use crate::gui::views::wallets::wallet::WalletSettings;
+use crate::gui::views::wallets::{WalletMessages, WalletTransactions, WalletTransport};
+use crate::gui::views::{Content, Modal, View};
+use crate::gui::Colors;
 use crate::node::Node;
-use crate::wallet::{ExternalConnection, Wallet, WalletConfig};
-use crate::wallet::types::{ConnectionMethod, WalletData};
+use crate::wallet::types::ConnectionMethod;
+use crate::wallet::{ExternalConnection, Wallet};
+use crate::AppConfig;
 
 /// Wallet content.
 pub struct WalletContent {
@@ -39,31 +38,15 @@ pub struct WalletContent {
     /// Current tab content to show.
     pub current_tab: Box<dyn WalletTab>,
 
-    /// Wallet accounts [`Modal`] content.
-    accounts_modal_content: WalletAccountsModal,
-
-    /// QR code scan content.
-    pub qr_scan_content: Option<CameraContent>,
+    account_content: AccountContent,
 }
-
-/// Identifier for account list [`Modal`].
-const ACCOUNT_LIST_MODAL: &'static str = "account_list_modal";
 
 impl ContentContainer for WalletContent {
     fn modal_ids(&self) -> Vec<&'static str> {
-        vec![
-            ACCOUNT_LIST_MODAL,
-        ]
+        vec![]
     }
 
-    fn modal_ui(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
-        match modal.id {
-            ACCOUNT_LIST_MODAL => {
-                self.accounts_modal_content.ui(ui, &self.wallet, modal, cb);
-            }
-            _ => {}
-        }
-    }
+    fn modal_ui(&mut self, _: &mut egui::Ui, _: &Modal, _: &dyn PlatformCallbacks) {}
 
     fn on_back(&mut self, _: &dyn PlatformCallbacks) -> bool {
         true
@@ -78,7 +61,7 @@ impl ContentContainer for WalletContent {
         let wallet = &self.wallet;
         let wallet_id = wallet.identifier();
         let data = wallet.get_data();
-        let show_qr_scan = self.qr_scan_content.is_some();
+        let show_qr_scan = self.account_content.qr_scan_showing();
         let hide_tabs = Self::block_navigation_on_sync(wallet);
 
         // Show wallet account panel not on settings tab when navigation is not blocked and QR code
@@ -91,7 +74,7 @@ impl ContentContainer for WalletContent {
         // Close scanner when balance got hidden.
         if !show_account && show_qr_scan {
             cb.stop_camera();
-            self.qr_scan_content = None;
+            self.account_content.close_qr_scan();
         }
         egui::TopBottomPanel::top(Id::from("wallet_account").with(wallet.identifier()))
             .frame(egui::Frame {
@@ -106,39 +89,7 @@ impl ContentContainer for WalletContent {
             })
             .show_animated_inside(ui, show_account, |ui| {
                 let rect = ui.available_rect_before_wrap();
-                if show_qr_scan {
-                    if let Some(result) = self.qr_scan_content.as_ref().unwrap().qr_scan_result() {
-                        match result {
-                            QrScanResult::Address(address) => {
-                                self.current_tab =
-                                    Box::new(WalletTransport::new(Some(address.to_string())));
-                            }
-                            _ => {
-                                self.current_tab =
-                                    Box::new(WalletMessages::new(Some(result.text())))
-                            }
-                        }
-                        // Stop camera and close scanning.
-                        cb.stop_camera();
-                        self.qr_scan_content = None;
-                    } else {
-                        View::max_width_ui(ui, Content::SIDE_PANEL_WIDTH, |ui| {
-                            self.qr_scan_content.as_mut().unwrap().ui(ui, cb);
-                            ui.add_space(6.0);
-                            ui.vertical_centered_justified(|ui| {
-                                View::button(ui, t!("close"), Colors::white_or_black(false), || {
-                                    cb.stop_camera();
-                                    self.qr_scan_content = None;
-                                });
-                            });
-                            ui.add_space(6.0);
-                        });
-                    }
-                } else {
-                    View::max_width_ui(ui, Content::SIDE_PANEL_WIDTH * 1.3, |ui| {
-                        self.account_ui(ui, data.unwrap(), cb);
-                    });
-                }
+                self.account_content.ui(ui, cb);
                 // Draw content divider lines.
                 let r = {
                     let mut r = rect.clone();
@@ -154,7 +105,7 @@ impl ContentContainer for WalletContent {
             });
 
         // Show wallet tabs.
-        let show_tabs = !hide_tabs && self.qr_scan_content.is_none();
+        let show_tabs = !hide_tabs && !self.account_content.qr_scan_showing();
         egui::TopBottomPanel::bottom("wallet_tabs")
             .frame(egui::Frame {
                 inner_margin: Margin {
@@ -169,7 +120,7 @@ impl ContentContainer for WalletContent {
             .show_animated_inside(ui, show_tabs, |ui| {
                 let rect = ui.available_rect_before_wrap();
                 View::max_width_ui(ui, Content::SIDE_PANEL_WIDTH * 1.3, |ui| {
-                    self.tabs_ui(ui, cb);
+                    self.tabs_ui(ui);
                 });
                 let rect = {
                     let mut r = rect.clone();
@@ -228,7 +179,7 @@ impl ContentContainer for WalletContent {
                 if show_qr_scan {
                     View::content_cover_ui(ui, rect, "wallet_tab", || {
                         cb.stop_camera();
-                        self.qr_scan_content = None;
+                        self.account_content.close_qr_scan();
                     });
                 }
                 // Draw content divider line.
@@ -242,17 +193,26 @@ impl ContentContainer for WalletContent {
 impl WalletContent {
     /// Create new instance with optional data.
     pub fn new(wallet: Wallet, data: Option<String>) -> Self {
-        let accounts_modal = WalletAccountsModal::new(wallet.accounts());
+        let account_content =  AccountContent::new(wallet.clone());
         let mut content = Self {
             wallet,
-            accounts_modal_content: accounts_modal,
-            qr_scan_content: None,
             current_tab: Box::new(WalletTransactions::default()),
+            account_content,
         };
         if data.is_some() {
             content.on_data(data);
         }
         content
+    }
+
+    /// Check if QR code scanner is opened.
+    pub fn qr_scan_showing(&self) -> bool {
+        self.account_content.qr_scan_showing()
+    }
+
+    /// Close QR code scanner.
+    pub fn close_qr_scan(&mut self) {
+        self.account_content.close_qr_scan();
     }
 
     /// Handle data from deeplink or opened file.
@@ -273,118 +233,11 @@ impl WalletContent {
             (!integrated_node || integrated_node_ready))
     }
 
-    /// Draw wallet account content.
-    fn account_ui(&mut self,
-                  ui: &mut egui::Ui,
-                  data: WalletData,
-                  cb: &dyn PlatformCallbacks) {
-        let mut rect = ui.available_rect_before_wrap();
-        rect.set_height(75.0);
-        // Draw round background.
-        let rounding = View::item_rounding(0, 2, false);
-        ui.painter().rect(rect,
-                          rounding,
-                          Colors::fill_lite(),
-                          View::item_stroke(),
-                          StrokeKind::Middle);
-
-        ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
-            // Draw button to show QR code scanner.
-            View::item_button(ui, View::item_rounding(0, 2, true), SCAN, None, || {
-                self.qr_scan_content = Some(CameraContent::default());
-                cb.start_camera();
-            });
-
-            // Draw button to show list of accounts.
-            View::item_button(ui, View::item_rounding(1, 3, true), USERS_THREE, None, || {
-                self.accounts_modal_content = WalletAccountsModal::new(self.wallet.accounts());
-                Modal::new(ACCOUNT_LIST_MODAL)
-                    .position(ModalPosition::CenterTop)
-                    .title(t!("wallets.accounts"))
-                    .show();
-            });
-
-            let layout_size = ui.available_size();
-            ui.allocate_ui_with_layout(layout_size, Layout::left_to_right(Align::Center), |ui| {
-                ui.add_space(8.0);
-                ui.vertical(|ui| {
-                    ui.add_space(3.0);
-                    // Show spendable amount.
-                    let amount = amount_to_hr_string(data.info.amount_currently_spendable, true);
-                    let amount_text = format!("{} {}", amount, GRIN);
-                    ui.with_layout(Layout::left_to_right(Align::Min), |ui| {
-                        ui.add_space(1.0);
-                        ui.label(RichText::new(amount_text)
-                            .size(18.0)
-                            .color(Colors::white_or_black(true)));
-                    });
-                    ui.add_space(-2.0);
-
-                    // Show account label.
-                    let account = self.wallet.get_config().account;
-                    let default_acc_label = WalletConfig::DEFAULT_ACCOUNT_LABEL.to_string();
-                    let acc_label = if account == default_acc_label {
-                        t!("wallets.default_account")
-                    } else {
-                        account.to_owned()
-                    };
-                    let acc_text = format!("{} {}", FOLDER_USER, acc_label);
-                    View::ellipsize_text(ui, acc_text, 15.0, Colors::text(false));
-
-                    // Show confirmed height or sync progress.
-                    let status_text = if !self.wallet.syncing() {
-                        format!("{} {}", PACKAGE, data.info.last_confirmed_height)
-                    } else {
-                        let info_progress = self.wallet.info_sync_progress();
-                        if info_progress == 100 || info_progress == 0 {
-                            format!("{} {}", SPINNER, t!("wallets.wallet_loading"))
-                        } else {
-                            if self.wallet.is_repairing() {
-                                let rep_progress = self.wallet.repairing_progress();
-                                if rep_progress == 0 {
-                                    format!("{} {}", SPINNER, t!("wallets.wallet_checking"))
-                                } else {
-                                    format!("{} {}: {}%",
-                                            SPINNER,
-                                            t!("wallets.wallet_checking"),
-                                            rep_progress)
-                                }
-                            } else {
-                                format!("{} {}: {}%",
-                                        SPINNER,
-                                        t!("wallets.wallet_loading"),
-                                        info_progress)
-                            }
-                        }
-                    };
-                    View::animate_text(ui,
-                                       status_text,
-                                       15.0,
-                                       Colors::gray(),
-                                       self.wallet.syncing());
-                })
-            });
-        });
-    }
-
     /// Draw tab buttons at the bottom of the screen.
-    fn tabs_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
+    fn tabs_ui(&mut self, ui: &mut egui::Ui) {
         ui.scope(|ui| {
             // Setup spacing between tabs.
             ui.style_mut().spacing.item_spacing = egui::vec2(View::TAB_ITEMS_PADDING, 0.0);
-
-            // Show camera switch button at QR code scan.
-            if self.qr_scan_content.is_some() && cb.can_switch_camera() {
-                // Setup vertical padding inside tab button.
-                ui.style_mut().spacing.button_padding = egui::vec2(10.0, 4.0);
-
-                ui.vertical_centered(|ui| {
-                    View::tab_button(ui, CAMERA_ROTATE, false, |_| {
-                        cb.switch_camera();
-                    });
-                });
-                return;
-            }
 
             // Setup vertical padding inside buttons.
             ui.style_mut().spacing.button_padding = egui::vec2(0.0, 4.0);

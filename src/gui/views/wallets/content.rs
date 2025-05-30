@@ -143,9 +143,9 @@ impl ContentContainer for WalletsContent {
             if self.showing_wallet() {
                 let content = self.wallet_content.as_mut().unwrap();
                 // Close opened QR code scanner.
-                if content.qr_scan_content.is_some() {
+                if content.qr_scan_showing() {
                     cb.stop_camera();
-                    content.qr_scan_content = None;
+                    content.close_qr_scan();
                     return false;
                 }
                 // Close opened wallet.
@@ -169,7 +169,7 @@ impl ContentContainer for WalletsContent {
         let dual_panel = is_dual_panel_mode(ui);
         let content_width = ui.available_width();
         let list_hidden = showing_settings || creating_wallet || self.wallets.list().is_empty()
-            || (showing_wallet && self.wallet_content.as_ref().unwrap().qr_scan_content.is_some())
+            || (showing_wallet && self.wallet_content.as_ref().unwrap().qr_scan_showing())
             || (dual_panel && showing_wallet && !AppConfig::show_wallets_at_dual_panel())
             || (!dual_panel && showing_wallet);
 
@@ -387,7 +387,7 @@ impl WalletsContent {
         let qr_scan = {
             let mut scan = false;
             if show_wallet {
-                scan = self.wallet_content.as_mut().unwrap().qr_scan_content.is_some();
+                scan = self.wallet_content.as_mut().unwrap().qr_scan_showing();
             }
             scan
         };
@@ -448,11 +448,10 @@ impl WalletsContent {
                     let wallet_qr_scan = self.wallet_content
                         .as_ref()
                         .unwrap()
-                        .qr_scan_content
-                        .is_some();
+                        .qr_scan_showing();
                     if wallet_qr_scan {
                         cb.stop_camera();
-                        self.wallet_content.as_mut().unwrap().qr_scan_content = None;
+                        self.wallet_content.as_mut().unwrap().close_qr_scan();
                         return;
                     }
                     self.wallet_content = None;
@@ -473,7 +472,7 @@ impl WalletsContent {
                 if qr_scan {
                     View::title_button_big(ui, ARROW_LEFT, |_| {
                         cb.stop_camera();
-                        self.wallet_content.as_mut().unwrap().qr_scan_content = None;
+                        self.wallet_content.as_mut().unwrap().close_qr_scan();
                     });
                 } else {
                     let list_icon = if show_list {
