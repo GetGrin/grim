@@ -130,7 +130,9 @@ impl<Platform: PlatformCallbacks> App<Platform> {
         }
 
         // Show modal or keyboard window above others.
-        ctx.move_to_top(LayerId::new(Order::Middle, egui::Id::new(Modal::WINDOW_ID)));
+        if Modal::opened().is_some() {
+            ctx.move_to_top(LayerId::new(Order::Middle, egui::Id::new(Modal::WINDOW_ID)));
+        }
         let keyboard_showing = if let Some(l) = ctx.top_layer_id() {
             l.id == egui::Id::new(KeyboardContent::WINDOW_ID)
         } else {
