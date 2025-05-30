@@ -129,17 +129,17 @@ impl<Platform: PlatformCallbacks> App<Platform> {
             self.platform.clear_user_attention();
         }
 
-        // Show modal or keyboard window above others.
+        // Show modal or keyboard window above opened Modal.
         if Modal::opened().is_some() {
             ctx.move_to_top(LayerId::new(Order::Middle, egui::Id::new(Modal::WINDOW_ID)));
-        }
-        let keyboard_showing = if let Some(l) = ctx.top_layer_id() {
-            l.id == egui::Id::new(KeyboardContent::WINDOW_ID)
-        } else {
-            false
-        };
-        if keyboard_showing {
-            ctx.move_to_top(LayerId::new(Order::Middle, egui::Id::new(KeyboardContent::WINDOW_ID)));
+            let keyboard_showing = if let Some(l) = ctx.top_layer_id() {
+                l.id == egui::Id::new(KeyboardContent::WINDOW_ID)
+            } else {
+                false
+            };
+            if keyboard_showing {
+                ctx.move_to_top(LayerId::new(Order::Middle, egui::Id::new(KeyboardContent::WINDOW_ID)));
+            }
         }
         // Reset keyboard state for newly opened modal.
         if Modal::first_draw() {
