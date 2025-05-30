@@ -342,7 +342,7 @@ impl TransportSendModal {
                 match res {
                     Ok(tx) => {
                         self.tx_info_content =
-                            Some(WalletTransactionModal::new(wallet, &tx, false));
+                            Some(WalletTransactionModal::new(Some(tx.data.id), false));
                     }
                     Err(_) => {
                         self.error = true;

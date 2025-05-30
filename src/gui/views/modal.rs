@@ -23,6 +23,7 @@ use std::sync::Arc;
 use crate::gui::views::types::{ModalPosition, ModalState};
 use crate::gui::views::{Content, View};
 use crate::gui::Colors;
+use crate::gui::platform::PlatformCallbacks;
 
 lazy_static! {
     /// Showing [`Modal`] state to be accessible from different ui parts.
@@ -173,8 +174,9 @@ impl Modal {
         modal.first_draw.load(Ordering::Relaxed)
     }
 
-    /// Draw opened [`Modal`] content.
-    pub fn ui(ctx: &egui::Context, add_content: impl FnOnce(&mut egui::Ui, &Modal)) {
+    pub fn ui(ctx: &egui::Context,
+              cb: &dyn PlatformCallbacks,
+              add_content: impl FnOnce(&mut egui::Ui, &Modal, &dyn PlatformCallbacks)) {
         let has_modal = {
             MODAL_STATE.read().modal.is_some()
         };
@@ -183,12 +185,15 @@ impl Modal {
                 let r_state = MODAL_STATE.read();
                 r_state.modal.clone().unwrap()
             };
-            modal.window_ui(ctx, add_content);
+            modal.window_ui(ctx, cb, add_content);
         }
     }
 
     /// Draw [`egui::Window`] with provided content.
-    fn window_ui(&self, ctx: &egui::Context, add_content: impl FnOnce(&mut egui::Ui, &Modal)) {
+    fn window_ui(&self,
+                 ctx: &egui::Context,
+                 cb: &dyn PlatformCallbacks,
+                 add_content: impl FnOnce(&mut egui::Ui, &Modal, &dyn PlatformCallbacks)) {
         let is_fullscreen = ctx.input(|i| {
             i.viewport().fullscreen.unwrap_or(false)
         });
@@ -249,7 +254,7 @@ impl Modal {
                 if let Some(title) = &self.title {
                     title_ui(title, ui);
                 }
-                self.content_ui(ui, add_content);
+                self.content_ui(ui, cb, add_content);
             });
 
         // Setup first draw flag.
@@ -289,7 +294,10 @@ impl Modal {
     }
 
     /// Draw provided content.
-    fn content_ui(&self, ui: &mut egui::Ui, add_content: impl FnOnce(&mut egui::Ui, &Modal)) {
+    fn content_ui(&self,
+                  ui: &mut egui::Ui,
+                  cb: &dyn PlatformCallbacks,
+                  add_content: impl FnOnce(&mut egui::Ui, &Modal, &dyn PlatformCallbacks)) {
         let mut rect = ui.available_rect_before_wrap();
 
         // Create background shape.
@@ -308,7 +316,7 @@ impl Modal {
         rect.min += egui::emath::vec2(6.0, 0.0);
         rect.max -= egui::emath::vec2(6.0, 0.0);
         let resp = ui.scope_builder(UiBuilder::new().max_rect(rect), |ui| {
-            (add_content)(ui, self);
+            (add_content)(ui, self, cb);
         }).response;
 
         // Setup background size.

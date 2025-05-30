@@ -32,7 +32,7 @@ impl NodeTab for NetworkNode {
         NodeTabType::Info
     }
 
-    fn ui(&mut self, ui: &mut egui::Ui, _: &dyn PlatformCallbacks) {
+    fn tab_ui(&mut self, ui: &mut egui::Ui, _: &dyn PlatformCallbacks) {
         ScrollArea::vertical()
             .id_salt("integrated_node_info_scroll")
             .scroll_bar_visibility(ScrollBarVisibility::AlwaysHidden)

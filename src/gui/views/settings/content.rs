@@ -18,7 +18,9 @@ use egui::{Layout, RichText};
 use crate::AppConfig;
 use crate::gui::Colors;
 use crate::gui::icons::{CHECK, CHECK_FAT};
+use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, View};
+use crate::gui::views::types::ContentContainer;
 
 /// Application settings content.
 pub struct SettingsContent {
@@ -34,9 +36,19 @@ impl Default for SettingsContent {
     }
 }
 
-impl SettingsContent {
-    /// Draw settings content.
-    pub fn ui(&mut self, ui: &mut egui::Ui) {
+impl ContentContainer for SettingsContent {
+    fn modal_ids(&self) -> Vec<&'static str> {
+        vec![]
+    }
+
+    fn modal_ui(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
+    }
+
+    fn on_back(&mut self, cb: &dyn PlatformCallbacks) -> bool {
+        true
+    }
+
+    fn container_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         ui.add_space(6.0);
 
         // Show theme selection.
@@ -60,7 +72,9 @@ impl SettingsContent {
             Self::language_item_ui(locale, ui, index, locales.len());
         }
     }
+}
 
+impl SettingsContent {
     /// Draw theme selection content.
     fn theme_selection_ui(ui: &mut egui::Ui) {
         ui.vertical_centered(|ui| {

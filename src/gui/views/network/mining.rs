@@ -24,6 +24,7 @@ use crate::gui::views::{Content, View};
 use crate::gui::views::network::NetworkContent;
 use crate::gui::views::network::setup::StratumSetup;
 use crate::gui::views::network::types::{NodeTab, NodeTabType};
+use crate::gui::views::types::ContentContainer;
 use crate::node::{Node, NodeConfig};
 
 /// Mining tab content.
@@ -45,7 +46,7 @@ impl NodeTab for NetworkMining {
         NodeTabType::Mining
     }
 
-    fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
+    fn tab_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         if Node::is_stratum_starting() || Node::get_sync_status().unwrap() != SyncStatus::NoSync {
             NetworkContent::loading_ui(ui, Some(t!("network_mining.loading")));
             return;

@@ -38,7 +38,7 @@ impl NodeTab for NetworkMetrics {
         NodeTabType::Metrics
     }
 
-    fn ui(&mut self, ui: &mut egui::Ui, _: &dyn PlatformCallbacks) {
+    fn tab_ui(&mut self, ui: &mut egui::Ui, _: &dyn PlatformCallbacks) {
         let server_stats = Node::get_stats();
         let stats = server_stats.as_ref().unwrap();
         if stats.diff_stats.height == 0 {

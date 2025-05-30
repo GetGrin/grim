@@ -21,7 +21,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use crate::gui::icons::FILE_X;
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::network::NetworkContent;
-use crate::gui::views::types::{ModalContainer, ModalPosition};
+use crate::gui::views::types::{ContentContainer, ModalPosition};
 use crate::gui::views::wallets::WalletsContent;
 use crate::gui::views::{Modal, View};
 use crate::gui::Colors;
@@ -39,7 +39,7 @@ pub struct Content {
     network: NetworkContent,
 
     /// Central panel [`WalletsContent`] content.
-    pub wallets: WalletsContent,
+    wallets: WalletsContent,
 
     /// Check if app exit is allowed on Desktop close event.
     pub exit_allowed: bool,
@@ -48,15 +48,7 @@ pub struct Content {
 
     /// Flag to check it's first draw of content.
     first_draw: bool,
-
-    /// List of allowed [`Modal`] ids for this [`ModalContainer`].
-    allowed_modal_ids: Vec<&'static str>
 }
-
-/// Identifier for integrated node warning [`Modal`] on Android.
-const ANDROID_INTEGRATED_NODE_WARNING_MODAL: &'static str = "android_node_warning_modal";
-/// Identifier for crash report [`Modal`].
-const CRASH_REPORT_MODAL: &'static str = "crash_report_modal";
 
 impl Default for Content {
     fn default() -> Self {
@@ -69,24 +61,25 @@ impl Default for Content {
             exit_allowed,
             show_exit_progress: false,
             first_draw: true,
-            allowed_modal_ids: vec![
-                Self::EXIT_CONFIRMATION_MODAL,
-                ANDROID_INTEGRATED_NODE_WARNING_MODAL,
-                CRASH_REPORT_MODAL
-            ],
         }
     }
 }
 
-impl ModalContainer for Content {
-    fn modal_ids(&self) -> &Vec<&'static str> {
-        &self.allowed_modal_ids
+/// Identifier for integrated node warning [`Modal`] on Android.
+const ANDROID_INTEGRATED_NODE_WARNING_MODAL: &'static str = "android_node_warning_modal";
+/// Identifier for crash report [`Modal`].
+const CRASH_REPORT_MODAL: &'static str = "crash_report_modal";
+
+impl ContentContainer for Content {
+    fn modal_ids(&self) -> Vec<&'static str> {
+        vec![
+            Self::EXIT_CONFIRMATION_MODAL,
+            ANDROID_INTEGRATED_NODE_WARNING_MODAL,
+            CRASH_REPORT_MODAL
+        ]
     }
 
-    fn modal_ui(&mut self,
-                ui: &mut egui::Ui,
-                modal: &Modal,
-                cb: &dyn PlatformCallbacks) {
+    fn modal_ui(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
         match modal.id {
             Self::EXIT_CONFIRMATION_MODAL => self.exit_modal_content(ui, modal, cb),
             ANDROID_INTEGRATED_NODE_WARNING_MODAL => self.android_warning_modal_ui(ui),
@@ -94,12 +87,23 @@ impl ModalContainer for Content {
             _ => {}
         }
     }
+
+    fn on_back(&mut self, cb: &dyn PlatformCallbacks) -> bool {
+        if Modal::on_back() {
+            if self.wallets.on_back(cb) {
+                Self::show_exit_modal();
+                return false;
+            }
+        }
+        true
+    }
+
+    fn container_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
+        self.content_ui(ui, cb);
+    }
 }
 
 impl Content {
-    /// Identifier for exit confirmation [`Modal`].
-    pub const EXIT_CONFIRMATION_MODAL: &'static str = "exit_confirmation_modal";
-
     /// Default width of side panel at application UI.
     pub const SIDE_PANEL_WIDTH: f32 = 400.0;
     /// Desktop window title height.
@@ -107,9 +111,10 @@ impl Content {
     /// Margin of window frame at desktop.
     pub const WINDOW_FRAME_MARGIN: f32 = 6.0;
 
-    pub fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
-        self.current_modal_ui(ui, cb);
+    /// Identifier for exit confirmation [`Modal`].
+    pub const EXIT_CONFIRMATION_MODAL: &'static str = "exit_confirmation_modal";
 
+    fn content_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         let dual_panel = Self::is_dual_panel_mode(ui.ctx());
         let (is_panel_open, mut panel_width) = network_panel_state_width(ui.ctx(), dual_panel);
         if self.network.showing_settings() {
@@ -234,13 +239,6 @@ impl Content {
                 });
             });
             ui.add_space(6.0);
-        }
-    }
-
-    /// Handle Back key event.
-    pub fn on_back(&mut self, cb: &dyn PlatformCallbacks) {
-        if self.wallets.on_back(cb) {
-            Self::show_exit_modal()
         }
     }
 

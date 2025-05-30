@@ -18,7 +18,7 @@ use crate::gui::Colors;
 use crate::gui::icons::PENCIL;
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, Content, View, TextEdit};
-use crate::gui::views::types::{ModalContainer, ModalPosition};
+use crate::gui::views::types::{ContentContainer, ModalPosition};
 use crate::wallet::Mnemonic;
 use crate::wallet::types::{PhraseMode, PhraseSize, PhraseWord};
 
@@ -33,9 +33,6 @@ pub struct MnemonicSetup {
     word_edit: String,
     /// Flag to check if entered word is valid at [`Modal`].
     valid_word_edit: bool,
-
-    /// [`Modal`] identifiers allowed at this ui container.
-    modal_ids: Vec<&'static str>
 }
 
 /// Identifier for word input [`Modal`].
@@ -48,16 +45,15 @@ impl Default for MnemonicSetup {
             word_index_edit: 0,
             word_edit: String::from(""),
             valid_word_edit: true,
-            modal_ids: vec![
-                WORD_INPUT_MODAL
-            ]
         }
     }
 }
 
-impl ModalContainer for MnemonicSetup {
-    fn modal_ids(&self) -> &Vec<&'static str> {
-        &self.modal_ids
+impl ContentContainer for MnemonicSetup {
+    fn modal_ids(&self) -> Vec<&'static str> {
+        vec![
+            WORD_INPUT_MODAL
+        ]
     }
 
     fn modal_ui(&mut self,
@@ -69,14 +65,19 @@ impl ModalContainer for MnemonicSetup {
             _ => {}
         }
     }
+
+    fn on_back(&mut self, _: &dyn PlatformCallbacks) -> bool {
+        true
+    }
+
+    fn container_ui(&mut self, ui: &mut egui::Ui, _: &dyn PlatformCallbacks) {
+        
+    }
 }
 
 impl MnemonicSetup {
-    /// Draw content for phrase input step.
-    pub fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
-        // Draw modal content for current ui container.
-        self.current_modal_ui(ui, cb);
-
+    /// Draw content for phrase import step.
+    pub fn import_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         ui.add_space(10.0);
 
         // Show mode and type setup.
@@ -89,12 +90,8 @@ impl MnemonicSetup {
         // Show words setup.
         self.word_list_ui(ui, self.mnemonic.mode() == PhraseMode::Import);
     }
-
     /// Draw content for phrase confirmation step.
     pub fn confirm_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
-        // Draw modal content for current ui container.
-        self.current_modal_ui(ui, cb);
-
         ui.add_space(4.0);
         ui.vertical_centered(|ui| {
             let text = format!("{}:", t!("wallets.recovery_phrase"));

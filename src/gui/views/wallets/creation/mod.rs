@@ -15,7 +15,7 @@
 mod mnemonic;
 pub use mnemonic::MnemonicSetup;
 
-mod creation;
-pub use creation::WalletCreation;
+mod content;
+pub use content::WalletCreationContent;
 
 pub mod types;

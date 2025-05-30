@@ -21,6 +21,7 @@ use crate::gui::views::{Content, KeyboardContent, Modal, TitlePanel, View};
 use crate::gui::Colors;
 use crate::wallet::ExternalConnection;
 use crate::AppConfig;
+use crate::gui::views::types::ContentContainer;
 
 /// Implements ui entry point and contains platform-specific callbacks.
 pub struct App<Platform> {
@@ -69,9 +70,7 @@ impl<Platform: PlatformCallbacks> App<Platform> {
 
         // Handle Esc keyboard key event.
         if ctx.input_mut(|i| i.consume_key(Modifiers::NONE, egui::Key::Escape)) {
-            if Modal::on_back() {
-                self.content.on_back(&self.platform);
-            }
+            self.content.on_back(&self.platform);
             // Request repaint to update previous content.
             ctx.request_repaint();
         }
@@ -121,13 +120,6 @@ impl<Platform: PlatformCallbacks> App<Platform> {
                 } else {
                     Self::title_panel_bg(ui, false);
                     self.content.ui(ui, &self.platform);
-                }
-
-                // Provide incoming data to wallets.
-                if let Some(data) = crate::consume_incoming_data() {
-                    if !data.is_empty() {
-                        self.content.wallets.on_data(ui, Some(data));
-                    }
                 }
             });
 
@@ -268,22 +260,7 @@ impl<Platform: PlatformCallbacks> App<Platform> {
         }
 
         // Paint the title.
-        let dual_wallets_panel = ui.available_width() >= (Content::SIDE_PANEL_WIDTH * 3.0) +
-            View::get_right_inset() + View::get_left_inset();
-        let wallet_panel_opened = self.content.wallets.showing_wallet();
-        let show_app_name = if dual_wallets_panel {
-            wallet_panel_opened && !AppConfig::show_wallets_at_dual_panel()
-        } else if Content::is_dual_panel_mode(ui.ctx()) {
-            wallet_panel_opened
-        } else {
-            Content::is_network_panel_open() || wallet_panel_opened
-        };
-        let creating_wallet = self.content.wallets.creating_wallet();
-        let title_text = if creating_wallet || show_app_name {
-            format!("Grim {}", crate::VERSION)
-        } else {
-            "ツ".to_string()
-        };
+        let title_text = format!("Grim {}", crate::VERSION);
         painter.text(
             title_rect.center(),
             egui::Align2::CENTER_CENTER,

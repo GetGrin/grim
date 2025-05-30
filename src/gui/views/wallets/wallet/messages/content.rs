@@ -37,10 +37,10 @@ pub struct WalletMessages {
     first_draw: bool,
 
     /// Invoice or sending request creation [`Modal`] content.
-    request_modal_content: Option<MessageRequestModal>,
+    request_modal_content: MessageRequestModal,
 
     /// Wallet transaction [`Modal`] content.
-    tx_info_content: Option<WalletTransactionModal>,
+    tx_info_content: WalletTransactionModal,
 
     /// Slatepacks message input text.
     message_edit: String,
@@ -85,8 +85,8 @@ impl WalletMessages {
             message_loading: false,
             message_error: "".to_string(),
             message_result: Arc::new(Default::default()),
-            tx_info_content: None,
-            request_modal_content: None,
+            tx_info_content: WalletTransactionModal::new(None, false),
+            request_modal_content: MessageRequestModal::new(false),
             file_pick_button: FilePickButton::default(),
             scan_modal_content: None,
         }
@@ -129,23 +129,19 @@ impl WalletMessages {
             Some(id) => {
                 match id {
                     REQUEST_MODAL => {
-                        if let Some(content) = self.request_modal_content.as_mut() {
-                            Modal::ui(ui.ctx(), |ui, modal| {
-                                content.ui(ui, wallet, modal, cb);
-                            });
-                        }
+                        Modal::ui(ui.ctx(), cb, |ui, modal, cb| {
+                            self.request_modal_content.ui(ui, wallet, modal, cb);
+                        });
                     }
                     TX_INFO_MODAL => {
-                        if let Some(content) = self.tx_info_content.as_mut() {
-                            Modal::ui(ui.ctx(), |ui, modal| {
-                                content.ui(ui, wallet, modal, cb);
-                            });
-                        }
+                        Modal::ui(ui.ctx(), cb, |ui, modal, cb| {
+                            self.tx_info_content.ui(ui, wallet, modal, cb);
+                        });
                     }
                     SCAN_QR_MODAL => {
                         let mut result = None;
                         if let Some(content) = self.scan_modal_content.as_mut() {
-                            Modal::ui(ui.ctx(), |ui, _| {
+                            Modal::ui(ui.ctx(), cb, |ui, _, cb| {
                                 content.ui(ui, cb, |res| {
                                     result = Some(res.clone());
                                     Modal::close();
@@ -217,7 +213,7 @@ impl WalletMessages {
 
     /// Show [`Modal`] to create invoice or sending request.
     fn show_request_modal(&mut self, invoice: bool) {
-        self.request_modal_content = Some(MessageRequestModal::new(invoice));
+        self.request_modal_content = MessageRequestModal::new(invoice);
         let title = if invoice {
             t!("wallets.receive")
         } else {
@@ -299,7 +295,7 @@ impl WalletMessages {
                     Ok(tx) => {
                         self.message_edit.clear();
                         // Show transaction modal on success.
-                        self.tx_info_content = Some(WalletTransactionModal::new(wallet, tx, false));
+                        self.tx_info_content = WalletTransactionModal::new(Some(tx.data.id), false);
                         Modal::new(TX_INFO_MODAL)
                             .position(ModalPosition::CenterTop)
                             .title(t!("wallets.tx"))
@@ -322,9 +318,8 @@ impl WalletMessages {
                                 // Show tx modal or show default error message.
                                 if let Some(tx) = wallet.tx_by_slate(&slate).as_ref() {
                                     self.message_edit.clear();
-                                    self.tx_info_content = Some(
-                                        WalletTransactionModal::new(wallet, tx, false)
-                                    );
+                                    self.tx_info_content =
+                                        WalletTransactionModal::new(Some(tx.data.id), false);
                                     Modal::new(TX_INFO_MODAL)
                                         .position(ModalPosition::CenterTop)
                                         .title(t!("wallets.tx"))
@@ -427,7 +422,7 @@ impl WalletMessages {
             if exists {
                 if let Some(tx) = wallet.tx_by_slate(&slate).as_ref() {
                     self.message_edit.clear();
-                    self.tx_info_content = Some(WalletTransactionModal::new(wallet, tx, false));
+                    self.tx_info_content = WalletTransactionModal::new(Some(tx.data.id), false);
                     Modal::new(TX_INFO_MODAL)
                         .position(ModalPosition::CenterTop)
                         .title(t!("wallets.tx"))

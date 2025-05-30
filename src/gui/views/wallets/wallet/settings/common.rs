@@ -146,17 +146,17 @@ impl CommonSettings {
             Some(id) => {
                 match id {
                     NAME_EDIT_MODAL => {
-                        Modal::ui(ui.ctx(), |ui, modal| {
+                        Modal::ui(ui.ctx(), cb, |ui, modal, cb| {
                             self.name_modal_ui(ui, wallet, modal, cb);
                         });
                     }
                     PASS_EDIT_MODAL => {
-                        Modal::ui(ui.ctx(), |ui, modal| {
+                        Modal::ui(ui.ctx(), cb, |ui, modal, cb| {
                             self.pass_modal_ui(ui, wallet, modal, cb);
                         });
                     }
                     MIN_CONFIRMATIONS_EDIT_MODAL => {
-                        Modal::ui(ui.ctx(), |ui, modal| {
+                        Modal::ui(ui.ctx(), cb, |ui, modal, cb| {
                             self.min_conf_modal_ui(ui, wallet, modal, cb);
                         });
                     }

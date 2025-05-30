@@ -20,7 +20,7 @@ use crate::gui::icons::{BARBELL, HARD_DRIVES, PLUG, POWER, TIMER};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, TextEdit, View};
 use crate::gui::views::network::settings::NetworkSettings;
-use crate::gui::views::types::{ModalContainer, ModalPosition};
+use crate::gui::views::types::{ContentContainer, ModalPosition};
 use crate::gui::views::wallets::modals::WalletsModal;
 use crate::node::{Node, NodeConfig};
 use crate::wallet::{WalletConfig, WalletList};
@@ -51,9 +51,6 @@ pub struct StratumSetup {
 
     /// Minimum share difficulty value to request from miners.
     min_share_diff_edit: String,
-
-    /// [`Modal`] identifiers allowed at this ui container.
-    modal_ids: Vec<&'static str>
 }
 
 /// Identifier for wallet selection [`Modal`].
@@ -91,19 +88,18 @@ impl Default for StratumSetup {
             wallet_name,
             attempt_time_edit: NodeConfig::get_stratum_attempt_time(),
             min_share_diff_edit: NodeConfig::get_stratum_min_share_diff(),
-            modal_ids: vec![
-                WALLET_SELECTION_MODAL,
-                STRATUM_PORT_MODAL,
-                ATTEMPT_TIME_MODAL,
-                MIN_SHARE_DIFF_MODAL
-            ]
         }
     }
 }
 
-impl ModalContainer for StratumSetup {
-    fn modal_ids(&self) -> &Vec<&'static str> {
-        &self.modal_ids
+impl ContentContainer for StratumSetup {
+    fn modal_ids(&self) -> Vec<&'static str> {
+        vec![
+            WALLET_SELECTION_MODAL,
+            STRATUM_PORT_MODAL,
+            ATTEMPT_TIME_MODAL,
+            MIN_SHARE_DIFF_MODAL
+        ]
     }
 
     fn modal_ui(&mut self,
@@ -112,7 +108,7 @@ impl ModalContainer for StratumSetup {
                 cb: &dyn PlatformCallbacks) {
         match modal.id {
             WALLET_SELECTION_MODAL => {
-                self.wallets_modal.ui(ui, modal, &mut self.wallets, cb, |wallet, _| {
+                self.wallets_modal.ui(ui, &mut self.wallets, |wallet, _| {
                     let id = wallet.get_config().id;
                     NodeConfig::save_stratum_wallet_id(id);
                     self.wallet_name = WalletConfig::read_name_by_id(id);
@@ -124,13 +120,12 @@ impl ModalContainer for StratumSetup {
             _ => {}
         }
     }
-}
 
-impl StratumSetup {
-    pub fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
-        // Draw modal content for current ui container.
-        self.current_modal_ui(ui, cb);
+    fn on_back(&mut self, _: &dyn PlatformCallbacks) -> bool {
+        true
+    }
 
+    fn container_ui(&mut self, ui: &mut egui::Ui, _: &dyn PlatformCallbacks) {
         View::sub_title(ui, format!("{} {}", HARD_DRIVES, t!("network_mining.server")));
         View::horizontal_line(ui, Colors::stroke());
         ui.add_space(6.0);
@@ -192,8 +187,8 @@ impl StratumSetup {
             View::button(ui,
                          t!("network_settings.choose_wallet"),
                          Colors::white_or_black(false), || {
-                self.show_wallets_modal();
-            });
+                    self.show_wallets_modal();
+                });
             ui.add_space(12.0);
 
             if self.wallet_name.is_some() {
@@ -242,7 +237,9 @@ impl StratumSetup {
             self.min_diff_ui(ui);
         });
     }
+}
 
+impl StratumSetup {
     /// Show wallet selection [`Modal`].
     fn show_wallets_modal(&mut self) {
         self.wallets_modal = WalletsModal::new(NodeConfig::get_stratum_wallet_id(), None, false);

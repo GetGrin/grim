@@ -21,7 +21,7 @@ use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, Content, View};
 use crate::gui::views::network::setup::{DandelionSetup, NodeSetup, P2PSetup, PoolSetup, StratumSetup};
 use crate::gui::views::network::types::{NodeTab, NodeTabType};
-use crate::gui::views::types::{ModalContainer, ModalPosition};
+use crate::gui::views::types::{ContentContainer, ModalPosition};
 use crate::node::{Node, NodeConfig};
 
 /// Integrated node settings tab content.
@@ -36,9 +36,6 @@ pub struct NetworkSettings {
     pool: PoolSetup,
     /// Dandelion server setup content.
     dandelion: DandelionSetup,
-
-    /// [`Modal`] identifiers allowed at this ui container.
-    modal_ids: Vec<&'static str>
 }
 
 /// Identifier for settings reset confirmation [`Modal`].
@@ -52,16 +49,15 @@ impl Default for NetworkSettings {
             stratum: StratumSetup::default(),
             pool: PoolSetup::default(),
             dandelion: DandelionSetup::default(),
-            modal_ids: vec![
-                RESET_SETTINGS_CONFIRMATION_MODAL
-            ]
         }
     }
 }
 
-impl ModalContainer for NetworkSettings {
-    fn modal_ids(&self) -> &Vec<&'static str> {
-        &self.modal_ids
+impl ContentContainer for NetworkSettings {
+    fn modal_ids(&self) -> Vec<&'static str> {
+        vec![
+            RESET_SETTINGS_CONFIRMATION_MODAL
+        ]
     }
 
     fn modal_ui(&mut self,
@@ -73,17 +69,12 @@ impl ModalContainer for NetworkSettings {
             _ => {}
         }
     }
-}
 
-impl NodeTab for NetworkSettings {
-    fn get_type(&self) -> NodeTabType {
-        NodeTabType::Settings
+    fn on_back(&mut self, _: &dyn PlatformCallbacks) -> bool {
+        true
     }
 
-    fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
-        // Draw modal content for current ui container.
-        self.current_modal_ui(ui, cb);
-
+    fn container_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         ScrollArea::vertical()
             .id_salt("node_settings_scroll")
             .scroll_bar_visibility(ScrollBarVisibility::AlwaysHidden)
@@ -132,6 +123,16 @@ impl NodeTab for NetworkSettings {
                     });
                 });
             });
+    }
+}
+
+impl NodeTab for NetworkSettings {
+    fn get_type(&self) -> NodeTabType {
+        NodeTabType::Settings
+    }
+
+    fn tab_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
+        self.ui(ui, cb);
     }
 }
 

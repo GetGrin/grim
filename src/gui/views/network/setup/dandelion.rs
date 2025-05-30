@@ -16,7 +16,7 @@ use egui::{Id, RichText};
 
 use crate::gui::icons::{CLOCK_COUNTDOWN, GRAPH, TIMER, WATCH};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::types::{ModalContainer, ModalPosition};
+use crate::gui::views::types::{ContentContainer, ModalPosition};
 use crate::gui::views::{Modal, TextEdit, View};
 use crate::gui::Colors;
 use crate::gui::views::network::NetworkSettings;
@@ -35,9 +35,6 @@ pub struct DandelionSetup {
 
     /// Stem phase probability value (stem 90% of the time, fluff 10% of the time by default).
     stem_prob_edit: String,
-
-    /// [`Modal`] identifiers allowed at this ui container.
-    modal_ids: Vec<&'static str>,
 }
 
 /// Identifier epoch duration value [`Modal`].
@@ -56,19 +53,18 @@ impl Default for DandelionSetup {
             embargo_edit: NodeConfig::get_reorg_cache_period(),
             aggregation_edit: NodeConfig::get_dandelion_aggregation(),
             stem_prob_edit: NodeConfig::get_stem_probability(),
-            modal_ids: vec![
-                EPOCH_MODAL,
-                EMBARGO_MODAL,
-                AGGREGATION_MODAL,
-                STEM_PROBABILITY_MODAL
-            ]
         }
     }
 }
 
-impl ModalContainer for DandelionSetup {
-    fn modal_ids(&self) -> &Vec<&'static str> {
-        &self.modal_ids
+impl ContentContainer for DandelionSetup {
+    fn modal_ids(&self) -> Vec<&'static str> {
+        vec![
+            EPOCH_MODAL,
+            EMBARGO_MODAL,
+            AGGREGATION_MODAL,
+            STEM_PROBABILITY_MODAL
+        ]
     }
 
     fn modal_ui(&mut self,
@@ -83,13 +79,12 @@ impl ModalContainer for DandelionSetup {
             _ => {}
         }
     }
-}
 
-impl DandelionSetup {
-    pub fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
-        // Draw modal content for current ui container.
-        self.current_modal_ui(ui, cb);
+    fn on_back(&mut self, _: &dyn PlatformCallbacks) -> bool {
+        true
+    }
 
+    fn container_ui(&mut self, ui: &mut egui::Ui, _: &dyn PlatformCallbacks) {
         View::sub_title(ui, format!("{} {}", GRAPH, "Dandelion"));
         View::horizontal_line(ui, Colors::stroke());
         ui.add_space(6.0);
@@ -131,7 +126,9 @@ impl DandelionSetup {
             ui.add_space(6.0);
         });
     }
+}
 
+impl DandelionSetup {
     /// Draw epoch duration setup content.
     fn epoch_ui(&mut self, ui: &mut egui::Ui) {
         ui.label(RichText::new(t!("network_settings.epoch_duration"))

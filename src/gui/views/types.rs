@@ -51,28 +51,27 @@ pub struct ModalState {
     pub modal: Option<Modal>,
 }
 
-/// Contains identifiers to draw opened [`Modal`] content for current ui container.
-pub trait ModalContainer {
+/// Content container to simplify modals management and navigation.
+pub trait ContentContainer {
     /// List of allowed [`Modal`] identifiers.
-    fn modal_ids(&self) -> &Vec<&'static str>;
-
-    /// Draw modal ui content.
-    fn modal_ui(&mut self,
-                ui: &mut egui::Ui,
-                modal: &Modal,
-                cb: &dyn PlatformCallbacks);
-
-    /// Draw [`Modal`] for current ui container if it's possible.
-    fn current_modal_ui(&mut self,
-                        ui: &mut egui::Ui,
-                        cb: &dyn PlatformCallbacks) {
-        let modal_id = Modal::opened();
-        let draw = modal_id.is_some() && self.modal_ids().contains(&modal_id.unwrap());
-        if draw {
-            Modal::ui(ui.ctx(), |ui, modal| {
-                self.modal_ui(ui, modal, cb);
-            });
+    fn modal_ids(&self) -> Vec<&'static str>;
+    /// Draw modal content.
+    fn modal_ui(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks);
+    /// Handle back key action, return `false` when consumed inside container.
+    fn on_back(&mut self, cb: &dyn PlatformCallbacks) -> bool;
+    /// Draw container content.
+    fn container_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks);
+    /// Draw content, to call by parent container.
+    fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
+        // Draw modal content.
+        if let Some(id) = Modal::opened() {
+            if self.modal_ids().contains(&id) {
+                Modal::ui(ui.ctx(), cb, |ui, modal, cb| {
+                    self.modal_ui(ui, modal, cb);
+                });
+            }
         }
+        self.container_ui(ui, cb);
     }
 }
 

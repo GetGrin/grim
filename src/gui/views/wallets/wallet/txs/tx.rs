@@ -36,7 +36,7 @@ pub struct WalletTransactionModal {
     tx_id: u32,
 
     /// Response Slatepack message input value.
-    response_edit: String,
+    response_edit: Option<String>,
 
     /// Flag to show transaction finalization input.
     show_finalization: bool,
@@ -61,32 +61,10 @@ pub struct WalletTransactionModal {
 
 impl WalletTransactionModal {
     /// Create new content instance with [`Wallet`] from provided [`WalletTransaction`].
-    pub fn new(wallet: &Wallet, tx: &WalletTransaction, show_finalization: bool) -> Self {
+    pub fn new(tx_id: Option<u32>, show_finalization: bool) -> Self {
         Self {
-            tx_id: tx.data.id,
-            response_edit: if !tx.cancelling && !tx.finalizing && !tx.data.confirmed &&
-                tx.data.tx_slate_id.is_some() &&
-                (tx.data.tx_type == TxLogEntryType::TxSent ||
-                    tx.data.tx_type == TxLogEntryType::TxReceived) {
-                let mut slate = Slate::blank(1, false);
-                slate.state = if tx.can_finalize {
-                    if tx.data.tx_type == TxLogEntryType::TxSent {
-                        SlateState::Standard1
-                    } else {
-                        SlateState::Invoice1
-                    }
-                } else {
-                    if tx.data.tx_type == TxLogEntryType::TxReceived {
-                        SlateState::Standard2
-                    } else {
-                        SlateState::Invoice2
-                    }
-                };
-                slate.id = tx.data.tx_slate_id.unwrap();
-                wallet.read_slatepack(&slate).unwrap_or("".to_string())
-            } else {
-                "".to_string()
-            },
+            tx_id: tx_id.unwrap(),
+            response_edit: None,
             finalize_edit: "".to_string(),
             finalize_error: false,
             show_finalization,
@@ -121,13 +99,42 @@ impl WalletTransactionModal {
         }
         let tx = txs.get(0).unwrap();
 
+        // Check if response was loaded.
+        if self.response_edit.is_none() {
+            self.response_edit = Some(
+                if !tx.cancelling && !tx.finalizing && !tx.data.confirmed &&
+                    tx.data.tx_slate_id.is_some() &&
+                    (tx.data.tx_type == TxLogEntryType::TxSent ||
+                        tx.data.tx_type == TxLogEntryType::TxReceived) {
+                    let mut slate = Slate::blank(1, false);
+                    slate.state = if tx.can_finalize {
+                        if tx.data.tx_type == TxLogEntryType::TxSent {
+                            SlateState::Standard1
+                        } else {
+                            SlateState::Invoice1
+                        }
+                    } else {
+                        if tx.data.tx_type == TxLogEntryType::TxReceived {
+                            SlateState::Standard2
+                        } else {
+                            SlateState::Invoice2
+                        }
+                    };
+                    slate.id = tx.data.tx_slate_id.unwrap();
+                    wallet.read_slatepack(&slate).unwrap_or("".to_string())
+                } else {
+                    "".to_string()
+                }
+            );
+        }
+
         // Show transaction information.
         if self.qr_code_content.is_none() && self.scan_qr_content.is_none() {
             self.info_ui(ui, tx, wallet, cb);
         }
 
         // Show Slatepack message interaction.
-        if !self.response_edit.is_empty() {
+        if !self.response_edit.as_ref().unwrap().is_empty() {
             self.message_ui(ui, tx, wallet, modal, cb);
         }
 
@@ -201,7 +208,7 @@ impl WalletTransactionModal {
                 if let Ok(_) = res {
                     self.show_finalization = false;
                     self.finalize_edit = "".to_string();
-                    self.response_edit = "".to_string();
+                    self.response_edit = Some("".to_string());
                 } else {
                     self.finalize_error = true;
                 }
@@ -370,7 +377,7 @@ impl WalletTransactionModal {
         let message_edit = if self.show_finalization {
             &mut self.finalize_edit
         }  else {
-            &mut self.response_edit
+            &mut self.response_edit.as_mut().unwrap()
         };
         let message_before = message_edit.clone();
 
@@ -471,14 +478,14 @@ impl WalletTransactionModal {
                     let qr_text = format!("{} {}", QR_CODE, t!("qr_code"));
                     View::button(ui, qr_text.clone(), Colors::white_or_black(false), || {
                         let text = self.response_edit.clone();
-                        self.qr_code_content = Some(QrCodeContent::new(text, true));
+                        self.qr_code_content = Some(QrCodeContent::new(text.unwrap(), true));
                     });
                 });
                 columns[1].vertical_centered_justified(|ui| {
                     // Draw copy button.
                     let copy_text = format!("{} {}", COPY, t!("copy"));
                     View::button(ui, copy_text, Colors::white_or_black(false), || {
-                        cb.copy_string_to_buffer(self.response_edit.clone());
+                        cb.copy_string_to_buffer(self.response_edit.clone().unwrap());
                         self.finalize_edit = "".to_string();
                         if tx.can_finalize {
                             self.show_finalization = true;
@@ -499,7 +506,7 @@ impl WalletTransactionModal {
                                           Colors::white_or_black(false), || {
                         if let Some((s, _)) = wallet.read_slate_by_tx(tx) {
                             let name = format!("{}.{}.slatepack", s.id, s.state);
-                            let data = self.response_edit.as_bytes().to_vec();
+                            let data = self.response_edit.as_ref().unwrap().as_bytes().to_vec();
                             cb.share_data(name, data).unwrap_or_default();
                         }
                     });

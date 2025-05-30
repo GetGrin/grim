@@ -19,40 +19,33 @@ use crate::gui::icons::{BEZIER_CURVE, BOUNDING_BOX, CHART_SCATTER, CIRCLES_THREE
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, TextEdit, View};
 use crate::gui::views::network::settings::NetworkSettings;
-use crate::gui::views::types::{ModalContainer, ModalPosition};
+use crate::gui::views::types::{ContentContainer, ModalPosition};
 use crate::node::NodeConfig;
 
 /// Memory pool setup section content.
 pub struct PoolSetup {
     /// Base fee value that's accepted into the pool.
     fee_base_edit: String,
-
     /// Reorg cache retention period value in minutes.
     reorg_period_edit: String,
-
     /// Maximum number of transactions allowed in the pool.
     pool_size_edit: String,
-
     /// Maximum number of transactions allowed in the stempool.
     stempool_size_edit: String,
-
     /// Maximum total weight of transactions to build a block.
     max_weight_edit: String,
-
-    /// [`Modal`] identifiers allowed at this ui container.
-    modal_ids: Vec<&'static str>,
 }
 
 /// Identifier for base fee value [`Modal`].
-pub const FEE_BASE_MODAL: &'static str = "fee_base";
+const FEE_BASE_MODAL: &'static str = "fee_base";
 /// Identifier for reorg cache retention period value [`Modal`].
-pub const REORG_PERIOD_MODAL: &'static str = "reorg_period";
+const REORG_PERIOD_MODAL: &'static str = "reorg_period";
 /// Identifier for maximum number of transactions in the pool [`Modal`].
-pub const POOL_SIZE_MODAL: &'static str = "pool_size";
+const POOL_SIZE_MODAL: &'static str = "pool_size";
 /// Identifier for maximum number of transactions in the stempool [`Modal`].
-pub const STEMPOOL_SIZE_MODAL: &'static str = "stempool_size";
+const STEMPOOL_SIZE_MODAL: &'static str = "stempool_size";
 /// Identifier for maximum total weight of transactions [`Modal`].
-pub const MAX_WEIGHT_MODAL: &'static str = "max_weight";
+const MAX_WEIGHT_MODAL: &'static str = "max_weight";
 
 impl Default for PoolSetup {
     fn default() -> Self {
@@ -62,20 +55,19 @@ impl Default for PoolSetup {
             pool_size_edit: NodeConfig::get_max_pool_size(),
             stempool_size_edit: NodeConfig::get_max_stempool_size(),
             max_weight_edit: NodeConfig::get_mineable_max_weight(),
-            modal_ids: vec![
-                FEE_BASE_MODAL,
-                REORG_PERIOD_MODAL,
-                POOL_SIZE_MODAL,
-                STEMPOOL_SIZE_MODAL,
-                MAX_WEIGHT_MODAL
-            ]
         }
     }
 }
 
-impl ModalContainer for PoolSetup {
-    fn modal_ids(&self) -> &Vec<&'static str> {
-        &self.modal_ids
+impl ContentContainer for PoolSetup {
+    fn modal_ids(&self) -> Vec<&'static str> {
+        vec![
+            FEE_BASE_MODAL,
+            REORG_PERIOD_MODAL,
+            POOL_SIZE_MODAL,
+            STEMPOOL_SIZE_MODAL,
+            MAX_WEIGHT_MODAL
+        ]
     }
 
     fn modal_ui(&mut self,
@@ -91,13 +83,12 @@ impl ModalContainer for PoolSetup {
             _ => {}
         }
     }
-}
 
-impl PoolSetup {
-    pub fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
-        // Draw modal content for current ui container.
-        self.current_modal_ui(ui, cb);
+    fn on_back(&mut self, _: &dyn PlatformCallbacks) -> bool {
+        true
+    }
 
+    fn container_ui(&mut self, ui: &mut egui::Ui, _: &dyn PlatformCallbacks) {
         View::sub_title(ui, format!("{} {}", CHART_SCATTER, t!("network_settings.tx_pool")));
         View::horizontal_line(ui, Colors::stroke());
         ui.add_space(6.0);
@@ -135,7 +126,9 @@ impl PoolSetup {
             self.max_weight_ui(ui);
         });
     }
+}
 
+impl PoolSetup {
     /// Draw fee base setup content.
     fn fee_base_ui(&mut self, ui: &mut egui::Ui) {
         ui.label(RichText::new(t!("network_settings.pool_fee"))

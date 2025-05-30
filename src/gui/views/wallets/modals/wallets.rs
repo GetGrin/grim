@@ -15,15 +15,12 @@
 use egui::scroll_area::ScrollBarVisibility;
 use egui::{Align, Layout, RichText, ScrollArea, StrokeKind};
 
-use crate::gui::Colors;
 use crate::gui::icons::{CHECK, CHECK_FAT, COMPUTER_TOWER, FOLDER_OPEN, GLOBE_SIMPLE, PLUGS_CONNECTED};
-use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Modal, View};
-use crate::gui::views::types::ModalPosition;
-use crate::gui::views::wallets::modals::OpenWalletModal;
 use crate::gui::views::wallets::wallet::types::wallet_status_text;
-use crate::wallet::{Wallet, WalletList};
+use crate::gui::views::{Modal, View};
+use crate::gui::Colors;
 use crate::wallet::types::ConnectionMethod;
+use crate::wallet::{Wallet, WalletList};
 
 /// Wallet list [`Modal`] content
 pub struct WalletsModal {
@@ -35,32 +32,19 @@ pub struct WalletsModal {
 
     /// Flag to check if wallet can be opened from the list.
     can_open: bool,
-    /// Wallet opening content.
-    open_wallet_content: Option<OpenWalletModal>,
 }
 
 impl WalletsModal {
     /// Create new content instance.
     pub fn new(selected_id: Option<i64>, data: Option<String>, can_open: bool) -> Self {
-        Self { selected_id, data, can_open, open_wallet_content: None }
+        Self { selected_id, data, can_open }
     }
 
     /// Draw content.
     pub fn ui(&mut self,
               ui: &mut egui::Ui,
-              modal: &Modal,
               wallets: &WalletList,
-              cb: &dyn PlatformCallbacks,
               mut on_select: impl FnMut(Wallet, Option<String>)) {
-        // Draw wallet opening modal content.
-        if let Some(open_content) = self.open_wallet_content.as_mut() {
-            open_content.ui(ui, modal, cb, |wallet, data| {
-                on_select(wallet, data);
-                self.data = None;
-            });
-            return;
-        }
-
         ui.add_space(4.0);
         ScrollArea::vertical()
             .max_height(373.0)
@@ -123,14 +107,7 @@ impl WalletsModal {
                     FOLDER_OPEN
                 };
                 View::item_button(ui, View::item_rounding(0, 1, true), icon, None, || {
-                    if wallet.is_open() {
-                        on_select();
-                    } else {
-                        Modal::change_position(ModalPosition::CenterTop);
-                        self.open_wallet_content = Some(
-                            OpenWalletModal::new(wallet.clone(), self.data.clone())
-                        );
-                    }
+                    on_select();
                 });
             } else {
                 // Draw button to select wallet.

@@ -229,7 +229,8 @@ impl MessageRequestModal {
             let result = r_request.as_ref().unwrap();
             match result {
                 Ok(tx) => {
-                    self.result_tx_content = Some(WalletTransactionModal::new(wallet, tx, false));
+                    self.result_tx_content =
+                        Some(WalletTransactionModal::new(Some(tx.data.id), false));
                 }
                 Err(err) => {
                     match err {

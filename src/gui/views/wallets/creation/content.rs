@@ -20,7 +20,7 @@ use crate::gui::Colors;
 use crate::gui::icons::{CHECK, CLIPBOARD_TEXT, COPY, SCAN};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, Content, View, CameraScanModal};
-use crate::gui::views::types::{LinePosition, ModalContainer, ModalPosition, QrScanResult};
+use crate::gui::views::types::{LinePosition, ContentContainer, ModalPosition, QrScanResult};
 use crate::gui::views::wallets::creation::MnemonicSetup;
 use crate::gui::views::wallets::creation::types::Step;
 use crate::gui::views::wallets::ConnectionSettings;
@@ -29,7 +29,7 @@ use crate::wallet::{ExternalConnection, Wallet};
 use crate::wallet::types::PhraseMode;
 
 /// Wallet creation content.
-pub struct WalletCreation {
+pub struct WalletCreationContent {
     /// Wallet name.
     pub name: String,
     /// Wallet password.
@@ -48,16 +48,15 @@ pub struct WalletCreation {
 
     /// Flag to check if an error occurred during wallet creation.
     creation_error: Option<String>,
-
-    /// [`Modal`] identifiers allowed at this ui container.
-    modal_ids: Vec<&'static str>
 }
 
 const QR_CODE_PHRASE_SCAN_MODAL: &'static str = "qr_code_rec_phrase_scan_modal";
 
-impl ModalContainer for WalletCreation {
-    fn modal_ids(&self) -> &Vec<&'static str> {
-        &self.modal_ids
+impl ContentContainer for WalletCreationContent {
+    fn modal_ids(&self) -> Vec<&'static str> {
+        vec![
+            QR_CODE_PHRASE_SCAN_MODAL
+        ]
     }
 
     fn modal_ui(&mut self,
@@ -86,10 +85,16 @@ impl ModalContainer for WalletCreation {
             _ => {}
         }
     }
+
+    fn on_back(&mut self, _: &dyn PlatformCallbacks) -> bool {
+        true
+    }
+
+    fn container_ui(&mut self, _: &mut egui::Ui, _: &dyn PlatformCallbacks) {}
 }
 
-impl WalletCreation {
-    /// Create new wallet creation instance from name and password.
+impl WalletCreationContent {
+    /// Create new wallet creation content from name and password.
     pub fn new(name: String, pass: ZeroingString) -> Self {
         Self {
             name,
@@ -99,19 +104,15 @@ impl WalletCreation {
             mnemonic_setup: MnemonicSetup::default(),
             network_setup: ConnectionSettings::default(),
             creation_error: None,
-            modal_ids: vec![
-                QR_CODE_PHRASE_SCAN_MODAL
-            ],
         }
     }
 
     /// Draw wallet creation content.
-    pub fn ui(&mut self,
-              ui: &mut egui::Ui,
-              cb: &dyn PlatformCallbacks,
-              on_create: impl FnMut(Wallet)) {
-        self.current_modal_ui(ui, cb);
-
+    pub fn content_ui(&mut self,
+                      ui: &mut egui::Ui,
+                      cb: &dyn PlatformCallbacks,
+                      on_create: impl FnMut(Wallet)) {
+        self.ui(ui, cb);
         egui::TopBottomPanel::bottom("wallet_creation_step_panel")
             .frame(egui::Frame {
                 inner_margin: Margin {
@@ -350,14 +351,14 @@ impl WalletCreation {
     /// Draw wallet creation [`Step`] content.
     fn step_content_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         match &self.step {
-            Step::EnterMnemonic => self.mnemonic_setup.ui(ui, cb),
+            Step::EnterMnemonic => self.mnemonic_setup.import_ui(ui, cb),
             Step::ConfirmMnemonic => self.mnemonic_setup.confirm_ui(ui, cb),
             Step::SetupConnection => {
                 // Redraw if node is running.
                 if Node::is_running() && !Content::is_dual_panel_mode(ui.ctx()) {
                     ui.ctx().request_repaint_after(Node::STATS_UPDATE_DELAY);
                 }
-                self.network_setup.create_ui(ui, cb)
+                self.network_setup.content_ui(ui, cb);
             }
         }
     }

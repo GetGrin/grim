@@ -22,6 +22,9 @@ use crate::wallet::{ConnectionsConfig, ExternalConnection};
 
 /// Content to create or update external wallet connection.
 pub struct ExternalConnectionModal {
+    /// Flag to check if content was just rendered.
+    first_draw: bool,
+
     /// External connection URL value for [`Modal`].
     ext_node_url_edit: String,
     /// External connection API secret value for [`Modal`].
@@ -46,6 +49,7 @@ impl ExternalConnectionModal {
             ("".to_string(), "".to_string(), None)
         };
         Self {
+            first_draw: true,
             ext_node_url_edit,
             ext_node_secret_edit,
             ext_node_url_error: false,
@@ -103,7 +107,7 @@ impl ExternalConnectionModal {
             let url_edit_id = Id::from(modal.id).with(self.ext_conn_id).with("node_url");
             let mut url_edit = TextEdit::new(url_edit_id)
                 .paste()
-                .focus(Modal::first_draw());
+                .focus(self.first_draw);
             url_edit.ui(ui, &mut self.ext_node_url_edit, cb);
 
             ui.add_space(8.0);
@@ -163,5 +167,7 @@ impl ExternalConnectionModal {
             });
             ui.add_space(6.0);
         });
+
+        self.first_draw = false;
     }
 }

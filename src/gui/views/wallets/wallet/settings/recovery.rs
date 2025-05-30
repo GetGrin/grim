@@ -148,12 +148,12 @@ impl RecoverySettings {
             Some(id) => {
                 match id {
                     RECOVERY_PHRASE_MODAL => {
-                        Modal::ui(ui.ctx(), |ui, modal| {
+                        Modal::ui(ui.ctx(), cb, |ui, modal, cb| {
                             self.recovery_phrase_modal_ui(ui, wallet, modal, cb);
                         });
                     }
                     DELETE_CONFIRMATION_MODAL => {
-                        Modal::ui(ui.ctx(), |ui, _| {
+                        Modal::ui(ui.ctx(), cb, |ui, _, _| {
                             self.deletion_modal_ui(ui, wallet);
                         });
                     }

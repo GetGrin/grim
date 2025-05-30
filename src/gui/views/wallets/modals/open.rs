@@ -18,13 +18,9 @@ use grin_util::ZeroingString;
 use crate::gui::Colors;
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, TextEdit, View};
-use crate::wallet::Wallet;
 
 /// Wallet opening [`Modal`] content.
 pub struct OpenWalletModal {
-    /// Wallet to open.
-    wallet: Wallet,
-
     /// Password to open wallet.
     pass_edit: String,
     /// Flag to check if wrong password was entered.
@@ -36,9 +32,8 @@ pub struct OpenWalletModal {
 
 impl OpenWalletModal {
     /// Create new content instance.
-    pub fn new(wallet: Wallet, data: Option<String>) -> Self {
+    pub fn new(data: Option<String>) -> Self {
         Self {
-            wallet,
             pass_edit: "".to_string(),
             wrong_pass: false,
             data,
@@ -49,20 +44,17 @@ impl OpenWalletModal {
               ui: &mut egui::Ui,
               modal: &Modal,
               cb: &dyn PlatformCallbacks,
-              mut on_continue: impl FnMut(Wallet, Option<String>)) {
+              mut on_continue: impl FnMut(ZeroingString, &Option<String>) -> bool) {
         // Callback for button to continue.
         let mut on_continue = |m: &mut OpenWalletModal| {
             let pass = m.pass_edit.clone();
             if pass.is_empty() {
                 return;
             }
-            match m.wallet.open(ZeroingString::from(pass)) {
-                Ok(_) => {
-                    m.pass_edit = "".to_string();
-                    Modal::close();
-                    on_continue(m.wallet.clone(), m.data.clone());
-                }
-                Err(_) => m.wrong_pass = true
+            m.wrong_pass = !on_continue(ZeroingString::from(pass), &m.data);
+            if !m.wrong_pass {
+                m.pass_edit = "".to_string();
+                Modal::close();
             }
         };
 

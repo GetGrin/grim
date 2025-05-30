@@ -17,7 +17,7 @@ use crate::gui::platform::PlatformCallbacks;
 /// Integrated node tab content interface.
 pub trait NodeTab {
     fn get_type(&self) -> NodeTabType;
-    fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks);
+    fn tab_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks);
 }
 
 /// Type of [`NodeTab`] content.

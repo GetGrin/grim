@@ -165,7 +165,7 @@ impl WalletTransactions {
                     r.nw = 0.0 as u8;
                     r.sw = 0.0 as u8;
                     View::item_button(ui, r, FILE_TEXT, None, || {
-                        self.show_tx_info_modal(wallet, tx, false);
+                        self.show_tx_info_modal(tx, false);
                     });
                 }
 
@@ -175,7 +175,7 @@ impl WalletTransactions {
                 if wallet_loaded && tx.can_finalize {
                     let (icon, color) = (CHECK, Some(Colors::green()));
                     View::item_button(ui, CornerRadius::default(), icon, color, || {
-                        self.show_tx_info_modal(wallet, tx, true);
+                        self.show_tx_info_modal(tx, true);
                     });
                 }
 
@@ -246,14 +246,14 @@ impl WalletTransactions {
             Some(id) => {
                 match id {
                     TX_INFO_MODAL => {
-                        Modal::ui(ui.ctx(), |ui, modal| {
+                        Modal::ui(ui.ctx(), cb, |ui, modal, cb| {
                             if let Some(content) = self.tx_info_content.as_mut() {
                                 content.ui(ui, wallet, modal, cb);
                             }
                         });
                     }
                     CANCEL_TX_CONFIRMATION_MODAL => {
-                        Modal::ui(ui.ctx(), |ui, _| {
+                        Modal::ui(ui.ctx(), cb, |ui, _, cb| {
                             self.cancel_confirmation_modal(ui, wallet);
                         });
                     }
@@ -453,8 +453,8 @@ impl WalletTransactions {
     }
 
     /// Show transaction information [`Modal`].
-    fn show_tx_info_modal(&mut self, wallet: &Wallet, tx: &WalletTransaction, finalize: bool) {
-        let modal = WalletTransactionModal::new(wallet, tx, finalize);
+    fn show_tx_info_modal(&mut self, tx: &WalletTransaction, finalize: bool) {
+        let modal = WalletTransactionModal::new(Some(tx.data.id), finalize);
         self.tx_info_content = Some(modal);
         Modal::new(TX_INFO_MODAL)
             .position(ModalPosition::CenterTop)

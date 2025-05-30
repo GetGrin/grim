@@ -23,7 +23,7 @@ use crate::gui::views::{Content, TitlePanel, View};
 use crate::gui::views::network::{ConnectionsContent, NetworkMetrics, NetworkMining, NetworkNode, NetworkSettings};
 use crate::gui::views::network::types::{NodeTab, NodeTabType};
 use crate::gui::views::settings::SettingsContent;
-use crate::gui::views::types::{LinePosition, TitleContentType, TitleType};
+use crate::gui::views::types::{ContentContainer, LinePosition, TitleContentType, TitleType};
 use crate::node::{Node, NodeConfig, NodeError};
 use crate::wallet::ExternalConnection;
 
@@ -111,7 +111,7 @@ impl NetworkContent {
                         let rect = ui.available_rect_before_wrap();
                         if let Some(c) = &mut self.settings_content {
                             View::max_width_ui(ui, Content::SIDE_PANEL_WIDTH * 1.3, |ui| {
-                                c.ui(ui);
+                                c.ui(ui, cb);
                             });
                         } else if self.node_tab_content.get_type() != NodeTabType::Settings {
                             View::max_width_ui(ui, Content::SIDE_PANEL_WIDTH * 1.3, |ui| {
@@ -124,11 +124,11 @@ impl NetworkContent {
                                     Node::is_stopping() {
                                     NetworkContent::loading_ui(ui, None);
                                 } else {
-                                    self.node_tab_content.ui(ui, cb);
+                                    self.node_tab_content.tab_ui(ui, cb);
                                 }
                             });
                         } else {
-                            self.node_tab_content.ui(ui, cb);
+                            self.node_tab_content.tab_ui(ui, cb);
                         }
 
                         // Draw content divider line.

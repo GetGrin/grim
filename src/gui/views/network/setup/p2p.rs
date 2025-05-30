@@ -21,7 +21,7 @@ use crate::gui::icons::{ARROW_FAT_LINES_DOWN, ARROW_FAT_LINES_UP, GLOBE_SIMPLE, 
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, TextEdit, View};
 use crate::gui::views::network::settings::NetworkSettings;
-use crate::gui::views::types::{ModalContainer, ModalPosition};
+use crate::gui::views::types::{ContentContainer, ModalPosition};
 use crate::node::{Node, NodeConfig, PeersConfig};
 
 /// Type of peer.
@@ -65,9 +65,6 @@ pub struct P2PSetup {
 
     /// Flag to check if reset of peers was called.
     peers_reset: bool,
-
-    /// [`Modal`] identifiers allowed at this ui container.
-    modal_ids: Vec<&'static str>
 }
 
 /// Identifier for port value [`Modal`].
@@ -111,23 +108,22 @@ impl Default for P2PSetup {
             max_inbound_count: NodeConfig::get_max_inbound_peers(),
             max_outbound_count: NodeConfig::get_max_outbound_peers(),
             peers_reset: false,
-            modal_ids: vec![
-                PORT_MODAL,
-                CUSTOM_SEED_MODAL,
-                ALLOW_PEER_MODAL,
-                DENY_PEER_MODAL,
-                PREFER_PEER_MODAL,
-                BAN_WINDOW_MODAL,
-                MAX_INBOUND_MODAL,
-                MAX_OUTBOUND_MODAL
-            ]
         }
     }
 }
 
-impl ModalContainer for P2PSetup {
-    fn modal_ids(&self) -> &Vec<&'static str> {
-        &self.modal_ids
+impl ContentContainer for P2PSetup {
+    fn modal_ids(&self) -> Vec<&'static str> {
+        vec![
+            PORT_MODAL,
+            CUSTOM_SEED_MODAL,
+            ALLOW_PEER_MODAL,
+            DENY_PEER_MODAL,
+            PREFER_PEER_MODAL,
+            BAN_WINDOW_MODAL,
+            MAX_INBOUND_MODAL,
+            MAX_OUTBOUND_MODAL
+        ]
     }
 
     fn modal_ui(&mut self,
@@ -146,16 +142,12 @@ impl ModalContainer for P2PSetup {
             _ => {}
         }
     }
-}
 
-impl P2PSetup {
-    /// Title for custom DNS Seeds setup section.
-    const DNS_SEEDS_TITLE: &'static str = "DNS Seeds";
+    fn on_back(&mut self, _: &dyn PlatformCallbacks) -> bool {
+        true
+    }
 
-    pub fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
-        // Draw modal content for current ui container.
-        self.current_modal_ui(ui, cb);
-
+    fn container_ui(&mut self, ui: &mut egui::Ui, _: &dyn PlatformCallbacks) {
         View::sub_title(ui, format!("{} {}", HANDSHAKE, t!("network_settings.p2p_server")));
         View::horizontal_line(ui, Colors::stroke());
         ui.add_space(6.0);
@@ -236,7 +228,12 @@ impl P2PSetup {
             }
         });
     }
+}
 
+/// Title for custom DNS Seeds setup section.
+const DNS_SEEDS_TITLE: &'static str = "DNS Seeds";
+
+impl P2PSetup {
     /// Draw p2p port setup content.
     fn port_ui(&mut self, ui: &mut egui::Ui) {
         ui.label(RichText::new(t!("network_settings.p2p_port"))
@@ -398,7 +395,7 @@ impl P2PSetup {
                     PeerType::Allowed => t!("network_settings.allow_list"),
                     PeerType::Denied => t!("network_settings.deny_list"),
                     PeerType::Preferred => t!("network_settings.favourites"),
-                    _ => Self::DNS_SEEDS_TITLE.to_string()
+                    _ => DNS_SEEDS_TITLE.to_string()
                 };
                 // Show modal to add peer.
                 Modal::new(modal_id)
@@ -483,8 +480,7 @@ impl P2PSetup {
 
     /// Draw seeding type setup content.
     fn seeding_type_ui(&mut self, ui: &mut egui::Ui) {
-        let title = Self::DNS_SEEDS_TITLE;
-        ui.label(RichText::new(title).size(16.0).color(Colors::gray()));
+        ui.label(RichText::new(DNS_SEEDS_TITLE).size(16.0).color(Colors::gray()));
         ui.add_space(2.0);
 
         let default_seeding = NodeConfig::is_default_seeding_type();

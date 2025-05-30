@@ -23,7 +23,7 @@ use crate::gui::Colors;
 use crate::gui::icons::{ARROWS_CLOCKWISE, BRIDGE, CAMERA_ROTATE, CHAT_CIRCLE_TEXT, FOLDER_USER, GEAR_FINE, GRAPH, PACKAGE, POWER, SCAN, SPINNER, USERS_THREE};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, Content, View, CameraContent};
-use crate::gui::views::types::{LinePosition, ModalContainer, ModalPosition, QrScanResult};
+use crate::gui::views::types::{LinePosition, ContentContainer, ModalPosition, QrScanResult};
 use crate::gui::views::wallets::{WalletTransactions, WalletMessages, WalletTransport};
 use crate::gui::views::wallets::types::{GRIN, WalletTab, WalletTabType};
 use crate::gui::views::wallets::wallet::modals::WalletAccountsModal;
@@ -40,48 +40,47 @@ pub struct WalletContent {
     pub current_tab: Box<dyn WalletTab>,
 
     /// Wallet accounts [`Modal`] content.
-    accounts_modal_content: Option<WalletAccountsModal>,
+    accounts_modal_content: WalletAccountsModal,
 
     /// QR code scan content.
     pub qr_scan_content: Option<CameraContent>,
-
-    /// List of allowed [`Modal`] ids for this [`ModalContainer`].
-    allowed_modal_ids: Vec<&'static str>
 }
 
 /// Identifier for account list [`Modal`].
 const ACCOUNT_LIST_MODAL: &'static str = "account_list_modal";
 
-impl ModalContainer for WalletContent {
-    fn modal_ids(&self) -> &Vec<&'static str> {
-        &self.allowed_modal_ids
+impl ContentContainer for WalletContent {
+    fn modal_ids(&self) -> Vec<&'static str> {
+        vec![
+            ACCOUNT_LIST_MODAL,
+        ]
     }
 
     fn modal_ui(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
         match modal.id {
             ACCOUNT_LIST_MODAL => {
-                if let Some(content) = self.accounts_modal_content.as_mut() {
-                    Modal::ui(ui.ctx(), |ui, modal| {
-                        content.ui(ui, &self.wallet, modal, cb);
-                    });
-                }
+                self.accounts_modal_content.ui(ui, &self.wallet, modal, cb);
             }
             _ => {}
         }
     }
+
+    fn on_back(&mut self, _: &dyn PlatformCallbacks) -> bool {
+        true
+    }
+
+    fn container_ui(&mut self, _: &mut egui::Ui, _: &dyn PlatformCallbacks) {}
 }
 
 impl WalletContent {
     /// Create new instance with optional data.
     pub fn new(wallet: Wallet, data: Option<String>) -> Self {
+        let accounts_modal = WalletAccountsModal::new(wallet.accounts());
         let mut content = Self {
             wallet,
-            accounts_modal_content: None,
+            accounts_modal_content: accounts_modal,
             qr_scan_content: None,
             current_tab: Box::new(WalletTransactions::default()),
-            allowed_modal_ids: vec![
-                ACCOUNT_LIST_MODAL,
-            ],
         };
         if data.is_some() {
             content.on_data(data);
@@ -97,7 +96,6 @@ impl WalletContent {
     /// Draw wallet content.
     pub fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         ui.ctx().request_repaint_after(Duration::from_millis(1000));
-        self.current_modal_ui(ui, cb);
 
         let dual_panel = Content::is_dual_panel_mode(ui.ctx());
         let show_wallets_dual = AppConfig::show_wallets_at_dual_panel();
@@ -302,9 +300,7 @@ impl WalletContent {
 
             // Draw button to show list of accounts.
             View::item_button(ui, View::item_rounding(1, 3, true), USERS_THREE, None, || {
-                self.accounts_modal_content = Some(
-                    WalletAccountsModal::new(self.wallet.accounts())
-                );
+                self.accounts_modal_content = WalletAccountsModal::new(self.wallet.accounts());
                 Modal::new(ACCOUNT_LIST_MODAL)
                     .position(ModalPosition::CenterTop)
                     .title(t!("wallets.accounts"))

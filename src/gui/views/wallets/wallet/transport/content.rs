@@ -96,20 +96,20 @@ impl WalletTransport {
                 match id {
                     SEND_TOR_MODAL => {
                         if let Some(content) = self.send_modal_content.as_mut() {
-                            Modal::ui(ui.ctx(), |ui, modal| {
+                            Modal::ui(ui.ctx(), cb, |ui, modal, cb| {
                                 content.ui(ui, wallet, modal, cb);
                             });
                         }
                     }
                     TOR_SETTINGS_MODAL => {
                         if let Some(content) = self.settings_modal_content.as_mut() {
-                            Modal::ui(ui.ctx(), |ui, modal| {
+                            Modal::ui(ui.ctx(), cb, |ui, modal, cb| {
                                 content.ui(ui, wallet, modal, cb);
                             });
                         }
                     }
                     QR_ADDRESS_MODAL => {
-                        Modal::ui(ui.ctx(), |ui, _| {
+                        Modal::ui(ui.ctx(), cb, |ui, _, cb| {
                             self.qr_address_modal_ui(ui, cb);
                         });
                     }

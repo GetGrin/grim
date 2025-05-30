@@ -12,24 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::time::Duration;
-use egui::{Align, CornerRadius, Id, Layout, Margin, RichText, ScrollArea, StrokeKind};
 use egui::scroll_area::ScrollBarVisibility;
+use egui::{Align, CornerRadius, Id, Layout, Margin, RichText, ScrollArea, StrokeKind};
+use std::time::Duration;
 
-use crate::AppConfig;
-use crate::gui::Colors;
 use crate::gui::icons::{ARROW_LEFT, CARET_RIGHT, COMPUTER_TOWER, FOLDER_OPEN, FOLDER_PLUS, GEAR, GLOBE, GLOBE_SIMPLE, LOCK_KEY, PLUS, SIDEBAR_SIMPLE, SUITCASE};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Modal, Content, TitlePanel, View};
 use crate::gui::views::settings::SettingsContent;
-use crate::gui::views::types::{ModalContainer, ModalPosition, LinePosition, TitleContentType, TitleType};
-use crate::gui::views::wallets::creation::WalletCreation;
+use crate::gui::views::types::{ContentContainer, LinePosition, ModalPosition, TitleContentType, TitleType};
+use crate::gui::views::wallets::creation::WalletCreationContent;
 use crate::gui::views::wallets::modals::{AddWalletModal, OpenWalletModal, WalletConnectionModal, WalletsModal};
 use crate::gui::views::wallets::types::WalletTabType;
 use crate::gui::views::wallets::wallet::types::wallet_status_text;
 use crate::gui::views::wallets::WalletContent;
-use crate::wallet::{ExternalConnection, Wallet, WalletList};
+use crate::gui::views::{Content, Modal, TitlePanel, View};
+use crate::gui::Colors;
 use crate::wallet::types::ConnectionMethod;
+use crate::wallet::{ExternalConnection, Wallet, WalletList};
+use crate::AppConfig;
 
 /// Wallets content.
 pub struct WalletsContent {
@@ -37,27 +37,21 @@ pub struct WalletsContent {
     wallets: WalletList,
 
     /// Initial wallet creation [`Modal`] content.
-    add_wallet_modal_content: Option<AddWalletModal>,
+    add_wallet_modal_content: AddWalletModal,
     /// Wallet opening [`Modal`] content.
-    open_wallet_content: Option<OpenWalletModal>,
-    /// Wallet connection selection content.
-    conn_selection_content: Option<WalletConnectionModal>,
+    open_wallet_content: OpenWalletModal,
+    /// Wallet connection selection [`Modal`] content.
+    conn_selection_content: WalletConnectionModal,
     /// Wallet selection [`Modal`] content.
-    wallet_selection_content: Option<WalletsModal>,
+    wallet_selection_content: WalletsModal,
 
     /// Selected [`Wallet`] content.
     wallet_content: Option<WalletContent>,
     /// Wallet creation content.
-    creation_content: Option<WalletCreation>,
+    creation_content: Option<WalletCreationContent>,
 
     /// Settings content.
     settings_content: Option<SettingsContent>,
-
-    /// Flag to show [`Wallet`] list at dual panel mode.
-    show_wallets_at_dual_panel: bool,
-
-    /// [`Modal`] identifiers allowed at this ui container.
-    modal_ids: Vec<&'static str>
 }
 
 const ADD_WALLET_MODAL: &'static str = "wallets_add_modal";
@@ -69,97 +63,121 @@ impl Default for WalletsContent {
     fn default() -> Self {
         Self {
             wallets: WalletList::default(),
-            wallet_selection_content: None,
-            open_wallet_content: None,
-            conn_selection_content: None,
+            wallet_selection_content: WalletsModal::new(None, None, true),
+            open_wallet_content: OpenWalletModal::new(None),
+            add_wallet_modal_content: AddWalletModal::default(),
+            conn_selection_content: WalletConnectionModal::new(ConnectionMethod::Integrated),
             wallet_content: None,
             creation_content: None,
             settings_content: None,
-            show_wallets_at_dual_panel: AppConfig::show_wallets_at_dual_panel(),
-            modal_ids: vec![
-                ADD_WALLET_MODAL,
-                OPEN_WALLET_MODAL,
-                SELECT_CONNECTION_MODAL,
-                SELECT_WALLET_MODAL,
-            ],
-            add_wallet_modal_content: None,
         }
     }
 }
 
-impl ModalContainer for WalletsContent {
-    fn modal_ids(&self) -> &Vec<&'static str> {
-        &self.modal_ids
+impl ContentContainer for WalletsContent {
+    fn modal_ids(&self) -> Vec<&'static str> {
+        vec![
+            ADD_WALLET_MODAL,
+            OPEN_WALLET_MODAL,
+            SELECT_CONNECTION_MODAL,
+            SELECT_WALLET_MODAL,
+        ]
     }
 
-    fn modal_ui(&mut self,
-                ui: &mut egui::Ui,
-                modal: &Modal,
-                cb: &dyn PlatformCallbacks) {
+    fn modal_ui(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
         match modal.id {
             ADD_WALLET_MODAL => {
-                if let Some(content) = self.add_wallet_modal_content.as_mut() {
-                    content.ui(ui, modal, cb, |name, pass| {
-                        self.creation_content = Some(
-                            WalletCreation::new(name.clone(), pass.clone())
-                        );
-                    });
-                }
-                if self.creating_wallet() {
-                    self.add_wallet_modal_content = None;
-                }
+                self.add_wallet_modal_content.ui(ui, modal, cb, |name, pass| {
+                    self.creation_content = Some(
+                        WalletCreationContent::new(name.clone(), pass.clone())
+                    );
+                });
             },
             OPEN_WALLET_MODAL => {
-                let mut open = false;
-                if let Some(open_content) = self.open_wallet_content.as_mut() {
-                    open_content.ui(ui, modal, cb, |wallet, data| {
-                        self.wallet_content = Some(WalletContent::new(wallet, data));
-                        open = true;
-                    });
-                }
-                if open {
-                    self.open_wallet_content = None;
-                }
+                self.open_wallet_content.ui(ui, modal, cb, |pass, _| {
+                    if let Some(content) = &self.wallet_content {
+                        return match content.wallet.open(pass) {
+                            Ok(_) => true,
+                            Err(_) => false
+                        };
+                    }
+                    true
+                });
             },
             SELECT_CONNECTION_MODAL => {
-                if let Some(content) = self.conn_selection_content.as_mut() {
-                    content.ui(ui, modal, cb, |conn| {
-                        if let Some(wallet_content) = &self.wallet_content {
-                            wallet_content.wallet.update_connection(&conn);
-                        }
-                    });
-                }
+                self.conn_selection_content.ui(ui, modal, cb, |conn| {
+                    if let Some(wallet_content) = &self.wallet_content {
+                        wallet_content.wallet.update_connection(&conn);
+                    }
+                });
             }
             SELECT_WALLET_MODAL => {
-                let mut select = false;
-                if let Some(content) = self.wallet_selection_content.as_mut() {
-                    content.ui(ui, modal, &mut self.wallets, cb, |wallet, data| {
-                        self.wallet_content = Some(WalletContent::new(wallet, data));
-                        select = true;
-                    });
-                }
-                if select {
-                    self.wallet_selection_content = None;
-                }
+                self.wallet_selection_content.ui(ui, &mut self.wallets, |wallet, data| {
+                    if !wallet.is_open() {
+                        self.open_wallet_content = OpenWalletModal::new(data.clone());
+                        Modal::new(OPEN_WALLET_MODAL)
+                            .position(ModalPosition::CenterTop)
+                            .title(t!("wallets.open"))
+                            .show();
+                    }
+                    self.wallet_content = Some(WalletContent::new(wallet, data));
+                });
             }
             _ => {}
         }
+    }
+
+    fn on_back(&mut self, cb: &dyn PlatformCallbacks) -> bool {
+        if self.showing_settings() {
+            // Close settings.
+            self.settings_content = None;
+            return false;
+        } else if self.creating_wallet() {
+            // Close wallet creation.
+            let creation = self.creation_content.as_mut().unwrap();
+            if creation.on_back() {
+                self.creation_content = None;
+            }
+            return false;
+        } else {
+            if self.showing_wallet() {
+                let content = self.wallet_content.as_mut().unwrap();
+                // Close opened QR code scanner.
+                if content.qr_scan_content.is_some() {
+                    cb.stop_camera();
+                    content.qr_scan_content = None;
+                    return false;
+                }
+                // Close opened wallet.
+                self.wallet_content = None;
+                return false;
+            }
+        }
+        true
+    }
+
+    fn container_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
+        self.content_ui(ui, cb);
     }
 }
 
 impl WalletsContent {
     /// Draw wallets content.
-    pub fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
-        self.current_modal_ui(ui, cb);
+    fn content_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
+        if let Some(data) = crate::consume_incoming_data() {
+            if !data.is_empty() {
+                self.on_data(ui, Some(data));
+            }
+        }
 
         let showing_settings = self.showing_settings();
         let creating_wallet = self.creating_wallet();
         let showing_wallet = self.showing_wallet() && !creating_wallet && !showing_settings;
-        let dual_panel = Self::is_dual_panel_mode(ui);
+        let dual_panel = is_dual_panel_mode(ui);
         let content_width = ui.available_width();
         let list_hidden = showing_settings || creating_wallet || self.wallets.list().is_empty()
             || (showing_wallet && self.wallet_content.as_ref().unwrap().qr_scan_content.is_some())
-            || (dual_panel && showing_wallet && !self.show_wallets_at_dual_panel)
+            || (dual_panel && showing_wallet && !AppConfig::show_wallets_at_dual_panel())
             || (!dual_panel && showing_wallet);
 
         // Show title panel.
@@ -262,7 +280,7 @@ impl WalletsContent {
                 if self.showing_settings() {
                     if let Some(c) = &mut self.settings_content {
                         View::max_width_ui(ui, Content::SIDE_PANEL_WIDTH * 1.3, |ui| {
-                            c.ui(ui);
+                            c.ui(ui, cb);
                         });
                     }
                 } else if self.creating_wallet() {
@@ -270,7 +288,7 @@ impl WalletsContent {
                     let pass = creation.pass.clone();
                     let mut created = false;
                     // Show wallet creation content.
-                    creation.ui(ui, cb, |wallet| {
+                    creation.content_ui(ui, cb, |wallet| {
                         self.wallets.add(wallet.clone());
                         if let Ok(_) = wallet.open(pass.clone()) {
                             self.wallet_content = Some(WalletContent::new(wallet, None));
@@ -324,7 +342,7 @@ impl WalletsContent {
     }
 
     /// Handle data from deeplink or opened file.
-    pub fn on_data(&mut self, ui: &mut egui::Ui, data: Option<String>) {
+    fn on_data(&mut self, ui: &mut egui::Ui, data: Option<String>) {
         let wallets_size = self.wallets.list().len();
         if wallets_size == 0 {
             return;
@@ -348,7 +366,7 @@ impl WalletsContent {
 
     /// Show initial wallet creation [`Modal`].
     pub fn show_add_wallet_modal(&mut self) {
-        self.add_wallet_modal_content = Some(AddWalletModal::default());
+        self.add_wallet_modal_content = AddWalletModal::default();
         Modal::new(ADD_WALLET_MODAL)
             .position(ModalPosition::CenterTop)
             .title(t!("wallets.add"))
@@ -357,41 +375,11 @@ impl WalletsContent {
 
     /// Show wallet selection with provided optional data.
     fn show_wallet_selection_modal(&mut self, data: Option<String>) {
-        self.wallet_selection_content = Some(WalletsModal::new(None, data, true));
+        self.wallet_selection_content = WalletsModal::new(None, data, true);
         Modal::new(SELECT_WALLET_MODAL)
             .position(ModalPosition::Center)
             .title(t!("network_settings.choose_wallet"))
             .show();
-    }
-
-    /// Handle Back key event returning `false` when event was handled.
-    pub fn on_back(&mut self, cb: &dyn PlatformCallbacks) -> bool {
-        if self.showing_settings() {
-            // Close settings.
-            self.settings_content = None;
-            return false;
-        } else if self.creating_wallet() {
-            // Close wallet creation.
-            let creation = self.creation_content.as_mut().unwrap();
-            if creation.on_back() {
-                self.creation_content = None;
-            }
-            return false;
-        } else {
-            if self.showing_wallet() {
-                let content = self.wallet_content.as_mut().unwrap();
-                // Close opened QR code scanner.
-                if content.qr_scan_content.is_some() {
-                    cb.stop_camera();
-                    content.qr_scan_content = None;
-                    return false;
-                }
-                // Close opened wallet.
-                self.wallet_content = None;
-                return false;
-            }
-        }
-        true
     }
 
     /// Draw [`TitlePanel`] content.
@@ -400,7 +388,7 @@ impl WalletsContent {
                 dual_panel: bool,
                 show_wallet: bool,
                 cb: &dyn PlatformCallbacks) {
-        let show_list = self.show_wallets_at_dual_panel;
+        let show_list = AppConfig::show_wallets_at_dual_panel();
         let showing_settings = self.showing_settings();
         let creating_wallet = self.creating_wallet();
         let qr_scan = {
@@ -501,7 +489,6 @@ impl WalletsContent {
                         SUITCASE
                     };
                     View::title_button_big(ui, list_icon, |_| {
-                        self.show_wallets_at_dual_panel = !show_list;
                         AppConfig::toggle_show_wallets_at_dual_panel();
                     });
                 }
@@ -586,9 +573,8 @@ impl WalletsContent {
                     let mut show_selection = false;
                     View::item_button(ui, CornerRadius::default(), GLOBE, None, || {
                         self.wallet_content = Some(WalletContent::new(wallet.clone(), None));
-                        self.conn_selection_content = Some(
-                            WalletConnectionModal::new(wallet.get_current_connection())
-                        );
+                        self.conn_selection_content =
+                            WalletConnectionModal::new(wallet.get_current_connection());
                         // Show connection selection modal.
                         Modal::new(SELECT_CONNECTION_MODAL)
                             .position(ModalPosition::CenterTop)
@@ -657,17 +643,17 @@ impl WalletsContent {
     /// Show [`Modal`] to select and open wallet.
     fn show_opening_modal(&mut self, wallet: Wallet, data: Option<String>) {
         self.wallet_content = Some(WalletContent::new(wallet.clone(), None));
-        self.open_wallet_content = Some(OpenWalletModal::new(wallet, data));
+        self.open_wallet_content = OpenWalletModal::new(data);
         Modal::new(OPEN_WALLET_MODAL)
             .position(ModalPosition::CenterTop)
             .title(t!("wallets.open"))
             .show();
     }
+}
 
-    /// Check if it's possible to show [`WalletsContent`] and [`WalletContent`] panels at same time.
-    fn is_dual_panel_mode(ui: &mut egui::Ui) -> bool {
-        let dual_panel_root = Content::is_dual_panel_mode(ui.ctx());
-        let max_width = ui.available_width();
-        dual_panel_root && max_width >= (Content::SIDE_PANEL_WIDTH * 2.0) + View::get_right_inset()
-    }
+/// Check if it's possible to show [`WalletsContent`] and [`WalletContent`] panels at same time.
+fn is_dual_panel_mode(ui: &mut egui::Ui) -> bool {
+    let dual_panel_root = Content::is_dual_panel_mode(ui.ctx());
+    let max_width = ui.available_width();
+    dual_panel_root && max_width >= (Content::SIDE_PANEL_WIDTH * 2.0) + View::get_right_inset()
 }

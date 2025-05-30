@@ -20,7 +20,7 @@ use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, View};
 use crate::gui::views::network::ConnectionsContent;
 use crate::gui::views::network::modals::ExternalConnectionModal;
-use crate::gui::views::types::{ModalContainer, ModalPosition};
+use crate::gui::views::types::{ContentContainer, ModalPosition};
 use crate::wallet::{ConnectionsConfig, ExternalConnection, Wallet};
 use crate::wallet::types::ConnectionMethod;
 
@@ -31,9 +31,6 @@ pub struct ConnectionSettings {
 
     /// External connection [`Modal`] content.
     ext_conn_modal: ExternalConnectionModal,
-
-    /// [`Modal`] identifiers allowed at this ui container.
-    modal_ids: Vec<&'static str>
 }
 
 impl Default for ConnectionSettings {
@@ -41,16 +38,15 @@ impl Default for ConnectionSettings {
         Self {
             method: ConnectionMethod::Integrated,
             ext_conn_modal: ExternalConnectionModal::new(None),
-            modal_ids: vec![
-                ExternalConnectionModal::WALLET_ID
-            ]
         }
     }
 }
 
-impl ModalContainer for ConnectionSettings {
-    fn modal_ids(&self) -> &Vec<&'static str> {
-        &self.modal_ids
+impl ContentContainer for ConnectionSettings {
+    fn modal_ids(&self) -> Vec<&'static str> {
+        vec![
+            ExternalConnectionModal::WALLET_ID
+        ]
     }
 
     fn modal_ui(&mut self,
@@ -64,20 +60,21 @@ impl ModalContainer for ConnectionSettings {
             _ => {}
         }
     }
+
+    fn on_back(&mut self, _: &dyn PlatformCallbacks) -> bool {
+        true
+    }
+
+    fn container_ui(&mut self, _: &mut egui::Ui, _: &dyn PlatformCallbacks) {}
 }
 
 impl ConnectionSettings {
-    /// Draw wallet creation setup content.
-    pub fn create_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
-        self.ui(ui, cb);
-    }
-
     /// Draw existing wallet connection setup content.
     pub fn wallet_ui(&mut self, ui: &mut egui::Ui, wallet: &Wallet, cb: &dyn PlatformCallbacks) {
         self.method = wallet.get_current_connection();
 
         // Draw setup content.
-        let changed = self.ui(ui, cb);
+        let changed = self.content_ui(ui, cb);
 
         if changed {
             wallet.update_connection(&self.method);
@@ -90,10 +87,9 @@ impl ConnectionSettings {
     }
 
     /// Draw connection setup content, returning `true` if connection was changed.
-    fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) -> bool {
+    pub fn content_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) -> bool {
+        self.ui(ui, cb);
         let mut changed = false;
-        // Draw modal content for current ui container.
-        self.current_modal_ui(ui, cb);
 
         ui.add_space(2.0);
         View::sub_title(ui, format!("{} {}", GLOBE, t!("wallets.conn_method")));

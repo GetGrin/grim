@@ -21,7 +21,7 @@ use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, View};
 use crate::gui::views::network::modals::ExternalConnectionModal;
 use crate::gui::views::network::NodeSetup;
-use crate::gui::views::types::{ModalContainer, ModalPosition};
+use crate::gui::views::types::{ContentContainer, ModalPosition};
 use crate::node::{Node, NodeConfig};
 use crate::wallet::{ConnectionsConfig, ExternalConnection};
 
@@ -29,25 +29,21 @@ use crate::wallet::{ConnectionsConfig, ExternalConnection};
 pub struct ConnectionsContent {
     /// External connection [`Modal`] content.
     ext_conn_modal: ExternalConnectionModal,
-
-    /// [`Modal`] identifiers allowed at this ui container.
-    modal_ids: Vec<&'static str>
 }
 
 impl Default for ConnectionsContent {
     fn default() -> Self {
         Self {
             ext_conn_modal: ExternalConnectionModal::new(None),
-            modal_ids: vec![
-                ExternalConnectionModal::NETWORK_ID
-            ],
         }
     }
 }
 
-impl ModalContainer for ConnectionsContent {
-    fn modal_ids(&self) -> &Vec<&'static str> {
-        &self.modal_ids
+impl ContentContainer for ConnectionsContent {
+    fn modal_ids(&self) -> Vec<&'static str> {
+        vec![
+            ExternalConnectionModal::NETWORK_ID
+        ]
     }
 
     fn modal_ui(&mut self,
@@ -61,13 +57,12 @@ impl ModalContainer for ConnectionsContent {
             _ => {}
         }
     }
-}
 
-impl ConnectionsContent {
-    /// Draw connections content.
-    pub fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
-        self.current_modal_ui(ui, cb);
+    fn on_back(&mut self, _: &dyn PlatformCallbacks) -> bool {
+        true
+    }
 
+    fn container_ui(&mut self, ui: &mut egui::Ui, _: &dyn PlatformCallbacks) {
         ui.add_space(2.0);
 
         // Show network type selection.
@@ -121,7 +116,9 @@ impl ConnectionsContent {
             }
         }
     }
+}
 
+impl ConnectionsContent {
     /// Draw integrated node connection item content.
     pub fn integrated_node_item_ui(ui: &mut egui::Ui, custom_button: impl FnOnce(&mut egui::Ui)) {
         // Draw round background.

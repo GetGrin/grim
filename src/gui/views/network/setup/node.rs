@@ -19,7 +19,7 @@ use crate::gui::icons::{CLOCK_CLOCKWISE, COMPUTER_TOWER, PLUG, POWER, SHIELD, SH
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::network::settings::NetworkSettings;
 use crate::gui::views::network::NetworkContent;
-use crate::gui::views::types::{ModalContainer, ModalPosition};
+use crate::gui::views::types::{ContentContainer, ModalPosition};
 use crate::gui::views::{Modal, TextEdit, View};
 use crate::gui::Colors;
 use crate::node::{Node, NodeConfig};
@@ -43,9 +43,6 @@ pub struct NodeSetup {
 
     /// Future Time Limit value.
     ftl_edit: String,
-
-    /// [`Modal`] identifiers allowed at this ui container.
-    modal_ids: Vec<&'static str>
 }
 
 /// Identifier for API port value [`Modal`].
@@ -68,19 +65,18 @@ impl Default for NodeSetup {
             is_api_port_available,
             secret_edit: "".to_string(),
             ftl_edit: NodeConfig::get_ftl(),
-            modal_ids: vec![
-                API_PORT_MODAL,
-                API_SECRET_MODAL,
-                FOREIGN_API_SECRET_MODAL,
-                FTL_MODAL
-            ]
         }
     }
 }
 
-impl ModalContainer for NodeSetup {
-    fn modal_ids(&self) -> &Vec<&'static str> {
-        &self.modal_ids
+impl ContentContainer for NodeSetup {
+    fn modal_ids(&self) -> Vec<&'static str> {
+        vec![
+            API_PORT_MODAL,
+            API_SECRET_MODAL,
+            FOREIGN_API_SECRET_MODAL,
+            FTL_MODAL
+        ]
     }
 
     fn modal_ui(&mut self,
@@ -95,13 +91,12 @@ impl ModalContainer for NodeSetup {
             _ => {}
         }
     }
-}
 
-impl NodeSetup {
-    pub fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
-        // Draw modal content for current ui container.
-        self.current_modal_ui(ui, cb);
+    fn on_back(&mut self, _: &dyn PlatformCallbacks) -> bool {
+        true
+    }
 
+    fn container_ui(&mut self, ui: &mut egui::Ui, _: &dyn PlatformCallbacks) {
         View::sub_title(ui, format!("{} {}", COMPUTER_TOWER, t!("network_settings.server")));
         View::horizontal_line(ui, Colors::stroke());
         ui.add_space(6.0);
@@ -218,7 +213,9 @@ impl NodeSetup {
             self.archive_mode_ui(ui);
         });
     }
+}
 
+impl NodeSetup {
     /// Draw [`ChainTypes`] setup content.
     pub fn chain_type_ui(ui: &mut egui::Ui) {
         ui.vertical_centered(|ui| {
