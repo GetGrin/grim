@@ -71,8 +71,8 @@ impl ContentContainer for MnemonicSetup {
 }
 
 impl MnemonicSetup {
-    /// Draw content for phrase import step.
-    pub fn import_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
+    /// Draw content for phrase enter step.
+    pub fn enter_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         self.ui(ui, cb);
         ui.add_space(10.0);
 
@@ -122,7 +122,7 @@ impl MnemonicSetup {
         ui.add_space(6.0);
 
         // Show words setup.
-        self.word_list_ui(ui, true);
+        self.word_list_ui(ui, false);
     }
     /// Draw content for phrase confirmation step.
     pub fn confirm_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {

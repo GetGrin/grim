@@ -348,7 +348,7 @@ impl WalletCreationContent {
     /// Draw wallet creation [`Step`] content.
     fn step_content_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         match &self.step {
-            Step::EnterMnemonic => self.mnemonic_setup.import_ui(ui, cb),
+            Step::EnterMnemonic => self.mnemonic_setup.enter_ui(ui, cb),
             Step::ConfirmMnemonic => self.mnemonic_setup.confirm_ui(ui, cb),
             Step::SetupConnection => {
                 // Redraw if node is running.
