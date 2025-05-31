@@ -241,9 +241,21 @@ impl ContentContainer for WalletsContent {
             .show_inside(ui, |ui| {
                 if self.showing_settings() {
                     if let Some(c) = &mut self.settings_content {
-                        View::max_width_ui(ui, Content::SIDE_PANEL_WIDTH * 1.3, |ui| {
-                            c.ui(ui, cb);
-                        });
+                        ScrollArea::vertical()
+                            .id_salt("app_settings_wallets")
+                            .scroll_bar_visibility(ScrollBarVisibility::AlwaysHidden)
+                            .auto_shrink([false; 2])
+                            .show(ui, |ui| {
+                                ui.add_space(1.0);
+                                ui.vertical_centered(|ui| {
+                                    // Show application settings content.
+                                    View::max_width_ui(ui,
+                                                       Content::SIDE_PANEL_WIDTH * 1.3,
+                                                       |ui| {
+                                                           c.ui(ui, cb);
+                                                       });
+                                });
+                            });
                     }
                 } else if self.creating_wallet() {
                     let creation = self.creation_content.as_mut().unwrap();

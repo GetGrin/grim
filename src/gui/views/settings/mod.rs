@@ -13,4 +13,8 @@
 // limitations under the License.
 
 mod content;
+mod interface;
+mod network;
+mod storage;
+
 pub use content::*;
