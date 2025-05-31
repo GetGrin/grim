@@ -52,6 +52,15 @@ pub struct AppConfig {
 
     /// Flag to check if dark theme should be used, use system settings if not set.
     use_dark_theme: Option<bool>,
+
+    /// Flag to use proxy for network requests.
+    use_proxy: Option<bool>,
+    /// Flag to use SOCKS5 or HTTP proxy for network requests.
+    use_socks_proxy: Option<bool>,
+    /// HTTP proxy URL.
+    http_proxy_url: Option<String>,
+    /// SOCKS5 proxy URL.
+    socks_proxy_url: Option<String>,
 }
 
 impl Default for AppConfig {
@@ -69,6 +78,10 @@ impl Default for AppConfig {
             lang: None,
             english_keyboard: None,
             use_dark_theme: None,
+            use_proxy: None,
+            use_socks_proxy: None,
+            http_proxy_url: None,
+            socks_proxy_url: None,
         }
     }
 }
@@ -261,4 +274,59 @@ impl AppConfig {
         w_config.use_dark_theme = Some(use_dark);
         w_config.save();
     }
+
+    /// Check if proxy for network requests is needed.
+    pub fn use_proxy() -> bool {
+        let r_config = Settings::app_config_to_read();
+        r_config.use_proxy.clone().unwrap_or(false)
+    }
+
+    /// Enable or disable proxy for network requests.
+    pub fn toggle_use_proxy() {
+        let use_proxy = Self::use_proxy();
+        let mut w_config = Settings::app_config_to_update();
+        w_config.use_proxy = Some(!use_proxy);
+        w_config.save();
+    }
+
+    /// Check if SOCKS5 or HTTP proxy should be used.
+    pub fn use_socks_proxy() -> bool {
+        let r_config = Settings::app_config_to_read();
+        r_config.use_socks_proxy.clone().unwrap_or(true)
+    }
+
+    /// Enable SOCKS5 or HTTP proxy.
+    pub fn toggle_use_socks_proxy() {
+        let use_proxy = Self::use_socks_proxy();
+        let mut w_config = Settings::app_config_to_update();
+        w_config.use_socks_proxy = Some(!use_proxy);
+        w_config.save();
+    }
+
+    /// Get SOCKS proxy URL.
+    pub fn socks_proxy_url() -> Option<String> {
+        let r_config = Settings::app_config_to_read();
+        r_config.socks_proxy_url.clone()
+    }
+
+    /// Save SOCKS proxy URL.
+    pub fn save_socks_proxy_url(url: Option<String>) {
+        let mut w_config = Settings::app_config_to_update();
+        w_config.socks_proxy_url = url;
+        w_config.save();
+    }
+
+    /// Get HTTP proxy URL.
+    pub fn http_proxy_url() -> Option<String> {
+        let r_config = Settings::app_config_to_read();
+        r_config.http_proxy_url.clone()
+    }
+
+    /// Save HTTP proxy URL.
+    pub fn save_http_proxy_url(url: Option<String>) {
+        let mut w_config = Settings::app_config_to_update();
+        w_config.http_proxy_url = url;
+        w_config.save();
+    }
+
 }

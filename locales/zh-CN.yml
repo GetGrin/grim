@@ -29,6 +29,7 @@ choose_file: 选择文件
 crash_report: 崩溃报告
 crash_report_warning: 上次应用程序意外关闭，您可以报告开发人员崩溃事件.
 confirmation: 确认
+enter_url: 输入 URL
 wallets:
   await_conf_amount: 等待确认中
   await_fin_amount: 等待确定中
@@ -292,6 +293,9 @@ modal:
 modal_exit:
   description: 您确定要退出应用程序吗？
   exit: 退出手
+app_settings:
+  proxy: 代理
+  proxy_desc: 是否值得对来自应用程序的网络请求使用代理.
 keyboard:
   1: 1
   2: 2

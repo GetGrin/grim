@@ -12,13 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::gui::Colors;
+use crate::gui::icons::{DATABASE, GLOBE_SIMPLE};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::settings::interface::InterfaceSettingsContent;
 use crate::gui::views::settings::network::NetworkSettingsContent;
 use crate::gui::views::settings::storage::StorageSettingsContent;
 use crate::gui::views::types::ContentContainer;
 use crate::gui::views::View;
+use crate::gui::Colors;
 
 /// Application settings content.
 pub struct SettingsContent {
@@ -49,11 +50,23 @@ impl SettingsContent {
         ui.add_space(8.0);
         View::horizontal_line(ui, Colors::stroke());
         ui.add_space(6.0);
-        
+
+        View::sub_title(ui, format!("{} {}", GLOBE_SIMPLE, t!("network.self")));
+        View::horizontal_line(ui, Colors::stroke());
+        ui.add_space(6.0);
+
         // Show network settings.
-        //self.network_settings.ui(ui, cb);
+        self.network_settings.ui(ui, cb);
+
+        ui.add_space(8.0);
+        View::horizontal_line(ui, Colors::stroke());
+        ui.add_space(6.0);
+
+        // View::sub_title(ui, format!("{} {}", DATABASE, t!("network_node.data")));
+        // View::horizontal_line(ui, Colors::stroke());
+        // ui.add_space(6.0);
 
         // Show storage settings.
-        // self.storage_settings.ui(ui, cb);
+        self.storage_settings.ui(ui, cb);
     }
 }

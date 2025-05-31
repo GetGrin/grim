@@ -12,9 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::{Align, Layout, RichText, ScrollArea, StrokeKind};
 use egui::scroll_area::ScrollBarVisibility;
-use crate::gui::icons::{CHECK, CHECK_FAT, GLOBE_SIMPLE, PENCIL};
+use egui::{Align, Layout, RichText, ScrollArea, StrokeKind};
+
+use crate::gui::icons::{CHECK, CHECK_FAT, PENCIL, TRANSLATE};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::types::{ContentContainer, ModalPosition};
 use crate::gui::views::{Modal, View};
@@ -64,13 +65,11 @@ impl ContentContainer for InterfaceSettingsContent {
                 View::radio_value(ui, &mut selected_use_dark, true, t!("dark"));
             })
         });
-        ui.add_space(8.0);
+        ui.add_space(14.0);
         if saved_use_dark != selected_use_dark {
             AppConfig::set_dark_theme(selected_use_dark);
             crate::setup_visuals(ui.ctx());
         }
-
-        ui.add_space(6.0);
 
         // Draw language selection.
         self.language_item_ui(self.locale.clone().as_str(), ui, true, 0, 1);
@@ -155,17 +154,14 @@ impl InterfaceSettingsContent {
                 ui.allocate_ui_with_layout(layout_size, Layout::left_to_right(Align::Center), |ui| {
                     ui.add_space(12.0);
                     ui.vertical(|ui| {
-                        // Draw connections URL.
                         ui.add_space(4.0);
                         View::ellipsize_text(ui,
                                              t!("lang_name", locale = locale),
                                              18.0,
                                              Colors::title(false));
                         ui.add_space(1.0);
-
-                        // Setup connection status text.
                         let value = format!("{} {}",
-                                            GLOBE_SIMPLE,
+                                            TRANSLATE,
                                             t!("language"));
                         ui.label(RichText::new(value).size(15.0).color(Colors::gray()));
                         ui.add_space(3.0);

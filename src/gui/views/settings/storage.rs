@@ -34,9 +34,7 @@ impl ContentContainer for StorageSettingsContent {
     }
 
     fn container_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
-        View::sub_title(ui, format!("{} {}", DATABASE, t!("network_node.data")));
-        View::horizontal_line(ui, Colors::stroke());
-        ui.add_space(6.0);
+
     }
 }
 

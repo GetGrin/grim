@@ -29,6 +29,7 @@ choose_file: Choose file
 crash_report: Crash report
 crash_report_warning: Application closed unexpectedly last time, you can share crash report with developers.
 confirmation: Confirmation
+enter_url: Enter URL
 wallets:
   await_conf_amount: Awaiting confirmation
   await_fin_amount: Awaiting finalization
@@ -292,6 +293,9 @@ modal:
 modal_exit:
   description: Are you sure you want to quit the application?
   exit: Exit
+app_settings:
+  proxy: Proxy
+  proxy_desc: Whether to use proxy for network requests from the application.
 keyboard:
   1: 1
   2: 2

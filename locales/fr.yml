@@ -29,6 +29,7 @@ choose_file: Choisir un fichier
 crash_report: Rapport d'échec
 crash_report_warning: L'application s'est fermée de manière inattendue la dernière fois, vous pouvez partager un rapport d'incident avec les développeurs.
 confirmation: Confirmation
+enter_url: Entrez l'URL
 wallets:
   await_conf_amount: En attente de confirmation
   await_fin_amount: En attente de finalisation
@@ -292,6 +293,9 @@ modal:
 modal_exit:
   description: "Êtes-vous sûr de vouloir quitter l'application ?"
   exit: Quitter
+app_settings:
+  proxy: Proxy
+  proxy_desc: Vaut-il la peine d'utiliser un proxy pour les requêtes réseau de l'application.
 keyboard:
   1: 1
   2: 2

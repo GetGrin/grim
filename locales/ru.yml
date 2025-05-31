@@ -29,6 +29,7 @@ choose_file: Выбрать файл
 crash_report: Отчёт о сбое
 crash_report_warning: В прошлый раз приложение неожиданно закрылось, вы можете поделиться отчетом о сбое с разработчиками.
 confirmation: Подтверждение
+enter_url: Введите URL-адрес
 wallets:
   await_conf_amount: Ожидает подтверждения
   await_fin_amount: Ожидает завершения
@@ -292,6 +293,9 @@ modal:
 modal_exit:
   description: Вы уверены, что хотите выйти из приложения?
   exit: Выход
+app_settings:
+  proxy: Прокси
+  proxy_desc: Стоит ли использовать прокси для сетевых запросов из приложения.
 keyboard:
   1: 1
   2: 2

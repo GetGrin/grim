@@ -29,6 +29,7 @@ choose_file: Dosya seçin
 crash_report: Ariza Raporu
 crash_report_warning: Uygulama beklenmedik bir sekilde kapandi son kez, kilitlenme raporunu gelistiricilerle paylasabilirsiniz.
 confirmation: Onay
+enter_url: URL'yi girin
 wallets:
   await_conf_amount: Onay bekleniyor
   await_fin_amount: Tamamlanma bekleniyor
@@ -292,6 +293,9 @@ modal:
 modal_exit:
   description: Uygulamadan cikmak için exit, emin misiniz?
   exit: Exit
+app_settings:
+  proxy: Proxy
+  proxy_desc: Uygulamadan gelen ağ istekleri için bir proxy kullanmaya değer mi.
 keyboard:
   1: 1
   2: 2
