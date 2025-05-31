@@ -187,7 +187,28 @@ impl Wallet {
         } else {
             integrated()
         };
-        Ok(HTTPNodeClient::new(&node_api_url, node_secret)?)
+        let client = if AppConfig::use_proxy() {
+            let socks = AppConfig::use_socks_proxy();
+            let url = if socks {
+                AppConfig::socks_proxy_url()
+            } else {
+                AppConfig::http_proxy_url()
+            }.unwrap_or("".to_string());
+            let res = url.replace("http://", "").replace("socks5://", "").parse();
+            if let Ok(addr) = res {
+                let scheme = if socks {
+                    "socks5://"
+                } else {
+                    "http://"
+                };
+                HTTPNodeClient::new_proxy(&node_api_url, node_secret, Some((addr, scheme)))?
+            } else {
+                HTTPNodeClient::new_proxy(&node_api_url, node_secret, None)?
+            }
+        } else {
+            HTTPNodeClient::new_proxy(&node_api_url, node_secret, None)?
+        };
+        Ok(client)
     }
 
     /// Create [`WalletInstance`] from provided [`WalletConfig`].

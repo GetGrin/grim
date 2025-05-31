@@ -38,6 +38,7 @@ mod node;
 mod wallet;
 mod tor;
 mod settings;
+mod http;
 pub mod gui;
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");

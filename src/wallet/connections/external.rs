@@ -16,6 +16,7 @@ use grin_core::global::ChainTypes;
 use grin_util::to_base64;
 use serde_derive::{Deserialize, Serialize};
 
+use crate::http::HttpClient;
 use crate::wallet::ConnectionsConfig;
 
 /// External connection for the wallet.
@@ -34,13 +35,15 @@ pub struct ExternalConnection {
 }
 
 /// Default external node URL for main network.
-const DEFAULT_MAIN_URLS: [&'static str; 2] = [
+const DEFAULT_MAIN_URLS: [&'static str; 3] = [
+    "https://main.gri.mw",
     "https://grincoin.org",
     "https://grinnode.live:3413"
 ];
 
 /// Default external node URL for main network.
-const DEFAULT_TEST_URLS: [&'static str; 1] = [
+const DEFAULT_TEST_URLS: [&'static str; 2] = [
+    "https://test.gri.mw",
     "https://testnet.grincoin.org"
 ];
 
@@ -101,11 +104,8 @@ fn check_ext_conn(conn: &ExternalConnection, ui_ctx: &egui::Context) {
                 let url = url::Url::parse(conn.url.as_str()).unwrap();
                 if let Ok(_) = url.socket_addrs(|| None) {
                     let addr = format!("{}v2/foreign", url.to_string());
-                    // Setup http client.
-                    let client = hyper_tor::Client::builder()
-                        .build::<_, hyper_tor::Body>(hyper_tls::HttpsConnector::new());
-                    let mut req_setup = hyper_tor::Request::builder()
-                        .method(hyper_tor::Method::POST)
+                    let mut req_setup = hyper::Request::builder()
+                        .method(hyper::Method::POST)
                         .uri(addr.clone());
                     // Setup secret key auth.
                     if let Some(key) = conn.secret {
@@ -114,13 +114,13 @@ fn check_ext_conn(conn: &ExternalConnection, ui_ctx: &egui::Context) {
                             to_base64(&format!("grin:{}", key))
                         );
                         req_setup = req_setup
-                            .header(hyper_tor::header::AUTHORIZATION, basic_auth.clone());
+                            .header(hyper::header::AUTHORIZATION, basic_auth.clone());
                     }
-                    let req = req_setup.body(hyper_tor::Body::from(
+                    let req = req_setup.body(http_body_util::Full::from(
                         r#"{"id":1,"jsonrpc":"2.0","method":"get_version","params":{} }"#)
                     ).unwrap();
                     // Send request.
-                    match client.request(req).await {
+                    match HttpClient::send(req).await {
                         Ok(res) => {
                             let status = res.status().as_u16();
                             // Available on 200 HTTP status code.

@@ -741,6 +741,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "async-socks5"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8da2537846e16b96d2972ee52a3b355663872a1a687ce6d57a3b6f6b6a181c89"
+dependencies = [
+ "thiserror 1.0.69",
+ "tokio 1.45.1",
+]
+
+[[package]]
 name = "async-task"
 version = "4.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -942,6 +952,12 @@ name = "base64"
 version = "0.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9e1b586273c5702936fe7b7d6896644d8be71e6314cfe09d3167c95f712589e8"
+
+[[package]]
+name = "base64"
+version = "0.21.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9d297deb1925b89f2ccc13d7635fa0714f12c87adce1c75356b39ca9b7178567"
 
 [[package]]
 name = "base64"
@@ -2821,12 +2837,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "fake-simd"
-version = "0.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e88a8acf291dafb59c2d96e8f59828f3838bb1a70398823ade51a84de6a6deed"
-
-[[package]]
 name = "fallible-iterator"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3513,6 +3523,7 @@ dependencies = [
  "arboard",
  "arti-client",
  "backtrace",
+ "bytes 1.10.1",
  "chrono",
  "curve25519-dalek 4.1.3",
  "dirs 6.0.0",
@@ -3537,8 +3548,13 @@ dependencies = [
  "grin_wallet_impls",
  "grin_wallet_libwallet",
  "grin_wallet_util",
+ "http-body-util",
  "hyper 0.14.32",
- "hyper-tls 0.5.0",
+ "hyper 1.6.0",
+ "hyper-proxy2",
+ "hyper-socks2",
+ "hyper-tls 0.6.0",
+ "hyper-util",
  "image",
  "interprocess",
  "jni",
@@ -3839,9 +3855,8 @@ dependencies = [
 
 [[package]]
 name = "grin_wallet_api"
-version = "5.3.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c6e91d09af566e34c045dc398a862ae947446acf05274193f75511db2972b1ae"
+version = "5.4.0-alpha.1"
+source = "git+https://github.com/ardocrat/grin-wallet?branch=wallet_node_client_proxy#bb85ffff7f4f2b129ede72e0423449e924a528c0"
 dependencies = [
  "base64 0.12.3",
  "chrono",
@@ -3865,9 +3880,8 @@ dependencies = [
 
 [[package]]
 name = "grin_wallet_config"
-version = "5.3.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d9ba1884188e89acfdb1896e929b1327c77a8c04c9294b5b2cc784fbb207c8e8"
+version = "5.4.0-alpha.1"
+source = "git+https://github.com/ardocrat/grin-wallet?branch=wallet_node_client_proxy#bb85ffff7f4f2b129ede72e0423449e924a528c0"
 dependencies = [
  "dirs 2.0.2",
  "grin_core",
@@ -3881,9 +3895,8 @@ dependencies = [
 
 [[package]]
 name = "grin_wallet_controller"
-version = "5.3.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aac2140d873e1c86cc984aac4b01ca001ee62ce71d48ffb62d5820147082db6d"
+version = "5.4.0-alpha.1"
+source = "git+https://github.com/ardocrat/grin-wallet?branch=wallet_node_client_proxy#bb85ffff7f4f2b129ede72e0423449e924a528c0"
 dependencies = [
  "chrono",
  "easy-jsonrpc-mw",
@@ -3916,9 +3929,8 @@ dependencies = [
 
 [[package]]
 name = "grin_wallet_impls"
-version = "5.3.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "478c40acf16a81fe60fb2a4bb6630b85d28e6904f87ddb512749d2e2124f6352"
+version = "5.4.0-alpha.1"
+source = "git+https://github.com/ardocrat/grin-wallet?branch=wallet_node_client_proxy#bb85ffff7f4f2b129ede72e0423449e924a528c0"
 dependencies = [
  "base64 0.12.3",
  "blake2-rfc",
@@ -3956,9 +3968,8 @@ dependencies = [
 
 [[package]]
 name = "grin_wallet_libwallet"
-version = "5.3.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "74dfcdeb1b13dfca419d930b83357d72b2b76dfa9b41f3942b13646f57c57b9b"
+version = "5.4.0-alpha.1"
+source = "git+https://github.com/ardocrat/grin-wallet?branch=wallet_node_client_proxy#bb85ffff7f4f2b129ede72e0423449e924a528c0"
 dependencies = [
  "age",
  "base64 0.9.3",
@@ -3966,6 +3977,7 @@ dependencies = [
  "blake2-rfc",
  "bs58",
  "byteorder",
+ "chacha20",
  "chrono",
  "curve25519-dalek 2.1.3",
  "ed25519-dalek 1.0.1",
@@ -3975,6 +3987,7 @@ dependencies = [
  "grin_util",
  "grin_wallet_config",
  "grin_wallet_util",
+ "hmac 0.12.1",
  "lazy_static",
  "log",
  "num-bigint 0.2.6",
@@ -3984,7 +3997,7 @@ dependencies = [
  "serde",
  "serde_derive",
  "serde_json",
- "sha2 0.8.2",
+ "sha2 0.10.9",
  "strum 0.18.0",
  "strum_macros 0.18.0",
  "thiserror 1.0.69",
@@ -3994,9 +4007,8 @@ dependencies = [
 
 [[package]]
 name = "grin_wallet_util"
-version = "5.3.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d253707c5cb3ee35b06f4b688a81e9916a0e37302cf3f7d855e109696cdf0d7c"
+version = "5.4.0-alpha.1"
+source = "git+https://github.com/ardocrat/grin-wallet?branch=wallet_node_client_proxy#bb85ffff7f4f2b129ede72e0423449e924a528c0"
 dependencies = [
  "data-encoding",
  "ed25519-dalek 1.0.1",
@@ -4071,6 +4083,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "h2"
+version = "0.4.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a9421a676d1b147b16b82c9225157dc629087ef8ec4d5e2960f9437a90dac0a5"
+dependencies = [
+ "atomic-waker",
+ "bytes 1.10.1",
+ "fnv",
+ "futures-core",
+ "futures-sink",
+ "http 1.3.1",
+ "indexmap 2.9.0",
+ "slab",
+ "tokio 1.45.1",
+ "tokio-util 0.7.15",
+ "tracing",
+]
+
+[[package]]
 name = "half"
 version = "2.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4114,6 +4145,30 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6ba4ff7128dee98c7dc9794b6a411377e1404dba1c97deb8d1a55297bd25d8af"
 dependencies = [
  "hashbrown 0.14.5",
+]
+
+[[package]]
+name = "headers"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "322106e6bd0cba2d5ead589ddb8150a13d7c4217cf80d7c4f682ca994ccc6aa9"
+dependencies = [
+ "base64 0.21.7",
+ "bytes 1.10.1",
+ "headers-core",
+ "http 1.3.1",
+ "httpdate 1.0.3",
+ "mime",
+ "sha1",
+]
+
+[[package]]
+name = "headers-core"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "54b4a22553d4242c49fddb9ba998a99962b5cc6f22cb5a3482bec22522403ce4"
+dependencies = [
+ "http 1.3.1",
 ]
 
 [[package]]
@@ -4252,6 +4307,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "http-body"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1efedce1fb8e6913f23e0c92de8e62cd5b772a67e7b3946df930a62566c93184"
+dependencies = [
+ "bytes 1.10.1",
+ "http 1.3.1",
+]
+
+[[package]]
+name = "http-body-util"
+version = "0.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b021d93e26becf5dc7e1b75b1bed1fd93124b374ceb73f43d4d4eafec896a64a"
+dependencies = [
+ "bytes 1.10.1",
+ "futures-core",
+ "http 1.3.1",
+ "http-body 1.0.1",
+ "pin-project-lite 0.2.16",
+]
+
+[[package]]
 name = "httparse"
 version = "1.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4334,6 +4412,47 @@ dependencies = [
 ]
 
 [[package]]
+name = "hyper"
+version = "1.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cc2b571658e38e0c01b1fdca3bbbe93c00d3d71693ff2770043f8c29bc7d6f80"
+dependencies = [
+ "bytes 1.10.1",
+ "futures-channel",
+ "futures-util",
+ "h2 0.4.10",
+ "http 1.3.1",
+ "http-body 1.0.1",
+ "httparse",
+ "httpdate 1.0.3",
+ "itoa 1.0.15",
+ "pin-project-lite 0.2.16",
+ "smallvec",
+ "tokio 1.45.1",
+ "want",
+]
+
+[[package]]
+name = "hyper-proxy2"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9043b7b23fb0bc4a1c7014c27b50a4fc42cc76206f71d34fc0dfe5b28ddc3faf"
+dependencies = [
+ "bytes 1.10.1",
+ "futures-util",
+ "headers",
+ "http 1.3.1",
+ "hyper 1.6.0",
+ "hyper-tls 0.6.0",
+ "hyper-util",
+ "native-tls",
+ "pin-project-lite 0.2.16",
+ "tokio 1.45.1",
+ "tokio-native-tls",
+ "tower-service",
+]
+
+[[package]]
 name = "hyper-rustls"
 version = "0.20.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4368,6 +4487,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "hyper-socks2"
+version = "0.9.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "51c227614c208f7e7c2e040526912604a1a957fe467c9c2f5b06c5d032337dab"
+dependencies = [
+ "async-socks5",
+ "http 1.3.1",
+ "hyper 1.6.0",
+ "hyper-tls 0.6.0",
+ "hyper-util",
+ "thiserror 1.0.69",
+ "tokio 1.45.1",
+ "tower-service",
+]
+
+[[package]]
 name = "hyper-timeout"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4394,15 +4529,39 @@ dependencies = [
 
 [[package]]
 name = "hyper-tls"
-version = "0.5.0"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d6183ddfa99b85da61a140bea0efc93fdf56ceaa041b37d553518030827f9905"
+checksum = "70206fc6890eaca9fde8a0bf71caa2ddfc9fe045ac9e5c70df101a7dbde866e0"
 dependencies = [
  "bytes 1.10.1",
- "hyper 0.14.32",
+ "http-body-util",
+ "hyper 1.6.0",
+ "hyper-util",
  "native-tls",
  "tokio 1.45.1",
  "tokio-native-tls",
+ "tower-service",
+]
+
+[[package]]
+name = "hyper-util"
+version = "0.1.13"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b1c293b6b3d21eca78250dc7dbebd6b9210ec5530e038cbfe0661b5c47ab06e8"
+dependencies = [
+ "bytes 1.10.1",
+ "futures-channel",
+ "futures-core",
+ "futures-util",
+ "http 1.3.1",
+ "http-body 1.0.1",
+ "hyper 1.6.0",
+ "libc",
+ "pin-project-lite 0.2.16",
+ "socket2 0.5.10",
+ "tokio 1.45.1",
+ "tower-service",
+ "tracing",
 ]
 
 [[package]]
@@ -8285,18 +8444,6 @@ dependencies = [
  "cfg-if 1.0.0",
  "cpufeatures",
  "digest 0.10.7",
-]
-
-[[package]]
-name = "sha2"
-version = "0.8.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a256f46ea78a0c0d9ff00077504903ac881a1dafdc20da66545699e7776b3e69"
-dependencies = [
- "block-buffer 0.7.3",
- "digest 0.8.1",
- "fake-simd",
- "opaque-debug 0.2.3",
 ]
 
 [[package]]
