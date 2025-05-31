@@ -35,14 +35,14 @@ pub struct ExternalConnection {
 
 /// Default external node URL for main network.
 const DEFAULT_MAIN_URLS: [&'static str; 2] = [
-        "https://grincoin.org",
-        "https://grinnode.live:3413"
-    ];
+    "https://grincoin.org",
+    "https://grinnode.live:3413"
+];
 
 /// Default external node URL for main network.
 const DEFAULT_TEST_URLS: [&'static str; 1] = [
-        "https://testnet.grincoin.org"
-    ];
+    "https://testnet.grincoin.org"
+];
 
 impl ExternalConnection {
     /// Get default connections for provided chain type.
@@ -102,10 +102,10 @@ fn check_ext_conn(conn: &ExternalConnection, ui_ctx: &egui::Context) {
                 if let Ok(_) = url.socket_addrs(|| None) {
                     let addr = format!("{}v2/foreign", url.to_string());
                     // Setup http client.
-                    let client = hyper::Client::builder()
-                        .build::<_, hyper::Body>(hyper_tls::HttpsConnector::new());
-                    let mut req_setup = hyper::Request::builder()
-                        .method(hyper::Method::POST)
+                    let client = hyper_tor::Client::builder()
+                        .build::<_, hyper_tor::Body>(hyper_tls::HttpsConnector::new());
+                    let mut req_setup = hyper_tor::Request::builder()
+                        .method(hyper_tor::Method::POST)
                         .uri(addr.clone());
                     // Setup secret key auth.
                     if let Some(key) = conn.secret {
@@ -114,9 +114,9 @@ fn check_ext_conn(conn: &ExternalConnection, ui_ctx: &egui::Context) {
                             to_base64(&format!("grin:{}", key))
                         );
                         req_setup = req_setup
-                            .header(hyper::header::AUTHORIZATION, basic_auth.clone());
+                            .header(hyper_tor::header::AUTHORIZATION, basic_auth.clone());
                     }
-                    let req = req_setup.body(hyper::Body::from(
+                    let req = req_setup.body(hyper_tor::Body::from(
                         r#"{"id":1,"jsonrpc":"2.0","method":"get_version","params":{} }"#)
                     ).unwrap();
                     // Send request.
