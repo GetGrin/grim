@@ -173,11 +173,7 @@ impl InterfaceSettingsContent {
                 });
             } else {
                 // Draw button to select language.
-                let is_current = if let Some(lang) = AppConfig::locale() {
-                    lang == locale
-                } else {
-                    rust_i18n::locale() == locale
-                };
+                let is_current = self.locale == locale;
                 if !is_current {
                     View::item_button(ui, View::item_rounding(index, len, true), CHECK, None, || {
                         rust_i18n::set_locale(locale);
