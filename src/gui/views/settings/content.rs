@@ -16,7 +16,6 @@ use crate::gui::icons::{DATABASE, GLOBE_SIMPLE};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::settings::interface::InterfaceSettingsContent;
 use crate::gui::views::settings::network::NetworkSettingsContent;
-use crate::gui::views::settings::storage::StorageSettingsContent;
 use crate::gui::views::types::ContentContainer;
 use crate::gui::views::View;
 use crate::gui::Colors;
@@ -27,8 +26,6 @@ pub struct SettingsContent {
     interface_settings: InterfaceSettingsContent,
     /// Network communication settings.
     network_settings: NetworkSettingsContent,
-    /// File storage settings.
-    storage_settings: StorageSettingsContent
 }
 
 impl Default for SettingsContent {
@@ -36,7 +33,6 @@ impl Default for SettingsContent {
         Self {
             interface_settings: InterfaceSettingsContent::default(),
             network_settings: NetworkSettingsContent::default(),
-            storage_settings: StorageSettingsContent::default(),
         }
     }
 }
@@ -57,16 +53,6 @@ impl SettingsContent {
 
         // Show network settings.
         self.network_settings.ui(ui, cb);
-
-        ui.add_space(8.0);
-        View::horizontal_line(ui, Colors::stroke());
         ui.add_space(6.0);
-
-        // View::sub_title(ui, format!("{} {}", DATABASE, t!("network_node.data")));
-        // View::horizontal_line(ui, Colors::stroke());
-        // ui.add_space(6.0);
-
-        // Show storage settings.
-        self.storage_settings.ui(ui, cb);
     }
 }
