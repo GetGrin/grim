@@ -19,7 +19,6 @@ use hyper::{Request, Response};
 use hyper_proxy2::{Intercept, Proxy, ProxyConnector};
 use hyper_tls::HttpsConnector;
 use hyper_util::client::legacy::{Client, Error};
-use hyper_util::client::legacy::connect::HttpConnector;
 use hyper_util::rt::TokioExecutor;
 
 use crate::AppConfig;
@@ -33,14 +32,13 @@ impl HttpClient {
     pub async fn send(req: Request<Full<Bytes>>) -> Result<Response<Incoming>, Error> {
         let res = if AppConfig::use_proxy() {
             if let Some(url) = AppConfig::socks_proxy_url() {
-                let mut connector = HttpConnector::new();
-                connector.enforce_http(false);
+                let connector = HttpsConnector::new();
                 let uri = url.parse().unwrap();
                 let proxy = hyper_socks2::SocksConnector {
                     proxy_addr: uri,
                     auth: None,
                     connector,
-                };
+                }.with_tls().unwrap();
                 let client = Client::builder(TokioExecutor::new())
                     .build::<_, Full<Bytes>>(proxy);
                 client.request(req).await
@@ -48,7 +46,7 @@ impl HttpClient {
                 let url = AppConfig::http_proxy_url().unwrap();
                 let uri = url.parse().unwrap();
                 let proxy = Proxy::new(Intercept::All, uri);
-                let connector = HttpConnector::new();
+                let connector = HttpsConnector::new();
                 let proxy_connector = ProxyConnector::from_proxy(connector, proxy).unwrap();
                 let client = Client::builder(TokioExecutor::new())
                     .build::<_, Full<Bytes>>(proxy_connector);
