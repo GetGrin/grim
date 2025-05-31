@@ -266,7 +266,7 @@ impl<Platform: PlatformCallbacks> App<Platform> {
         }
 
         // Paint the title.
-        let title_text = format!("Grim {}", crate::VERSION);
+        let title_text = format!("Grim {} ツ", crate::VERSION);
         painter.text(
             title_rect.center(),
             egui::Align2::CENTER_CENTER,
