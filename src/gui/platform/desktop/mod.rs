@@ -260,6 +260,17 @@ impl PlatformCallbacks for Desktop {
         None
     }
 
+    fn pick_folder(&self) -> Option<String> {
+        let file = FileDialog::new()
+            .set_title(t!("choose_folder"))
+            .set_directory(dirs::home_dir().unwrap())
+            .pick_folder();
+        if let Some(file) = file {
+            return Some(file.to_str().unwrap_or_default().to_string());
+        }
+        None
+    }
+
     fn picked_file(&self) -> Option<String> {
         None
     }

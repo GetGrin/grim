@@ -161,6 +161,16 @@ impl PlatformCallbacks for Android {
         Some("".to_string())
     }
 
+    fn pick_folder(&self) -> Option<String> {
+        // Clear previous result.
+        let mut w_path = PICKED_FILE_PATH.write();
+        *w_path = None;
+        // Launch file picker.
+        let _ = self.call_java_method("pickFolder", "()V", &[]);
+        // Return empty string to identify async pick.
+        Some("".to_string())
+    }
+
     fn picked_file(&self) -> Option<String> {
         let has_file = {
             let r_path = PICKED_FILE_PATH.read();

@@ -33,6 +33,7 @@ pub trait PlatformCallbacks {
     fn switch_camera(&self);
     fn share_data(&self, name: String, data: Vec<u8>) -> Result<(), std::io::Error>;
     fn pick_file(&self) -> Option<String>;
+    fn pick_folder(&self) -> Option<String>;
     fn picked_file(&self) -> Option<String>;
     fn request_user_attention(&self);
     fn user_attention_required(&self) -> bool;

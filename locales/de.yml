@@ -26,6 +26,7 @@ theme: 'Theme:'
 dark: Dunkel
 light: Hell
 choose_file: Datei auswählen
+choose_folder: Ordner auswählen
 crash_report: Absturzbericht
 crash_report_warning: Anwendung wurde beim letzten Mal unerwartet geschlossen, Sie können den Absturzbericht mit Entwicklern teilen.
 confirmation: Bestätigung

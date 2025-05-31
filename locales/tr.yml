@@ -26,6 +26,7 @@ theme: 'Tema:'
 dark: Karanlik
 light: Isik
 choose_file: Dosya seçin
+choose_folder: Klasör seç
 crash_report: Ariza Raporu
 crash_report_warning: Uygulama beklenmedik bir sekilde kapandi son kez, kilitlenme raporunu gelistiricilerle paylasabilirsiniz.
 confirmation: Onay

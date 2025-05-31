@@ -26,6 +26,7 @@ theme: '主题:'
 dark: 深色
 light: 淡色
 choose_file: 选择文件
+choose_folder: 选择文件夹
 crash_report: 崩溃报告
 crash_report_warning: 上次应用程序意外关闭，您可以报告开发人员崩溃事件.
 confirmation: 确认
