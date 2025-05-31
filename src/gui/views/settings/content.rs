@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::gui::icons::{DATABASE, GLOBE_SIMPLE};
+use crate::gui::icons::GLOBE_SIMPLE;
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::settings::interface::InterfaceSettingsContent;
 use crate::gui::views::settings::network::NetworkSettingsContent;

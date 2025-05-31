@@ -22,6 +22,7 @@ use serde::de::DeserializeOwned;
 use serde::Serialize;
 use grin_config::ConfigError;
 use grin_core::global;
+
 use crate::node::NodeConfig;
 use crate::settings::AppConfig;
 use crate::tor::TorConfig;
