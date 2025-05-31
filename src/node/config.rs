@@ -940,4 +940,16 @@ impl NodeConfig {
         w_config.node.server.dandelion_config.always_stem_our_txs = !stem_txs;
         w_config.save();
     }
+
+    /// Save database node storage directory path.
+    pub fn get_storage_path() -> String {
+        Settings::node_config_to_read().node.server.db_root.clone()
+    }
+
+    /// Save database node storage directory path.
+    pub fn save_storage_path(path: String) {
+        let mut w_config = Settings::node_config_to_update();
+        w_config.node.server.db_root = path;
+        w_config.save();
+    }
 }
