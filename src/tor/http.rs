@@ -19,10 +19,10 @@ use std::sync::Arc;
 use std::task::{Context, Poll};
 
 use arti_client::{DataStream, IntoTorAddr, TorClient};
-use hyper::client::connect::{Connected, Connection};
-use hyper::http::uri::Scheme;
-use hyper::http::Uri;
-use hyper::service::Service;
+use hyper_tor::client::connect::{Connected, Connection};
+use hyper_tor::http::uri::Scheme;
+use hyper_tor::http::Uri;
+use hyper_tor::service::Service;
 use pin_project::pin_project;
 use thiserror::Error;
 use tls_api::TlsConnector as TlsConn; // This is different from tor_rtcompat::TlsConnector

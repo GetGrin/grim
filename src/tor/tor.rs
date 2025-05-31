@@ -28,7 +28,6 @@ use curve25519_dalek::digest::Digest;
 use ed25519_dalek::hazmat::ExpandedSecretKey;
 use fs_mistrust::Mistrust;
 use grin_util::secp::SecretKey;
-use hyper::{Body, Uri};
 use parking_lot::RwLock;
 use sha2::Sha512;
 use tls_api_native_tls::TlsConnector;
@@ -135,17 +134,17 @@ impl Tor {
         // Create http tor-powered client to post data.
         let tls_connector = TlsConnector::builder().unwrap().build().unwrap();
         let tor_connector = ArtiHttpConnector::new(client, tls_connector);
-        let http = hyper::Client::builder().build::<_, Body>(tor_connector);
+        let http = hyper_tor::Client::builder().build::<_, hyper_tor::Body>(tor_connector);
         // Create request.
-        let req = hyper::Request::builder()
-            .method(hyper::Method::POST)
+        let req = hyper_tor::Request::builder()
+            .method(hyper_tor::Method::POST)
             .uri(url)
-            .body(Body::from(body))
+            .body(hyper_tor::Body::from(body))
             .unwrap();
         // Send request.
         let mut resp = None;
         match http.request(req).await {
-            Ok(r) => match hyper::body::to_bytes(r).await {
+            Ok(r) => match hyper_tor::body::to_bytes(r).await {
                 Ok(raw) => resp = Some(String::from_utf8_lossy(&raw).to_string()),
                 Err(_) => {}
             },
@@ -276,12 +275,12 @@ impl Tor {
                             }
                             runtime
                                 .spawn(async move {
-                                    let tls_connector =
+                                    let tls_conn =
                                         TlsConnector::builder().unwrap().build().unwrap();
-                                    let tor_connector =
-                                        ArtiHttpConnector::new(client_check.clone(), tls_connector);
+                                    let tor_conn =
+                                        ArtiHttpConnector::new(client_check.clone(), tls_conn);
                                     let http =
-                                        hyper::Client::builder().build::<_, Body>(tor_connector);
+                                        hyper_tor::Client::builder().build::<_, hyper_tor::Body>(tor_conn);
 
                                     const MAX_ERRORS: i32 = 3;
                                     let mut errors_count = 0;
@@ -295,7 +294,7 @@ impl Tor {
                                         }
                                         // Send request.
                                         let duration = match http
-                                            .get(Uri::from_str(url.clone().as_str()).unwrap())
+                                            .get(hyper_tor::Uri::from_str(url.clone().as_str()).unwrap())
                                             .await
                                         {
                                             Ok(_) => {
