@@ -139,7 +139,7 @@ fn start_desktop_gui(platform: grim::gui::platform::Desktop) {
         ..Default::default()
     };
     // Use Glow renderer for Windows.
-    options.renderer = if is_win {
+    options.renderer = if is_win || is_mac {
         eframe::Renderer::Glow
     } else {
         eframe::Renderer::Wgpu
