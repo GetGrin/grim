@@ -123,9 +123,7 @@ impl QrCodeContent {
             self.qr_image_ui(svg, ui);
 
             // Show QR code text.
-            ui.add_space(6.0);
-            View::ellipsize_text(ui, self.text.clone(), 16.0, Colors::inactive_text());
-            ui.add_space(6.0);
+            self.text_ui(ui);
 
             ui.vertical_centered(|ui| {
                 let sharing = {
@@ -216,9 +214,7 @@ impl QrCodeContent {
             self.qr_image_ui(svg, ui);
 
             // Show QR code text.
-            ui.add_space(6.0);
-            View::ellipsize_text(ui, self.text.clone(), 16.0, Colors::inactive_text());
-            ui.add_space(6.0);
+            self.text_ui(ui);
 
             // Setup spacing between buttons.
             ui.spacing_mut().item_spacing = egui::Vec2::new(6.0, 0.0);
@@ -296,6 +292,13 @@ impl QrCodeContent {
             bg_shape.rect = content_rect;
             ui.painter().set(bg_idx, bg_shape);
         });
+    }
+
+    /// Draw QR code text.
+    fn text_ui(&self, ui: &mut egui::Ui) {
+        ui.add_space(6.0);
+        View::ellipsize_text(ui, self.text.clone(), 15.0, Colors::inactive_text());
+        ui.add_space(6.0);
     }
 
     /// Check if QR code is loading.
