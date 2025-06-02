@@ -12,26 +12,29 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use egui::epaint::RectShape;
+use egui::{SizeHint, TextureHandle, UiBuilder};
+use image::codecs::png::{CompressionType, FilterType, PngEncoder};
+use image::{ExtendedColorType, ImageEncoder};
+use parking_lot::RwLock;
+use qrcodegen::QrCode;
 use std::mem::size_of;
 use std::sync::Arc;
-use parking_lot::RwLock;
 use std::thread;
-use egui::{SizeHint, TextureHandle, UiBuilder};
-use egui::epaint::RectShape;
-use image::{ExtendedColorType, ImageEncoder};
-use image::codecs::png::{CompressionType, FilterType, PngEncoder};
-use qrcodegen::QrCode;
 
-use crate::gui::Colors;
-use crate::gui::icons::IMAGES_SQUARE;
+use crate::gui::icons::{COPY, IMAGES_SQUARE};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::types::QrImageState;
 use crate::gui::views::View;
+use crate::gui::Colors;
 
 /// QR code image from text.
 pub struct QrCodeContent {
     /// QR code text.
     text: String,
+
+    /// Maximum QR code size.
+    max_size: f32,
 
     /// Flag to draw animated QR with Uniform Resources
     /// https://github.com/BlockchainCommons/Research/blob/master/papers/bcr-2020-005-ur.md
@@ -53,12 +56,19 @@ impl QrCodeContent {
     pub fn new(text: String, animated: bool) -> Self {
         Self {
             text,
+            max_size: DEFAULT_QR_SIZE as f32,
             animated,
             animated_index: None,
             animation_time: None,
             texture_handle: None,
             qr_image_state: Arc::new(RwLock::new(QrImageState::default())),
         }
+    }
+
+    /// Setup maximum QR code size.
+    pub fn with_max_size(mut self, max_size: f32) -> Self {
+        self.max_size = max_size;
+        self
     }
 
     /// Draw QR code.
@@ -70,6 +80,9 @@ impl QrCodeContent {
             // Show static QR code.
             self.static_ui(ui, cb);
         }
+        ui.add_space(8.0);
+        View::horizontal_line(ui, Colors::item_stroke());
+        ui.add_space(8.0);
     }
 
     /// Draw animated QR code content.
@@ -120,18 +133,32 @@ impl QrCodeContent {
                     r_state.exporting || r_state.gif_creating
                 };
                 if !sharing {
-                    // Show button to share QR.
-                    let share_text = format!("{} {}", IMAGES_SQUARE, t!("share"));
-                    View::colored_text_button(ui,
-                                              share_text,
-                                              Colors::blue(),
-                                              Colors::white_or_black(false), || {
-                            {
-                                let mut w_state = self.qr_image_state.write();
-                                w_state.exporting = true;
-                            }
-                            // Create GIF to export.
-                            self.create_qr_gif();
+                    // Setup spacing between buttons.
+                    ui.spacing_mut().item_spacing = egui::Vec2::new(6.0, 0.0);
+
+                    ui.columns(2, |columns| {
+                        columns[0].vertical_centered_justified(|ui| {
+                            // Draw copy button.
+                            let copy_text = format!("{} {}", COPY, t!("copy"));
+                            View::button(ui, copy_text, Colors::white_or_black(false), || {
+                                cb.copy_string_to_buffer(self.text.clone());
+                            });
+                        });
+                        columns[1].vertical_centered_justified(|ui| {
+                            // Show button to share QR.
+                            let share_text = format!("{} {}", IMAGES_SQUARE, t!("share"));
+                            View::colored_text_button(ui,
+                                                      share_text,
+                                                      Colors::blue(),
+                                                      Colors::white_or_black(false), || {
+                                    {
+                                        let mut w_state = self.qr_image_state.write();
+                                        w_state.exporting = true;
+                                    }
+                                    // Create GIF to export.
+                                    self.create_qr_gif();
+                                });
+                        });
                     });
                 } else {
                     ui.vertical_centered(|ui| {
@@ -140,10 +167,6 @@ impl QrCodeContent {
                         ui.add_space(1.0);
                     });
                 }
-
-                ui.add_space(8.0);
-                View::horizontal_line(ui, Colors::item_stroke());
-                ui.add_space(8.0);
 
                 // Check if GIF was created to share.
                 let has_gif = {
@@ -197,66 +220,82 @@ impl QrCodeContent {
             View::ellipsize_text(ui, self.text.clone(), 16.0, Colors::inactive_text());
             ui.add_space(6.0);
 
-            // Show button to share QR.
-            ui.vertical_centered(|ui| {
-                let share_text = format!("{} {}", IMAGES_SQUARE, t!("share"));
-                View::colored_text_button(ui,
-                                          share_text,
-                                          Colors::blue(),
-                                          Colors::white_or_black(false), || {
-                        let text = self.text.as_str();
-                        if let Ok(qr) = QrCode::encode_text(text, qrcodegen::QrCodeEcc::Low) {
-                            if let Some(data) = Self::qr_to_image_data(qr, DEFAULT_QR_SIZE as usize) {
-                                let mut png = vec![];
-                                let png_enc = PngEncoder::new_with_quality(&mut png,
-                                                                           CompressionType::Best,
-                                                                           FilterType::NoFilter);
-                                if let Ok(()) = png_enc.write_image(data.as_slice(),
-                                                                    DEFAULT_QR_SIZE,
-                                                                    DEFAULT_QR_SIZE,
-                                                                    ExtendedColorType::L8) {
-                                    let name = format!("{}.png", chrono::Utc::now().timestamp());
-                                    cb.share_data(name, png).unwrap_or_default();
-                                }
-                            }
-                        }
+            // Setup spacing between buttons.
+            ui.spacing_mut().item_spacing = egui::Vec2::new(6.0, 0.0);
+
+            ui.columns(2, |columns| {
+                columns[0].vertical_centered_justified(|ui| {
+                    // Draw copy button.
+                    let copy_text = format!("{} {}", COPY, t!("copy"));
+                    View::button(ui, copy_text, Colors::white_or_black(false), || {
+                        cb.copy_string_to_buffer(self.text.clone());
+                    });
+                });
+                columns[1].vertical_centered_justified(|ui| {
+                    let share_text = format!("{} {}", IMAGES_SQUARE, t!("share"));
+                    View::colored_text_button(ui,
+                                              share_text,
+                                              Colors::blue(),
+                                              Colors::white_or_black(false), || {
+                            self.share_static(cb);
+                        });
                 });
             });
-            ui.add_space(8.0);
-            View::horizontal_line(ui, Colors::item_stroke());
-            ui.add_space(8.0);
+        }
+    }
+
+    /// Share static QR code image.
+    fn share_static(&self, cb: &dyn PlatformCallbacks) {
+        let text = self.text.as_str();
+        if let Ok(qr) = QrCode::encode_text(text, qrcodegen::QrCodeEcc::Low) {
+            let size = DEFAULT_QR_SIZE as usize;
+            if let Some(data) = Self::qr_to_image_data(qr, size) {
+                let mut png = vec![];
+                let png_enc = PngEncoder::new_with_quality(&mut png,
+                                                           CompressionType::Best,
+                                                           FilterType::NoFilter);
+                if let Ok(()) = png_enc.write_image(data.as_slice(),
+                                                    DEFAULT_QR_SIZE,
+                                                    DEFAULT_QR_SIZE,
+                                                    ExtendedColorType::L8) {
+                    let name = format!("{}.png", chrono::Utc::now().timestamp());
+                    cb.share_data(name, png).unwrap_or_default();
+                }
+            }
         }
     }
 
     /// Draw QR code image content.
     fn qr_image_ui(&mut self, svg: Vec<u8>, ui: &mut egui::Ui) {
-        let mut rect = ui.available_rect_before_wrap();
-        rect.min += egui::emath::vec2(10.0, 0.0);
-        rect.max -= egui::emath::vec2(10.0, 0.0);
+        View::max_width_ui(ui, self.max_size, |ui| {
+            let mut rect = ui.available_rect_before_wrap();
+            rect.min += egui::emath::vec2(10.0, 0.0);
+            rect.max -= egui::emath::vec2(10.0, 0.0);
 
-        // Create background shape.
-        let mut bg_shape = RectShape::new(
-            rect,
-            egui::CornerRadius::default(),
-            egui::Color32::WHITE,
-            egui::Stroke::NONE,
-            egui::StrokeKind::Outside
-        );
-        let bg_idx = ui.painter().add(bg_shape.clone());
+            // Create background shape.
+            let mut bg_shape = RectShape::new(
+                rect,
+                egui::CornerRadius::default(),
+                egui::Color32::WHITE,
+                egui::Stroke::NONE,
+                egui::StrokeKind::Outside
+            );
+            let bg_idx = ui.painter().add(bg_shape.clone());
 
-        // Draw QR code image content.
-        let mut content_rect = ui.scope_builder(UiBuilder::new().max_rect(rect), |ui| {
-            ui.add_space(10.0);
-            let size = SizeHint::Size(ui.available_width() as u32, ui.available_width() as u32);
-            self.texture_handle = Some(View::svg_image(ui, "qr_code", svg.as_slice(), Some(size)));
-            ui.add_space(10.0);
-        }).response.rect;
+            // Draw QR code image.
+            let mut content_rect = ui.scope_builder(UiBuilder::new().max_rect(rect), |ui| {
+                ui.add_space(10.0);
+                let size = SizeHint::Size(ui.available_width() as u32, ui.available_width() as u32);
+                self.texture_handle = Some(View::svg_image(ui, "qr", svg.as_slice(), Some(size)));
+                ui.add_space(10.0);
+            }).response.rect;
 
-        // Setup background size.
-        content_rect.min -= egui::emath::vec2(10.0, 0.0);
-        content_rect.max += egui::emath::vec2(10.0, 0.0);
-        bg_shape.rect = content_rect;
-        ui.painter().set(bg_idx, bg_shape);
+            // Setup background size.
+            content_rect.min -= egui::emath::vec2(10.0, 0.0);
+            content_rect.max += egui::emath::vec2(10.0, 0.0);
+            bg_shape.rect = content_rect;
+            ui.painter().set(bg_idx, bg_shape);
+        });
     }
 
     /// Check if QR code is loading.
