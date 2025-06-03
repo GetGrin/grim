@@ -27,6 +27,8 @@ use crate::wallet::{ConnectionsConfig, ExternalConnection};
 
 /// Network connections content.
 pub struct ConnectionsContent {
+    /// Flag to check connections state on first draw.
+    first_draw: bool,
     /// External connection [`Modal`] content.
     ext_conn_modal: ExternalConnectionModal,
 }
@@ -34,6 +36,7 @@ pub struct ConnectionsContent {
 impl Default for ConnectionsContent {
     fn default() -> Self {
         Self {
+            first_draw: true,
             ext_conn_modal: ExternalConnectionModal::new(None),
         }
     }
@@ -59,6 +62,12 @@ impl ContentContainer for ConnectionsContent {
     }
 
     fn container_ui(&mut self, ui: &mut egui::Ui, _: &dyn PlatformCallbacks) {
+        // Check connections state on first draw.
+        if self.first_draw {
+            ExternalConnection::check(None, ui.ctx());
+            self.first_draw = false;
+        }
+
         ui.add_space(2.0);
 
         // Show network type selection.

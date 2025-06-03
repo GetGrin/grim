@@ -21,7 +21,7 @@ use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, View};
 use crate::gui::views::network::ConnectionsContent;
 use crate::gui::views::network::modals::ExternalConnectionModal;
-use crate::wallet::ConnectionsConfig;
+use crate::wallet::{ConnectionsConfig, ExternalConnection};
 use crate::wallet::types::ConnectionMethod;
 
 /// Wallet connection selection [`Modal`] content.
@@ -29,8 +29,8 @@ pub struct WalletConnectionModal {
     /// Current connection method.
     pub conn: ConnectionMethod,
 
-    /// External connection content.
-    ext_conn_content: Option<ExternalConnectionModal>
+    /// External connection creation content.
+    new_ext_conn_content: Option<ExternalConnectionModal>
 }
 
 impl WalletConnectionModal {
@@ -38,7 +38,7 @@ impl WalletConnectionModal {
     pub fn new(conn: ConnectionMethod) -> Self {
         Self {
             conn,
-            ext_conn_content: None,
+            new_ext_conn_content: None,
         }
     }
 
@@ -48,12 +48,17 @@ impl WalletConnectionModal {
               modal: &Modal,
               cb: &dyn PlatformCallbacks,
               on_select: impl Fn(ConnectionMethod)) {
-        // Draw external connection content.
-        if let Some(ext_content) = self.ext_conn_content.as_mut() {
+        // Draw external connection creation content.
+        if let Some(ext_content) = self.new_ext_conn_content.as_mut() {
             ext_content.ui(ui, cb, modal, |conn| {
                 on_select(ConnectionMethod::External(conn.id, conn.url));
             });
             return;
+        }
+
+        // Check connections state on first draw.
+        if Modal::first_draw() {
+            ExternalConnection::check(None, ui.ctx());
         }
 
         ui.add_space(4.0);
@@ -97,7 +102,7 @@ impl WalletConnectionModal {
                     // Show button to add new external node connection.
                     let add_node_text = format!("{} {}", PLUS_CIRCLE, t!("wallets.add_node"));
                     View::button(ui, add_node_text, Colors::white_or_black(false), || {
-                        self.ext_conn_content = Some(ExternalConnectionModal::new(None));
+                        self.new_ext_conn_content = Some(ExternalConnectionModal::new(None));
                     });
                 });
                 ui.add_space(4.0);

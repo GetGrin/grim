@@ -12,20 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::{Id, Margin, RichText, ScrollArea};
 use egui::scroll_area::ScrollBarVisibility;
+use egui::{Id, Margin, RichText, ScrollArea};
 
-use crate::AppConfig;
-use crate::gui::Colors;
 use crate::gui::icons::{ARROWS_COUNTER_CLOCKWISE, ARROW_LEFT, BRIEFCASE, DATABASE, DOTS_THREE_OUTLINE_VERTICAL, FACTORY, FADERS, GAUGE, GEAR, POWER};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Content, TitlePanel, View};
-use crate::gui::views::network::{ConnectionsContent, NetworkMetrics, NetworkMining, NetworkNode, NetworkSettings};
 use crate::gui::views::network::types::{NodeTab, NodeTabType};
+use crate::gui::views::network::{ConnectionsContent, NetworkMetrics, NetworkMining, NetworkNode, NetworkSettings};
 use crate::gui::views::settings::SettingsContent;
 use crate::gui::views::types::{ContentContainer, LinePosition, TitleContentType, TitleType};
+use crate::gui::views::{Content, TitlePanel, View};
+use crate::gui::Colors;
 use crate::node::{Node, NodeConfig, NodeError};
-use crate::wallet::ExternalConnection;
+use crate::AppConfig;
 
 /// Network content.
 pub struct NetworkContent {
@@ -279,9 +278,6 @@ impl NetworkContent {
             } else if !show_connections {
                 View::title_button_big(ui, DOTS_THREE_OUTLINE_VERTICAL, |ui| {
                     AppConfig::toggle_show_connections_network_panel();
-                    if AppConfig::show_connections_network_panel() {
-                        ExternalConnection::check(None, ui.ctx());
-                    }
                 });
             } else if !dual_panel {
                 View::title_button_big(ui, GEAR, |_| {
