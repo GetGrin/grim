@@ -504,6 +504,7 @@ impl Wallet {
                     label: label.clone(),
                     path: id.to_bip_32_string(),
                 });
+                w_data.sort_by_key(|w| w.label != label.clone());
             }
             Ok(())
         })
@@ -1491,10 +1492,11 @@ fn start_api_server(wallet: &Wallet) -> Result<(ApiServer, u16), Error> {
 
 /// Update wallet accounts data.
 fn update_accounts(wallet: &Wallet, current_height: u64, current_spendable: Option<u64>) {
+    let current_account = wallet.get_config().account;
     if let Some(spendable) = current_spendable {
         let mut accounts = wallet.accounts.read().clone();
         for a in accounts.iter_mut() {
-            if a.label == wallet.get_config().account {
+            if a.label == current_account {
                 a.spendable_amount = spendable;
             }
         }
@@ -1518,15 +1520,14 @@ fn update_accounts(wallet: &Wallet, current_height: u64, current_spendable: Opti
                     });
                 }
             }
-            // Sort in reverse.
-            accounts.reverse();
+            accounts.sort_by_key(|w| w.label != current_account);
 
             // Save accounts data.
             let mut w_data = wallet.accounts.write();
             *w_data = accounts;
 
             // Set current active account from config.
-            api.set_active_account(m, wallet.get_config().account.as_str())?;
+            api.set_active_account(m, current_account.as_str())?;
 
             Ok(())
         });
