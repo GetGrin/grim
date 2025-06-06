@@ -122,7 +122,7 @@ impl MnemonicSetup {
         ui.add_space(6.0);
 
         // Show words setup.
-        self.word_list_ui(ui, false);
+        self.word_list_ui(ui, self.mnemonic.mode() == PhraseMode::Import);
     }
     /// Draw content for phrase confirmation step.
     pub fn confirm_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
