@@ -15,7 +15,7 @@
 use egui::scroll_area::ScrollBarVisibility;
 use egui::{Id, Margin, RichText, ScrollArea};
 
-use crate::gui::icons::{ARROWS_COUNTER_CLOCKWISE, ARROW_LEFT, BRIEFCASE, DATABASE, DOTS_THREE_OUTLINE_VERTICAL, FACTORY, FADERS, GAUGE, GEAR, POWER};
+use crate::gui::icons::{ARROWS_COUNTER_CLOCKWISE, ARROW_LEFT, BRIEFCASE, DATABASE, DOTS_THREE_OUTLINE_VERTICAL, FACTORY, FADERS, GAUGE, GEAR, GLOBE, POWER};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::network::types::{NodeTab, NodeTabType};
 use crate::gui::views::network::{ConnectionsContent, NetworkMetrics, NetworkMining, NetworkNode, NetworkSettings};
@@ -230,22 +230,26 @@ impl NetworkContent {
             let current_type = self.node_tab_content.get_type();
             ui.columns(4, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
-                    View::tab_button(ui, DATABASE, current_type == NodeTabType::Info, |_| {
+                    let active = Some(current_type == NodeTabType::Info);
+                    View::tab_button(ui, DATABASE, None, active, |_| {
                         self.node_tab_content = Box::new(NetworkNode::default());
                     });
                 });
                 columns[1].vertical_centered_justified(|ui| {
-                    View::tab_button(ui, GAUGE, current_type == NodeTabType::Metrics, |_| {
+                    let active = Some(current_type == NodeTabType::Metrics);
+                    View::tab_button(ui, GAUGE, None, active, |_| {
                         self.node_tab_content = Box::new(NetworkMetrics::default());
                     });
                 });
                 columns[2].vertical_centered_justified(|ui| {
-                    View::tab_button(ui, FACTORY, current_type == NodeTabType::Mining, |_| {
+                    let active = Some(current_type == NodeTabType::Mining);
+                    View::tab_button(ui, FACTORY, None, active, |_| {
                         self.node_tab_content = Box::new(NetworkMining::default());
                     });
                 });
                 columns[3].vertical_centered_justified(|ui| {
-                    View::tab_button(ui, FADERS, current_type == NodeTabType::Settings, |_| {
+                    let active = Some(current_type == NodeTabType::Settings);
+                    View::tab_button(ui, FADERS, None, active, |_| {
                         self.node_tab_content = Box::new(NetworkSettings::default());
                     });
                 });
@@ -276,7 +280,7 @@ impl NetworkContent {
                     self.settings_content = None;
                 });
             } else if !show_connections {
-                View::title_button_big(ui, DOTS_THREE_OUTLINE_VERTICAL, |ui| {
+                View::title_button_big(ui, GLOBE, |_| {
                     AppConfig::toggle_show_connections_network_panel();
                 });
             } else if !dual_panel {

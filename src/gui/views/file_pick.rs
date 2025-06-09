@@ -12,42 +12,58 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::{fs, thread};
+use egui::CornerRadius;
 use parking_lot::RwLock;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
+use std::{fs, thread};
 
-use crate::gui::Colors;
 use crate::gui::icons::ARCHIVE_BOX;
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::View;
+use crate::gui::Colors;
+
+/// Type of button.
+pub enum FilePickContentType {
+    Button, ItemButton(CornerRadius), Tab
+}
 
 /// Button to pick file and parse its data into text.
-pub struct FilePickButton {
+pub struct FilePickContent {
+    /// Content type.
+    content_type: FilePickContentType,
+
     /// Flag to check if file is picking.
-    pub file_picking: Arc<AtomicBool>,
+    file_picking: Arc<AtomicBool>,
+
+    /// Flag to parse file content after pick.
+    parse_file: bool,
     /// Flag to check if file is parsing.
-    pub file_parsing: Arc<AtomicBool>,
+    file_parsing: Arc<AtomicBool>,
     /// File parsing result.
-    pub file_parsing_result: Arc<RwLock<Option<String>>>
+    file_parsing_result: Arc<RwLock<Option<String>>>,
 }
 
-impl Default for FilePickButton {
-    fn default() -> Self {
+impl FilePickContent {
+    /// Create new content from provided type.
+    pub fn new(content_type: FilePickContentType) -> Self {
         Self {
+            content_type,
             file_picking: Arc::new(AtomicBool::new(false)),
+            parse_file: true,
             file_parsing: Arc::new(AtomicBool::new(false)),
-            file_parsing_result: Arc::new(RwLock::new(None))
+            file_parsing_result: Arc::new(RwLock::new(None)),
         }
     }
-}
 
-impl FilePickButton {
-    /// Draw button content.
-    pub fn ui(&mut self,
-              ui: &mut egui::Ui,
-              cb: &dyn PlatformCallbacks,
-              on_result: impl FnOnce(String)) {
+    /// Do not parse file content.
+    pub fn no_parse(mut self) -> Self {
+        self.parse_file = false;
+        self
+    }
+
+    /// Draw content with provided callback to return path of the file.
+    pub fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks, on_pick: impl FnOnce(String)) {
         if self.file_picking.load(Ordering::Relaxed) {
             View::small_loading_spinner(ui);
             // Check file pick result.
@@ -70,7 +86,7 @@ impl FilePickButton {
                     r_res.clone().unwrap()
                 };
                 // Callback on result.
-                on_result(text);
+                on_pick(text);
                 // Clear result.
                 let mut w_res = self.file_parsing_result.write();
                 *w_res = None;
@@ -78,12 +94,48 @@ impl FilePickButton {
             }
         } else {
             // Draw button to pick file.
-            let text = format!("{} {}", ARCHIVE_BOX, t!("choose_file"));
-            View::colored_text_button(ui, text, Colors::blue(), Colors::white_or_black(false), || {
-                if let Some(path) = cb.pick_file() {
-                    self.on_file_pick(path);
+            match self.content_type {
+                FilePickContentType::Button => {
+                    let text = format!("{} {}", ARCHIVE_BOX, t!("choose_file"));
+                    View::colored_text_button(ui,
+                                              text,
+                                              Colors::blue(),
+                                              Colors::white_or_black(false),
+                                              || {
+                                                  if let Some(path) = cb.pick_file() {
+                                                      if !self.parse_file {
+                                                          on_pick(path);
+                                                          return;
+                                                      }
+                                                      self.on_file_pick(path);
+                                                  }
+                                              });
                 }
-            });
+                FilePickContentType::ItemButton(r) => {
+                    View::item_button(ui, r, ARCHIVE_BOX, Some(Colors::blue()), || {
+                        if let Some(path) = cb.pick_file() {
+                            if !self.parse_file {
+                                on_pick(path);
+                                return;
+                            }
+                            self.on_file_pick(path);
+                        }
+                    });
+                }
+                FilePickContentType::Tab => {
+                    let active = self.file_parsing.load(Ordering::Relaxed) ||
+                        self.file_picking.load(Ordering::Relaxed);
+                    View::tab_button(ui, ARCHIVE_BOX, Some(Colors::blue()), Some(active), |_| {
+                        if let Some(path) = cb.pick_file() {
+                            if !self.parse_file {
+                                on_pick(path);
+                                return;
+                            }
+                            self.on_file_pick(path);
+                        }
+                    });
+                }
+            }
         }
     }
 
@@ -92,6 +144,10 @@ impl FilePickButton {
         // Wait for asynchronous file pick result if path is empty.
         if path.is_empty() {
             self.file_picking.store(true, Ordering::Relaxed);
+            return;
+        }
+        // Do not parse result.
+        if !self.parse_file {
             return;
         }
         self.file_parsing.store(true, Ordering::Relaxed);

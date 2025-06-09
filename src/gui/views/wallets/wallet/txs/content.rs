@@ -12,46 +12,36 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::ops::Range;
-use std::time::{SystemTime, UNIX_EPOCH};
-use egui::{Align, Id, Layout, Rect, RichText, CornerRadius, ScrollArea, StrokeKind};
 use egui::epaint::RectShape;
 use egui::scroll_area::ScrollBarVisibility;
+use egui::{Align, CornerRadius, Id, Layout, Rect, RichText, ScrollArea, StrokeKind};
 use grin_core::consensus::COINBASE_MATURITY;
 use grin_core::core::amount_to_hr_string;
 use grin_wallet_libwallet::TxLogEntryType;
+use std::ops::Range;
+use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::gui::Colors;
-use crate::gui::icons::{ARROW_CIRCLE_DOWN, ARROW_CIRCLE_UP, BRIDGE, CALENDAR_CHECK, CHAT_CIRCLE_TEXT, CHECK, DOTS_THREE_CIRCLE, FILE_TEXT, GEAR_FINE, PROHIBIT, X_CIRCLE};
+use crate::gui::icons::{ARCHIVE_BOX, ARROW_CIRCLE_DOWN, ARROW_CIRCLE_UP, CALENDAR_CHECK, CHECK, DOTS_THREE_CIRCLE, FILE_ARROW_DOWN, FILE_TEXT, GEAR_FINE, PROHIBIT, X_CIRCLE};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Modal, PullToRefresh, Content, View};
 use crate::gui::views::types::{LinePosition, ModalPosition};
 use crate::gui::views::wallets::types::WalletTab;
-use crate::gui::views::wallets::wallet::types::{GRIN, WalletTabType};
-use crate::gui::views::wallets::wallet::WalletTransactionModal;
+use crate::gui::views::wallets::wallet::types::{WalletTabType, GRIN};
+use crate::gui::views::wallets::wallet::WalletTransactionContent;
+use crate::gui::views::{Content, Modal, PullToRefresh, View};
+use crate::gui::Colors;
 use crate::wallet::types::{WalletData, WalletTransaction};
 use crate::wallet::Wallet;
 
 /// Wallet transactions tab content.
 pub struct WalletTransactions {
     /// Transaction information [`Modal`] content.
-    tx_info_content: Option<WalletTransactionModal>,
+    tx_info_content: Option<WalletTransactionContent>,
 
     /// Transaction identifier to use at confirmation [`Modal`].
     confirm_cancel_tx_id: Option<u32>,
 
     /// Flag to check if sync of wallet was initiated manually at time.
     manual_sync: Option<u128>
-}
-
-impl Default for WalletTransactions {
-    fn default() -> Self {
-        Self {
-            tx_info_content: None,
-            confirm_cancel_tx_id: None,
-            manual_sync: None,
-        }
-    }
 }
 
 impl WalletTab for WalletTransactions {
@@ -74,6 +64,19 @@ impl WalletTransactions {
     /// Height of transaction list item.
     pub const TX_ITEM_HEIGHT: f32 = 75.0;
 
+    /// Create new content instance with opening tx info.
+    pub fn new(tx: Option<WalletTransaction>) -> Self {
+        let mut content = Self {
+            tx_info_content: None,
+            confirm_cancel_tx_id: None,
+            manual_sync: None,
+        };
+        if let Some(tx) = &tx {
+            content.show_tx_info_modal(tx, false);
+        }
+        content
+    }
+
     /// Draw transactions content.
     fn txs_ui(&mut self, ui: &mut egui::Ui, wallet: &Wallet) {
         let data = wallet.get_data().unwrap();
@@ -84,15 +87,14 @@ impl WalletTransactions {
             return;
         }
         let txs = data.txs.as_ref().unwrap();
-        let mut awaiting_amount = false;
         View::max_width_ui(ui, Content::SIDE_PANEL_WIDTH * 1.3, |ui| {
             // Show message when txs are empty.
             if txs.is_empty() {
                 View::center_content(ui, 96.0, |ui| {
                     let empty_text = t!(
                             "wallets.txs_empty",
-                            "message" => CHAT_CIRCLE_TEXT,
-                            "transport" => BRIDGE,
+                            "message" => FILE_ARROW_DOWN,
+                            "transport" => ARCHIVE_BOX,
                             "settings" => GEAR_FINE
                         );
                     ui.label(RichText::new(empty_text)
@@ -102,7 +104,7 @@ impl WalletTransactions {
                 return;
             }
             // Draw awaiting amount info if exists.
-            awaiting_amount = self.awaiting_info_ui(ui, &data);
+           self.awaiting_info_ui(ui, &data);
         });
         ui.add_space(4.0);
 
@@ -120,7 +122,7 @@ impl WalletTransactions {
                     .show_rows(ui, Self::TX_ITEM_HEIGHT, txs.len(), |ui, row_range| {
                         ui.add_space(1.0);
                         View::max_width_ui(ui, Content::SIDE_PANEL_WIDTH * 1.3, |ui| {
-                            self.tx_list_ui(ui, awaiting_amount, row_range, wallet, txs);
+                            self.tx_list_ui(ui, row_range, wallet, txs);
                         });
                     })
             });
@@ -137,25 +139,19 @@ impl WalletTransactions {
     /// Draw transaction list content.
     fn tx_list_ui(&mut self,
                   ui: &mut egui::Ui,
-                  awaiting: bool,
                   row_range: Range<usize>,
                   wallet: &Wallet,
                   txs: &Vec<WalletTransaction>) {
         for index in row_range {
-            let mut rect = if awaiting {
-                let mut rect = ui.available_rect_before_wrap();
-                rect.min += egui::emath::vec2(6.0, 0.0);
-                rect.max -= egui::emath::vec2(6.0, 0.0);
-                rect
-            } else {
-                ui.available_rect_before_wrap()
-            };
+            let mut rect = ui.available_rect_before_wrap();
+            rect.min += egui::emath::vec2(6.0, 0.0);
+            rect.max -= egui::emath::vec2(6.0, 0.0);
             rect.set_height(Self::TX_ITEM_HEIGHT);
 
             // Draw tx item background.
             let mut r = View::item_rounding(index, txs.len(), false);
             let p = ui.painter();
-            p.rect(rect, r, Colors::fill_lite(), View::item_stroke(), StrokeKind::Middle);
+            p.rect(rect, r, Colors::fill(), View::item_stroke(), StrokeKind::Middle);
 
             let tx = txs.get(index).unwrap();
             let data = wallet.get_data().unwrap();
@@ -195,14 +191,15 @@ impl WalletTransactions {
         }
     }
 
-    /// Draw information about locked, finalizing or confirming balance, return `true` if exists.
-    fn awaiting_info_ui(&mut self, ui: &mut egui::Ui, data: &WalletData) -> bool {
+    /// Draw information about locked, finalizing or confirming balance.
+    fn awaiting_info_ui(&mut self, ui: &mut egui::Ui, data: &WalletData) {
         let amount_conf = data.info.amount_awaiting_confirmation;
         let amount_fin = data.info.amount_awaiting_finalization;
         let amount_locked = data.info.amount_locked;
         if amount_conf == 0 && amount_fin == 0 && amount_locked == 0 {
-            return false;
+            return;
         }
+        ui.add_space(-1.0);
         let rect = ui.available_rect_before_wrap();
         // Draw background.
         let mut bg = RectShape::new(rect, CornerRadius {
@@ -210,7 +207,7 @@ impl WalletTransactions {
             ne: 0.0 as u8,
             sw: 8.0 as u8,
             se: 8.0 as u8,
-        }, Colors::TRANSPARENT, View::item_stroke(), StrokeKind::Middle);
+        }, Colors::fill(), View::item_stroke(), StrokeKind::Middle);
         let bg_idx = ui.painter().add(bg.clone());
         let resp = ui.allocate_ui(rect.size(), |ui| {
             ui.vertical_centered_justified(|ui| {
@@ -233,7 +230,6 @@ impl WalletTransactions {
         // Setup background size.
         bg.rect = resp.rect;
         ui.painter().set(bg_idx, bg);
-        true
     }
 
     /// Draw [`Modal`] content for this ui container.
@@ -454,7 +450,7 @@ impl WalletTransactions {
 
     /// Show transaction information [`Modal`].
     fn show_tx_info_modal(&mut self, tx: &WalletTransaction, finalize: bool) {
-        let modal = WalletTransactionModal::new(Some(tx.data.id), finalize);
+        let modal = WalletTransactionContent::new(tx, finalize);
         self.tx_info_content = Some(modal);
         Modal::new(TX_INFO_MODAL)
             .position(ModalPosition::CenterTop)
@@ -529,5 +525,5 @@ fn awaiting_item_ui(ui: &mut egui::Ui, amount: u64, label: String) {
     ui.label(RichText::new(label)
         .color(Colors::gray())
         .size(15.0));
-    ui.add_space(4.0);
+    ui.add_space(8.0);
 }

@@ -45,14 +45,10 @@ impl WalletAccountsContent {
         ScrollArea::vertical()
             .id_salt("account_list_scroll")
             .scroll_bar_visibility(ScrollBarVisibility::AlwaysHidden)
-            .max_height(266.0)
+            .max_height(411.0)
             .auto_shrink([true; 2])
             .show_rows(ui, ACCOUNT_ITEM_HEIGHT, size, |ui, row_range| {
                 for index in row_range {
-                    // Add space before the first item.
-                    if index == 0 {
-                        ui.add_space(4.0);
-                    }
                     let acc = self.accounts.get(index).unwrap().clone();
                     self.account_item_ui(ui, &acc, index, size, || {
                         on_select(acc.clone());
@@ -100,15 +96,18 @@ impl WalletAccountsContent {
 
                 let layout_size = ui.available_size();
                 ui.allocate_ui_with_layout(layout_size, Layout::left_to_right(Align::Center), |ui| {
-                    ui.add_space(6.0);
+                    ui.add_space(8.0);
                     ui.vertical(|ui| {
-                        ui.add_space(4.0);
+                        ui.add_space(3.0);
                         // Show spendable amount.
                         let amount = amount_to_hr_string(acc.spendable_amount, true);
                         let amount_text = format!("{} {}", amount, GRIN);
-                        ui.label(RichText::new(amount_text)
-                            .size(18.0)
-                            .color(Colors::white_or_black(true)));
+                        ui.with_layout(Layout::left_to_right(Align::Min), |ui| {
+                            ui.add_space(1.0);
+                            ui.label(RichText::new(amount_text)
+                                .size(18.0)
+                                .color(Colors::white_or_black(true)));
+                        });
                         ui.add_space(-2.0);
 
                         // Show account name.

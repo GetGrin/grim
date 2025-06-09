@@ -19,7 +19,7 @@ use grin_util::ZeroingString;
 use crate::gui::Colors;
 use crate::gui::icons::{CHECK, CLIPBOARD_TEXT, COPY, SCAN};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Modal, Content, View, CameraScanModal};
+use crate::gui::views::{Modal, Content, View, CameraScanContent};
 use crate::gui::views::types::{LinePosition, ContentContainer, ModalPosition, QrScanResult};
 use crate::gui::views::wallets::creation::MnemonicSetup;
 use crate::gui::views::wallets::creation::types::Step;
@@ -39,7 +39,7 @@ pub struct WalletCreationContent {
     step: Step,
 
     /// QR code scanning [`Modal`] content.
-    scan_modal_content: Option<CameraScanModal>,
+    scan_modal_content: Option<CameraScanContent>,
 
     /// Mnemonic phrase setup content.
     mnemonic_setup: MnemonicSetup,
@@ -66,7 +66,7 @@ impl ContentContainer for WalletCreationContent {
         match modal.id {
             QR_CODE_PHRASE_SCAN_MODAL => {
                 if let Some(content) = self.scan_modal_content.as_mut() {
-                    content.ui(ui, cb, |result| {
+                    content.modal_ui(ui, cb, |result| {
                         match result {
                             QrScanResult::Text(text) => {
                                 self.mnemonic_setup.mnemonic.import(&text);
@@ -118,7 +118,7 @@ impl WalletCreationContent {
                     top: View::TAB_ITEMS_PADDING as i8,
                     bottom: (View::get_bottom_inset() + View::TAB_ITEMS_PADDING) as i8,
                 },
-                fill: Colors::fill_deep(),
+                fill: Colors::fill(),
                 ..Default::default()
             })
             .show_inside(ui, |ui| {
@@ -146,6 +146,7 @@ impl WalletCreationContent {
                     top: 3.0 as i8,
                     bottom: 4.0 as i8,
                 },
+                fill: Colors::fill_lite(),
                 ..Default::default()
             })
             .show_inside(ui, |ui| {
@@ -260,7 +261,7 @@ impl WalletCreationContent {
                                                     SCAN,
                                                     t!("scan").to_uppercase());
                             View::button(ui, scan_text, Colors::white_or_black(false), || {
-                                self.scan_modal_content = Some(CameraScanModal::default());
+                                self.scan_modal_content = Some(CameraScanContent::default());
                                 // Show QR code scan modal.
                                 Modal::new(QR_CODE_PHRASE_SCAN_MODAL)
                                     .position(ModalPosition::CenterTop)

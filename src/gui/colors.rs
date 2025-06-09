@@ -34,20 +34,20 @@ const GREEN: Color32 = Color32::from_rgb(0, 0x64, 0);
 const GREEN_DARK: Color32 = Color32::from_rgb(0, (0x64 as f32 * 1.3 + 0.5) as u8, 0);
 
 const RED: Color32 = Color32::from_rgb(0x8B, 0, 0);
-const RED_DARK: Color32 = Color32::from_rgb((0x8B as f32 * 1.3 + 0.5) as u8, 0, 0);
+const RED_DARK: Color32 = Color32::from_rgb((0x8B as f32 * 1.3 + 0.5) as u8, 50, 30);
 
 const BLUE: Color32 = Color32::from_rgb(0, 0x66, 0xE4);
 const BLUE_DARK: Color32 =
     Color32::from_rgb(0, (0x66 as f32 * 1.3 + 0.5) as u8, (0xE4 as f32 * 1.3 + 0.5) as u8);
 
 const FILL: Color32 = Color32::from_gray(244);
-const FILL_DARK: Color32 = Color32::from_gray(24);
+const FILL_DARK: Color32 = Color32::from_gray(26);
 
 const FILL_DEEP: Color32 = Color32::from_gray(238);
-const FILL_DEEP_DARK: Color32 = Color32::from_gray(18);
+const FILL_DEEP_DARK: Color32 = Color32::from_gray(32);
 
 const FILL_LITE: Color32 = Color32::from_gray(249);
-const FILL_LITE_DARK: Color32 = Color32::from_gray(16);
+const FILL_LITE_DARK: Color32 = Color32::from_gray(21);
 
 const TEXT: Color32 = Color32::from_gray(80);
 const TEXT_DARK: Color32 = Color32::from_gray(185);
@@ -231,7 +231,7 @@ impl Colors {
         }
     }
 
-    pub fn item_button() -> Color32 {
+    pub fn item_button_text() -> Color32 {
         if use_dark() {
             ITEM_BUTTON_DARK
         } else {

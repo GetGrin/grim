@@ -1,4 +1,4 @@
-// Copyright 2023 The Grim Developers
+// Copyright 2025 The Grim Developers
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,362 +14,197 @@
 
 use egui::{Align, CornerRadius, Layout, RichText, StrokeKind};
 
-use crate::gui::Colors;
-use crate::gui::icons::{CHECK_CIRCLE, COPY, DOTS_THREE_CIRCLE, EXPORT, GEAR_SIX, GLOBE_SIMPLE, POWER, QR_CODE, SHIELD_CHECKERED, SHIELD_SLASH, WARNING_CIRCLE, X_CIRCLE};
+use crate::gui::icons::{CIRCLE_HALF, DOTS_THREE_CIRCLE, PLUGS, PLUGS_CONNECTED, POWER, QR_CODE, SHIELD_CHECKERED, SHIELD_SLASH, WARNING_CIRCLE, WRENCH};
 use crate::gui::platform::PlatformCallbacks;
+use crate::gui::views::wallets::wallet::transport::settings::WalletTransportSettingsContent;
+use crate::gui::views::wallets::wallet::types::WalletContentContainer;
 use crate::gui::views::{Modal, QrCodeContent, View};
-use crate::gui::views::types::ModalPosition;
-use crate::gui::views::wallets::wallet::transport::send::TransportSendModal;
-use crate::gui::views::wallets::wallet::transport::settings::TransportSettingsModal;
-use crate::gui::views::wallets::wallet::types::{WalletTab, WalletTabType};
+use crate::gui::Colors;
 use crate::tor::{Tor, TorConfig};
-use crate::wallet::types::WalletData;
 use crate::wallet::Wallet;
 
-/// Wallet transport tab content.
-pub struct WalletTransport {
-    /// Sending [`Modal`] content.
-    send_modal_content: Option<TransportSendModal>,
+/// Wallet transport panel content.
+pub struct WalletTransportContent {
+    /// QR code address content.
+    pub qr_address_content: Option<QrCodeContent>,
 
-    /// QR code address image [`Modal`] content.
-    qr_address_content: Option<QrCodeContent>,
-
-    /// Tor settings [`Modal`] content.
-    settings_modal_content: Option<TransportSettingsModal>,
+    /// Settings content.
+    pub settings_content: Option<WalletTransportSettingsContent>,
 }
 
-impl WalletTab for WalletTransport {
-    fn get_type(&self) -> WalletTabType {
-        WalletTabType::Transport
+impl WalletContentContainer for WalletTransportContent {
+    fn modal_ids(&self) -> Vec<&'static str> { vec![] }
+
+    fn modal_ui(&mut self, _: &mut egui::Ui, _: &Wallet, _: &Modal, _: &dyn PlatformCallbacks) {
     }
 
-    fn ui(&mut self,
-          ui: &mut egui::Ui,
-          wallet: &Wallet,
-          cb: &dyn PlatformCallbacks) {
-        self.modal_content_ui(ui, wallet, cb);
-        self.transport_ui(ui, wallet, cb);
-    }
-}
+    fn container_ui(&mut self, ui: &mut egui::Ui, wallet: &Wallet, cb: &dyn PlatformCallbacks) {
+        if let Some(content) = self.qr_address_content.as_mut() {
+            ui.add_space(6.0);
 
-/// Identifier for [`Modal`] to send amount over Tor.
-const SEND_TOR_MODAL: &'static str = "send_tor_modal";
-/// Identifier for [`Modal`] to setup Tor service.
-const TOR_SETTINGS_MODAL: &'static str = "tor_settings_modal";
-/// Identifier for [`Modal`] to show QR code address image.
-const QR_ADDRESS_MODAL: &'static str = "qr_address_modal";
+            // Draw QR code content.
+            content.ui(ui, cb);
 
-impl WalletTransport {
-    /// Create new transport content instance, opening sending `Modal` if address was provided.
-    pub fn new(address: Option<String>) -> Self {
-        let mut content = Self {
-            send_modal_content: None,
-            qr_address_content: None,
-            settings_modal_content: None,
-        };
-        if address.is_some() {
-            content.show_send_tor_modal(address)
-        }
-        content
-    }
-
-    /// Draw wallet transport content.
-    fn transport_ui(&mut self, ui: &mut egui::Ui, wallet: &Wallet, cb: &dyn PlatformCallbacks) {
-        ui.add_space(3.0);
-        ui.label(RichText::new(t!("transport.desc"))
-            .size(16.0)
-            .color(Colors::inactive_text()));
-        ui.add_space(7.0);
-
-        // Draw Tor transport content.
-        self.tor_ui(ui, wallet, cb);
-    }
-
-    /// Draw [`Modal`] content for this ui container.
-    fn modal_content_ui(&mut self,
-                        ui: &mut egui::Ui,
-                        wallet: &Wallet,
-                        cb: &dyn PlatformCallbacks) {
-        match Modal::opened() {
-            None => {}
-            Some(id) => {
-                match id {
-                    SEND_TOR_MODAL => {
-                        if let Some(content) = self.send_modal_content.as_mut() {
-                            Modal::ui(ui.ctx(), cb, |ui, modal, cb| {
-                                content.ui(ui, wallet, modal, cb);
-                            });
-                        }
-                    }
-                    TOR_SETTINGS_MODAL => {
-                        if let Some(content) = self.settings_modal_content.as_mut() {
-                            Modal::ui(ui.ctx(), cb, |ui, modal, cb| {
-                                content.ui(ui, wallet, modal, cb);
-                            });
-                        }
-                    }
-                    QR_ADDRESS_MODAL => {
-                        Modal::ui(ui.ctx(), cb, |ui, _, cb| {
-                            self.qr_address_modal_ui(ui, cb);
-                        });
-                    }
-                    _ => {}
-                }
+            ui.vertical_centered_justified(|ui| {
+                View::button(ui, t!("close"), Colors::white_or_black(false), || {
+                    self.qr_address_content = None;
+                });
+            });
+            ui.add_space(6.0);
+        } else if let Some(content) = self.settings_content.as_mut() {
+            let mut closed = false;
+            content.ui(ui, wallet, cb, || {
+                closed = true;
+            });
+            if closed {
+                self.settings_content = None;
             }
+        } else {
+            self.tor_header_ui(ui, wallet);
         }
     }
+}
 
-    /// Draw Tor transport content.
-    fn tor_ui(&mut self, ui: &mut egui::Ui, wallet: &Wallet, cb: &dyn PlatformCallbacks) {
-        let data = wallet.get_data().unwrap();
-
-        // Draw header content.
-        self.tor_header_ui(ui, wallet);
-
-        // Draw receive info content.
-        if wallet.slatepack_address().is_some() {
-            self.tor_receive_ui(ui, wallet, &data, cb);
+impl Default for WalletTransportContent {
+    fn default() -> Self {
+        Self {
+            qr_address_content: None,
+            settings_content: None,
         }
+    }
+}
 
-        // Draw send content.
-        let service_id = &wallet.identifier();
-        if data.info.amount_currently_spendable > 0 && wallet.foreign_api_port().is_some() &&
-            !Tor::is_service_starting(service_id) {
-            self.tor_send_ui(ui);
+impl WalletTransportContent {
+    /// Check if it's possible to go back at navigation stack.
+    pub fn can_back(&self) -> bool {
+        self.settings_content.is_some() || self.qr_address_content.is_some()
+    }
+
+    /// Navigate back on navigation stack.
+    pub fn back(&mut self) {
+        if self.settings_content.is_some() {
+            self.settings_content = None;
+        } else if self.qr_address_content.is_some() {
+            self.qr_address_content = None;
         }
     }
 
     /// Draw Tor transport header content.
     fn tor_header_ui(&mut self, ui: &mut egui::Ui, wallet: &Wallet) {
+        let wallet_data = wallet.get_data();
+        if wallet_data.is_none() {
+            return;
+        }
+        let addr = wallet.slatepack_address().unwrap();
+
         // Setup layout size.
         let mut rect = ui.available_rect_before_wrap();
         rect.set_height(78.0);
 
         // Draw round background.
-        let bg_rect = rect.clone();
-        let item_rounding = View::item_rounding(0, 2, false);
-        ui.painter().rect(bg_rect,
-                          item_rounding,
-                          Colors::fill_lite(),
+        let info = wallet.get_data().unwrap().info;
+        let awaiting_balance = info.amount_awaiting_confirmation > 0 ||
+            info.amount_awaiting_finalization > 0 || info.amount_locked > 0;
+        let rounding = if awaiting_balance {
+            View::item_rounding(1, 3, false)
+        } else {
+            View::item_rounding(1, 2, false)
+        };
+        ui.painter().rect(rect,
+                          rounding,
+                          Colors::fill(),
                           View::item_stroke(),
-                          StrokeKind::Middle);
+                          StrokeKind::Outside);
 
         ui.vertical(|ui| {
             ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
-                // Draw button to setup Tor transport.
-                let button_rounding = View::item_rounding(0, 2, true);
-                View::item_button(ui, button_rounding, GEAR_SIX, None, || {
-                    self.settings_modal_content = Some(TransportSettingsModal::default());
-                    // Show Tor settings modal.
-                    Modal::new(TOR_SETTINGS_MODAL)
-                        .position(ModalPosition::CenterTop)
-                        .title(t!("transport.tor_settings"))
-                        .closeable(false)
-                        .show();
+                // Show button to show QR code address.
+                View::item_button(ui,  View::item_rounding(1, 2, true), QR_CODE, None, || {
+                    self.qr_address_content = Some(QrCodeContent::new(addr.clone(), false)
+                        .with_max_size(320.0));
                 });
 
                 // Draw button to enable/disable Tor listener for current wallet.
                 let service_id = &wallet.identifier();
                 if  !Tor::is_service_starting(service_id) && wallet.foreign_api_port().is_some() {
                     if !Tor::is_service_running(service_id) {
-                        View::item_button(ui, CornerRadius::default(), POWER, Some(Colors::green()), || {
+                        let r = CornerRadius::default();
+                        View::item_button(ui, r, POWER, Some(Colors::green()), || {
                             if let Ok(key) = wallet.secret_key() {
                                 let api_port = wallet.foreign_api_port().unwrap();
                                 Tor::start_service(api_port, key, service_id);
                             }
                         });
                     } else {
-                        View::item_button(ui, CornerRadius::default(), POWER, Some(Colors::red()), || {
+                        let r = CornerRadius::default();
+                        View::item_button(ui, r, POWER, Some(Colors::red()), || {
                             Tor::stop_service(service_id);
                         });
                     }
                 }
 
+                // Draw button to show Tor transport settings.
+                let button_rounding = View::item_rounding(1, 3, true);
+                View::item_button(ui, button_rounding, WRENCH, None, || {
+                    self.settings_content = Some(WalletTransportSettingsContent::default());
+                });
+
                 let layout_size = ui.available_size();
                 ui.allocate_ui_with_layout(layout_size, Layout::left_to_right(Align::Center), |ui| {
                     ui.add_space(6.0);
                     ui.vertical(|ui| {
                         ui.add_space(3.0);
-                        ui.with_layout(Layout::left_to_right(Align::Min), |ui| {
-                            ui.add_space(1.0);
-                            ui.label(RichText::new(t!("transport.tor_network"))
-                                .size(18.0)
-                                .color(Colors::title(false)));
-                        });
 
-                        // Setup Tor status text.
                         let is_running = Tor::is_service_running(service_id);
-                        let is_starting = Tor::is_service_starting(service_id);
                         let has_error = Tor::is_service_failed(service_id);
-                        let (icon, text) = if wallet.foreign_api_port().is_none() {
-                            (DOTS_THREE_CIRCLE, t!("wallets.loading"))
-                        } else if is_starting {
+                        let address_color = if is_running {
+                            Colors::green()
+                        } else if has_error {
+                            Colors::red()
+                        } else {
+                            Colors::inactive_text()
+                        };
+                        let is_starting = Tor::is_service_starting(service_id);
+                        // Show slatepack address text.
+                        View::animate_text(ui, addr.clone(), 17.0, address_color, is_starting);
+                        ui.add_space(1.0);
+
+                        let (icon, text) = if is_starting {
                             (DOTS_THREE_CIRCLE, t!("transport.connecting"))
                         } else if has_error {
                             (WARNING_CIRCLE, t!("transport.conn_error"))
                         } else if is_running {
-                            (CHECK_CIRCLE, t!("transport.connected"))
+                            (PLUGS_CONNECTED, t!("transport.connected"))
+                        } else if let Some(_) = TorConfig::get_proxy() {
+                            (PLUGS_CONNECTED, t!("app_settings.proxy"))
                         } else {
-                            (X_CIRCLE, t!("transport.disconnected"))
+                            (PLUGS, t!("transport.disconnected"))
                         };
                         let status_text = format!("{} {}", icon, text);
-                        ui.label(RichText::new(status_text).size(15.0).color(Colors::text(false)));
+                        // Show connection status text.
+                        View::ellipsize_text(ui, status_text, 15.0, Colors::text(false));
                         ui.add_space(1.0);
 
-                        // Setup bridges status text.
-                        let bridge = TorConfig::get_bridge();
-                        let bridges_text = match &bridge {
-                            None => {
-                                format!("{} {}", SHIELD_SLASH, t!("transport.bridges_disabled"))
+                        let bridges_text = if is_starting || has_error {
+                            match TorConfig::get_bridge() {
+                                None => {
+                                    format!("{} {}", SHIELD_SLASH, t!("transport.bridges_disabled"))
+                                }
+                                Some(b) => {
+                                    let name = b.protocol_name().to_uppercase();
+                                    format!("{} {}",
+                                            SHIELD_CHECKERED,
+                                            t!("transport.bridge_name", "b" = name))
+                                }
                             }
-                            Some(b) => {
-                                let name = b.protocol_name().to_uppercase();
-                                format!("{} {}",
-                                        SHIELD_CHECKERED,
-                                        t!("transport.bridge_name", "b" = name))
-                            }
+                        } else {
+                            format!("{} {}", CIRCLE_HALF, t!("transport.tor_network"))
                         };
-
+                        // Show bridge info text.
                         ui.label(RichText::new(bridges_text).size(15.0).color(Colors::gray()));
                     });
                 });
             });
         });
-    }
-
-    /// Draw Tor receive content.
-    fn tor_receive_ui(&mut self,
-                      ui: &mut egui::Ui,
-                      wallet: &Wallet,
-                      data: &WalletData,
-                      cb: &dyn PlatformCallbacks) {
-        let addr = wallet.slatepack_address().unwrap();
-        let service_id = &wallet.identifier();
-        let can_send = data.info.amount_currently_spendable > 0;
-
-        // Setup layout size.
-        let mut rect = ui.available_rect_before_wrap();
-        rect.set_height(52.0);
-
-        // Draw round background.
-        let bg_rect = rect.clone();
-        let item_rounding = if can_send {
-            View::item_rounding(1, 3, false)
-        } else {
-            View::item_rounding(1, 2, false)
-        };
-        ui.painter().rect(bg_rect,
-                          item_rounding,
-                          Colors::fill_lite(),
-                          View::item_stroke(),
-                          StrokeKind::Middle);
-
-        ui.vertical(|ui| {
-            ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
-                // Draw button to setup Tor transport.
-                let button_rounding = if can_send {
-                    View::item_rounding(1, 3, true)
-                } else {
-                    View::item_rounding(1, 2, true)
-                };
-                View::item_button(ui, button_rounding, QR_CODE, None, || {
-                    // Show QR code image address modal.
-                    self.qr_address_content = Some(QrCodeContent::new(addr.clone(), false));
-                    Modal::new(QR_ADDRESS_MODAL)
-                        .position(ModalPosition::CenterTop)
-                        .title(t!("network_mining.address"))
-                        .show();
-                });
-
-                // Show button to enable/disable Tor listener for current wallet.
-                View::item_button(ui, CornerRadius::default(), COPY, None, || {
-                    cb.copy_string_to_buffer(addr.clone());
-                });
-
-                let layout_size = ui.available_size();
-                ui.allocate_ui_with_layout(layout_size, Layout::left_to_right(Align::Center), |ui| {
-                    ui.add_space(6.0);
-                    ui.vertical(|ui| {
-                        ui.add_space(3.0);
-
-                        // Show wallet Slatepack address.
-                        let address_color = if Tor::is_service_starting(service_id) ||
-                            wallet.foreign_api_port().is_none() {
-                            Colors::inactive_text()
-                        } else if Tor::is_service_running(service_id) {
-                            Colors::green()
-                        } else {
-                            Colors::red()
-                        };
-                        View::ellipsize_text(ui, addr, 15.0, address_color);
-
-                        let address_label = format!("{} {}",
-                                                    GLOBE_SIMPLE,
-                                                    t!("network_mining.address"));
-                        ui.label(RichText::new(address_label).size(15.0).color(Colors::gray()));
-                    });
-                });
-            });
-        });
-    }
-
-    /// Draw QR code image address [`Modal`] content.
-    fn qr_address_modal_ui(&mut self,
-                           ui: &mut egui::Ui,
-                           cb: &dyn PlatformCallbacks) {
-        ui.add_space(6.0);
-
-        // Draw QR code content.
-        if let Some(content) = self.qr_address_content.as_mut() {
-            content.ui(ui, cb);
-        } else {
-            Modal::close();
-            return;
-        }
-
-        ui.vertical_centered_justified(|ui| {
-            View::button(ui, t!("close"), Colors::white_or_black(false), || {
-                self.qr_address_content = None;
-                Modal::close();
-            });
-        });
-        ui.add_space(6.0);
-    }
-
-    /// Draw Tor send content.
-    fn tor_send_ui(&mut self, ui: &mut egui::Ui) {
-        // Setup layout size.
-        let mut rect = ui.available_rect_before_wrap();
-        rect.set_height(55.0);
-
-        // Draw round background.
-        let bg_rect = rect.clone();
-        let item_rounding = View::item_rounding(1, 2, false);
-        ui.painter().rect(bg_rect,
-                          item_rounding,
-                          Colors::fill(),
-                          View::item_stroke(),
-                          StrokeKind::Middle);
-
-        ui.vertical(|ui| {
-            ui.allocate_ui_with_layout(rect.size(), Layout::top_down(Align::Center), |ui| {
-                ui.add_space(7.0);
-                // Draw button to open sending modal.
-                let send_text = format!("{} {}", EXPORT, t!("wallets.send"));
-                View::button(ui, send_text, Colors::white_or_black(false), || {
-                    self.show_send_tor_modal(None);
-                });
-            });
-        });
-    }
-
-    /// Show [`Modal`] to send over Tor.
-    fn show_send_tor_modal(&mut self, address: Option<String>) {
-        self.send_modal_content = Some(TransportSendModal::new(address));
-        // Show modal.
-        Modal::new(SEND_TOR_MODAL)
-            .position(ModalPosition::CenterTop)
-            .title(t!("wallets.send"))
-            .show();
     }
 }

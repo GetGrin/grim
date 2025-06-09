@@ -16,12 +16,12 @@ use egui::{Id, RichText};
 use grin_chain::SyncStatus;
 use grin_util::ZeroingString;
 
-use crate::gui::Colors;
-use crate::gui::icons::{EYE, LIFEBUOY, STETHOSCOPE, TRASH, WRENCH};
+use crate::gui::icons::{EYE, KEY, LIFEBUOY, STETHOSCOPE, TRASH};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Modal, TextEdit, View};
 use crate::gui::views::types::ModalPosition;
 use crate::gui::views::wallets::wallet::types::WalletContentContainer;
+use crate::gui::views::{Modal, TextEdit, View};
+use crate::gui::Colors;
 use crate::node::Node;
 use crate::wallet::types::ConnectionMethod;
 use crate::wallet::Wallet;
@@ -69,7 +69,7 @@ impl WalletContentContainer for RecoverySettings {
         ui.add_space(10.0);
         View::horizontal_line(ui, Colors::stroke());
         ui.add_space(6.0);
-        View::sub_title(ui, format!("{} {}", WRENCH, t!("wallets.recovery")));
+        View::sub_title(ui, format!("{} {}", KEY, t!("wallets.recovery")));
         View::horizontal_line(ui, Colors::stroke());
         ui.add_space(4.0);
 

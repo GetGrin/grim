@@ -24,14 +24,14 @@ use grin_wallet_libwallet::{Error, Slate, SlateState, TxLogEntryType};
 use crate::gui::Colors;
 use crate::gui::icons::{BROOM, CHECK, CLIPBOARD_TEXT, COPY, CUBE, FILE_ARCHIVE, FILE_TEXT, HASH_STRAIGHT, PROHIBIT, QR_CODE, SCAN};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{CameraContent, FilePickButton, Modal, QrCodeContent, View};
+use crate::gui::views::{CameraContent, FilePickContent, FilePickContentType, Modal, QrCodeContent, View};
 use crate::gui::views::wallets::wallet::txs::WalletTransactions;
 use crate::gui::views::wallets::wallet::types::SLATEPACK_MESSAGE_HINT;
 use crate::wallet::types::WalletTransaction;
 use crate::wallet::Wallet;
 
 /// Transaction information [`Modal`] content.
-pub struct WalletTransactionModal {
+pub struct WalletTransactionContent {
     /// Transaction identifier.
     tx_id: u32,
 
@@ -56,14 +56,14 @@ pub struct WalletTransactionModal {
     scan_qr_content: Option<CameraContent>,
 
     /// Button to parse picked file content.
-    file_pick_button: FilePickButton,
+    file_pick_button: FilePickContent,
 }
 
-impl WalletTransactionModal {
+impl WalletTransactionContent {
     /// Create new content instance with [`Wallet`] from provided [`WalletTransaction`].
-    pub fn new(tx_id: Option<u32>, show_finalization: bool) -> Self {
+    pub fn new(tx: &WalletTransaction, show_finalization: bool) -> Self {
         Self {
-            tx_id: tx_id.unwrap_or(0),
+            tx_id: tx.data.id,
             response_edit: None,
             finalize_edit: "".to_string(),
             finalize_error: false,
@@ -72,7 +72,7 @@ impl WalletTransactionModal {
             final_result: Arc::new(RwLock::new(None)),
             qr_code_content: None,
             scan_qr_content: None,
-            file_pick_button: FilePickButton::default(),
+            file_pick_button: FilePickContent::new(FilePickContentType::Button),
         }
     }
 

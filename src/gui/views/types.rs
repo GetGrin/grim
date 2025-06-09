@@ -77,7 +77,7 @@ pub trait ContentContainer {
 #[derive(Clone)]
 pub enum QrScanResult {
     /// Slatepack message.
-    Slatepack(ZeroingString),
+    Slatepack(String),
     /// Slatepack address.
     Address(ZeroingString),
     /// Parsed text.

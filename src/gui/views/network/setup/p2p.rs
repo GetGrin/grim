@@ -764,10 +764,8 @@ fn peer_item_ui(ui: &mut egui::Ui,
     rect.set_height(42.0);
 
     // Draw round background.
-    let mut bg_rect = rect.clone();
-    bg_rect.min += egui::emath::vec2(6.0, 0.0);
     let item_rounding = View::item_rounding(index, len, false);
-    ui.painter().rect(bg_rect,
+    ui.painter().rect(rect,
                       item_rounding,
                       Colors::white_or_black(false),
                       View::item_stroke(),
@@ -798,7 +796,7 @@ fn peer_item_ui(ui: &mut egui::Ui,
 
             let layout_size = ui.available_size();
             ui.allocate_ui_with_layout(layout_size, Layout::left_to_right(Align::Center), |ui| {
-                ui.add_space(12.0);
+                ui.add_space(6.0);
                 // Draw peer address.
                 let peer_text = format!("{} {}", GLOBE_SIMPLE, &peer_addr);
                 ui.label(RichText::new(peer_text)

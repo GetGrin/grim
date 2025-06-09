@@ -161,7 +161,7 @@ pub fn setup_visuals(ctx: &Context) {
     } else {
         Colors::yellow()
     };
-    visuals.widgets.inactive.fg_stroke.color = Colors::item_button();
+    visuals.widgets.inactive.fg_stroke.color = Colors::item_button_text();
     // Setup visuals.
     ctx.set_visuals(visuals);
 }

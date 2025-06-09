@@ -25,18 +25,14 @@ pub struct OpenWalletModal {
     pass_edit: String,
     /// Flag to check if wrong password was entered.
     wrong_pass: bool,
-
-    /// Optional data to pass after wallet opening.
-    data: Option<String>,
 }
 
 impl OpenWalletModal {
     /// Create new content instance.
-    pub fn new(data: Option<String>) -> Self {
+    pub fn new() -> Self {
         Self {
             pass_edit: "".to_string(),
             wrong_pass: false,
-            data,
         }
     }
     /// Draw [`Modal`] content.
@@ -44,14 +40,14 @@ impl OpenWalletModal {
               ui: &mut egui::Ui,
               modal: &Modal,
               cb: &dyn PlatformCallbacks,
-              mut on_continue: impl FnMut(ZeroingString, &Option<String>) -> bool) {
+              mut on_continue: impl FnMut(ZeroingString) -> bool) {
         // Callback for button to continue.
         let mut on_continue = |m: &mut OpenWalletModal| {
             let pass = m.pass_edit.clone();
             if pass.is_empty() {
                 return;
             }
-            m.wrong_pass = !on_continue(ZeroingString::from(pass), &m.data);
+            m.wrong_pass = !on_continue(ZeroingString::from(pass));
             if !m.wrong_pass {
                 m.pass_edit = "".to_string();
                 Modal::close();

@@ -13,7 +13,13 @@
 // limitations under the License.
 
 mod content;
-mod interface;
-mod network;
-
 pub use content::*;
+
+mod interface;
+pub use interface::*;
+
+mod network;
+pub use network::*;
+
+mod tor;
+pub use tor::*;

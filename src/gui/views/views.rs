@@ -197,17 +197,31 @@ impl View {
     /// Tab button with white background fill color, contains only icon.
     pub fn tab_button(ui: &mut egui::Ui,
                       icon: &str,
-                      active: bool,
+                      color: Option<Color32>,
+                      selected: Option<bool>,
                       action: impl FnOnce(&mut egui::Ui)) {
         ui.scope(|ui| {
-            let text_color = match active {
-                true => Colors::title(false),
-                false => Colors::text(false)
+            let text_color = if let Some(c) = color {
+                if selected.is_none() {
+                    Colors::inactive_text().gamma_multiply(1.2)
+                } else {
+                    c
+                }
+            } else {
+                if let Some(active) = selected {
+                    match active {
+                        true => Colors::gray(),
+                        false => Colors::item_button_text()
+                    }
+                } else {
+                    Colors::inactive_text().gamma_multiply(1.2)
+                }
             };
 
             let mut button = Button::new(RichText::new(icon).size(22.0).color(text_color));
 
-            if !active {
+            let active_not_selected = selected.is_some() && !selected.unwrap();
+            if active_not_selected {
                 // Disable expansion on click/hover.
                 ui.style_mut().visuals.widgets.hovered.expansion = 0.0;
                 ui.style_mut().visuals.widgets.active.expansion = 0.0;
@@ -223,7 +237,13 @@ impl View {
                 button = button.fill(Colors::fill()).stroke(Stroke::NONE);
             }
 
-            let br = button.ui(ui).on_hover_cursor(CursorIcon::PointingHand);
+            // Setup pointer style.
+            let br = if active_not_selected {
+                button.ui(ui).on_hover_cursor(CursorIcon::PointingHand)
+            } else {
+                button.ui(ui)
+            };
+
             br.surrender_focus();
             if br.clicked() {
                 action(ui);
@@ -322,7 +342,7 @@ impl View {
             ui.visuals_mut().widgets.active.bg_stroke = Stroke::NONE;
 
             // Setup button text color.
-            let text_color = if let Some(c) = color { c } else { Colors::item_button() };
+            let text_color = if let Some(c) = color { c } else { Colors::item_button_text() };
 
             // Show button.
             let br = Button::new(RichText::new(text).size(20.0).color(text_color))
@@ -592,7 +612,9 @@ impl View {
         if resp.clicked() || resp.dragged() {
             on_click();
         }
-        let shape = RectShape::filled(resp.rect, CornerRadius::ZERO, Colors::semi_transparent());
+        let shape = RectShape::filled(resp.rect,
+                                      CornerRadius::ZERO,
+                                      Colors::semi_transparent().gamma_multiply(0.7));
         ui.painter().add(shape);
     }
 

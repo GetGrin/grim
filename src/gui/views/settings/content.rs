@@ -14,8 +14,7 @@
 
 use crate::gui::icons::GLOBE_SIMPLE;
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::settings::interface::InterfaceSettingsContent;
-use crate::gui::views::settings::network::NetworkSettingsContent;
+use crate::gui::views::settings::{InterfaceSettingsContent, NetworkSettingsContent};
 use crate::gui::views::types::ContentContainer;
 use crate::gui::views::View;
 use crate::gui::Colors;
@@ -26,6 +25,7 @@ pub struct SettingsContent {
     interface_settings: InterfaceSettingsContent,
     /// Network communication settings.
     network_settings: NetworkSettingsContent,
+    // tor_settings: TorSettingsContent,
 }
 
 impl Default for SettingsContent {
@@ -33,6 +33,7 @@ impl Default for SettingsContent {
         Self {
             interface_settings: InterfaceSettingsContent::default(),
             network_settings: NetworkSettingsContent::default(),
+            //tor_settings: TorSettingsContent::default(),
         }
     }
 }
@@ -53,6 +54,22 @@ impl SettingsContent {
 
         // Show network settings.
         self.network_settings.ui(ui, cb);
-        ui.add_space(6.0);
+        ui.add_space(8.0);
+
+        // Do not show Tor settings on Android.
+        // let os = OperatingSystem::from_target_os();
+        // let show_tor = os != OperatingSystem::Android;
+        // if show_tor {
+        //     View::horizontal_line(ui, Colors::stroke());
+        //     ui.add_space(6.0);
+        // 
+        //     View::sub_title(ui, format!("{} {}", CIRCLE_HALF, t!("transport.tor_network")));
+        //     View::horizontal_line(ui, Colors::stroke());
+        //     ui.add_space(6.0);
+        // 
+        //     // Show Tor settings.
+        //     self.tor_settings.ui(ui, cb);
+        //     ui.add_space(8.0);
+        // }
     }
 }

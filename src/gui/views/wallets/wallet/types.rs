@@ -57,8 +57,6 @@ pub trait WalletTab {
 #[derive(PartialEq)]
 pub enum WalletTabType {
     Txs,
-    Messages,
-    Transport,
     Settings
 }
 
@@ -67,8 +65,6 @@ impl WalletTabType {
     pub fn name(&self) -> String {
         match *self {
             WalletTabType::Txs => t!("wallets.txs"),
-            WalletTabType::Messages => t!("wallets.messages"),
-            WalletTabType::Transport => t!("wallets.transport"),
             WalletTabType::Settings => t!("wallets.settings")
         }
     }

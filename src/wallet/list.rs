@@ -24,12 +24,19 @@ pub struct WalletList {
     pub main_list: Vec<Wallet>,
     /// List of wallets for [`ChainTypes::Testnet`].
     pub test_list: Vec<Wallet>,
+
+    /// Selected wallet id.
+    selected: Option<i64>,
 }
 
 impl Default for WalletList {
     fn default() -> Self {
         let (main_list, test_list) = Self::init();
-        Self { main_list, test_list }
+        Self {
+            main_list,
+            test_list,
+            selected: None
+        }
     }
 }
 
@@ -95,5 +102,24 @@ impl WalletList {
                 return;
             }
         }
+    }
+
+    /// Select wallet.
+    pub fn select(&mut self, id: Option<i64>) {
+        self.selected = id;
+    }
+
+    /// Get selected wallet.
+    pub fn selected(&self) -> Box<Option<&Wallet>> {
+        if self.selected.is_none() {
+            return Box::new(None);
+        }
+        let list = self.list();
+        for wallet in list {
+            if wallet.get_config().id == self.selected.unwrap() {
+                return Box::new(Some(wallet));
+            }
+        }
+        Box::new(None)
     }
 }

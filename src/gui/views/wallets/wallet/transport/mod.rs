@@ -1,4 +1,4 @@
-// Copyright 2024 The Grim Developers
+// Copyright 2025 The Grim Developers
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,5 +15,4 @@
 mod content;
 pub use content::*;
 
-mod send;
 mod settings;

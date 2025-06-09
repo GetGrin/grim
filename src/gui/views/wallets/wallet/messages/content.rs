@@ -23,11 +23,11 @@ use parking_lot::RwLock;
 use crate::gui::Colors;
 use crate::gui::icons::{BROOM, CLIPBOARD_TEXT, DOWNLOAD_SIMPLE, SCAN, UPLOAD_SIMPLE};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{FilePickButton, Modal, View, CameraScanModal};
+use crate::gui::views::{FilePickContent, Modal, View, CameraScanContent, FilePickContentType};
 use crate::gui::views::types::{ModalPosition, QrScanResult};
-use crate::gui::views::wallets::wallet::messages::request::MessageRequestModal;
+use crate::gui::views::wallets::wallet::messages::request::RequestModalContent;
 use crate::gui::views::wallets::wallet::types::{SLATEPACK_MESSAGE_HINT, WalletTab, WalletTabType};
-use crate::gui::views::wallets::wallet::WalletTransactionModal;
+use crate::gui::views::wallets::wallet::WalletTransactionContent;
 use crate::wallet::types::WalletTransaction;
 use crate::wallet::Wallet;
 
@@ -37,10 +37,7 @@ pub struct WalletMessages {
     first_draw: bool,
 
     /// Invoice or sending request creation [`Modal`] content.
-    request_modal_content: MessageRequestModal,
-
-    /// Wallet transaction [`Modal`] content.
-    tx_info_content: WalletTransactionModal,
+    request_modal_content: RequestModalContent,
 
     /// Slatepacks message input text.
     message_edit: String,
@@ -52,10 +49,10 @@ pub struct WalletMessages {
     message_result: Arc<RwLock<Option<(Slate, Result<WalletTransaction, Error>)>>>,
 
     /// QR code scanner [`Modal`] content.
-    scan_modal_content: Option<CameraScanModal>,
+    scan_modal_content: Option<CameraScanContent>,
 
     /// Button to parse picked file content.
-    file_pick_button: FilePickButton,
+    file_pick_button: FilePickContent,
 }
 
 /// Identifier for amount input [`Modal`] to create invoice or sending request.
@@ -64,17 +61,6 @@ const REQUEST_MODAL: &'static str = "messages_request_modal";
 const TX_INFO_MODAL: &'static str = "messages_tx_info_modal";
 /// Identifier for [`Modal`] to scan Slatepack message from QR code.
 const SCAN_QR_MODAL: &'static str = "messages_scan_qr_modal";
-
-impl WalletTab for WalletMessages {
-    fn get_type(&self) -> WalletTabType {
-        WalletTabType::Messages
-    }
-
-    fn ui(&mut self, ui: &mut egui::Ui, wallet: &Wallet, cb: &dyn PlatformCallbacks) {
-        self.modal_content_ui(ui, wallet, cb);
-        self.messages_ui(ui, wallet, cb);
-    }
-}
 
 impl WalletMessages {
     /// Create new content instance, put message into input if provided.
@@ -85,9 +71,8 @@ impl WalletMessages {
             message_loading: false,
             message_error: "".to_string(),
             message_result: Arc::new(Default::default()),
-            tx_info_content: WalletTransactionModal::new(None, false),
-            request_modal_content: MessageRequestModal::new(false),
-            file_pick_button: FilePickButton::default(),
+            request_modal_content: RequestModalContent::new(false),
+            file_pick_button: FilePickContent::new(FilePickContentType::Button),
             scan_modal_content: None,
         }
     }
@@ -133,16 +118,11 @@ impl WalletMessages {
                             self.request_modal_content.ui(ui, wallet, modal, cb);
                         });
                     }
-                    TX_INFO_MODAL => {
-                        Modal::ui(ui.ctx(), cb, |ui, modal, cb| {
-                            self.tx_info_content.ui(ui, wallet, modal, cb);
-                        });
-                    }
                     SCAN_QR_MODAL => {
                         let mut result = None;
                         if let Some(content) = self.scan_modal_content.as_mut() {
                             Modal::ui(ui.ctx(), cb, |ui, _, cb| {
-                                content.ui(ui, cb, |res| {
+                                content.modal_ui(ui, cb, |res| {
                                     result = Some(res.clone());
                                     Modal::close();
                                 });
@@ -213,7 +193,7 @@ impl WalletMessages {
 
     /// Show [`Modal`] to create invoice or sending request.
     fn show_request_modal(&mut self, invoice: bool) {
-        self.request_modal_content = MessageRequestModal::new(invoice);
+        self.request_modal_content = RequestModalContent::new(invoice);
         let title = if invoice {
             t!("wallets.receive")
         } else {
@@ -295,7 +275,7 @@ impl WalletMessages {
                     Ok(tx) => {
                         self.message_edit.clear();
                         // Show transaction modal on success.
-                        self.tx_info_content = WalletTransactionModal::new(Some(tx.data.id), false);
+                        // self.tx_info_content = WalletTransactionContent::new(Some(tx.data.id), false);
                         Modal::new(TX_INFO_MODAL)
                             .position(ModalPosition::CenterTop)
                             .title(t!("wallets.tx"))
@@ -318,8 +298,8 @@ impl WalletMessages {
                                 // Show tx modal or show default error message.
                                 if let Some(tx) = wallet.tx_by_slate(&slate).as_ref() {
                                     self.message_edit.clear();
-                                    self.tx_info_content =
-                                        WalletTransactionModal::new(Some(tx.data.id), false);
+                                    // self.tx_info_content =
+                                    //     WalletTransactionContent::new(Some(tx.data.id), false);
                                     Modal::new(TX_INFO_MODAL)
                                         .position(ModalPosition::CenterTop)
                                         .title(t!("wallets.tx"))
@@ -352,7 +332,7 @@ impl WalletMessages {
                     View::button(ui, scan_text, Colors::white_or_black(false), || {
                         self.message_edit.clear();
                         self.message_error.clear();
-                        self.scan_modal_content = Some(CameraScanModal::default());
+                        self.scan_modal_content = Some(CameraScanContent::default());
                         // Show QR code scan modal.
                         Modal::new(SCAN_QR_MODAL)
                             .position(ModalPosition::CenterTop)
@@ -422,7 +402,7 @@ impl WalletMessages {
             if exists {
                 if let Some(tx) = wallet.tx_by_slate(&slate).as_ref() {
                     self.message_edit.clear();
-                    self.tx_info_content = WalletTransactionModal::new(Some(tx.data.id), false);
+                    // self.tx_info_content = WalletTransactionContent::new(Some(tx.data.id), false);
                     Modal::new(TX_INFO_MODAL)
                         .position(ModalPosition::CenterTop)
                         .title(t!("wallets.tx"))

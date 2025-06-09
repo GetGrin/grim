@@ -50,7 +50,6 @@ impl Default for CameraContent {
 impl CameraContent {
     /// Draw camera content.
     pub fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
-        ui.ctx().request_repaint();
         let rect = if let Some(img_data) = cb.camera_image() {
             if let Ok(img) =
                 image::load_from_memory(&*img_data.0) {
@@ -85,6 +84,7 @@ impl CameraContent {
                 });
             });
         }
+        ui.ctx().request_repaint();
     }
 
     /// Draw camera image.
@@ -311,7 +311,7 @@ impl CameraContent {
 
         // Check if string contains Slatepack message prefix and postfix.
         if text.starts_with("BEGINSLATEPACK.") && text.ends_with("ENDSLATEPACK.") {
-            return QrScanResult::Slatepack(ZeroingString::from(text));
+            return QrScanResult::Slatepack(text.to_string());
         }
 
         // Check Uniform Resource data.

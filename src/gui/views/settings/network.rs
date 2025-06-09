@@ -94,9 +94,6 @@ impl NetworkSettingsContent {
     /// Draw proxy edit modal content.
     fn proxy_modal_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         let on_save = |c: &mut NetworkSettingsContent| {
-            // Check if URL proxy is correct.
-            let http = "http://";
-            let socks = "socks5://";
             let proxy = c.proxy_url_edit.trim().to_string();
             let use_socks = AppConfig::use_socks_proxy();
             // Clear value if empty.
@@ -109,6 +106,9 @@ impl NetworkSettingsContent {
                 Modal::close();
                 return;
             }
+            // Format URL.
+            let http = "http://";
+            let socks = "socks5://";
             let url = if use_socks {
                 let p = proxy.replace(http, "");
                 if !p.contains(socks) {
@@ -200,7 +200,7 @@ impl NetworkSettingsContent {
         });
     }
 
-    /// Draw language selection item content.
+    /// Draw proxy item content.
     fn proxy_item_ui(&mut self, ui: &mut egui::Ui) {
         // Setup layout size.
         let mut rect = ui.available_rect_before_wrap();

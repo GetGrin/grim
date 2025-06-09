@@ -17,11 +17,10 @@ use egui::{Align, Context, CornerRadius, CursorIcon, LayerId, Layout, Modifiers,
 
 use crate::gui::icons::{ARROWS_IN, ARROWS_OUT, CARET_DOWN, MOON, SUN, X};
 use crate::gui::platform::PlatformCallbacks;
+use crate::gui::views::types::ContentContainer;
 use crate::gui::views::{Content, KeyboardContent, Modal, TitlePanel, View};
 use crate::gui::Colors;
-use crate::wallet::ExternalConnection;
 use crate::AppConfig;
-use crate::gui::views::types::ContentContainer;
 
 /// Implements ui entry point and contains platform-specific callbacks.
 pub struct App<Platform> {
