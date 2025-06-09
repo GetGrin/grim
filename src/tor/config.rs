@@ -16,11 +16,18 @@ use std::path::PathBuf;
 use serde_derive::{Deserialize, Serialize};
 
 use crate::Settings;
-use crate::tor::TorBridge;
+use crate::tor::{TorBridge, TorProxy};
 
 /// Tor configuration.
 #[derive(Serialize, Deserialize, Clone)]
 pub struct TorConfig {
+    /// Proxy for tor connections.
+    proxy: Option<TorProxy>,
+    /// SOCKS5 proxy type.
+    proxy_socks5: TorProxy,
+    /// HTTP proxy type.
+    proxy_http: TorProxy,
+
     /// Selected bridge type.
     bridge: Option<TorBridge>,
     /// Obfs4 bridge type.
@@ -32,6 +39,9 @@ pub struct TorConfig {
 impl Default for TorConfig {
     fn default() -> Self {
         Self {
+            proxy: None,
+            proxy_socks5: TorProxy::HTTP(TorProxy::DEFAULT_SOCKS5_URL.to_string()),
+            proxy_http: TorProxy::HTTP(TorProxy::DEFAULT_HTTP_URL.to_string()),
             bridge: None,
             obfs4: TorBridge::Obfs4(
                 TorBridge::DEFAULT_OBFS4_BIN_PATH.to_string(),
@@ -122,5 +132,40 @@ impl TorConfig {
     pub fn get_snowflake() -> TorBridge {
         let r_config = Settings::tor_config_to_read();
         r_config.snowflake.clone()
+    }
+
+    /// Save proxy for Tor connections.
+    pub fn save_proxy(proxy: Option<TorProxy>) {
+        let mut w_config = Settings::tor_config_to_update();
+        w_config.proxy = proxy.clone();
+        if let Some(p) = proxy {
+            match p {
+                TorProxy::SOCKS5(_) => {
+                    w_config.proxy_socks5 = p
+                }
+                TorProxy::HTTP(_) => {
+                    w_config.proxy_http = p
+                }
+            }
+        }
+        w_config.save();
+    }
+
+    /// Get used proxy for Tor connections.
+    pub fn get_proxy() -> Option<TorProxy> {
+        let r_config = Settings::tor_config_to_read();
+        r_config.proxy.clone()
+    }
+
+    /// Get saved SOCKS5 proxy.
+    pub fn get_socks5_proxy() -> TorProxy {
+        let r_config = Settings::tor_config_to_read();
+        r_config.proxy_socks5.clone()
+    }
+
+    /// Get saved HTTP proxy.
+    pub fn get_http_proxy() -> TorProxy {
+        let r_config = Settings::tor_config_to_read();
+        r_config.proxy_http.clone()
     }
 }

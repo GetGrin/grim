@@ -13,25 +13,25 @@
 // limitations under the License.
 
 use arti_client::config::pt::TransportConfigBuilder;
-use futures::task::SpawnExt;
-use lazy_static::lazy_static;
-use std::collections::{BTreeMap, BTreeSet};
-use std::net::{IpAddr, Ipv4Addr, SocketAddr};
-use std::str::FromStr;
-use std::sync::Arc;
-use std::{fs, thread};
-use std::time::Duration;
-
 use arti_client::config::{CfgPath, TorClientConfigBuilder};
 use arti_client::{TorClient, TorClientConfig};
 use curve25519_dalek::digest::Digest;
 use ed25519_dalek::hazmat::ExpandedSecretKey;
 use fs_mistrust::Mistrust;
+use futures::task::SpawnExt;
 use grin_util::secp::SecretKey;
+use http_body_util::BodyExt;
+use lazy_static::lazy_static;
 use parking_lot::RwLock;
 use sha2::Sha512;
-use tls_api_native_tls::TlsConnector;
+use std::collections::{BTreeMap, BTreeSet};
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+use std::str::FromStr;
+use std::sync::Arc;
+use std::time::Duration;
+use std::{fs, thread};
 use tls_api::{TlsConnector as TlsConnectorTrait, TlsConnectorBuilder};
+use tls_api_native_tls::TlsConnector;
 use tokio::time::sleep;
 use tor_hscrypto::pk::{HsIdKey, HsIdKeypair};
 use tor_hsrproxy::config::{
@@ -47,8 +47,9 @@ use tor_llcrypto::pk::ed25519::ExpandedKeypair;
 use tor_rtcompat::tokio::TokioNativeTlsRuntime;
 use tor_rtcompat::Runtime;
 
+use crate::http::HttpClient;
 use crate::tor::http::ArtiHttpConnector;
-use crate::tor::TorConfig;
+use crate::tor::{TorConfig, TorProxy};
 
 lazy_static! {
     /// Static thread-aware state of [`Node`] to be updated from separate thread.
@@ -81,7 +82,8 @@ impl Default for Tor {
         let config = Self::build_config();
         let client = TorClient::with_runtime(runtime)
             .config(config.clone())
-            .create_unbootstrapped().unwrap();
+            .create_unbootstrapped()
+            .unwrap();
         Self {
             running_services: Arc::new(RwLock::new(BTreeMap::new())),
             starting_services: Arc::new(RwLock::new(BTreeSet::new())),
@@ -120,37 +122,67 @@ impl Tor {
     pub fn rebuild_client() {
         let config = Self::build_config();
         let r_client = TOR_SERVER_STATE.client_config.read();
-        r_client
-            .0
+        r_client.0
             .reconfigure(&config, tor_config::Reconfigure::AllOrNothing)
             .unwrap();
     }
 
     /// Send post request using Tor.
     pub async fn post(body: String, url: String) -> Option<String> {
-        // Bootstrap client.
-        let (client, _) = Self::client_config();
-        client.bootstrap().await.unwrap();
-        // Create http tor-powered client to post data.
-        let tls_connector = TlsConnector::builder().unwrap().build().unwrap();
-        let tor_connector = ArtiHttpConnector::new(client, tls_connector);
-        let http = hyper_tor::Client::builder().build::<_, hyper_tor::Body>(tor_connector);
-        // Create request.
-        let req = hyper_tor::Request::builder()
-            .method(hyper_tor::Method::POST)
-            .uri(url)
-            .body(hyper_tor::Body::from(body))
-            .unwrap();
-        // Send request.
-        let mut resp = None;
-        match http.request(req).await {
-            Ok(r) => match hyper_tor::body::to_bytes(r).await {
-                Ok(raw) => resp = Some(String::from_utf8_lossy(&raw).to_string()),
+        if let Some(proxy) = TorConfig::get_proxy() {
+            let req = hyper::Request::builder()
+                .method(hyper::Method::POST)
+                .uri(url)
+                .body(http_body_util::Full::from(body))
+                .unwrap();
+            let res = match proxy {
+                TorProxy::SOCKS5(url) => {
+                    HttpClient::send_socks_proxy(url, req).await
+                }
+                TorProxy::HTTP(url) => {
+                    HttpClient::send_http_proxy(url, req).await
+                }
+            };
+            match res {
+                Ok(res) => {
+                    let body = res.into_body().collect().await.unwrap().to_bytes().into();
+                    Some(String::from_utf8(body).unwrap())
+                }
+                Err(_) => {
+                    None
+                }
+            }
+        } else {
+            if let Some(b) = TorConfig::get_bridge() {
+                if !fs::exists(b.binary_path()).unwrap() {
+                    return None;
+                }
+            }
+            // Bootstrap client.
+            let (client, _) = Self::client_config();
+            let client = client.isolated_client();
+            client.bootstrap().await.unwrap();
+            // Create http tor-powered client to post data.
+            let tls_connector = TlsConnector::builder().unwrap().build().unwrap();
+            let tor_connector = ArtiHttpConnector::new(client, tls_connector);
+            let http = hyper_tor::Client::builder().build::<_, hyper_tor::Body>(tor_connector);
+            // Create request.
+            let req = hyper_tor::Request::builder()
+                .method(hyper_tor::Method::POST)
+                .uri(url)
+                .body(hyper_tor::Body::from(body))
+                .unwrap();
+            // Send request.
+            let mut resp = None;
+            match http.request(req).await {
+                Ok(r) => match hyper_tor::body::to_bytes(r).await {
+                    Ok(raw) => resp = Some(String::from_utf8_lossy(&raw).to_string()),
+                    Err(_) => {}
+                },
                 Err(_) => {}
-            },
-            Err(_) => {}
+            }
+            resp
         }
-        resp
     }
 
     fn client_config() -> (TorClient<TokioNativeTlsRuntime>, TorClientConfig) {
@@ -253,89 +285,95 @@ impl Tor {
                             service.clone(),
                             request,
                             hs_nickname.clone(),
-                        ))
-                        .await
-                        .unwrap();
-
-                        // Check service availability if not checking.
-                        if Self::is_service_checking(&service_id) {
-                            return;
-                        }
-                        let client_check = client_thread.clone();
+                        )).await.unwrap();
+                        // Check service availability.
                         let addr = service.onion_address().unwrap().to_string();
                         let url = format!("http://{}/", addr);
-                        thread::spawn(move || {
-                            // Wait 1 second to start.
-                            thread::sleep(Duration::from_millis(1000));
-                            let runtime = client_thread.runtime();
-                            // Put service to checking.
-                            {
-                                let mut w_services = TOR_SERVER_STATE.checking_services.write();
-                                w_services.insert(service_id.clone());
-                            }
-                            runtime
-                                .spawn(async move {
-                                    let tls_conn =
-                                        TlsConnector::builder().unwrap().build().unwrap();
-                                    let tor_conn =
-                                        ArtiHttpConnector::new(client_check.clone(), tls_conn);
-                                    let http =
-                                        hyper_tor::Client::builder().build::<_, hyper_tor::Body>(tor_conn);
-
-                                    const MAX_ERRORS: i32 = 3;
-                                    let mut errors_count = 0;
-                                    loop {
-                                        if !Self::is_service_running(&service_id) {
-                                            // Remove service from checking.
-                                            let mut w_services =
-                                                TOR_SERVER_STATE.checking_services.write();
-                                            w_services.remove(&service_id);
-                                            break;
-                                        }
-                                        // Send request.
-                                        let duration = match http
-                                            .get(hyper_tor::Uri::from_str(url.clone().as_str()).unwrap())
-                                            .await
-                                        {
-                                            Ok(_) => {
-                                                // Remove service from starting.
-                                                let mut w_services =
-                                                    TOR_SERVER_STATE.starting_services.write();
-                                                w_services.remove(&service_id);
-                                                // Remove service from failed.
-                                                let mut w_services =
-                                                    TOR_SERVER_STATE.failed_services.write();
-                                                w_services.remove(&service_id);
-                                                // Check again after 50 seconds.
-                                                Duration::from_millis(50000)
-                                            }
-                                            Err(_) => {
-                                                // Restart service on 3rd error.
-                                                errors_count += 1;
-                                                if errors_count == MAX_ERRORS {
-                                                    errors_count = 0;
-                                                    let key = key.clone();
-                                                    let service_id = service_id.clone();
-                                                    thread::spawn(move || {
-                                                        Self::restart_service(
-                                                            port,
-                                                            key,
-                                                            &service_id,
-                                                        );
-                                                    });
-                                                }
-                                                Duration::from_millis(5000)
-                                            }
-                                        };
-                                        // Wait to check service again.
-                                        sleep(duration).await;
-                                    }
-                                })
-                                .unwrap();
-                        });
+                        Self::check_service(service_id, client_thread, url, port, key);
                         return;
                     }
                     on_error(service_id);
+                })
+                .unwrap();
+        });
+    }
+
+    /// Check service availability.
+    fn check_service(service_id: String,
+                     client: TorClient<TokioNativeTlsRuntime>,
+                     url: String,
+                     port: u16,
+                     key: SecretKey) {
+        if Self::is_service_checking(&service_id) {
+            return;
+        }
+        let client_check = client.clone();
+        thread::spawn(move || {
+            // Wait 1 second to start.
+            thread::sleep(Duration::from_millis(1000));
+            let runtime = client.runtime();
+            // Put service to checking.
+            {
+                let mut w_services = TOR_SERVER_STATE.checking_services.write();
+                w_services.insert(service_id.clone());
+            }
+            runtime
+                .spawn(async move {
+                    let tls_conn =
+                        TlsConnector::builder().unwrap().build().unwrap();
+                    let tor_conn =
+                        ArtiHttpConnector::new(client_check.clone(), tls_conn);
+                    let http =
+                        hyper_tor::Client::builder().build::<_, hyper_tor::Body>(tor_conn);
+
+                    const MAX_ERRORS: i32 = 3;
+                    let mut errors_count = 0;
+                    loop {
+                        if !Self::is_service_running(&service_id) {
+                            // Remove service from checking.
+                            let mut w_services =
+                                TOR_SERVER_STATE.checking_services.write();
+                            w_services.remove(&service_id);
+                            break;
+                        }
+                        // Send request.
+                        let duration = match http
+                            .get(hyper_tor::Uri::from_str(url.clone().as_str()).unwrap())
+                            .await
+                        {
+                            Ok(_) => {
+                                // Remove service from starting.
+                                let mut w_services =
+                                    TOR_SERVER_STATE.starting_services.write();
+                                w_services.remove(&service_id);
+                                // Remove service from failed.
+                                let mut w_services =
+                                    TOR_SERVER_STATE.failed_services.write();
+                                w_services.remove(&service_id);
+                                // Check again after 50 seconds.
+                                Duration::from_millis(50000)
+                            }
+                            Err(_) => {
+                                // Restart service on 3rd error.
+                                errors_count += 1;
+                                if errors_count == MAX_ERRORS {
+                                    errors_count = 0;
+                                    let key = key.clone();
+                                    let service_id = service_id.clone();
+                                    thread::spawn(move || {
+                                        Self::restart_service(
+                                            port,
+                                            key,
+                                            &service_id,
+                                        );
+                                    });
+                                }
+                                Duration::from_millis(5000)
+                            }
+                        };
+                        // Wait to check service again.
+                        sleep(duration).await;
+                    }
                 })
                 .unwrap();
         });

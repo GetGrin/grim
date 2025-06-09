@@ -30,33 +30,43 @@ pub struct HttpClient {
 impl HttpClient {
     /// Send request.
     pub async fn send(req: Request<Full<Bytes>>) -> Result<Response<Incoming>, Error> {
-        let res = if AppConfig::use_proxy() {
+        if AppConfig::use_proxy() {
             if let Some(url) = AppConfig::socks_proxy_url() {
-                let connector = HttpsConnector::new();
-                let uri = url.parse().unwrap();
-                let proxy = hyper_socks2::SocksConnector {
-                    proxy_addr: uri,
-                    auth: None,
-                    connector,
-                }.with_tls().unwrap();
-                let client = Client::builder(TokioExecutor::new())
-                    .build::<_, Full<Bytes>>(proxy);
-                client.request(req).await
+                Self::send_socks_proxy(url, req).await
             } else {
-                let url = AppConfig::http_proxy_url().unwrap();
-                let uri = url.parse().unwrap();
-                let proxy = Proxy::new(Intercept::All, uri);
-                let connector = HttpsConnector::new();
-                let proxy_connector = ProxyConnector::from_proxy(connector, proxy).unwrap();
-                let client = Client::builder(TokioExecutor::new())
-                    .build::<_, Full<Bytes>>(proxy_connector);
-                client.request(req).await
+                Self::send_http_proxy(AppConfig::http_proxy_url().unwrap(), req).await
             }
         } else {
             let client = Client::builder(TokioExecutor::new())
                 .build::<_, Full<Bytes>>(HttpsConnector::new());
             client.request(req).await
-        };
-        res
+        }
+    }
+
+    /// Create socks proxy client.
+    pub async fn send_socks_proxy(proxy_url: String, req: Request<Full<Bytes>>)
+        -> Result<Response<Incoming>, Error> {
+        let connector = HttpsConnector::new();
+        let uri = proxy_url.parse().unwrap();
+        let proxy = hyper_socks2::SocksConnector {
+            proxy_addr: uri,
+            auth: None,
+            connector,
+        }.with_tls().unwrap();
+        let client = Client::builder(TokioExecutor::new())
+            .build::<_, Full<Bytes>>(proxy);
+        client.request(req).await
+    }
+
+    /// Create http proxy client.
+    pub async fn send_http_proxy(proxy_url: String, req: Request<Full<Bytes>>)
+        -> Result<Response<Incoming>, Error> {
+        let uri = proxy_url.parse().unwrap();
+        let proxy = Proxy::new(Intercept::All, uri);
+        let connector = HttpsConnector::new();
+        let proxy_connector = ProxyConnector::from_proxy(connector, proxy).unwrap();
+        let client = Client::builder(TokioExecutor::new())
+            .build::<_, Full<Bytes>>(proxy_connector);
+        client.request(req).await
     }
 }
