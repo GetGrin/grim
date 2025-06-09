@@ -96,7 +96,12 @@ pub struct Wallet {
     /// Flag to check if wallet repairing and restoring missing outputs is needed.
     repair_needed: Arc<AtomicBool>,
     /// Wallet repair progress in percents.
-    repair_progress: Arc<AtomicU8>
+    repair_progress: Arc<AtomicU8>,
+
+    /// Flag to check if Slatepack message file is opening.
+    slatepack_opening: Arc<AtomicBool>,
+    /// Result of Slatepack message file opening.
+    slatepack_result: Arc<RwLock<Option<Result<WalletTransaction, Error>>>>,
 }
 
 impl Wallet {
@@ -121,7 +126,9 @@ impl Wallet {
             sync_attempts: Arc::new(AtomicU8::new(0)),
             syncing: Arc::new(AtomicBool::new(false)),
             repair_needed: Arc::new(AtomicBool::new(false)),
-            repair_progress: Arc::new(AtomicU8::new(0))
+            repair_progress: Arc::new(AtomicU8::new(0)),
+            slatepack_opening: Arc::new(AtomicBool::from(false)),
+            slatepack_result: Arc::new(RwLock::new(None)),
         }
     }
 
@@ -450,7 +457,12 @@ impl Wallet {
         let wallet_close = self.clone();
         let service_id = wallet_close.identifier();
         let conn = wallet_close.connection.clone();
+        let message_opening = self.slatepack_opening.clone();
         thread::spawn(move || {
+            // Wait message opening to finish.
+            while message_opening.load(Ordering::Relaxed) {
+                thread::sleep(Duration::from_millis(100));
+            }
             // Stop running API server.
             let api_server_exists = {
                 wallet_close.foreign_api_server.read().is_some()
@@ -642,6 +654,86 @@ impl Wallet {
             return Some(api.1);
         }
         None
+    }
+
+    /// Open Slatepack message with the wallet.
+    pub fn open_slatepack(&self, message: String) {
+        if !self.is_open() {
+            return;
+        }
+        if message.is_empty() {
+            let mut res_w = self.slatepack_result.write();
+            *res_w = Some(Err(Error::InvalidSlatepackData("".to_string())));
+        }
+        let w = self.clone();
+        let load = self.slatepack_opening.clone();
+        let res = self.slatepack_result.clone();
+        let msg = message.clone();
+        thread::spawn(move || {
+            load.store(true, Ordering::Relaxed);
+            if let Ok(slate) = w.parse_slatepack(&msg) {
+                // Check if message with same id and state already exists.
+                let slatepack_path = w.get_config().get_slatepack_path(&slate);
+                let exists = fs::exists(slatepack_path).unwrap_or(false);
+                if exists {
+                    if let Some(tx) = w.tx_by_slate(&slate) {
+                        let mut w_res = res.write();
+                        *w_res = Some(Ok(tx));
+                    }
+                    load.store(false, Ordering::Relaxed);
+                    return;
+                }
+                // Create response or finalize.
+                let r = match slate.state {
+                    SlateState::Standard1 | SlateState::Invoice1 => {
+                        if slate.state != SlateState::Standard1 {
+                            w.pay(&msg)
+                        } else {
+                            w.receive(&msg)
+                        }
+                    }
+                    SlateState::Standard2 | SlateState::Invoice2 => {
+                        w.finalize(&msg)
+                    }
+                    _ => {
+                        if let Some(tx) = w.tx_by_slate(&slate) {
+                            Ok(tx)
+                        } else {
+                            Err(Error::InvalidSlatepackData(msg))
+                        }
+                    }
+                };
+                if w.is_open() {
+                    let mut w_res = res.write();
+                    *w_res = Some(r);
+                }
+            } else {
+                if w.is_open() {
+                    let mut w_res = res.write();
+                    *w_res = Some(Err(Error::InvalidSlatepackData(msg)));
+                }
+            }
+            load.store(false, Ordering::Relaxed);
+        });
+    }
+
+    /// Check if Slatepack message is opening.
+    pub fn message_opening(&self) -> bool {
+        self.slatepack_opening.load(Ordering::Relaxed)
+    }
+
+    /// Consume Slatepack message result.
+    pub fn consume_message_result(&self) -> Option<Result<WalletTransaction, Error>> {
+        let res = {
+            let r_mes = self.slatepack_result.read();
+            r_mes.clone()
+        };
+        // Clear message result.
+        if res.is_some() {
+            let mut w_mes = self.slatepack_result.write();
+            *w_mes = None;
+        }
+        res
     }
 
     /// Parse Slatepack message into [`Slate`].
