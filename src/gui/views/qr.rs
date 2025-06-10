@@ -131,32 +131,20 @@ impl QrCodeContent {
                     r_state.exporting || r_state.gif_creating
                 };
                 if !sharing {
-                    // Setup spacing between buttons.
-                    ui.spacing_mut().item_spacing = egui::Vec2::new(6.0, 0.0);
-
-                    ui.columns(2, |columns| {
-                        columns[0].vertical_centered_justified(|ui| {
-                            // Draw copy button.
-                            let copy_text = format!("{} {}", COPY, t!("copy"));
-                            View::button(ui, copy_text, Colors::white_or_black(false), || {
-                                cb.copy_string_to_buffer(self.text.clone());
+                    ui.vertical_centered(|ui| {
+                        // Show button to share QR.
+                        let share_text = format!("{} {}", IMAGES_SQUARE, t!("share"));
+                        View::colored_text_button(ui,
+                                                  share_text,
+                                                  Colors::blue(),
+                                                  Colors::white_or_black(false), || {
+                                {
+                                    let mut w_state = self.qr_image_state.write();
+                                    w_state.exporting = true;
+                                }
+                                // Create GIF to export.
+                                self.create_qr_gif();
                             });
-                        });
-                        columns[1].vertical_centered_justified(|ui| {
-                            // Show button to share QR.
-                            let share_text = format!("{} {}", IMAGES_SQUARE, t!("share"));
-                            View::colored_text_button(ui,
-                                                      share_text,
-                                                      Colors::blue(),
-                                                      Colors::white_or_black(false), || {
-                                    {
-                                        let mut w_state = self.qr_image_state.write();
-                                        w_state.exporting = true;
-                                    }
-                                    // Create GIF to export.
-                                    self.create_qr_gif();
-                                });
-                        });
                     });
                 } else {
                     ui.vertical_centered(|ui| {
