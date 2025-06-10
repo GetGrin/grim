@@ -342,8 +342,7 @@ impl SendRequestContent {
             let result = r_request.as_ref().unwrap();
             match result {
                 Ok(tx) => {
-                    self.result_tx_content =
-                        Some(WalletTransactionContent::new(tx, false));
+                    self.result_tx_content = Some(WalletTransactionContent::new(tx));
                 }
                 Err(err) => {
                     let m = match err {

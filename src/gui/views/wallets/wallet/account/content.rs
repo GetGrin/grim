@@ -288,7 +288,7 @@ impl AccountContent {
                             //TODO: send with address
                         }
                         QrScanResult::Slatepack(m) => {
-                            wallet.open_slatepack(m.to_string());
+                            wallet.open_message(m.to_string());
                         }
                         _ => {
                             self.qr_scan_result = Some(result);

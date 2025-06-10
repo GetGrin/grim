@@ -166,14 +166,12 @@ pub struct WalletTransaction {
     pub finalizing: bool,
     /// Block height where tx was included.
     pub height: Option<u64>,
-    /// Flag to check if tx was received after sync from node.
-    pub from_node: bool,
 }
 
 impl WalletTransaction {
     /// Check if transaction can be cancelled.
     pub fn can_cancel(&self) -> bool {
-        self.from_node && !self.cancelling && !self.data.confirmed &&
+        !self.cancelling && !self.data.confirmed &&
             self.data.tx_type != TxLogEntryType::TxReceivedCancelled
             && self.data.tx_type != TxLogEntryType::TxSentCancelled
     }

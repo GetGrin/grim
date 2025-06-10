@@ -392,7 +392,7 @@ impl WalletContent {
                             message = m;
                         });
                         if !message.is_empty() {
-                            wallet.open_slatepack(message);
+                            wallet.open_message(message);
                         }
                     }
                 });

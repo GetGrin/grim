@@ -19,8 +19,6 @@ use crate::wallet::Wallet;
 
 /// GRIN coin symbol.
 pub const GRIN: &str = "ツ";
-/// Hint for Slatepack message input.
-pub const SLATEPACK_MESSAGE_HINT: &'static str = "BEGINSLATEPACK.\n...\n...\n...\nENDSLATEPACK.";
 
 /// Content container to simplify modals management and navigation.
 pub trait WalletContentContainer {

@@ -99,9 +99,9 @@ pub struct Wallet {
     repair_progress: Arc<AtomicU8>,
 
     /// Flag to check if Slatepack message file is opening.
-    slatepack_opening: Arc<AtomicBool>,
+    message_opening: Arc<AtomicBool>,
     /// Result of Slatepack message file opening.
-    slatepack_result: Arc<RwLock<Option<Result<WalletTransaction, Error>>>>,
+    message_result: Arc<RwLock<Option<Result<WalletTransaction, Error>>>>,
 }
 
 impl Wallet {
@@ -127,8 +127,8 @@ impl Wallet {
             syncing: Arc::new(AtomicBool::new(false)),
             repair_needed: Arc::new(AtomicBool::new(false)),
             repair_progress: Arc::new(AtomicU8::new(0)),
-            slatepack_opening: Arc::new(AtomicBool::from(false)),
-            slatepack_result: Arc::new(RwLock::new(None)),
+            message_opening: Arc::new(AtomicBool::from(false)),
+            message_result: Arc::new(RwLock::new(None)),
         }
     }
 
@@ -457,7 +457,7 @@ impl Wallet {
         let wallet_close = self.clone();
         let service_id = wallet_close.identifier();
         let conn = wallet_close.connection.clone();
-        let message_opening = self.slatepack_opening.clone();
+        let message_opening = self.message_opening.clone();
         thread::spawn(move || {
             // Wait message opening to finish.
             while message_opening.load(Ordering::Relaxed) {
@@ -657,17 +657,17 @@ impl Wallet {
     }
 
     /// Open Slatepack message with the wallet.
-    pub fn open_slatepack(&self, message: String) {
+    pub fn open_message(&self, message: String) {
         if !self.is_open() {
             return;
         }
         if message.is_empty() {
-            let mut res_w = self.slatepack_result.write();
+            let mut res_w = self.message_result.write();
             *res_w = Some(Err(Error::InvalidSlatepackData("".to_string())));
         }
         let w = self.clone();
-        let load = self.slatepack_opening.clone();
-        let res = self.slatepack_result.clone();
+        let load = self.message_opening.clone();
+        let res = self.message_result.clone();
         let msg = message.clone();
         thread::spawn(move || {
             load.store(true, Ordering::Relaxed);
@@ -719,18 +719,18 @@ impl Wallet {
 
     /// Check if Slatepack message is opening.
     pub fn message_opening(&self) -> bool {
-        self.slatepack_opening.load(Ordering::Relaxed)
+        self.message_opening.load(Ordering::Relaxed)
     }
 
     /// Consume Slatepack message result.
     pub fn consume_message_result(&self) -> Option<Result<WalletTransaction, Error>> {
         let res = {
-            let r_mes = self.slatepack_result.read();
+            let r_mes = self.message_result.read();
             r_mes.clone()
         };
         // Clear message result.
         if res.is_some() {
-            let mut w_mes = self.slatepack_result.write();
+            let mut w_mes = self.message_result.write();
             *w_mes = None;
         }
         res
@@ -1160,6 +1160,7 @@ impl Wallet {
             let _ = fs::remove_dir_all(wallet_delete.get_config().get_db_path());
             // Start sync to close thread.
             wallet_delete.sync();
+            wallet_delete.repair();
             // Mark wallet to reopen.
             wallet_delete.set_reopen(reopen);
         });
@@ -1333,8 +1334,6 @@ fn start_sync(wallet: Wallet) -> Thread {
 
 /// Retrieve [`WalletData`] from local base or node.
 fn sync_wallet_data(wallet: &Wallet, from_node: bool) {
-    let fresh_sync = wallet.get_data().is_none();
-
     // Update info sync progress at separate thread.
     let wallet_info = wallet.clone();
     let (info_tx, info_rx) = mpsc::channel::<StatusMessage>();
@@ -1496,7 +1495,6 @@ fn sync_wallet_data(wallet: &Wallet, from_node: bool) {
                             can_finalize,
                             finalizing,
                             height: conf_height,
-                            from_node: !fresh_sync || from_node
                         });
                     }
 

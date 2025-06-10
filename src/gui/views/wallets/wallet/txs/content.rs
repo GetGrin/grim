@@ -21,7 +21,7 @@ use grin_wallet_libwallet::TxLogEntryType;
 use std::ops::Range;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::gui::icons::{ARCHIVE_BOX, ARROW_CIRCLE_DOWN, ARROW_CIRCLE_UP, CALENDAR_CHECK, CHECK, DOTS_THREE_CIRCLE, FILE_ARROW_DOWN, FILE_TEXT, GEAR_FINE, PROHIBIT, X_CIRCLE};
+use crate::gui::icons::{ARCHIVE_BOX, ARROW_CIRCLE_DOWN, ARROW_CIRCLE_UP, CALENDAR_CHECK, DOTS_THREE_CIRCLE, FILE_ARROW_DOWN, FILE_TEXT, GEAR_FINE, PROHIBIT, X_CIRCLE};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::types::{LinePosition, ModalPosition};
 use crate::gui::views::wallets::types::WalletTab;
@@ -72,7 +72,7 @@ impl WalletTransactions {
             manual_sync: None,
         };
         if let Some(tx) = &tx {
-            content.show_tx_info_modal(tx, false);
+            content.show_tx_info_modal(tx);
         }
         content
     }
@@ -161,22 +161,12 @@ impl WalletTransactions {
                     r.nw = 0.0 as u8;
                     r.sw = 0.0 as u8;
                     View::item_button(ui, r, FILE_TEXT, None, || {
-                        self.show_tx_info_modal(tx, false);
-                    });
-                }
-
-                let wallet_loaded = wallet.foreign_api_port().is_some();
-
-                // Draw button to show transaction finalization.
-                if wallet_loaded && tx.can_finalize {
-                    let (icon, color) = (CHECK, Some(Colors::green()));
-                    View::item_button(ui, CornerRadius::default(), icon, color, || {
-                        self.show_tx_info_modal(tx, true);
+                        self.show_tx_info_modal(tx);
                     });
                 }
 
                 // Draw button to cancel transaction.
-                if wallet_loaded && tx.can_cancel() {
+                if tx.can_cancel() {
                     let (icon, color) = (PROHIBIT, Some(Colors::red()));
                     View::item_button(ui, CornerRadius::default(), icon, color, || {
                         self.confirm_cancel_tx_id = Some(tx.data.id);
@@ -449,11 +439,11 @@ impl WalletTransactions {
     }
 
     /// Show transaction information [`Modal`].
-    fn show_tx_info_modal(&mut self, tx: &WalletTransaction, finalize: bool) {
-        let modal = WalletTransactionContent::new(tx, finalize);
+    fn show_tx_info_modal(&mut self, tx: &WalletTransaction) {
+        let modal = WalletTransactionContent::new(tx);
         self.tx_info_content = Some(modal);
         Modal::new(TX_INFO_MODAL)
-            .position(ModalPosition::CenterTop)
+            .position(ModalPosition::Center)
             .title(t!("wallets.tx"))
             .show();
     }

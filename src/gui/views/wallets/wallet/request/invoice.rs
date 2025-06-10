@@ -201,8 +201,7 @@ impl InvoiceRequestContent {
             let result = r_request.as_ref().unwrap();
             match result {
                 Ok(tx) => {
-                    self.result_tx_content =
-                        Some(WalletTransactionContent::new(tx, false));
+                    self.result_tx_content = Some(WalletTransactionContent::new(tx));
                 }
                 Err(_) => {
                     self.request_error = Some(t!("wallets.invoice_slatepack_err"));
