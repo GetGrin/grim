@@ -48,7 +48,7 @@ impl WalletTransactionContent {
             qr_code_content: None,
             scan_qr_content: None,
             file_pick_button: FilePickContent::new(
-                FilePickContentType::ItemButton(CornerRadius::default())
+                FilePickContentType::ItemButton(View::item_rounding(0, 2, true))
             ),
         }
     }
@@ -77,6 +77,7 @@ impl WalletTransactionContent {
         let tx = txs.get(0).unwrap();
 
         if let Some(content) = self.qr_code_content.as_mut() {
+            ui.add_space(6.0);
             content.ui(ui, cb);
 
             // Setup spacing between buttons.
@@ -241,28 +242,28 @@ impl WalletTransactionContent {
                 }
                 return;
             }
-            // Draw button to cancel transaction.
-            if tx.can_cancel() {
-                let r = View::item_rounding(0, 2, true);
-                View::item_button(ui, r, PROHIBIT, Some(Colors::red()), || {
-                    wallet.cancel(tx.data.id);
-                });
-            }
             if tx.can_finalize {
+                // Draw button to pick file.
+                self.file_pick_button.ui(ui, cb, |data| {
+                    wallet.open_message(data);
+                });
                 // Draw button to scan QR code.
-                let r = if tx.can_cancel() {
-                    CornerRadius::default()
-                } else {
-                    View::item_rounding(0, 2, true)
-                };
+                let r =  CornerRadius::default();
                 View::item_button(ui, r, SCAN, Some(Colors::text_button()), || {
                     modal.disable_closing();
                     cb.start_camera();
                     self.scan_qr_content = Some(CameraContent::default());
                 });
-                // Draw button to pick file.
-                self.file_pick_button.ui(ui, cb, |data| {
-                    wallet.open_message(data);
+            }
+            // Draw button to cancel transaction.
+            if tx.can_cancel() {
+                let r = if tx.can_finalize {
+                    CornerRadius::default()
+                } else {
+                    View::item_rounding(0, 2, true)
+                };
+                View::item_button(ui, r, PROHIBIT, Some(Colors::red()), || {
+                    wallet.cancel(tx.data.id);
                 });
             }
         });
