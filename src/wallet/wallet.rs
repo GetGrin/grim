@@ -1462,17 +1462,15 @@ fn sync_wallet_data(wallet: &Wallet, from_node: bool) {
                                 };
                                 wallet.slatepack_exists(&slate)
                             };
-                            if !initial_state && !is_response {
-                                finalizing = {
-                                    let mut slate = Slate::blank(1, false);
-                                    slate.id = tx.tx_slate_id.unwrap();
-                                    slate.state = match tx.tx_type {
-                                        TxLogEntryType::TxReceived => SlateState::Invoice3,
-                                        _ => SlateState::Standard3
-                                    };
-                                    wallet.slatepack_exists(&slate)
+                            finalizing = {
+                                let mut slate = Slate::blank(1, false);
+                                slate.id = tx.tx_slate_id.unwrap();
+                                slate.state = match tx.tx_type {
+                                    TxLogEntryType::TxReceived => SlateState::Invoice3,
+                                    _ => SlateState::Standard3
                                 };
-                            }
+                                wallet.slatepack_exists(&slate)
+                            };
                             initial_state && !is_response && !finalizing
                         } else {
                             false
