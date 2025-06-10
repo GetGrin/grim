@@ -133,7 +133,7 @@ impl WalletTransactionContent {
             self.info_ui(ui, modal, tx, wallet, cb);
 
             // Show transaction sharing content.
-            if tx.can_finalize {
+            if tx.can_finalize || tx.is_response {
                 self.share_ui(ui, wallet, tx, cb);
             }
 
@@ -158,10 +158,18 @@ impl WalletTransactionContent {
                 tx: &WalletTransaction,
                 cb: &dyn PlatformCallbacks) {
         let amount = amount_to_hr_string(tx.amount, true);
-        let desc_text = if tx.data.tx_type == TxLogEntryType::TxSent {
-            t!("wallets.send_request_desc", "amount" => amount)
+        let desc_text = if tx.can_finalize {
+            if tx.data.tx_type == TxLogEntryType::TxSent {
+                t!("wallets.send_request_desc", "amount" => amount)
+            } else {
+                t!("wallets.invoice_desc", "amount" => amount)
+            }
         } else {
-            t!("wallets.invoice_desc", "amount" => amount)
+            if tx.data.tx_type == TxLogEntryType::TxSent {
+                t!("wallets.parse_i1_slatepack_desc", "amount" => amount)
+            } else {
+                t!("wallets.parse_s1_slatepack_desc", "amount" => amount)
+            }
         };
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
@@ -177,7 +185,7 @@ impl WalletTransactionContent {
                 // Draw button to show Slatepack message as QR code.
                 let qr_text = format!("{} {}", QR_CODE, t!("qr_code"));
                 View::button(ui, qr_text.clone(), Colors::white_or_black(false), || {
-                    if let Some((_, d)) = wallet.read_slate_by_tx(tx) {
+                    if let Some((_, d)) = wallet.read_slatepack_by_tx(tx) {
                         self.qr_code_content = Some(QrCodeContent::new(d, true));
                     }
                 });
@@ -189,7 +197,7 @@ impl WalletTransactionContent {
                                           share_text,
                                           Colors::blue(),
                                           Colors::white_or_black(false), || {
-                        if let Some((s, d)) = wallet.read_slate_by_tx(tx) {
+                        if let Some((s, d)) = wallet.read_slatepack_by_tx(tx) {
                             let name = format!("{}.{}.slatepack", s.id, s.state);
                             let data = d.as_bytes().to_vec();
                             cb.share_data(name, data).unwrap_or_default();

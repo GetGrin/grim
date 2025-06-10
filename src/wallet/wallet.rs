@@ -13,19 +13,6 @@
 // limitations under the License.
 
 use futures::channel::oneshot;
-use parking_lot::RwLock;
-use rand::Rng;
-use serde_json::{json, Value};
-use std::fs::File;
-use std::io::Write;
-use std::net::{SocketAddr, TcpListener};
-use std::path::PathBuf;
-use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
-use std::sync::{mpsc, Arc};
-use std::thread::Thread;
-use std::time::Duration;
-use std::{fs, thread};
-
 use grin_api::{ApiServer, Router};
 use grin_chain::SyncStatus;
 use grin_keychain::{ExtKeychain, Identifier, Keychain};
@@ -40,6 +27,18 @@ use grin_wallet_impls::{DefaultLCProvider, DefaultWalletImpl, HTTPNodeClient, LM
 use grin_wallet_libwallet::api_impl::owner::{cancel_tx, retrieve_summary_info, retrieve_txs};
 use grin_wallet_libwallet::{address, Error, InitTxArgs, IssueInvoiceTxArgs, NodeClient, RetrieveTxQueryArgs, RetrieveTxQuerySortField, RetrieveTxQuerySortOrder, Slate, SlateState, SlateVersion, SlatepackAddress, StatusMessage, TxLogEntry, TxLogEntryType, VersionedSlate, WalletBackend, WalletInitStatus, WalletInst, WalletLCProvider};
 use grin_wallet_util::OnionV3Address;
+use parking_lot::RwLock;
+use rand::Rng;
+use serde_json::{json, Value};
+use std::fs::File;
+use std::io::Write;
+use std::net::{SocketAddr, TcpListener};
+use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
+use std::sync::{mpsc, Arc};
+use std::thread::Thread;
+use std::time::Duration;
+use std::{fs, thread};
 
 use crate::node::{Node, NodeConfig};
 use crate::tor::Tor;
@@ -673,8 +672,7 @@ impl Wallet {
             load.store(true, Ordering::Relaxed);
             if let Ok(slate) = w.parse_slatepack(&msg) {
                 // Check if message with same id and state already exists.
-                let slatepack_path = w.get_config().get_slatepack_path(&slate);
-                let exists = fs::exists(slatepack_path).unwrap_or(false);
+                let exists = w.slatepack_exists(&slate);
                 if exists {
                     if let Some(tx) = w.tx_by_slate(&slate) {
                         let mut w_res = res.write();
@@ -766,17 +764,14 @@ impl Wallet {
         Ok(message)
     }
 
-    /// Read slatepack from file.
-    pub fn read_slatepack(&self, slate: &Slate) -> Option<String> {
+    /// Check if Slatepack file exists.
+    pub fn slatepack_exists(&self, slate: &Slate) -> bool {
         let slatepack_path = self.get_config().get_slatepack_path(slate);
-        match fs::read_to_string(slatepack_path) {
-            Ok(s) => Some(s),
-            Err(_) => None
-        }
+        fs::exists(slatepack_path).unwrap()
     }
 
-    /// Get last stored [`Slate`] for transaction.
-    pub fn read_slate_by_tx(&self, tx: &WalletTransaction) -> Option<(Slate, String)> {
+    /// Get last stored Slatepack message for transaction.
+    pub fn read_slatepack_by_tx(&self, tx: &WalletTransaction) -> Option<(Slate, String)> {
         let mut slate = None;
         if let Some(slate_id) = tx.data.tx_slate_id {
             // Get slate state based on tx state and status.
@@ -803,7 +798,8 @@ impl Wallet {
                 let mut s = Slate::blank(0, false);
                 s.id = slate_id;
                 s.state = st;
-                if let Some(m) = self.read_slatepack(&s) {
+                let slatepack_path = self.get_config().get_slatepack_path(&s);
+                if let Ok(m) = fs::read_to_string(slatepack_path) {
                     if let Ok(s) = self.parse_slatepack(&m) {
                         slate = Some((s, m));
                     }
@@ -865,7 +861,7 @@ impl Wallet {
                           addr: &SlatepackAddress) -> Result<WalletTransaction, Error> {
         // Initialize transaction.
         let tx = self.send(amount, Some(addr.clone()))?;
-        let slate_res = self.read_slate_by_tx(&tx);
+        let slate_res = self.read_slatepack_by_tx(&tx);
         if slate_res.is_none() {
             return Err(Error::GenericError("Slate not found".to_string()));
         }
@@ -1445,6 +1441,7 @@ fn sync_wallet_data(wallet: &Wallet, from_node: bool) {
                         let unconfirmed_sent_or_received = tx.tx_slate_id.is_some() &&
                             !tx.confirmed && (tx.tx_type == TxLogEntryType::TxSent ||
                             tx.tx_type == TxLogEntryType::TxReceived);
+                        let mut is_response = false;
                         let mut finalizing = false;
                         let can_finalize = if unconfirmed_sent_or_received {
                             let initial_state = {
@@ -1454,18 +1451,29 @@ fn sync_wallet_data(wallet: &Wallet, from_node: bool) {
                                     TxLogEntryType::TxReceived => SlateState::Invoice1,
                                     _ => SlateState::Standard1
                                 };
-                                wallet.read_slatepack(&slate).is_some()
+                                wallet.slatepack_exists(&slate)
                             };
-                            finalizing = {
+                            is_response = {
                                 let mut slate = Slate::blank(1, false);
                                 slate.id = tx.tx_slate_id.unwrap();
                                 slate.state = match tx.tx_type {
-                                    TxLogEntryType::TxReceived => SlateState::Invoice3,
-                                    _ => SlateState::Standard3
+                                    TxLogEntryType::TxReceived => SlateState::Standard2,
+                                    _ => SlateState::Invoice2
                                 };
-                                wallet.read_slatepack(&slate).is_some()
+                                wallet.slatepack_exists(&slate)
                             };
-                            initial_state && !finalizing
+                            if !initial_state && !is_response {
+                                finalizing = {
+                                    let mut slate = Slate::blank(1, false);
+                                    slate.id = tx.tx_slate_id.unwrap();
+                                    slate.state = match tx.tx_type {
+                                        TxLogEntryType::TxReceived => SlateState::Invoice3,
+                                        _ => SlateState::Standard3
+                                    };
+                                    wallet.slatepack_exists(&slate)
+                                };
+                            }
+                            initial_state && !is_response && !finalizing
                         } else {
                             false
                         };
@@ -1492,6 +1500,7 @@ fn sync_wallet_data(wallet: &Wallet, from_node: bool) {
                             data: tx.clone(),
                             amount,
                             cancelling,
+                            is_response,
                             can_finalize,
                             finalizing,
                             height: conf_height,

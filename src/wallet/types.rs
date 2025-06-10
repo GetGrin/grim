@@ -160,6 +160,8 @@ pub struct WalletTransaction {
     pub amount: u64,
     /// Flag to check if transaction is cancelling.
     pub cancelling: bool,
+    /// Flag to check if transaction can be sent back to initiator to finalize.
+    pub is_response: bool,
     /// Flag to check if transaction can be finalized based on Slatepack message state.
     pub can_finalize: bool,
     /// Flag to check if transaction is finalizing.
