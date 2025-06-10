@@ -1396,7 +1396,7 @@ fn sync_wallet_data(wallet: &Wallet, from_node: bool) {
 
                 // Retrieve txs from local database.
                 let txs_args = RetrieveTxQueryArgs {
-                    exclude_cancelled: Some(false),
+                    exclude_cancelled: Some(true),
                     sort_field: Some(RetrieveTxQuerySortField::CreationTimestamp),
                     sort_order: Some(RetrieveTxQuerySortOrder::Desc),
                     ..Default::default()
@@ -1419,7 +1419,7 @@ fn sync_wallet_data(wallet: &Wallet, from_node: bool) {
                     let account_txs = txs.1.iter().map(|v| v.clone()).filter(|tx| {
                         match wallet.get_parent_key_id() {
                             Ok(key) => {
-                                tx.parent_key_id == key
+                                tx.parent_key_id == key && tx.tx_slate_id.is_some()
                             }
                             Err(_) => {
                                 true
