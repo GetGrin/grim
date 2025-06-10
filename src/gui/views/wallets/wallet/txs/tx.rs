@@ -148,7 +148,7 @@ impl WalletTransactionContent {
                 }
             };
             ui.add_space(6.0);
-            ui.vertical_centered_justified(|ui| {
+            ui.vertical_centered(|ui| {
                 ui.label(RichText::new(desc_text).size(16.0).color(Colors::inactive_text()));
             });
             ui.add_space(6.0);
