@@ -132,55 +132,10 @@ impl WalletTransactionContent {
             // Show transaction information.
             self.info_ui(ui, modal, tx, wallet, cb);
 
-            // Show tx description.
-            let amount = amount_to_hr_string(tx.amount, true);
-            let desc_text = if tx.can_finalize {
-                if tx.data.tx_type == TxLogEntryType::TxSent {
-                    t!("wallets.send_request_desc", "amount" => amount)
-                } else {
-                    t!("wallets.invoice_desc", "amount" => amount)
-                }
-            } else {
-                if tx.data.tx_type == TxLogEntryType::TxSent {
-                    t!("wallets.parse_i1_slatepack_desc", "amount" => amount)
-                } else {
-                    t!("wallets.parse_s1_slatepack_desc", "amount" => amount)
-                }
-            };
-            ui.add_space(6.0);
-            ui.vertical_centered(|ui| {
-                ui.label(RichText::new(desc_text).size(16.0).color(Colors::inactive_text()));
-            });
-            ui.add_space(6.0);
-
-            // Setup spacing between buttons.
-            ui.spacing_mut().item_spacing = egui::Vec2::new(8.0, 0.0);
-
-            ui.columns(2, |columns| {
-                columns[0].vertical_centered_justified(|ui| {
-                    // Draw button to show Slatepack message as QR code.
-                    let qr_text = format!("{} {}", QR_CODE, t!("qr_code"));
-                    View::button(ui, qr_text.clone(), Colors::white_or_black(false), || {
-                        if let Some((_, d)) = wallet.read_slate_by_tx(tx) {
-                            self.qr_code_content = Some(QrCodeContent::new(d, true));
-                        }
-                    });
-                });
-                columns[1].vertical_centered_justified(|ui| {
-                    // Show button to share response as file.
-                    let share_text = format!("{} {}", FILE_TEXT, t!("file"));
-                    View::colored_text_button(ui,
-                                              share_text,
-                                              Colors::blue(),
-                                              Colors::white_or_black(false), || {
-                            if let Some((s, d)) = wallet.read_slate_by_tx(tx) {
-                                let name = format!("{}.{}.slatepack", s.id, s.state);
-                                let data = d.as_bytes().to_vec();
-                                cb.share_data(name, data).unwrap_or_default();
-                            }
-                        });
-                });
-            });
+            // Show transaction sharing content.
+            if tx.can_finalize {
+                self.share_ui(ui, wallet, tx, cb);
+            }
 
             ui.add_space(8.0);
             View::horizontal_line(ui, Colors::item_stroke());
@@ -196,6 +151,53 @@ impl WalletTransactionContent {
         ui.add_space(6.0);
     }
 
+    /// Draw transaction sharing content.
+    fn share_ui(&mut self,
+                ui: &mut egui::Ui,
+                wallet: &Wallet,
+                tx: &WalletTransaction,
+                cb: &dyn PlatformCallbacks) {
+        let amount = amount_to_hr_string(tx.amount, true);
+        let desc_text = if tx.data.tx_type == TxLogEntryType::TxSent {
+            t!("wallets.send_request_desc", "amount" => amount)
+        } else {
+            t!("wallets.invoice_desc", "amount" => amount)
+        };
+        ui.add_space(6.0);
+        ui.vertical_centered(|ui| {
+            ui.label(RichText::new(desc_text).size(16.0).color(Colors::inactive_text()));
+        });
+        ui.add_space(6.0);
+
+        // Setup spacing between buttons.
+        ui.spacing_mut().item_spacing = egui::Vec2::new(8.0, 0.0);
+
+        ui.columns(2, |columns| {
+            columns[0].vertical_centered_justified(|ui| {
+                // Draw button to show Slatepack message as QR code.
+                let qr_text = format!("{} {}", QR_CODE, t!("qr_code"));
+                View::button(ui, qr_text.clone(), Colors::white_or_black(false), || {
+                    if let Some((_, d)) = wallet.read_slate_by_tx(tx) {
+                        self.qr_code_content = Some(QrCodeContent::new(d, true));
+                    }
+                });
+            });
+            columns[1].vertical_centered_justified(|ui| {
+                // Show button to share response as file.
+                let share_text = format!("{} {}", FILE_TEXT, t!("file"));
+                View::colored_text_button(ui,
+                                          share_text,
+                                          Colors::blue(),
+                                          Colors::white_or_black(false), || {
+                        if let Some((s, d)) = wallet.read_slate_by_tx(tx) {
+                            let name = format!("{}.{}.slatepack", s.id, s.state);
+                            let data = d.as_bytes().to_vec();
+                            cb.share_data(name, data).unwrap_or_default();
+                        }
+                    });
+            });
+        });
+    }
 
     /// Draw transaction information content.
     fn info_ui(&mut self,
