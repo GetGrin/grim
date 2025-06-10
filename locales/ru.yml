@@ -25,6 +25,7 @@ share: Поделиться
 theme: 'Тема:'
 dark: Тёмная
 light: Светлая
+file: Файл
 choose_file: Выбрать файл
 choose_folder: Выбрать папку
 crash_report: Отчёт о сбое

@@ -25,6 +25,7 @@ share: Paylasmak
 theme: 'Tema:'
 dark: Karanlik
 light: Isik
+file: Dosya
 choose_file: Dosya seçin
 choose_folder: Klasör seç
 crash_report: Ariza Raporu

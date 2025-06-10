@@ -25,6 +25,7 @@ share: 分享
 theme: '主题:'
 dark: 深色
 light: 淡色
+file: 文件
 choose_file: 选择文件
 choose_folder: 选择文件夹
 crash_report: 崩溃报告

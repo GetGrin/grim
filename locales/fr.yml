@@ -25,6 +25,7 @@ share: Partager
 theme: 'Thème:'
 dark: Sombre
 light: Clair
+file: Fichier
 choose_file: Choisir un fichier
 choose_folder: Choisir un dossier
 crash_report: Rapport d'échec

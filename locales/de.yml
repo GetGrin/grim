@@ -25,6 +25,7 @@ share: teilen
 theme: 'Theme:'
 dark: Dunkel
 light: Hell
+file: Datei
 choose_file: Datei auswählen
 choose_folder: Ordner auswählen
 crash_report: Absturzbericht
