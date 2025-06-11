@@ -233,7 +233,7 @@ impl Tor {
     /// Start Onion service from listening local port and [`SecretKey`].
     pub fn start_service(port: u16, key: SecretKey, id: &String) {
         // Check if service is already running.
-        if Self::is_service_running(id) {
+        if Self::is_service_running(id) || Self::is_service_starting(id) {
             return;
         } else {
             // Save starting service.
