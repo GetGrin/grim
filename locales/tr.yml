@@ -86,6 +86,7 @@ wallets:
   tx_canceled: Iptal edildi
   tx_cancelling: Iptal ediliyor
   tx_finalizing: Islem tamamlaniyor
+  tx_posting: Islem kaydetme
   tx_confirmed: Onaylandi
   txs: Islemler
   tx: Islem
@@ -141,7 +142,7 @@ transport:
   incorrect_addr_err: 'Girilen adres hatali:'
   tor_send_error: Tor adresi uzerinden gonderimde aksaklik olustu, alici online olmasi gerek, islem iptal edildi.
   tor_autorun_desc: Islemleri Tor adresi olarak AL,bunun için  cuzdan acilisinda Tor hizmetinin baslatilip baslatilmayacagi.
-  tor_sending: 'Tor adrese %{amount} ツ gonderiliyor.'
+  tor_sending: Tor adrese gonderiliyor
   tor_settings: Tor Ayarlar
   bridges: Bridges
   bridges_desc: Setup bridges to bypass Tor network censorship if usual connection is not working.

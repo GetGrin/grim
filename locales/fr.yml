@@ -86,6 +86,7 @@ wallets:
   tx_canceled: Annulé
   tx_cancelling: Annulation
   tx_finalizing: Finalisation
+  tx_posting: Publication
   tx_confirmed: Confirmé
   txs: Transactions
   tx: Transaction
@@ -141,7 +142,7 @@ transport:
   incorrect_addr_err: 'Adresse entrée incorrecte:'
   tor_send_error: "Une erreur s'est produite lors de l'envoi via Tor. Assurez-vous que le destinataire est en ligne, la transaction a été annulée."
   tor_autorun_desc: "Lancer automatiquement le service Tor à l'ouverture du portefeuille pour recevoir les transactions de manière synchronisée."
-  tor_sending: 'Envoi de %{amount} ツ via Tor'
+  tor_sending: Envoi via Tor
   tor_settings: Paramètres Tor
   bridges: Passerelles
   bridges_desc: Configurez des passerelles pour contourner la censure du réseau Tor si la connexion habituelle ne fonctionne pas.

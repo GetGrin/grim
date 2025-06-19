@@ -23,7 +23,7 @@ use serde_derive::{Deserialize, Serialize};
 
 use crate::{AppConfig, Settings};
 use crate::wallet::ConnectionsConfig;
-use crate::wallet::types::ConnectionMethod;
+use crate::wallet::types::{ConnectionMethod, WalletTransaction};
 
 /// Wallet configuration.
 #[derive(Serialize, Deserialize, Clone)]
@@ -192,15 +192,27 @@ impl WalletConfig {
         path.to_str().unwrap().to_string()
     }
 
-    /// Get Slatepacks data path for current wallet.
-    pub fn get_slatepack_path(&self, slate: &Slate) -> PathBuf {
+    /// Get Slatepack file path for transaction.
+    pub fn get_tx_slate_path(&self, tx: &WalletTransaction) -> PathBuf {
         let mut path = PathBuf::from(self.get_wallet_path());
         path.push(SLATEPACKS_DIR_NAME);
         if !path.exists() {
             let _ = fs::create_dir_all(path.clone());
         }
-        let slatepack_file_name = format!("{}.{}.slatepack", slate.id, slate.state);
-        path.push(slatepack_file_name);
+        let file = format!("{}.{}.slatepack", tx.data.tx_slate_id.unwrap(), tx.state);
+        path.push(file);
+        path
+    }
+
+    /// Get Slatepack file path for Slate.
+    pub fn get_slate_path(&self, slate: &Slate) -> PathBuf {
+        let mut path = PathBuf::from(self.get_wallet_path());
+        path.push(SLATEPACKS_DIR_NAME);
+        if !path.exists() {
+            let _ = fs::create_dir_all(path.clone());
+        }
+        let file = format!("{}.{}.slatepack", slate.id, slate.state);
+        path.push(file);
         path
     }
 

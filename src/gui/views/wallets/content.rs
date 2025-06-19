@@ -26,7 +26,7 @@ use crate::gui::views::wallets::wallet::types::{wallet_status_text, WalletConten
 use crate::gui::views::wallets::WalletContent;
 use crate::gui::views::{Content, Modal, TitlePanel, View};
 use crate::gui::Colors;
-use crate::wallet::types::ConnectionMethod;
+use crate::wallet::types::{ConnectionMethod, WalletTask};
 use crate::wallet::{Wallet, WalletList};
 use crate::AppConfig;
 
@@ -619,7 +619,7 @@ impl WalletsContent {
     fn select_wallet(&mut self, wallet: &Wallet, data: Option<String>, cb: &dyn PlatformCallbacks) {
         self.wallet_content.account_content.close_qr_scan(cb);
         if let Some(data) = data {
-            wallet.open_message(data);
+            wallet.task(WalletTask::OpenMessage(data));
         }
         self.wallets.select(Some(wallet.get_config().id));
     }

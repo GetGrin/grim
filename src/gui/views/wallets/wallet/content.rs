@@ -16,7 +16,7 @@ use egui::scroll_area::ScrollBarVisibility;
 use egui::{Id, Margin, RichText, ScrollArea};
 use grin_chain::SyncStatus;
 use std::time::Duration;
-use grin_wallet_libwallet::Error;
+
 use crate::gui::icons::{ARROWS_CLOCKWISE, FILE_ARROW_DOWN, FILE_ARROW_UP, GEAR_FINE, POWER, STACK};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::types::{LinePosition, ModalPosition};
@@ -30,7 +30,7 @@ use crate::gui::views::wallets::WalletTransactions;
 use crate::gui::views::{Content, FilePickContent, FilePickContentType, Modal, View};
 use crate::gui::Colors;
 use crate::node::Node;
-use crate::wallet::types::{ConnectionMethod, WalletTransaction};
+use crate::wallet::types::{ConnectionMethod, WalletTask};
 use crate::wallet::{ExternalConnection, Wallet};
 use crate::AppConfig;
 
@@ -103,11 +103,6 @@ impl WalletContentContainer for WalletContent {
         if wallet.get_current_connection() == ConnectionMethod::Integrated &&
             !Node::is_running() {
             show_account = false;
-        }
-
-        // Consume inserted message.
-        if let Some(res) = wallet.consume_message_result() {
-            self.on_transaction(res);
         }
 
         // Show wallet tabs.
@@ -314,13 +309,6 @@ impl WalletContent {
         }
     }
 
-    /// Callback on incoming transaction for user to take action.
-    fn on_transaction(&mut self, tx_result: Result<WalletTransaction, Error>) {
-        if let Ok(tx) = tx_result {
-            self.current_tab = Box::new(WalletTransactions::new(Some(tx)));
-        }
-    }
-
     /// Check if it's possible to go back at navigation stack.
     pub fn can_back(&self) -> bool {
         self.account_content.can_back() || self.transport_content.can_back()
@@ -370,41 +358,49 @@ impl WalletContent {
                     });
                 });
                 columns[1].vertical_centered_justified(|ui| {
-                    let active = if has_wallet_data {
-                        Some(false)
+                    if wallet.invoice_creating() {
+                        ui.add_space(4.0);
+                        View::small_loading_spinner(ui);
                     } else {
-                        None
-                    };
-                    View::tab_button(ui, FILE_ARROW_DOWN, Some(Colors::green()), active, |_| {
-                        self.invoice_request_content = Some(InvoiceRequestContent::default());
-                        Modal::new(INVOICE_MODAL_ID)
-                            .position(ModalPosition::CenterTop)
-                            .title(t!("wallets.receive"))
-                            .show();
-                    });
+                        let active = if has_wallet_data {
+                            Some(false)
+                        } else {
+                            None
+                        };
+                        View::tab_button(ui, FILE_ARROW_DOWN, Some(Colors::green()), active, |_| {
+                            self.invoice_request_content = Some(InvoiceRequestContent::default());
+                            Modal::new(INVOICE_MODAL_ID)
+                                .position(ModalPosition::CenterTop)
+                                .title(t!("wallets.receive"))
+                                .show();
+                        });
+                    }
                 });
                 columns[2].vertical_centered_justified(|ui| {
                     if wallet.message_opening() {
+                        ui.add_space(4.0);
                         View::small_loading_spinner(ui);
                     } else {
-                        let mut message = "".to_string();
                         self.file_pick_tab_button.ui(ui, cb, |m| {
-                            message = m;
+                            wallet.task(WalletTask::OpenMessage(m));
                         });
-                        if !message.is_empty() {
-                            wallet.open_message(message);
-                        }
                     }
                 });
                 if can_send {
                     columns[3].vertical_centered_justified(|ui| {
-                        View::tab_button(ui, FILE_ARROW_UP, Some(Colors::red()), Some(false), |_| {
-                            self.send_request_content = Some(SendRequestContent::new(None));
-                            Modal::new(SEND_MODAL_ID)
-                                .position(ModalPosition::CenterTop)
-                                .title(t!("wallets.send"))
-                                .show();
-                        });
+                        if wallet.send_creating() {
+                            ui.add_space(4.0);
+                            View::small_loading_spinner(ui);
+                        } else {
+                            let (icon, color) = (FILE_ARROW_UP, Some(Colors::red()));
+                            View::tab_button(ui, icon, color, Some(false), |_| {
+                                self.send_request_content = Some(SendRequestContent::new(None));
+                                Modal::new(SEND_MODAL_ID)
+                                    .position(ModalPosition::CenterTop)
+                                    .title(t!("wallets.send"))
+                                    .show();
+                            });
+                        }
                     });
                 }
                 let settings_index = if tabs_amount == 5 { 4 } else { 3 };

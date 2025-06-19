@@ -130,7 +130,7 @@ impl WalletTransportContent {
                     if !Tor::is_service_running(service_id) {
                         let r = CornerRadius::default();
                         View::item_button(ui, r, POWER, Some(Colors::green()), || {
-                            if let Ok(key) = wallet.secret_key() {
+                            if let Ok(key) = wallet.get_secret_key() {
                                 let api_port = wallet.foreign_api_port().unwrap();
                                 Tor::start_service(api_port, key, service_id);
                             }

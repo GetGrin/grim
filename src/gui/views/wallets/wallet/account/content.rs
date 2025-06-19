@@ -24,6 +24,7 @@ use crate::gui::views::wallets::wallet::types::{WalletContentContainer, GRIN};
 use crate::gui::views::{CameraContent, CameraScanContent, Content, Modal, View};
 use crate::gui::Colors;
 use crate::wallet::{Wallet, WalletConfig};
+use crate::wallet::types::WalletTask;
 
 /// Wallet account panel content.
 pub struct AccountContent {
@@ -288,7 +289,7 @@ impl AccountContent {
                             //TODO: send with address
                         }
                         QrScanResult::Slatepack(m) => {
-                            wallet.open_message(m.to_string());
+                            wallet.task(WalletTask::OpenMessage(m));
                         }
                         _ => {
                             self.qr_scan_result = Some(result);

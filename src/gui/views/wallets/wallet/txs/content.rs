@@ -21,7 +21,7 @@ use grin_wallet_libwallet::TxLogEntryType;
 use std::ops::Range;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::gui::icons::{ARCHIVE_BOX, ARROW_CIRCLE_DOWN, ARROW_CIRCLE_UP, CALENDAR_CHECK, DOTS_THREE_CIRCLE, FILE_ARROW_DOWN, FILE_TEXT, GEAR_FINE, PROHIBIT, X_CIRCLE};
+use crate::gui::icons::{ARCHIVE_BOX, ARROW_CIRCLE_DOWN, ARROW_CIRCLE_UP, CALENDAR_CHECK, DOTS_THREE_CIRCLE, FILE_ARROW_DOWN, FILE_TEXT, GEAR_FINE, PROHIBIT, WARNING, X_CIRCLE};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::types::{LinePosition, ModalPosition};
 use crate::gui::views::wallets::types::WalletTab;
@@ -29,7 +29,7 @@ use crate::gui::views::wallets::wallet::types::{WalletTabType, GRIN};
 use crate::gui::views::wallets::wallet::WalletTransactionContent;
 use crate::gui::views::{Content, Modal, PullToRefresh, View};
 use crate::gui::Colors;
-use crate::wallet::types::{WalletData, WalletTransaction};
+use crate::wallet::types::{WalletData, WalletTask, WalletTransaction, WalletTransactionAction};
 use crate::wallet::Wallet;
 
 /// Wallet transactions tab content.
@@ -50,6 +50,15 @@ impl WalletTab for WalletTransactions {
     }
 
     fn ui(&mut self, ui: &mut egui::Ui, wallet: &Wallet, cb: &dyn PlatformCallbacks) {
+        if Modal::opened().is_none() {
+            // Show transaction modal on task result.
+            if let Some(id) = wallet.consume_tx_task_result() {
+                let tx = wallet.get_data().unwrap().tx_by_slate_id(id);
+                if let Some(tx) = tx {
+                    self.show_tx_info_modal(tx.data.id);
+                }
+            }
+        }
         self.modal_content_ui(ui, wallet, cb);
         self.txs_ui(ui, wallet);
     }
@@ -72,7 +81,7 @@ impl WalletTransactions {
             manual_sync: None,
         };
         if let Some(tx) = &tx {
-            content.show_tx_info_modal(tx);
+            content.show_tx_info_modal(tx.data.id);
         }
         content
     }
@@ -104,7 +113,7 @@ impl WalletTransactions {
                 return;
             }
             // Draw awaiting amount info if exists.
-           self.awaiting_info_ui(ui, &data);
+            self.awaiting_info_ui(ui, &data);
         });
         ui.add_space(4.0);
 
@@ -161,10 +170,9 @@ impl WalletTransactions {
                     r.nw = 0.0 as u8;
                     r.sw = 0.0 as u8;
                     View::item_button(ui, r, FILE_TEXT, None, || {
-                        self.show_tx_info_modal(tx);
+                        self.show_tx_info_modal(tx.data.id);
                     });
                 }
-
                 // Draw button to cancel transaction.
                 if tx.can_cancel() {
                     let (icon, color) = (PROHIBIT, Some(Colors::red()));
@@ -176,6 +184,10 @@ impl WalletTransactions {
                             .title(t!("confirmation"))
                             .show();
                     });
+                }
+                //TODO: Draw button to repeat transaction task on error.
+                if tx.action_error.is_some() {
+                    
                 }
             });
         }
@@ -303,52 +315,68 @@ impl WalletTransactions {
                             || tx.data.tx_type == TxLogEntryType::TxReceivedCancelled;
                         if is_canceled {
                             format!("{} {}", X_CIRCLE, t!("wallets.tx_canceled"))
-                        } else if tx.finalizing {
-                            format!("{} {}", DOTS_THREE_CIRCLE, t!("wallets.tx_finalizing"))
-                        } else {
-                            if tx.cancelling {
-                                format!("{} {}", DOTS_THREE_CIRCLE, t!("wallets.tx_cancelling"))
+                        } else if let Some(a) = &tx.action {
+                            let error = if tx.action_error.is_none() {
+                                "".to_string()
                             } else {
-                                match tx.data.tx_type {
-                                    TxLogEntryType::TxReceived => {
-                                        format!("{} {}",
-                                                DOTS_THREE_CIRCLE,
-                                                t!("wallets.tx_receiving"))
-                                    },
-                                    TxLogEntryType::TxSent => {
-                                        format!("{} {}",
-                                                DOTS_THREE_CIRCLE,
-                                                t!("wallets.tx_sending"))
-                                    },
-                                    TxLogEntryType::ConfirmedCoinbase => {
-                                        let tx_h = tx.height.unwrap_or(1) - 1;
-                                        if tx_h != 0 {
-                                            let left_conf = height - tx_h;
-                                            if height >= tx_h && left_conf < COINBASE_MATURITY {
-                                                let conf_info = format!("{}/{}",
-                                                                        left_conf,
-                                                                        COINBASE_MATURITY);
-                                                format!("{} {} {}",
-                                                        DOTS_THREE_CIRCLE,
-                                                        t!("wallets.tx_confirming"),
-                                                        conf_info
-                                                )
-                                            } else {
-                                                format!("{} {}",
-                                                        DOTS_THREE_CIRCLE,
-                                                        t!("wallets.tx_confirming"))
-                                            }
+                                format!("{}: ", t!("error"))
+                            };
+                            let status = match a {
+                                WalletTransactionAction::Cancelling => t!("wallets.tx_cancelling"),
+                                WalletTransactionAction::Finalizing => t!("wallets.tx_finalizing"),
+                                WalletTransactionAction::Posting => t!("wallets.tx_posting"),
+                                WalletTransactionAction::SendingTor => t!("transport.tor_sending")
+                            };
+                            let icon = if error.is_empty() {
+                                DOTS_THREE_CIRCLE
+                            } else {
+                                WARNING
+                            };
+                            format!("{} {}{}", icon, error, status)
+                        } else {
+                            match tx.data.tx_type {
+                                TxLogEntryType::TxReceived => {
+                                    let text = match tx.finalized() {
+                                        true => t!("wallets.await_fin_amount"),
+                                        false => t!("wallets.tx_receiving")
+                                    };
+                                    format!("{} {}", DOTS_THREE_CIRCLE, text)
+                                },
+                                TxLogEntryType::TxSent => {
+                                    let text = match tx.finalized() {
+                                        true => t!("wallets.await_fin_amount"),
+                                        false => t!("wallets.tx_sending")
+                                    };
+                                    format!("{} {}", DOTS_THREE_CIRCLE, text)
+                                },
+                                TxLogEntryType::ConfirmedCoinbase => {
+                                    let tx_h = tx.height.unwrap_or(1) - 1;
+                                    if tx_h != 0 {
+                                        let left_conf = height - tx_h;
+                                        if height >= tx_h && left_conf < COINBASE_MATURITY {
+                                            let conf_info = format!("{}/{}",
+                                                                    left_conf,
+                                                                    COINBASE_MATURITY);
+                                            format!("{} {} {}",
+                                                    DOTS_THREE_CIRCLE,
+                                                    t!("wallets.tx_confirming"),
+                                                    conf_info
+                                            )
                                         } else {
                                             format!("{} {}",
                                                     DOTS_THREE_CIRCLE,
                                                     t!("wallets.tx_confirming"))
                                         }
-                                    },
-                                    _ => {
+                                    } else {
                                         format!("{} {}",
                                                 DOTS_THREE_CIRCLE,
                                                 t!("wallets.tx_confirming"))
                                     }
+                                },
+                                _ => {
+                                    format!("{} {}",
+                                            DOTS_THREE_CIRCLE,
+                                            t!("wallets.tx_confirming"))
                                 }
                             }
                         }
@@ -439,8 +467,8 @@ impl WalletTransactions {
     }
 
     /// Show transaction information [`Modal`].
-    fn show_tx_info_modal(&mut self, tx: &WalletTransaction) {
-        let modal = WalletTransactionContent::new(tx);
+    fn show_tx_info_modal(&mut self, id: u32) {
+        let modal = WalletTransactionContent::new(id);
         self.tx_info_content = Some(modal);
         Modal::new(TX_INFO_MODAL)
             .position(ModalPosition::Center)
@@ -450,28 +478,29 @@ impl WalletTransactions {
 
     /// Confirmation [`Modal`] to cancel transaction.
     fn cancel_confirmation_modal(&mut self, ui: &mut egui::Ui, wallet: &Wallet) {
+        let data = wallet.get_data().unwrap();
+        let data_txs = data.txs.unwrap();
+        let txs = data_txs.into_iter()
+            .filter(|tx| tx.data.id == self.confirm_cancel_tx_id.unwrap())
+            .collect::<Vec<WalletTransaction>>();
+        if txs.is_empty() {
+            Modal::close();
+            return;
+        }
+        let tx = txs.get(0).unwrap();
+        let amount = amount_to_hr_string(tx.amount, true);
+        let text = match tx.data.tx_type {
+            TxLogEntryType::TxReceived => {
+                t!("wallets.tx_receive_cancel_conf", "amount" => amount)
+            },
+            _ => {
+                t!("wallets.tx_send_cancel_conf", "amount" => amount)
+            }
+        };
+
+        // Show confirmation text.
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
-            // Setup confirmation text.
-            let data = wallet.get_data().unwrap();
-            let data_txs = data.txs.unwrap();
-            let txs = data_txs.into_iter()
-                .filter(|tx| tx.data.id == self.confirm_cancel_tx_id.unwrap())
-                .collect::<Vec<WalletTransaction>>();
-            if txs.is_empty() {
-                Modal::close();
-                return;
-            }
-            let tx = txs.get(0).unwrap();
-            let amount = amount_to_hr_string(tx.amount, true);
-            let text = match tx.data.tx_type {
-                TxLogEntryType::TxReceived => {
-                    t!("wallets.tx_receive_cancel_conf", "amount" => amount)
-                },
-                _ => {
-                    t!("wallets.tx_send_cancel_conf", "amount" => amount)
-                }
-            };
             ui.label(RichText::new(text)
                 .size(17.0)
                 .color(Colors::text(false)));
@@ -492,7 +521,7 @@ impl WalletTransactions {
                 });
                 columns[1].vertical_centered_justified(|ui| {
                     View::button(ui, "OK".to_string(), Colors::white_or_black(false), || {
-                        wallet.cancel(self.confirm_cancel_tx_id.unwrap());
+                        wallet.task(WalletTask::Cancel(tx.clone()));
                         self.confirm_cancel_tx_id = None;
                         Modal::close();
                     });

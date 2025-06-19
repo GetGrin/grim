@@ -17,12 +17,12 @@ use grin_core::core::amount_to_hr_string;
 use grin_util::ToHex;
 use grin_wallet_libwallet::TxLogEntryType;
 
-use crate::gui::icons::{COPY, CUBE, FILE_ARCHIVE, FILE_TEXT, HASH_STRAIGHT, PROHIBIT, QR_CODE, SCAN};
+use crate::gui::icons::{CIRCLE_HALF, COPY, CUBE, FILE_ARCHIVE, FILE_TEXT, HASH_STRAIGHT, PROHIBIT, QR_CODE, SCAN};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::wallets::wallet::txs::WalletTransactions;
 use crate::gui::views::{CameraContent, FilePickContent, FilePickContentType, Modal, QrCodeContent, View};
 use crate::gui::Colors;
-use crate::wallet::types::WalletTransaction;
+use crate::wallet::types::{WalletTask, WalletTransaction};
 use crate::wallet::Wallet;
 
 /// Transaction information [`Modal`] content.
@@ -42,9 +42,9 @@ pub struct WalletTransactionContent {
 
 impl WalletTransactionContent {
     /// Create new content instance with [`Wallet`] from provided [`WalletTransaction`].
-    pub fn new(tx: &WalletTransaction) -> Self {
+    pub fn new(id: u32) -> Self {
         Self {
-            tx_id: tx.data.id,
+            tx_id: id,
             qr_code_content: None,
             scan_qr_content: None,
             file_pick_button: FilePickContent::new(
@@ -103,7 +103,7 @@ impl WalletTransactionContent {
                 modal.enable_closing();
                 self.scan_qr_content = None;
                 // Provide scan result as Slatepack message.
-                wallet.open_message(result.text());
+                wallet.task(WalletTask::OpenMessage(result.text()));
             } else {
                 scan_content.ui(ui, cb);
             }
@@ -133,8 +133,8 @@ impl WalletTransactionContent {
             // Show transaction information.
             self.info_ui(ui, modal, tx, wallet, cb);
 
-            // Show transaction sharing content.
-            if tx.can_finalize || tx.is_response {
+            // Show transaction sharing content when can cancel or finalized.
+            if tx.can_cancel() && !tx.finalized() {
                 self.share_ui(ui, wallet, tx, cb);
             }
 
@@ -159,7 +159,7 @@ impl WalletTransactionContent {
                 tx: &WalletTransaction,
                 cb: &dyn PlatformCallbacks) {
         let amount = amount_to_hr_string(tx.amount, true);
-        let desc_text = if tx.can_finalize {
+        let desc_text = if tx.can_finalize() {
             if tx.data.tx_type == TxLogEntryType::TxSent {
                 t!("wallets.send_request_desc", "amount" => amount)
             } else {
@@ -186,8 +186,8 @@ impl WalletTransactionContent {
                 // Draw button to show Slatepack message as QR code.
                 let qr_text = format!("{} {}", QR_CODE, t!("qr_code"));
                 View::button(ui, qr_text.clone(), Colors::white_or_black(false), || {
-                    if let Some((_, d)) = wallet.read_slatepack_by_tx(tx) {
-                        self.qr_code_content = Some(QrCodeContent::new(d, true));
+                    if let Some(c) = wallet.read_slatepack(tx) {
+                        self.qr_code_content = Some(QrCodeContent::new(c, true));
                     }
                 });
             });
@@ -198,10 +198,12 @@ impl WalletTransactionContent {
                                           share_text,
                                           Colors::blue(),
                                           Colors::white_or_black(false), || {
-                        if let Some((s, d)) = wallet.read_slatepack_by_tx(tx) {
-                            let name = format!("{}.{}.slatepack", s.id, s.state);
-                            let data = d.as_bytes().to_vec();
-                            cb.share_data(name, data).unwrap_or_default();
+                        if let Some(slate_id) = tx.data.tx_slate_id {
+                            let name = format!("{}.{}.slatepack", slate_id, tx.state);
+                            if let Some(c) = wallet.read_slatepack(tx) {
+                                let data = c.as_bytes().to_vec();
+                                cb.share_data(name, data).unwrap_or_default();
+                            }
                         }
                     });
             });
@@ -242,10 +244,10 @@ impl WalletTransactionContent {
                 }
                 return;
             }
-            if tx.can_finalize {
+            if tx.can_finalize() {
                 // Draw button to pick file.
                 self.file_pick_button.ui(ui, cb, |data| {
-                    wallet.open_message(data);
+                    wallet.task(WalletTask::OpenMessage(data));
                 });
                 // Draw button to scan QR code.
                 let r =  CornerRadius::default();
@@ -257,13 +259,14 @@ impl WalletTransactionContent {
             }
             // Draw button to cancel transaction.
             if tx.can_cancel() {
-                let r = if tx.can_finalize {
+                let r = if tx.can_finalize() {
                     CornerRadius::default()
                 } else {
                     View::item_rounding(0, 2, true)
                 };
                 View::item_button(ui, r, PROHIBIT, Some(Colors::red()), || {
-                    wallet.cancel(tx.data.id);
+                    wallet.task(WalletTask::Cancel(tx.clone()));
+                    Modal::close();
                 });
             }
         });
@@ -280,7 +283,7 @@ impl WalletTransactionContent {
         }
         // Show receiver address.
         if let Some(rec) = tx.receiver() {
-            let label = format!("{} {}", CUBE, t!("network_mining.address"));
+            let label = format!("{} {}", CIRCLE_HALF, t!("network_mining.address"));
             info_item_ui(ui, rec.to_string(), label, true, cb);
         }
     }

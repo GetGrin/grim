@@ -468,9 +468,12 @@ impl View {
         Spinner::new().size(Self::BIG_SPINNER_SIZE).color(Colors::gold()).ui(ui);
     }
 
+    /// Size of big loading spinner.
+    pub const SMALL_SPINNER_SIZE: f32 = 32.0;
+
     /// Draw small gold loading spinner.
     pub fn small_loading_spinner(ui: &mut egui::Ui) {
-        Spinner::new().size(38.0).color(Colors::gold()).ui(ui);
+        Spinner::new().size(30.0).color(Colors::gold()).ui(ui);
     }
 
     /// Draw the button that looks like checkbox with callback on check.

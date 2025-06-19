@@ -14,42 +14,23 @@
 
 use egui::{Id, RichText};
 use grin_core::core::amount_from_hr_string;
-use grin_wallet_libwallet::Error;
-use parking_lot::RwLock;
-use std::sync::Arc;
-use std::thread;
 
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::wallets::wallet::WalletTransactionContent;
 use crate::gui::views::{Modal, TextEdit, View};
 use crate::gui::Colors;
-use crate::wallet::types::WalletTransaction;
+use crate::wallet::types::WalletTask;
 use crate::wallet::Wallet;
 
 /// Invoice request creation content.
 pub struct InvoiceRequestContent {
     /// Amount to receive.
     amount_edit: String,
-
-    /// Flag to check if request is loading.
-    request_loading: bool,
-    /// Request result if there is no error.
-    request_result: Arc<RwLock<Option<Result<WalletTransaction, Error>>>>,
-    /// Flag to check if there is an error happened on request creation.
-    request_error: Option<String>,
-
-    /// Request result transaction content.
-    result_tx_content: Option<WalletTransactionContent>,
 }
 
 impl Default for InvoiceRequestContent {
     fn default() -> Self {
         Self {
             amount_edit: "".to_string(),
-            request_loading: false,
-            request_result: Arc::new(RwLock::new(None)),
-            request_error: None,
-            result_tx_content: None,
         }
     }
 }
@@ -61,41 +42,19 @@ impl InvoiceRequestContent {
               wallet: &Wallet,
               modal: &Modal,
               cb: &dyn PlatformCallbacks) {
-        // Draw transaction information on request result.
-        if let Some(tx) = self.result_tx_content.as_mut() {
-            tx.ui(ui, wallet, modal, cb);
-            return;
-        }
-
         // Setup callback on continue.
         let on_continue = |m: &mut InvoiceRequestContent| {
             if m.amount_edit.is_empty() {
                 return;
             }
             if let Ok(a) = amount_from_hr_string(m.amount_edit.as_str()) {
-                modal.disable_closing();
-                // Setup data for request.
-                let wallet = wallet.clone();
-                let result = m.request_result.clone();
-                // Send request at another thread.
-                m.request_loading = true;
-                thread::spawn(move || {
-                    let res = wallet.issue_invoice(a);
-                    let mut w_result = result.write();
-                    *w_result = Some(res);
-                });
-            } else {
-                m.request_error = Some(t!("wallets.invoice_slatepack_err"));
+                m.amount_edit = "".to_string();
+                wallet.task(WalletTask::Receive(a));
+                Modal::close();
             }
         };
 
         ui.add_space(6.0);
-
-        // Draw content on request loading.
-        if self.request_loading {
-            self.loading_request_ui(ui, modal);
-            return;
-        }
 
         // Draw amount input content.
         ui.vertical_centered(|ui| {
@@ -117,7 +76,6 @@ impl InvoiceRequestContent {
 
         // Check value if input was changed.
         if amount_edit_before != self.amount_edit {
-            self.request_error = None;
             if !self.amount_edit.is_empty() {
                 self.amount_edit = self.amount_edit.trim().replace(",", ".");
                 match amount_from_hr_string(self.amount_edit.as_str()) {
@@ -146,16 +104,6 @@ impl InvoiceRequestContent {
             }
         }
 
-        // Show request creation error.
-        if let Some(err) = &self.request_error {
-            ui.add_space(12.0);
-            ui.vertical_centered(|ui| {
-                ui.label(RichText::new(err)
-                    .size(17.0)
-                    .color(Colors::red()));
-            });
-        }
-
         ui.add_space(12.0);
 
         // Setup spacing between buttons.
@@ -165,7 +113,6 @@ impl InvoiceRequestContent {
             columns[0].vertical_centered_justified(|ui| {
                 View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
                     self.amount_edit = "".to_string();
-                    self.request_error = None;
                     Modal::close();
                 });
             });
@@ -177,37 +124,5 @@ impl InvoiceRequestContent {
             });
         });
         ui.add_space(6.0);
-    }
-
-    /// Draw loading request content.
-    fn loading_request_ui(&mut self, ui: &mut egui::Ui, modal: &Modal) {
-        ui.add_space(34.0);
-        ui.vertical_centered(|ui| {
-            View::big_loading_spinner(ui);
-        });
-        ui.add_space(50.0);
-
-        // Check if there is request result error.
-        if self.request_error.is_some() {
-            modal.enable_closing();
-            self.request_loading = false;
-            return;
-        }
-
-        // Update data on request result.
-        let r_request = self.request_result.read();
-        if r_request.is_some() {
-            modal.enable_closing();
-            let result = r_request.as_ref().unwrap();
-            match result {
-                Ok(tx) => {
-                    self.result_tx_content = Some(WalletTransactionContent::new(tx));
-                }
-                Err(_) => {
-                    self.request_error = Some(t!("wallets.invoice_slatepack_err"));
-                    self.request_loading = false;
-                }
-            }
-        }
     }
 }

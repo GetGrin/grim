@@ -86,6 +86,7 @@ wallets:
   tx_canceled: Отменено
   tx_cancelling: Отмена
   tx_finalizing: Завершение
+  tx_posting: Публикация
   tx_confirmed: Подтверждено
   txs: Транзакции
   tx: Транзакция
@@ -141,7 +142,7 @@ transport:
   incorrect_addr_err: 'Введённый адрес неверен:'
   tor_send_error: Во время отправки через Tor произошла ошибка, убедитесь, что получатель находится онлайн, транзакция была отменена.
   tor_autorun_desc: Запускать ли Tor сервис при открытии кошелька для синхронного получения транзакций.
-  tor_sending: 'Отправка %{amount} ツ через Tor'
+  tor_sending: Отправка через Tor
   tor_settings: Настройки Tor
   bridges: Мосты
   bridges_desc: Настройте мосты для обхода цензуры сети Tor, если обычное соединение не работает.

@@ -86,6 +86,7 @@ wallets:
   tx_canceled: Abgebrochen
   tx_cancelling: Abbrechen
   tx_finalizing: Finalisierung
+  tx_posting: Buchungsvorgang
   tx_confirmed: Bestätigt
   txs: Transaktionen
   tx: Transaktion
@@ -141,7 +142,7 @@ transport:
   incorrect_addr_err: 'Eingegebene Addresse ist inkorrekt:'
   tor_send_error: Beim Senden über Tor ist ein Fehler aufgetreten. Stellen Sie sicher, dass der Empfänger online ist. Die Transaktion wurde abgebrochen.
   tor_autorun_desc: Gibt an, ob beim Öffnen des Wallets der Tor-Dienst gestartet werden soll, um Transaktionen synchron zu empfangen.
-  tor_sending: 'Sende %{amount} ツ über Tor'
+  tor_sending: Sende über Tor
   tor_settings: Tor Einstellungen
   bridges: Brücken
   bridges_desc: Richten Sie Brücken ein, um die Zensur des Tor-Netzwerks zu umgehen, wenn die normale Verbindung nicht funktioniert.

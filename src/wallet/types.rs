@@ -17,7 +17,7 @@ use std::sync::Arc;
 use grin_keychain::ExtKeychain;
 use grin_util::Mutex;
 use grin_wallet_impls::{DefaultLCProvider, HTTPNodeClient};
-use grin_wallet_libwallet::{SlatepackAddress, TxLogEntry, TxLogEntryType, WalletInfo, WalletInst};
+use grin_wallet_libwallet::{Error, Slate, SlateState, SlatepackAddress, TxLogEntry, TxLogEntryType, WalletInfo, WalletInst};
 use grin_wallet_util::OnionV3Address;
 use serde_derive::{Deserialize, Serialize};
 
@@ -151,31 +151,133 @@ pub struct WalletData {
     pub txs: Option<Vec<WalletTransaction>>
 }
 
+impl WalletData {
+    /// Update transaction action status.
+    pub fn on_tx_action(&mut self, id: String, action: Option<WalletTransactionAction>) {
+        if self.txs.is_none() {
+            return;
+        }
+        for tx in self.txs.as_mut().unwrap() {
+            if let Some(slate_id) = tx.data.tx_slate_id {
+                if slate_id.to_string() == id {
+                    tx.action = action;
+                    tx.action_error = None;
+                    break;
+                }
+            }
+        }
+    }
+
+    /// Update transaction action error status.
+    pub fn on_tx_error(&mut self, id: String, err: Option<Error>) {
+        if self.txs.is_none() {
+            return;
+        }
+        for tx in self.txs.as_mut().unwrap() {
+            if let Some(slate_id) = tx.data.tx_slate_id {
+                if slate_id.to_string() == id {
+                    tx.action_error = err;
+                    break;
+                }
+            }
+        }
+    }
+
+    /// Get transaction by slate identifier.
+    pub fn tx_by_slate_id(&self, id: String) -> Option<WalletTransaction> {
+        if self.txs.is_none() {
+            return None;
+        }
+        for tx in self.txs.as_ref().unwrap() {
+            if let Some(slate_id) = tx.data.tx_slate_id {
+                if slate_id.to_string() == id {
+                    return Some(tx.clone());
+                }
+            }
+        }
+        None
+    }
+}
+
+/// Wallet transaction action.
+#[derive(Clone, PartialEq)]
+pub enum WalletTransactionAction {
+    Cancelling, Finalizing, Posting, SendingTor
+}
+
 /// Wallet transaction data.
 #[derive(Clone)]
 pub struct WalletTransaction {
-    /// Transaction information.
+    /// Information from database.
     pub data: TxLogEntry,
+    /// State of transaction Slate.
+    pub state: SlateState,
     /// Calculated transaction amount between debited and credited amount.
     pub amount: u64,
-    /// Flag to check if transaction is cancelling.
-    pub cancelling: bool,
-    /// Flag to check if transaction can be sent back to initiator to finalize.
-    pub is_response: bool,
-    /// Flag to check if transaction can be finalized based on Slatepack message state.
-    pub can_finalize: bool,
-    /// Flag to check if transaction is finalizing.
-    pub finalizing: bool,
     /// Block height where tx was included.
     pub height: Option<u64>,
+
+    /// Action on transaction.
+    pub action: Option<WalletTransactionAction>,
+    /// Action result error.
+    pub action_error: Option<Error>
 }
 
 impl WalletTransaction {
+    /// Check if transactions can be finalized after receiving response.
+    pub fn can_finalize(&self) -> bool {
+        !self.cancelling() && !self.data.confirmed &&
+            (!self.sending_tor() || self.action_error.is_some()) &&
+            (self.data.tx_type == TxLogEntryType::TxSent ||
+                self.data.tx_type == TxLogEntryType::TxReceived) &&
+            (self.state == SlateState::Invoice1 || self.state == SlateState::Standard1)
+    }
+
+    /// Check if transaction was finalized.
+    pub fn finalized(&self) -> bool {
+        (self.data.tx_type == TxLogEntryType::TxSent ||
+            self.data.tx_type == TxLogEntryType::TxReceived) &&
+        self.state == SlateState::Invoice3 || self.state == SlateState::Standard3
+    }
+
+    /// Check if transaction is sending over Tor.
+    pub fn sending_tor(&self) -> bool {
+        if let Some(a) = self.action.as_ref() {
+            return a == &WalletTransactionAction::SendingTor;
+        }
+        false
+    }
+
+    /// Check if transaction is cancelling.
+    pub fn cancelling(&self) -> bool {
+        if let Some(a) = self.action.as_ref() {
+            return a == &WalletTransactionAction::Cancelling;
+        }
+        false
+    }
+
+    /// Check if transaction is posting.
+    pub fn posting(&self) -> bool {
+        if let Some(a) = self.action.as_ref() {
+            return a == &WalletTransactionAction::Posting;
+        }
+        false
+    }
+
     /// Check if transaction can be cancelled.
     pub fn can_cancel(&self) -> bool {
-        !self.cancelling && !self.data.confirmed &&
-            self.data.tx_type != TxLogEntryType::TxReceivedCancelled
-            && self.data.tx_type != TxLogEntryType::TxSentCancelled
+        !self.cancelling() && !self.data.confirmed &&
+            (!self.sending_tor() || self.action_error.is_some()) &&
+            self.data.tx_type != TxLogEntryType::TxReceivedCancelled &&
+            self.data.tx_type != TxLogEntryType::TxSentCancelled
+    }
+
+    /// Check if transaction is finalizing.
+    pub fn finalizing(&self) -> bool {
+        if let Some(a) = self.action.as_ref() {
+            return a == &WalletTransactionAction::Finalizing;
+        }
+        false
     }
 
     /// Get receiver address if payment proof was created.
@@ -188,4 +290,33 @@ impl WalletTransaction {
         }
         None
     }
+}
+
+/// Task for the wallet.
+#[derive(Clone)]
+pub enum WalletTask {
+    /// Open Slatepack message parsing result and making an action.
+    OpenMessage(String),
+    /// Create request to send.
+    /// * amount
+    /// * receiver
+    Send(u64, Option<SlatepackAddress>),
+    /// Resend request over Tor.
+    /// * local tx id
+    /// * receiver
+    SendTor(u32, SlatepackAddress),
+    /// Invoice creation.
+    /// * amount
+    Receive(u64),
+    /// Transaction finalization.
+    /// * tx
+    /// * local tx id
+    Finalize(Option<Slate>, u32),
+    /// Post transaction to blockchain.
+    /// * tx
+    /// * local tx id
+    Post(Option<Slate>, u32),
+    /// Cancel transaction.
+    /// * tx
+    Cancel(WalletTransaction),
 }

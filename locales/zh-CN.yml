@@ -81,11 +81,13 @@ wallets:
   tx_sent: 已发送
   tx_received: 已接收
   tx_sending: 发送中
+  tx_sending_tor: 通过 Tor 发送
   tx_receiving: 接收中
   tx_confirming: 等待确认
   tx_canceled: 已取消
   tx_cancelling: 取消
   tx_finalizing: 完成
+  tx_posting: 过账交易
   tx_confirmed: 已确认
   txs: 所有交易
   tx: 交易
@@ -141,7 +143,6 @@ transport:
   incorrect_addr_err: '输入的地址不正确:'
   tor_send_error: 通过 Tor 发送时出错，请确保接收方在线, 交易已取消.
   tor_autorun_desc: 是否在开钱包时启动 Tor 服务以同步接收交易.
-  tor_sending: '通过 Tor 发送%{amount} ツ'
   tor_settings: Tor 设置
   bridges: 桥梁
   bridges_desc: 如果常规连接不正常，设置网桥，可以绕过 Tor 网络审查.
