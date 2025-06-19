@@ -60,11 +60,11 @@ grin_util = "5.3.3"
 #grin_wallet_controller = { path = "../grin-wallet/controller" }
 
 # test
-grin_wallet_impls = { git = "https://github.com/ardocrat/grin-wallet", branch = "wallet_node_client_proxy" }
-grin_wallet_api = { git = "https://github.com/ardocrat/grin-wallet", branch = "wallet_node_client_proxy" }
-grin_wallet_libwallet = { git = "https://github.com/ardocrat/grin-wallet", branch = "wallet_node_client_proxy" }
-grin_wallet_util = { git = "https://github.com/ardocrat/grin-wallet", branch = "wallet_node_client_proxy" }
-grin_wallet_controller = { git = "https://github.com/ardocrat/grin-wallet", branch = "wallet_node_client_proxy" }
+grin_wallet_impls = { git = "https://github.com/mimblewimble/grin-wallet", rev = "930a44d456b43172fc096eda0bbf6a3841f48c6a" }
+grin_wallet_api = { git = "https://github.com/mimblewimble/grin-wallet", rev = "930a44d456b43172fc096eda0bbf6a3841f48c6a" }
+grin_wallet_libwallet = { git = "https://github.com/mimblewimble/grin-wallet", rev = "930a44d456b43172fc096eda0bbf6a3841f48c6a" }
+grin_wallet_util = { git = "https://github.com/mimblewimble/grin-wallet", rev = "930a44d456b43172fc096eda0bbf6a3841f48c6a" }
+grin_wallet_controller = { git = "https://github.com/mimblewimble/grin-wallet", rev = "930a44d456b43172fc096eda0bbf6a3841f48c6a" }
 
 ## ui
 egui = { version = "0.31.1", default-features = false }
@@ -108,16 +108,16 @@ hyper-proxy2 = "0.1.0"
 hyper-tls = "0.6.0"
 
 ## tor
-arti-client = { version = "0.30.0", features = ["pt-client", "static", "onion-service-service", "onion-service-client"] }
-tor-rtcompat = { version = "0.30.0", features = ["static"] }
-tor-config = "0.30.0"
+arti-client = { version = "0.31.0", features = ["pt-client", "static", "onion-service-service", "onion-service-client"] }
+tor-rtcompat = { version = "0.31.0", features = ["static"] }
+tor-config = "0.31.0"
 fs-mistrust = "0.9.1"
-tor-hsservice = "0.30.0"
-tor-hsrproxy = "0.30.0"
-tor-keymgr = "0.30.0"
-tor-llcrypto = "0.30.0"
-tor-hscrypto = "0.30.0"
-tor-error = "0.30.0"
+tor-hsservice = "0.31.0"
+tor-hsrproxy = "0.31.0"
+tor-keymgr = "0.31.0"
+tor-llcrypto = "0.31.0"
+tor-hscrypto = "0.31.0"
+tor-error = "0.31.0"
 sha2 = "0.10.8"
 ed25519-dalek = "2.1.1"
 curve25519-dalek = "4.1.3"
