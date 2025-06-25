@@ -189,9 +189,9 @@ impl WalletTransactions {
                             .show();
                     });
                 }
-
-                // Draw button to repeat transaction action or resend with tor.
-                if tx.action_error.is_some() || rebroadcast || tx.can_resend_tor() {
+                
+                // Draw button to repeat transaction action.
+                if tx.can_repeat_action() || rebroadcast {
                     Self::tx_repeat_button_ui(ui, CornerRadius::default(), tx, wallet, rebroadcast);
                 }
             });
@@ -459,7 +459,7 @@ impl WalletTransactions {
                         TxLogEntryType::TxSentCancelled => Colors::inactive_text(),
                         TxLogEntryType::TxReverted => Colors::inactive_text(),
                     };
-                    ui.label(RichText::new(status_text).size(15.0).color(status_color));
+                    View::ellipsize_text(ui, status_text, 15.0, status_color);
 
                     // Setup transaction time.
                     let tx_time = View::format_time(tx.data.creation_ts.timestamp());

@@ -22,7 +22,7 @@ use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::wallets::wallet::txs::WalletTransactions;
 use crate::gui::views::{CameraContent, FilePickContent, FilePickContentType, Modal, QrCodeContent, View};
 use crate::gui::Colors;
-use crate::wallet::types::{WalletTask, WalletTransaction};
+use crate::wallet::types::{WalletTask, WalletTransaction, WalletTransactionAction};
 use crate::wallet::Wallet;
 
 /// Transaction information [`Modal`] content.
@@ -274,7 +274,7 @@ impl WalletTransactionContent {
             }
 
             // Draw button to repeat transaction action.
-            if tx.action_error.is_some() || rebroadcast || tx.can_resend_tor() {
+            if tx.can_repeat_action() || rebroadcast {
                 let r = if tx.can_finalize() || tx.can_cancel() {
                     CornerRadius::default()
                 } else {

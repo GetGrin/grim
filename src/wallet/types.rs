@@ -347,16 +347,19 @@ impl WalletTransaction {
             self.data.tx_type != TxLogEntryType::TxSentCancelled
     }
 
-    /// Check if transaction can be sent over Tor again.
-    pub fn can_resend_tor(&self) -> bool {
-       !self.sending_tor() && (self.state == SlateState::Standard1 ||
-            self.state == SlateState::Invoice1) && self.receiver.is_some()
-    }
-
     /// Check if transaction is finalizing.
     pub fn finalizing(&self) -> bool {
         if let Some(a) = self.action.as_ref() {
             return a == &WalletTransactionAction::Finalizing;
+        }
+        false
+    }
+
+    /// Check if possible to repeat transaction action.
+    pub fn can_repeat_action(&self) -> bool {
+        if let Some(a) =  &self.action {
+            return self.action_error.is_some() && a != &WalletTransactionAction::SendingTor &&
+                a != &WalletTransactionAction::Cancelling
         }
         false
     }

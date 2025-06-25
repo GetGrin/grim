@@ -1329,13 +1329,13 @@ async fn handle_task(w: &Wallet, t: WalletTask) {
             w.send_creating.store(true, Ordering::Relaxed);
             if let Ok(s) = w.send(*a, r.clone()) {
                 sync_wallet_data(&w, false);
+                w.send_creating.store(false, Ordering::Relaxed);
                 if let Some(r) = r {
                     send_tor(&s, r).await;
                 } else {
                     w.on_tx_result(&s);
                 }
             }
-            w.send_creating.store(false, Ordering::Relaxed);
         }
         WalletTask::SendTor(id, r) => {
             if let Some(s) = w.get_tx(*id) {
@@ -1355,6 +1355,7 @@ async fn handle_task(w: &Wallet, t: WalletTask) {
                 None => &w.get_tx(*id).unwrap(),
                 Some(s) => s
             };
+            w.on_tx_error(slate.id.to_string(), None);
             match w.finalize(slate) {
                 Ok(s) => {
                     match w.post(&s) {
@@ -1376,6 +1377,7 @@ async fn handle_task(w: &Wallet, t: WalletTask) {
                 None => &w.get_tx(*id).unwrap(),
                 Some(s) => s
             };
+            w.on_tx_error(slate.id.to_string(), None);
 
             // Cleanup broadcasting tx height.
             let has_data = {
