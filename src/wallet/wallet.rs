@@ -704,9 +704,9 @@ impl Wallet {
                         s.state == SlateState::Standard2) {
                         let mut slate = s.clone();
                         slate.state = if s.state == SlateState::Standard2 {
-                            SlateState::Standard1
+                            SlateState::Standard3
                         } else {
-                            SlateState::Invoice1
+                            SlateState::Invoice3
                         };
                         exists = w.slatepack_exists(&slate);
                     }
