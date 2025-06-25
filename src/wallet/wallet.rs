@@ -697,8 +697,21 @@ impl Wallet {
         thread::spawn(move || {
             load.store(true, Ordering::Relaxed);
             if let Ok(s) = w.parse_slatepack(&msg) {
-                // Check if message with same id and state already exists.
-                let exists = w.slatepack_exists(&s);
+                // Check if message with same id already exists.
+                let exists = {
+                    let mut exists = w.slatepack_exists(&s);
+                    if !exists && (s.state == SlateState::Invoice2 ||
+                        s.state == SlateState::Standard2) {
+                        let mut slate = s.clone();
+                        slate.state = if s.state == SlateState::Standard2 {
+                            SlateState::Standard1
+                        } else {
+                            SlateState::Invoice1
+                        };
+                        exists = w.slatepack_exists(&slate);
+                    }
+                    exists
+                };
                 if exists {
                     w.on_tx_result(&s);
                     load.store(false, Ordering::Relaxed);
@@ -1363,7 +1376,7 @@ async fn handle_task(w: &Wallet, t: WalletTask) {
                 None => &w.get_tx(*id).unwrap(),
                 Some(s) => s
             };
-            
+
             // Cleanup broadcasting tx height.
             let has_data = {
                 let r_data = w.data.read();
@@ -1376,7 +1389,7 @@ async fn handle_task(w: &Wallet, t: WalletTask) {
                         tx.broadcasting_height = None;
                         break;
                     }
-                } 
+                }
             }
 
             match w.post(slate) {
