@@ -1363,6 +1363,22 @@ async fn handle_task(w: &Wallet, t: WalletTask) {
                 None => &w.get_tx(*id).unwrap(),
                 Some(s) => s
             };
+            
+            // Cleanup broadcasting tx height.
+            let has_data = {
+                let r_data = w.data.read();
+                r_data.is_some()
+            };
+            if has_data {
+                let mut w_data = w.data.write();
+                for tx in w_data.as_mut().unwrap().txs.as_mut().unwrap() {
+                    if tx.data.id == *id {
+                        tx.broadcasting_height = None;
+                        break;
+                    }
+                } 
+            }
+
             match w.post(slate) {
                 Ok(_) => {
                     sync_wallet_data(&w, false);
