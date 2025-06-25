@@ -2260,7 +2260,7 @@ dependencies = [
 [[package]]
 name = "ecolor"
 version = "0.31.1"
-source = "git+https://github.com/ardocrat/egui?branch=back_button_android#1d498ae5660c5990e3caa9525f75bb9355e50e50"
+source = "git+https://github.com/emilk/egui?rev=f11a3510ba07ae87747d744d952676476a88c24e#f11a3510ba07ae87747d744d952676476a88c24e"
 dependencies = [
  "bytemuck",
  "emath",
@@ -2330,7 +2330,7 @@ dependencies = [
 [[package]]
 name = "eframe"
 version = "0.31.1"
-source = "git+https://github.com/ardocrat/egui?branch=back_button_android#1d498ae5660c5990e3caa9525f75bb9355e50e50"
+source = "git+https://github.com/emilk/egui?rev=f11a3510ba07ae87747d744d952676476a88c24e#f11a3510ba07ae87747d744d952676476a88c24e"
 dependencies = [
  "ahash",
  "bytemuck",
@@ -2364,7 +2364,7 @@ dependencies = [
 [[package]]
 name = "egui"
 version = "0.31.1"
-source = "git+https://github.com/ardocrat/egui?branch=back_button_android#1d498ae5660c5990e3caa9525f75bb9355e50e50"
+source = "git+https://github.com/emilk/egui?rev=f11a3510ba07ae87747d744d952676476a88c24e#f11a3510ba07ae87747d744d952676476a88c24e"
 dependencies = [
  "ahash",
  "bitflags 2.9.1",
@@ -2373,13 +2373,14 @@ dependencies = [
  "log",
  "nohash-hasher",
  "profiling",
+ "smallvec",
  "unicode-segmentation",
 ]
 
 [[package]]
 name = "egui-winit"
 version = "0.31.1"
-source = "git+https://github.com/ardocrat/egui?branch=back_button_android#1d498ae5660c5990e3caa9525f75bb9355e50e50"
+source = "git+https://github.com/emilk/egui?rev=f11a3510ba07ae87747d744d952676476a88c24e#f11a3510ba07ae87747d744d952676476a88c24e"
 dependencies = [
  "ahash",
  "arboard",
@@ -2397,7 +2398,7 @@ dependencies = [
 [[package]]
 name = "egui_extras"
 version = "0.31.1"
-source = "git+https://github.com/ardocrat/egui?branch=back_button_android#1d498ae5660c5990e3caa9525f75bb9355e50e50"
+source = "git+https://github.com/emilk/egui?rev=f11a3510ba07ae87747d744d952676476a88c24e#f11a3510ba07ae87747d744d952676476a88c24e"
 dependencies = [
  "ahash",
  "egui",
@@ -2412,7 +2413,7 @@ dependencies = [
 [[package]]
 name = "egui_glow"
 version = "0.31.1"
-source = "git+https://github.com/ardocrat/egui?branch=back_button_android#1d498ae5660c5990e3caa9525f75bb9355e50e50"
+source = "git+https://github.com/emilk/egui?rev=f11a3510ba07ae87747d744d952676476a88c24e#f11a3510ba07ae87747d744d952676476a88c24e"
 dependencies = [
  "ahash",
  "bytemuck",
@@ -2453,7 +2454,7 @@ dependencies = [
 [[package]]
 name = "emath"
 version = "0.31.1"
-source = "git+https://github.com/ardocrat/egui?branch=back_button_android#1d498ae5660c5990e3caa9525f75bb9355e50e50"
+source = "git+https://github.com/emilk/egui?rev=f11a3510ba07ae87747d744d952676476a88c24e#f11a3510ba07ae87747d744d952676476a88c24e"
 dependencies = [
  "bytemuck",
 ]
@@ -2568,7 +2569,7 @@ dependencies = [
 [[package]]
 name = "epaint"
 version = "0.31.1"
-source = "git+https://github.com/ardocrat/egui?branch=back_button_android#1d498ae5660c5990e3caa9525f75bb9355e50e50"
+source = "git+https://github.com/emilk/egui?rev=f11a3510ba07ae87747d744d952676476a88c24e#f11a3510ba07ae87747d744d952676476a88c24e"
 dependencies = [
  "ab_glyph",
  "ahash",

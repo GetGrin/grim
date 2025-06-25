@@ -565,7 +565,7 @@ impl View {
     pub fn svg_image(ui: &mut egui::Ui,
                      name: &str,
                      svg: &[u8],
-                     size: Option<SizeHint>) -> TextureHandle {
+                     size: SizeHint) -> TextureHandle {
         let color_img = load_svg_bytes_with_size(svg, size, &usvg::Options::default()).unwrap();
         // Create image texture.
         let texture_handle = ui.ctx().load_texture(name,

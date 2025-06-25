@@ -269,8 +269,12 @@ impl QrCodeContent {
             // Draw QR code image.
             let mut content_rect = ui.scope_builder(UiBuilder::new().max_rect(rect), |ui| {
                 ui.add_space(10.0);
-                let size = SizeHint::Size(ui.available_width() as u32, ui.available_width() as u32);
-                self.texture_handle = Some(View::svg_image(ui, "qr", svg.as_slice(), Some(size)));
+                let size = SizeHint::Size {
+                    width: ui.available_width() as u32,
+                    height: ui.available_width() as u32,
+                    maintain_aspect_ratio: true,
+                };
+                self.texture_handle = Some(View::svg_image(ui, "qr", svg.as_slice(), size));
                 ui.add_space(10.0);
             }).response.rect;
 

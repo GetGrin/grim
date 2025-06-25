@@ -154,8 +154,8 @@ winit = { version = "0.30.11", features = ["android-native-activity"] }
 eframe = { version = "0.31.1", default-features = false, features = ["glow", "android-native-activity"] }
 
 [patch.crates-io]
-egui_extras = { git = "https://github.com/ardocrat/egui", branch = "back_button_android" }
-egui = { git = "https://github.com/ardocrat/egui", branch = "back_button_android" }
-eframe = { git = "https://github.com/ardocrat/egui", branch = "back_button_android" }
+egui_extras = { git = "https://github.com/emilk/egui", rev = "f11a3510ba07ae87747d744d952676476a88c24e" }
+egui = { git = "https://github.com/emilk/egui", rev = "f11a3510ba07ae87747d744d952676476a88c24e" }
+eframe = { git = "https://github.com/emilk/egui", rev = "f11a3510ba07ae87747d744d952676476a88c24e" }
 ### patch grin store
 #grin_store = { path = "../grin-store" }

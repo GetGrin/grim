@@ -22,7 +22,7 @@ use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::wallets::wallet::txs::WalletTransactions;
 use crate::gui::views::{CameraContent, FilePickContent, FilePickContentType, Modal, QrCodeContent, View};
 use crate::gui::Colors;
-use crate::wallet::types::{WalletTask, WalletTransaction, WalletTransactionAction};
+use crate::wallet::types::{WalletTask, WalletTransaction};
 use crate::wallet::Wallet;
 
 /// Transaction information [`Modal`] content.
