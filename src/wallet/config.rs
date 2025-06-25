@@ -46,6 +46,8 @@ pub struct WalletConfig {
     pub enable_tor_listener: Option<bool>,
     /// Wallet API port.
     pub api_port: Option<u16>,
+    /// Delay in blocks before another transaction broadcasting attempt.
+    pub tx_broadcast_timeout: Option<u64>,
 }
 
 /// Base wallets directory name.
@@ -68,6 +70,9 @@ impl WalletConfig {
     /// Default account name value.
     pub const DEFAULT_ACCOUNT_LABEL: &'static str = "default";
 
+    /// Default value of timeout for broadcasting transaction in blocks.
+    pub const BROADCASTING_TIMEOUT_DEFAULT: u64 = 10;
+
     /// Create new wallet config.
     pub fn create(name: String, conn_method: &ConnectionMethod) -> WalletConfig {
         // Setup configuration path.
@@ -88,6 +93,7 @@ impl WalletConfig {
             use_dandelion: Some(true),
             enable_tor_listener: Some(false),
             api_port: Some(rand::rng().random_range(10000..30000)),
+            tx_broadcast_timeout: Some(Self::BROADCASTING_TIMEOUT_DEFAULT),
         };
         Settings::write_to_file(&config, config_path);
         config

@@ -420,6 +420,19 @@ impl Wallet {
         w_config.save();
     }
 
+    /// Get transaction broadcasting delay in blocks.
+    pub fn broadcasting_delay(&self) -> u64 {
+        let r_config = self.config.read();
+        r_config.tx_broadcast_timeout.unwrap_or(WalletConfig::BROADCASTING_TIMEOUT_DEFAULT)
+    }
+
+    /// Update transaction broadcasting delay in blocks.
+    pub fn update_broadcasting_delay(&self, delay: u64) {
+        let mut w_config = self.config.write();
+        w_config.tx_broadcast_timeout = Some(delay);
+        w_config.save();
+    }
+
     /// Update external connection identifier.
     pub fn update_connection(&self, conn: &ConnectionMethod) {
         let mut w_config = self.config.write();
@@ -991,30 +1004,29 @@ impl Wallet {
         res
     }
 
-    /// Get possible transaction confirmation height from db or node.
-    fn tx_height(&self, tx: &TxLogEntry, store: &TxHeightStore) -> Result<Option<u64>, Error> {
+    /// Get possible transaction confirmation height, .
+    fn tx_height(&self, tx: &WalletTransaction) -> Result<Option<u64>, Error> {
         let mut tx_height = None;
-        if tx.kernel_lookup_min_height.is_some() && tx.kernel_excess.is_some() && tx.confirmed {
-            if let Some(height) = store.read_tx_height(tx.id) {
-                tx_height = Some(height);
-            } else {
-                let r_inst = self.instance.as_ref().read();
-                let instance = r_inst.clone().unwrap();
-                let mut w_lock = instance.lock();
-                let w = w_lock.lc_provider()?.wallet_inst()?;
-                if let Ok(res) = w.w2n_client().get_kernel(
-                    tx.kernel_excess.as_ref().unwrap(),
-                    tx.kernel_lookup_min_height,
-                    None
-                ) {
-                    if let Some((_, h, _)) = res {
-                        tx_height = Some(h);
-                        store.write_tx_height(tx.id, h);
-                    } else {
-                        tx_height = Some(0);
-                    }
-                }
+        if tx.data.confirmed && tx.data.kernel_excess.is_some() {
+            let r_inst = self.instance.as_ref().read();
+            let instance = r_inst.clone().unwrap();
+            let mut w_lock = instance.lock();
+            let w = w_lock.lc_provider()?.wallet_inst()?;
+            if let Ok(res) = w.w2n_client().get_kernel(
+                tx.data.kernel_excess.as_ref().unwrap(),
+                tx.data.kernel_lookup_min_height,
+                None
+            ) {
+                tx_height = Some(match res {
+                    None => 0,
+                    Some((_, h, _)) => h
+                });
             }
+        } else if tx.broadcasting() {
+            tx_height = match self.get_data() {
+                None => None,
+                Some(data) => Some(data.info.last_confirmed_height)
+            };
         }
         Ok(tx_height)
     }
@@ -1117,10 +1129,8 @@ impl Wallet {
 
 /// Delay in seconds to sync [`WalletData`] (60 seconds as average block time).
 const SYNC_DELAY: Duration = Duration::from_millis(60 * 1000);
-
 /// Delay in seconds for sync thread to wait before start of new attempt.
 const ATTEMPT_DELAY: Duration = Duration::from_millis(3 * 1000);
-
 /// Number of attempts to sync [`WalletData`] before setting an error.
 const SYNC_ATTEMPTS: u8 = 10;
 
@@ -1328,10 +1338,9 @@ async fn handle_task(w: &Wallet, t: WalletTask) {
             w.invoice_creating.store(false, Ordering::Relaxed);
         },
         WalletTask::Finalize(s, id) => {
-            let slate = if let Some(s) = s {
-                s
-            } else {
-                &w.get_tx(*id).unwrap()
+            let slate = match s {
+                None => &w.get_tx(*id).unwrap(),
+                Some(s) => s
             };
             match w.finalize(slate) {
                 Ok(s) => {
@@ -1350,10 +1359,9 @@ async fn handle_task(w: &Wallet, t: WalletTask) {
             }
         }
         WalletTask::Post(s, id) => {
-            let slate = if let Some(s) = s {
-                s
-            } else {
-                &w.get_tx(*id).unwrap()
+            let slate = match s {
+                None => &w.get_tx(*id).unwrap(),
+                Some(s) => s
             };
             match w.post(slate) {
                 Ok(_) => {
@@ -1501,81 +1509,62 @@ fn update_txs(wallet: &Wallet, instance: WalletInstance, info: WalletInfo)
         }
     }).collect::<Vec<TxLogEntry>>();
 
-    // Initialize tx confirmation height storage.
     let tx_height_store = TxHeightStore::new(wallet.get_config().get_extra_db_path());
-
     let data = wallet.get_data().unwrap();
     let data_txs = data.txs.unwrap_or(vec![]);
     let mut new_txs: Vec<WalletTransaction> = vec![];
     for tx in &account_txs {
-        // Setup transaction amount.
-        let amount = if tx.amount_debited > tx.amount_credited {
-            tx.amount_debited - tx.amount_credited
-        } else {
-            tx.amount_credited - tx.amount_debited
-        };
-
-        // Setup confirmation height, action and state.
         let mut height: Option<u64> = None;
+        let mut broadcasting_height: Option<u64> = None;
         let mut action: Option<WalletTransactionAction> = None;
         let mut action_error: Option<Error> = None;
-        let mut state: Option<SlateState> = None;
         for t in &data_txs {
             if t.data.id == tx.id {
-                height = t.height;
                 action = t.action.clone();
                 action_error = t.action_error.clone();
-                state = Some(t.state.clone());
+                height = t.height;
+                broadcasting_height = t.broadcasting_height;
                 break;
             }
         }
-        if tx.kernel_lookup_min_height.is_some() &&
-            tx.kernel_excess.is_some() && tx.confirmed {
-            if height.is_none() {
-                height = wallet.tx_height(tx, &tx_height_store).unwrap_or(None);
-            }
-        }
-
-        // Setup transaction state for unconfirmed tx or for initial update.
+        let mut new = WalletTransaction::new(tx.clone(),
+                                             wallet,
+                                             height,
+                                             broadcasting_height,
+                                             action,
+                                             action_error);
+        // Update Slate state for unconfirmed.
         let unconfirmed = !tx.confirmed && (tx.tx_type == TxLogEntryType::TxSent ||
             tx.tx_type == TxLogEntryType::TxReceived);
-        if unconfirmed || state.is_none() {
-            let mut slate = Slate::blank(1, false);
-            slate.id = tx.tx_slate_id.unwrap();
-            slate.state = match tx.tx_type {
-                TxLogEntryType::TxReceived => SlateState::Invoice3,
-                _ => SlateState::Standard3
-            };
-            // Transaction was finalized.
-            if wallet.slatepack_exists(&slate) {
-                state = Some(slate.state);
-            } else {
-                slate.id = tx.tx_slate_id.unwrap();
-                slate.state = match tx.tx_type {
-                    TxLogEntryType::TxReceived => SlateState::Standard2,
-                    _ => SlateState::Invoice2
-                };
-                // Transaction signed to be finalized.
-                if wallet.slatepack_exists(&slate) {
-                    state = Some(slate.state);
-                } else {
-                    // Transaction just was created.
-                    state = Some(match tx.tx_type {
-                        TxLogEntryType::TxReceived => SlateState::Invoice1,
-                        _ => SlateState::Standard1
-                    });
-                }
-            }
+        if unconfirmed {
+            new.update_slate_state(wallet);
         }
-        // Add transaction to the list.
-        new_txs.push(WalletTransaction {
-            data: tx.clone(),
-            state: state.unwrap(),
-            amount,
-            height,
-            action,
-            action_error,
-        });
+
+        // Setup initial tx heights.
+        if height.is_none() && tx.confirmed {
+            height = if let Some(height) = tx_height_store.read_tx_height(tx.id) {
+                Some(height)
+            } else {
+                tx_height_store.delete_broadcasting_height(tx.id);
+                let h = wallet.tx_height(&new)?;
+                if let Some(h) = h {
+                    tx_height_store.write_tx_height(tx.id, h);
+                }
+                h
+            };
+            new.height = height;
+        } else if broadcasting_height.is_none() && new.broadcasting() {
+            broadcasting_height = if let Some(h) = tx_height_store.read_broadcasting_height(tx.id) {
+                Some(h)
+            } else {
+                let h = data.info.last_confirmed_height;
+                tx_height_store.write_broadcasting_height(tx.id, h);
+                Some(h)
+            };
+            new.broadcasting_height = Some(broadcasting_height.unwrap_or(0));
+        }
+
+        new_txs.push(new);
     }
     // Update wallet txs.
     let mut w_data = wallet.data.write();

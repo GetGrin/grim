@@ -21,7 +21,7 @@ use grin_wallet_libwallet::TxLogEntryType;
 use std::ops::Range;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::gui::icons::{ARCHIVE_BOX, ARROW_CIRCLE_DOWN, ARROW_CIRCLE_UP, CALENDAR_CHECK, DOTS_THREE_CIRCLE, FILE_ARROW_DOWN, FILE_TEXT, GEAR_FINE, PROHIBIT, WARNING, X_CIRCLE};
+use crate::gui::icons::{ARCHIVE_BOX, ARROWS_CLOCKWISE, ARROW_CIRCLE_DOWN, ARROW_CIRCLE_UP, CALENDAR_CHECK, DOTS_THREE_CIRCLE, FILE_ARROW_DOWN, FILE_TEXT, GEAR_FINE, PROHIBIT, WARNING, X_CIRCLE};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::types::{LinePosition, ModalPosition};
 use crate::gui::views::wallets::types::WalletTab;
@@ -89,6 +89,7 @@ impl WalletTransactions {
     /// Draw transactions content.
     fn txs_ui(&mut self, ui: &mut egui::Ui, wallet: &Wallet) {
         let data = wallet.get_data().unwrap();
+        let config = wallet.get_config();
         if data.txs.is_none() {
             ui.centered_and_justified(|ui| {
                 View::big_loading_spinner(ui);
@@ -125,13 +126,13 @@ impl WalletTransactions {
             .min_refresh_distance(70.0)
             .scroll_area_ui(ui, |ui| {
                 ScrollArea::vertical()
-                    .id_salt(Id::from("wallet_tx_list_scroll").with(wallet.get_config().id))
+                    .id_salt(Id::from("wallet_tx_list_scroll").with(config.id))
                     .scroll_bar_visibility(ScrollBarVisibility::AlwaysHidden)
                     .auto_shrink([false; 2])
                     .show_rows(ui, Self::TX_ITEM_HEIGHT, txs.len(), |ui, row_range| {
                         ui.add_space(1.0);
                         View::max_width_ui(ui, Content::SIDE_PANEL_WIDTH * 1.3, |ui| {
-                            self.tx_list_ui(ui, row_range, wallet, txs);
+                            self.tx_list_ui(ui, row_range, &wallet, txs);
                         });
                     })
             });
@@ -151,6 +152,7 @@ impl WalletTransactions {
                   row_range: Range<usize>,
                   wallet: &Wallet,
                   txs: &Vec<WalletTransaction>) {
+        let data = wallet.get_data().unwrap();
         for index in row_range {
             let mut rect = ui.available_rect_before_wrap();
             rect.min += egui::emath::vec2(6.0, 0.0);
@@ -163,7 +165,6 @@ impl WalletTransactions {
             p.rect(rect, r, Colors::fill(), View::item_stroke(), StrokeKind::Middle);
 
             let tx = txs.get(index).unwrap();
-            let data = wallet.get_data().unwrap();
             Self::tx_item_ui(ui, tx, rect, &data, |ui| {
                 // Draw button to show transaction info.
                 if tx.data.tx_slate_id.is_some() {
@@ -173,8 +174,11 @@ impl WalletTransactions {
                         self.show_tx_info_modal(tx.data.id);
                     });
                 }
+
+                let rebroadcast = tx.broadcasting_timed_out(wallet);
+
                 // Draw button to cancel transaction.
-                if tx.can_cancel() {
+                if tx.can_cancel() || rebroadcast {
                     let (icon, color) = (PROHIBIT, Some(Colors::red()));
                     View::item_button(ui, CornerRadius::default(), icon, color, || {
                         self.confirm_cancel_tx_id = Some(tx.data.id);
@@ -185,9 +189,10 @@ impl WalletTransactions {
                             .show();
                     });
                 }
-                //TODO: Draw button to repeat transaction task on error.
-                if tx.action_error.is_some() {
-                    
+
+                // Draw button to repeat transaction action or resend with tor.
+                if tx.action_error.is_some() || rebroadcast || tx.can_resend_tor() {
+                    Self::tx_repeat_button_ui(ui, CornerRadius::default(), tx, wallet, rebroadcast);
                 }
             });
         }
@@ -463,6 +468,37 @@ impl WalletTransactions {
                     ui.add_space(3.0);
                 });
             });
+        });
+    }
+
+    /// Draw button to repeat transaction action on error or repost.
+    pub fn tx_repeat_button_ui(ui: &mut egui::Ui,
+                               rounding: CornerRadius,
+                               tx: &WalletTransaction,
+                               wallet: &Wallet,
+                               repost: bool) {
+        let (icon, color) = (ARROWS_CLOCKWISE, Some(Colors::green()));
+        View::item_button(ui, rounding, icon, color, || {
+            if repost {
+                wallet.task(WalletTask::Post(None, tx.data.id));
+            } else {
+                match tx.action.as_ref().unwrap() {
+                    WalletTransactionAction::Cancelling => {
+                        wallet.task(WalletTask::Cancel(tx.clone()));
+                    }
+                    WalletTransactionAction::Finalizing => {
+                        wallet.task(WalletTask::Finalize(None, tx.data.id));
+                    }
+                    WalletTransactionAction::Posting => {
+                        wallet.task(WalletTask::Post(None, tx.data.id));
+                    }
+                    WalletTransactionAction::SendingTor => {
+                        if let Some(a) = &tx.receiver {
+                            wallet.task(WalletTask::SendTor(tx.data.id, a.clone()));
+                        }
+                    }
+                }
+            }
         });
     }
 

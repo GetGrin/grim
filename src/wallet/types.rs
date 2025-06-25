@@ -12,14 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::sync::Arc;
-
 use grin_keychain::ExtKeychain;
 use grin_util::Mutex;
 use grin_wallet_impls::{DefaultLCProvider, HTTPNodeClient};
 use grin_wallet_libwallet::{Error, Slate, SlateState, SlatepackAddress, TxLogEntry, TxLogEntryType, WalletInfo, WalletInst};
 use grin_wallet_util::OnionV3Address;
 use serde_derive::{Deserialize, Serialize};
+use std::sync::Arc;
+
+use crate::wallet::Wallet;
 
 /// Mnemonic phrase word.
 #[derive(Clone)]
@@ -212,10 +213,15 @@ pub struct WalletTransaction {
     pub data: TxLogEntry,
     /// State of transaction Slate.
     pub state: SlateState,
-    /// Calculated transaction amount between debited and credited amount.
+
+    /// Transaction amount without fees.
     pub amount: u64,
+    /// Possible receiver of transaction.
+    pub receiver: Option<SlatepackAddress>,
     /// Block height where tx was included.
     pub height: Option<u64>,
+    /// Block height where tx started broadcasting.
+    pub broadcasting_height: Option<u64>,
 
     /// Action on transaction.
     pub action: Option<WalletTransactionAction>,
@@ -224,6 +230,75 @@ pub struct WalletTransaction {
 }
 
 impl WalletTransaction {
+    /// Create new wallet transaction.
+    pub fn new(tx: TxLogEntry,
+               wallet: &Wallet,
+               height: Option<u64>,
+               broadcasting_height: Option<u64>,
+               action: Option<WalletTransactionAction>,
+               action_error: Option<Error>) -> Self {
+        let amount = if tx.amount_debited > tx.amount_credited {
+            tx.amount_debited - tx.amount_credited
+        } else {
+            tx.amount_credited - tx.amount_debited
+        };
+        let receiver: Option<SlatepackAddress> = {
+            if let Some(proof) = &tx.payment_proof {
+                let onion_addr = OnionV3Address::from_bytes(proof.receiver_address.to_bytes());
+                if let Ok(addr) = SlatepackAddress::try_from(onion_addr) {
+                    Some(addr);
+                }
+            }
+            None
+        };
+        let mut t = Self {
+            data: tx,
+            state: SlateState::Unknown,
+            amount,
+            receiver,
+            height,
+            broadcasting_height,
+            action,
+            action_error,
+        };
+        // Update Slate state for unconfirmed.
+        if !t.data.confirmed {
+            t.update_slate_state(wallet);
+        }
+        t
+    }
+
+    /// Update transaction [`Slate`] state for provided wallet.
+    pub fn update_slate_state(&mut self, wallet: &Wallet) {
+        let tx = &self.data;
+        let mut slate = Slate::blank(1, false);
+        slate.id = tx.tx_slate_id.unwrap();
+        slate.state = match tx.tx_type {
+            TxLogEntryType::TxReceived => SlateState::Invoice3,
+            _ => SlateState::Standard3
+        };
+        // Transaction was finalized.
+        if wallet.slatepack_exists(&slate) {
+            self.state = slate.state;
+        } else {
+            slate.id = tx.tx_slate_id.unwrap();
+            slate.state = match tx.tx_type {
+                TxLogEntryType::TxReceived => SlateState::Standard2,
+                _ => SlateState::Invoice2
+            };
+            // Transaction signed to be finalized.
+            if wallet.slatepack_exists(&slate) {
+                self.state = slate.state;
+            } else {
+                // Transaction just was created.
+                self.state = match tx.tx_type {
+                    TxLogEntryType::TxReceived => SlateState::Invoice1,
+                    _ => SlateState::Standard1
+                };
+            }
+        }
+    }
+
     /// Check if transactions can be finalized after receiving response.
     pub fn can_finalize(&self) -> bool {
         !self.cancelling() && !self.data.confirmed &&
@@ -266,10 +341,16 @@ impl WalletTransaction {
 
     /// Check if transaction can be cancelled.
     pub fn can_cancel(&self) -> bool {
-        !self.cancelling() && !self.data.confirmed &&
+        !self.cancelling() && !self.data.confirmed && !self.broadcasting() &&
             (!self.sending_tor() || self.action_error.is_some()) &&
             self.data.tx_type != TxLogEntryType::TxReceivedCancelled &&
             self.data.tx_type != TxLogEntryType::TxSentCancelled
+    }
+
+    /// Check if transaction can be sent over Tor again.
+    pub fn can_resend_tor(&self) -> bool {
+       !self.sending_tor() && (self.state == SlateState::Standard1 ||
+            self.state == SlateState::Invoice1) && self.receiver.is_some()
     }
 
     /// Check if transaction is finalizing.
@@ -280,15 +361,22 @@ impl WalletTransaction {
         false
     }
 
-    /// Get receiver address if payment proof was created.
-    pub fn receiver(&self) -> Option<SlatepackAddress> {
-        if let Some(proof) = &self.data.payment_proof {
-            let onion_addr = OnionV3Address::from_bytes(proof.receiver_address.to_bytes());
-            if let Ok(addr) = SlatepackAddress::try_from(onion_addr) {
-                return Some(addr);
+    /// Check if transaction is broadcasting after finalization.
+    pub fn broadcasting(&self) -> bool {
+        !self.data.confirmed && self.finalized()
+    }
+
+    /// Check if broadcasting of transaction was timed out.
+    pub fn broadcasting_timed_out(&self, wallet: &Wallet) -> bool {
+        if let Some(data) = wallet.get_data() {
+            if self.broadcasting() {
+                let last_height = data.info.last_confirmed_height;
+                let broadcasting_height = self.broadcasting_height.unwrap_or(0);
+                let delay = wallet.broadcasting_delay();
+                return last_height - broadcasting_height > delay;
             }
         }
-        None
+        false
     }
 }
 
@@ -301,7 +389,7 @@ pub enum WalletTask {
     /// * amount
     /// * receiver
     Send(u64, Option<SlatepackAddress>),
-    /// Resend request over Tor.
+    /// Send request over Tor.
     /// * local tx id
     /// * receiver
     SendTor(u32, SlatepackAddress),

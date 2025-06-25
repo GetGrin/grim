@@ -257,8 +257,11 @@ impl WalletTransactionContent {
                     self.scan_qr_content = Some(CameraContent::default());
                 });
             }
+
+            let rebroadcast = tx.broadcasting_timed_out(&wallet);
+
             // Draw button to cancel transaction.
-            if tx.can_cancel() {
+            if tx.can_cancel() || rebroadcast {
                 let r = if tx.can_finalize() {
                     CornerRadius::default()
                 } else {
@@ -268,6 +271,16 @@ impl WalletTransactionContent {
                     wallet.task(WalletTask::Cancel(tx.clone()));
                     Modal::close();
                 });
+            }
+
+            // Draw button to repeat transaction action.
+            if tx.action_error.is_some() || rebroadcast || tx.can_resend_tor() {
+                let r = if tx.can_finalize() || tx.can_cancel() {
+                    CornerRadius::default()
+                } else {
+                    View::item_rounding(0, 2, true)
+                };
+                WalletTransactions::tx_repeat_button_ui(ui, r, tx, wallet, rebroadcast);
             }
         });
 
@@ -282,7 +295,7 @@ impl WalletTransactionContent {
             info_item_ui(ui, kernel.0.to_hex(), label, true, cb);
         }
         // Show receiver address.
-        if let Some(rec) = tx.receiver() {
+        if let Some(rec) = &tx.receiver {
             let label = format!("{} {}", CIRCLE_HALF, t!("network_mining.address"));
             info_item_ui(ui, rec.to_string(), label, true, cb);
         }
