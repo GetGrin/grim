@@ -30,6 +30,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
 use std::{fs, thread};
+use safelog::DisplayRedacted;
 use tls_api::{TlsConnector as TlsConnectorTrait, TlsConnectorBuilder};
 use tls_api_native_tls::TlsConnector;
 use tokio::time::sleep;
@@ -287,7 +288,10 @@ impl Tor {
                             hs_nickname.clone(),
                         )).await.unwrap();
                         // Check service availability.
-                        let addr = service.onion_address().unwrap().to_string();
+                        let addr = service.onion_address()
+                            .unwrap()
+                            .display_unredacted()
+                            .to_string();
                         let url = format!("http://{}/", addr);
                         Self::check_service(service_id, client_thread, url, port, key);
                         return;
