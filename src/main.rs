@@ -256,7 +256,7 @@ fn start_app_socket(platform: grim::gui::platform::Desktop) {
 /// Get application socket name from provided path.
 #[allow(dead_code)]
 #[cfg(not(target_os = "android"))]
-fn socket_name(path: &std::path::PathBuf) -> std::io::Result<interprocess::local_socket::Name> {
+fn socket_name(path: &std::path::PathBuf) -> std::io::Result<interprocess::local_socket::Name<'_>> {
     use interprocess::local_socket::{NameType, ToFsName, ToNsName};
     let name = if egui::os::OperatingSystem::Mac != egui::os::OperatingSystem::from_target_os() &&
         interprocess::local_socket::GenericNamespaced::is_supported() {
