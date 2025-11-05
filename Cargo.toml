@@ -4,7 +4,7 @@ version = "0.3.0-alpha"
 authors = ["Ardocrat <ardocrat@gri.mw>"]
 description = "Cross-platform GUI for Grin with focus on usability and availability to be used by anyone, anywhere."
 license = "Apache-2.0"
-repository = "https://gri.mw/code/GUI/grim"
+repository = "https://code.gri.mw/GUI/grim"
 keywords = [ "crypto", "grin", "mimblewimble" ]
 edition = "2021"
 
@@ -60,11 +60,11 @@ grin_util = "5.3.3"
 #grin_wallet_controller = { path = "../grin-wallet/controller" }
 
 # test
-grin_wallet_impls = { git = "https://github.com/mimblewimble/grin-wallet", rev = "930a44d456b43172fc096eda0bbf6a3841f48c6a" }
-grin_wallet_api = { git = "https://github.com/mimblewimble/grin-wallet", rev = "930a44d456b43172fc096eda0bbf6a3841f48c6a" }
-grin_wallet_libwallet = { git = "https://github.com/mimblewimble/grin-wallet", rev = "930a44d456b43172fc096eda0bbf6a3841f48c6a" }
-grin_wallet_util = { git = "https://github.com/mimblewimble/grin-wallet", rev = "930a44d456b43172fc096eda0bbf6a3841f48c6a" }
-grin_wallet_controller = { git = "https://github.com/mimblewimble/grin-wallet", rev = "930a44d456b43172fc096eda0bbf6a3841f48c6a" }
+grin_wallet_impls = { git = "https://code.gri.mw/CORE/wallet", rev = "930a44d456b43172fc096eda0bbf6a3841f48c6a" }
+grin_wallet_api = { git = "https://code.gri.mw/CORE/wallet", rev = "930a44d456b43172fc096eda0bbf6a3841f48c6a" }
+grin_wallet_libwallet = { git = "https://code.gri.mw/CORE/wallet", rev = "930a44d456b43172fc096eda0bbf6a3841f48c6a" }
+grin_wallet_util = { git = "https://code.gri.mw/CORE/wallet", rev = "930a44d456b43172fc096eda0bbf6a3841f48c6a" }
+grin_wallet_controller = { git = "https://code.gri.mw/CORE/wallet", rev = "930a44d456b43172fc096eda0bbf6a3841f48c6a" }
 
 ## ui
 egui = { version = "0.31.1", default-features = false }
@@ -137,7 +137,7 @@ nokhwa = { version = "0.10.5", default-features = false, features = ["input-v4l"
 nokhwa = { version = "0.10.5", default-features = false, features = ["input-msmf"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
-nokhwa-mac = { git = "https://github.com/l1npengtul/nokhwa", rev = "612c861ef153cf0ee575d8dd1413b960e4e19dd6", features = ["input-avfoundation", "output-threaded"], package = "nokhwa" }
+nokhwa-mac = { git = "https://code.gri.mw/ardocrat/nokhwa", rev = "612c861ef153cf0ee575d8dd1413b960e4e19dd6", features = ["input-avfoundation", "output-threaded"], package = "nokhwa" }
 
 [target.'cfg(not(target_os = "android"))'.dependencies]
 env_logger = "0.11.3"
@@ -155,8 +155,8 @@ winit = { version = "0.30.11", features = ["android-native-activity"] }
 eframe = { version = "0.31.1", default-features = false, features = ["glow", "android-native-activity"] }
 
 [patch.crates-io]
-egui_extras = { git = "https://github.com/emilk/egui", rev = "f11a3510ba07ae87747d744d952676476a88c24e" }
-egui = { git = "https://github.com/emilk/egui", rev = "f11a3510ba07ae87747d744d952676476a88c24e" }
-eframe = { git = "https://github.com/emilk/egui", rev = "f11a3510ba07ae87747d744d952676476a88c24e" }
+egui_extras = { git = "https://code.gri.mw/GUI/egui", rev = "f11a3510ba07ae87747d744d952676476a88c24e" }
+egui = { git = "https://code.gri.mw/GUI/egui", rev = "f11a3510ba07ae87747d744d952676476a88c24e" }
+eframe = { git = "https://code.gri.mw/GUI/egui", rev = "f11a3510ba07ae87747d744d952676476a88c24e" }
 ### patch grin store
 #grin_store = { path = "../grin-store" }

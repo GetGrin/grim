@@ -2372,7 +2372,7 @@ dependencies = [
 [[package]]
 name = "ecolor"
 version = "0.31.1"
-source = "git+https://github.com/emilk/egui?rev=f11a3510ba07ae87747d744d952676476a88c24e#f11a3510ba07ae87747d744d952676476a88c24e"
+source = "git+https://code.gri.mw/GUI/egui?rev=f11a3510ba07ae87747d744d952676476a88c24e#f11a3510ba07ae87747d744d952676476a88c24e"
 dependencies = [
  "bytemuck",
  "emath",
@@ -2442,7 +2442,7 @@ dependencies = [
 [[package]]
 name = "eframe"
 version = "0.31.1"
-source = "git+https://github.com/emilk/egui?rev=f11a3510ba07ae87747d744d952676476a88c24e#f11a3510ba07ae87747d744d952676476a88c24e"
+source = "git+https://code.gri.mw/GUI/egui?rev=f11a3510ba07ae87747d744d952676476a88c24e#f11a3510ba07ae87747d744d952676476a88c24e"
 dependencies = [
  "ahash",
  "bytemuck",
@@ -2476,7 +2476,7 @@ dependencies = [
 [[package]]
 name = "egui"
 version = "0.31.1"
-source = "git+https://github.com/emilk/egui?rev=f11a3510ba07ae87747d744d952676476a88c24e#f11a3510ba07ae87747d744d952676476a88c24e"
+source = "git+https://code.gri.mw/GUI/egui?rev=f11a3510ba07ae87747d744d952676476a88c24e#f11a3510ba07ae87747d744d952676476a88c24e"
 dependencies = [
  "ahash",
  "bitflags 2.9.1",
@@ -2492,7 +2492,7 @@ dependencies = [
 [[package]]
 name = "egui-winit"
 version = "0.31.1"
-source = "git+https://github.com/emilk/egui?rev=f11a3510ba07ae87747d744d952676476a88c24e#f11a3510ba07ae87747d744d952676476a88c24e"
+source = "git+https://code.gri.mw/GUI/egui?rev=f11a3510ba07ae87747d744d952676476a88c24e#f11a3510ba07ae87747d744d952676476a88c24e"
 dependencies = [
  "ahash",
  "arboard",
@@ -2510,7 +2510,7 @@ dependencies = [
 [[package]]
 name = "egui_extras"
 version = "0.31.1"
-source = "git+https://github.com/emilk/egui?rev=f11a3510ba07ae87747d744d952676476a88c24e#f11a3510ba07ae87747d744d952676476a88c24e"
+source = "git+https://code.gri.mw/GUI/egui?rev=f11a3510ba07ae87747d744d952676476a88c24e#f11a3510ba07ae87747d744d952676476a88c24e"
 dependencies = [
  "ahash",
  "egui",
@@ -2525,7 +2525,7 @@ dependencies = [
 [[package]]
 name = "egui_glow"
 version = "0.31.1"
-source = "git+https://github.com/emilk/egui?rev=f11a3510ba07ae87747d744d952676476a88c24e#f11a3510ba07ae87747d744d952676476a88c24e"
+source = "git+https://code.gri.mw/GUI/egui?rev=f11a3510ba07ae87747d744d952676476a88c24e#f11a3510ba07ae87747d744d952676476a88c24e"
 dependencies = [
  "ahash",
  "bytemuck",
@@ -2566,7 +2566,7 @@ dependencies = [
 [[package]]
 name = "emath"
 version = "0.31.1"
-source = "git+https://github.com/emilk/egui?rev=f11a3510ba07ae87747d744d952676476a88c24e#f11a3510ba07ae87747d744d952676476a88c24e"
+source = "git+https://code.gri.mw/GUI/egui?rev=f11a3510ba07ae87747d744d952676476a88c24e#f11a3510ba07ae87747d744d952676476a88c24e"
 dependencies = [
  "bytemuck",
 ]
@@ -2693,7 +2693,7 @@ dependencies = [
 [[package]]
 name = "epaint"
 version = "0.31.1"
-source = "git+https://github.com/emilk/egui?rev=f11a3510ba07ae87747d744d952676476a88c24e#f11a3510ba07ae87747d744d952676476a88c24e"
+source = "git+https://code.gri.mw/GUI/egui?rev=f11a3510ba07ae87747d744d952676476a88c24e#f11a3510ba07ae87747d744d952676476a88c24e"
 dependencies = [
  "ab_glyph",
  "ahash",
@@ -3488,7 +3488,7 @@ dependencies = [
  "local-ip-address",
  "log",
  "nokhwa 0.10.7 (registry+https://github.com/rust-lang/crates.io-index)",
- "nokhwa 0.10.7 (git+https://github.com/l1npengtul/nokhwa?rev=612c861ef153cf0ee575d8dd1413b960e4e19dd6)",
+ "nokhwa 0.10.7 (git+https://code.gri.mw/ardocrat/nokhwa?rev=612c861ef153cf0ee575d8dd1413b960e4e19dd6)",
  "parking_lot 0.12.3",
  "pin-project",
  "qrcode",
@@ -3783,7 +3783,7 @@ dependencies = [
 [[package]]
 name = "grin_wallet_api"
 version = "5.4.0-alpha.1"
-source = "git+https://github.com/mimblewimble/grin-wallet?rev=930a44d456b43172fc096eda0bbf6a3841f48c6a#930a44d456b43172fc096eda0bbf6a3841f48c6a"
+source = "git+https://code.gri.mw/CORE/wallet?rev=930a44d456b43172fc096eda0bbf6a3841f48c6a#930a44d456b43172fc096eda0bbf6a3841f48c6a"
 dependencies = [
  "base64 0.12.3",
  "chrono",
@@ -3808,7 +3808,7 @@ dependencies = [
 [[package]]
 name = "grin_wallet_config"
 version = "5.4.0-alpha.1"
-source = "git+https://github.com/mimblewimble/grin-wallet?rev=930a44d456b43172fc096eda0bbf6a3841f48c6a#930a44d456b43172fc096eda0bbf6a3841f48c6a"
+source = "git+https://code.gri.mw/CORE/wallet?rev=930a44d456b43172fc096eda0bbf6a3841f48c6a#930a44d456b43172fc096eda0bbf6a3841f48c6a"
 dependencies = [
  "dirs 2.0.2",
  "grin_core",
@@ -3823,7 +3823,7 @@ dependencies = [
 [[package]]
 name = "grin_wallet_controller"
 version = "5.4.0-alpha.1"
-source = "git+https://github.com/mimblewimble/grin-wallet?rev=930a44d456b43172fc096eda0bbf6a3841f48c6a#930a44d456b43172fc096eda0bbf6a3841f48c6a"
+source = "git+https://code.gri.mw/CORE/wallet?rev=930a44d456b43172fc096eda0bbf6a3841f48c6a#930a44d456b43172fc096eda0bbf6a3841f48c6a"
 dependencies = [
  "chrono",
  "easy-jsonrpc-mw",
@@ -3857,7 +3857,7 @@ dependencies = [
 [[package]]
 name = "grin_wallet_impls"
 version = "5.4.0-alpha.1"
-source = "git+https://github.com/mimblewimble/grin-wallet?rev=930a44d456b43172fc096eda0bbf6a3841f48c6a#930a44d456b43172fc096eda0bbf6a3841f48c6a"
+source = "git+https://code.gri.mw/CORE/wallet?rev=930a44d456b43172fc096eda0bbf6a3841f48c6a#930a44d456b43172fc096eda0bbf6a3841f48c6a"
 dependencies = [
  "base64 0.12.3",
  "blake2-rfc",
@@ -3896,7 +3896,7 @@ dependencies = [
 [[package]]
 name = "grin_wallet_libwallet"
 version = "5.4.0-alpha.1"
-source = "git+https://github.com/mimblewimble/grin-wallet?rev=930a44d456b43172fc096eda0bbf6a3841f48c6a#930a44d456b43172fc096eda0bbf6a3841f48c6a"
+source = "git+https://code.gri.mw/CORE/wallet?rev=930a44d456b43172fc096eda0bbf6a3841f48c6a#930a44d456b43172fc096eda0bbf6a3841f48c6a"
 dependencies = [
  "age",
  "base64 0.9.3",
@@ -3935,7 +3935,7 @@ dependencies = [
 [[package]]
 name = "grin_wallet_util"
 version = "5.4.0-alpha.1"
-source = "git+https://github.com/mimblewimble/grin-wallet?rev=930a44d456b43172fc096eda0bbf6a3841f48c6a#930a44d456b43172fc096eda0bbf6a3841f48c6a"
+source = "git+https://code.gri.mw/CORE/wallet?rev=930a44d456b43172fc096eda0bbf6a3841f48c6a#930a44d456b43172fc096eda0bbf6a3841f48c6a"
 dependencies = [
  "data-encoding",
  "ed25519-dalek 1.0.1",
@@ -5762,12 +5762,12 @@ dependencies = [
 [[package]]
 name = "nokhwa"
 version = "0.10.7"
-source = "git+https://github.com/l1npengtul/nokhwa?rev=612c861ef153cf0ee575d8dd1413b960e4e19dd6#612c861ef153cf0ee575d8dd1413b960e4e19dd6"
+source = "git+https://code.gri.mw/ardocrat/nokhwa?rev=612c861ef153cf0ee575d8dd1413b960e4e19dd6#612c861ef153cf0ee575d8dd1413b960e4e19dd6"
 dependencies = [
  "flume",
  "image",
  "nokhwa-bindings-macos",
- "nokhwa-core 0.1.5 (git+https://github.com/l1npengtul/nokhwa?rev=612c861ef153cf0ee575d8dd1413b960e4e19dd6)",
+ "nokhwa-core 0.1.5 (git+https://code.gri.mw/ardocrat/nokhwa?rev=612c861ef153cf0ee575d8dd1413b960e4e19dd6)",
  "parking_lot 0.12.3",
  "paste",
  "thiserror 2.0.12",
@@ -5786,7 +5786,7 @@ dependencies = [
 [[package]]
 name = "nokhwa-bindings-macos"
 version = "0.2.2"
-source = "git+https://github.com/l1npengtul/nokhwa?rev=612c861ef153cf0ee575d8dd1413b960e4e19dd6#612c861ef153cf0ee575d8dd1413b960e4e19dd6"
+source = "git+https://code.gri.mw/ardocrat/nokhwa?rev=612c861ef153cf0ee575d8dd1413b960e4e19dd6#612c861ef153cf0ee575d8dd1413b960e4e19dd6"
 dependencies = [
  "block",
  "cocoa-foundation",
@@ -5794,7 +5794,7 @@ dependencies = [
  "core-media-sys",
  "core-video-sys",
  "flume",
- "nokhwa-core 0.1.5 (git+https://github.com/l1npengtul/nokhwa?rev=612c861ef153cf0ee575d8dd1413b960e4e19dd6)",
+ "nokhwa-core 0.1.5 (git+https://code.gri.mw/ardocrat/nokhwa?rev=612c861ef153cf0ee575d8dd1413b960e4e19dd6)",
  "objc",
  "once_cell",
 ]
@@ -5824,7 +5824,7 @@ dependencies = [
 [[package]]
 name = "nokhwa-core"
 version = "0.1.5"
-source = "git+https://github.com/l1npengtul/nokhwa?rev=612c861ef153cf0ee575d8dd1413b960e4e19dd6#612c861ef153cf0ee575d8dd1413b960e4e19dd6"
+source = "git+https://code.gri.mw/ardocrat/nokhwa?rev=612c861ef153cf0ee575d8dd1413b960e4e19dd6#612c861ef153cf0ee575d8dd1413b960e4e19dd6"
 dependencies = [
  "bytes 1.10.1",
  "image",

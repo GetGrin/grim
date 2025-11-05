@@ -397,16 +397,3 @@ impl<Platform: PlatformCallbacks> eframe::App for App<Platform> {
         Colors::TRANSPARENT.to_normalized_gamma_f32()
     }
 }
-
-#[allow(dead_code)]
-#[cfg(target_os = "android")]
-#[allow(non_snake_case)]
-#[no_mangle]
-/// Handle Back key code event from Android.
-pub extern "C" fn Java_mw_gri_android_MainActivity_onBack(
-    _env: jni::JNIEnv,
-    _class: jni::objects::JObject,
-    _activity: jni::objects::JObject,
-) {
-    BACK_BUTTON_PRESSED.store(true, Ordering::Relaxed);
-}

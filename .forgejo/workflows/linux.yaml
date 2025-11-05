@@ -1,0 +1,37 @@
+on:
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+
+jobs:
+  release:
+    runs-on: ubuntu
+    steps:
+      - uses: actions/checkout@v5
+      - run: mkdir release
+      - name: Release Linux x86
+        run: cargo zigbuild --release --target x86_64-unknown-linux-gnu
+      - name: AppImage x86
+        run: |
+          cp target/x86_64-unknown-linux-gnu/release/grim linux/Grim.AppDir/AppRun
+          appimagetool linux/Grim.AppDir grim-${{ inputs.version }}-linux-x86_64.AppImage
+          cp grim-${{ inputs.version }}-linux-x86_64.AppImage release/
+      - name: Checksum AppImage x86
+        working-directory: release
+        run: sha256sum grim-${{ inputs.version }}-linux-x86_64.AppImage > grim-${{ inputs.version }}-linux-x86_64-appimage-sha256sum.txt
+      - name: Release Linux ARM
+        run: cargo zigbuild --release --target aarch64-unknown-linux-gnu
+      - name: AppImage ARM
+        run: |
+          cp target/aarch64-unknown-linux-gnu/release/grim linux/Grim.AppDir/AppRun
+          appimagetool linux/Grim.AppDir grim-${{ inputs.version }}-linux-arm.AppImage
+          cp grim-${{ inputs.version }}-linux-arm.AppImage release/
+      - name: Checksum AppImage ARM
+        working-directory: release
+        run: sha256sum grim-${{ inputs.version }}-linux-arm.AppImage > grim-${{ inputs.version }}-linux-arm-appimage-sha256sum.txt
+      - uses: forgejo/upload-artifact@v4
+        with:
+          name: release_linux
+          path: release/*

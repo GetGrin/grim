@@ -1,0 +1,124 @@
+on:
+  push:
+    branches:
+      - master
+      - ci
+    tags-ignore:
+      - "*-dev*"
+
+jobs:
+  version:
+    runs-on: ubuntu
+    outputs:
+      v: ${{ steps.version.outputs.v }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: Get version
+        id: version
+        run: |
+          ver="$(grep -m 1 -Po 'version = "\K[^"]*' Cargo.toml)"
+          [[ $ver == *"-dev"* ]] && ver=${ver} || ver=${ver}-dev
+          [[ ${{ forgejo.ref_type }} == 'tag' ]] && app_ver=${{ forgejo.ref_name }} || app_ver=${ver}
+          echo "v=${app_ver}" >> "$FORGEJO_OUTPUT"
+          echo $app_ver
+          [[ ${{ forgejo.ref_type }} == 'branch' ]] && override=true || override=false
+          echo "override=${override}" >> "$FORGEJO_OUTPUT"
+          echo "override: ${override}"
+          [[ ${{ forgejo.ref_type }} == 'tag' ]] && pre=false || pre=true
+          echo "pre=${pre}" >> "$FORGEJO_OUTPUT"
+          echo "pre-release: ${pre}"
+      - name: Check existing release
+        if: ${{ forgejo.ref_type == 'tag' }}
+        id: check
+        run: |
+          git fetch --tags
+          dev_sha=$(git rev-parse refs/tags/${{ forgejo.ref_name }}-dev)
+          [[ "$(git show-ref)" == *"${dev_sha}"* ]] && exists='true' || exists='false'
+          echo "exists=${exists}" >> "$FORGEJO_OUTPUT"
+          echo ${exists}
+          mkdir release
+      - uses: actions/forgejo-release@v2.7.3
+        if: ${{ forgejo.ref_type == 'tag' && steps.check.outputs.exists == 'true' }}
+        with:
+          direction: download
+          token: ${{ secrets.RELEASE_TOKEN }}
+          tag: "${{ forgejo.ref_name }}-dev"
+          release-dir: ./release
+      - name: Rename files
+        if: ${{ forgejo.ref_type == 'tag' && steps.check.outputs.exists == 'true' }}
+        working-directory: release
+        run: for f in *; do mv "$f" "$(echo "$f" | sed s/-dev-/-/)"; done
+      - uses: actions/forgejo-release@v2.7.3
+        if: ${{ forgejo.ref_type == 'tag' && steps.check.outputs.exists == 'true' }}
+        with:
+          direction: upload
+          token: ${{ secrets.RELEASE_TOKEN }}
+          tag: ${{ forgejo.ref_name }}
+          override: false
+          prerelease: false
+          release-dir: ./release
+          release-notes: ""
+
+  android:
+    if: ${{ forgejo.ref_type == 'branch' || needs.check.outputs.exists == 'false' }}
+    runs-on: ubuntu
+    needs: version
+    uses: ./.forgejo/workflows/android.yaml
+    with:
+      version: ${{ needs.version.outputs.v }}
+    secrets:
+      RELEASE_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+      ANDROID_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE }}
+      ANDROID_KEYSTORE_PROPS: ${{ secrets.ANDROID_KEYSTORE_PROPS }}
+
+  linux:
+    if: ${{ forgejo.ref_type == 'branch' || needs.check.outputs.exists == 'false' }}
+    runs-on: ubuntu
+    needs: [version, android]
+    uses: ./.forgejo/workflows/linux.yaml
+    with:
+      version: ${{ needs.version.outputs.v }}
+    secrets:
+      RELEASE_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+
+  macos:
+    if: ${{ forgejo.ref_type == 'branch' || needs.check.outputs.exists == 'false' }}
+    runs-on: ubuntu
+    needs: [version, android, linux]
+    uses: ./.forgejo/workflows/macos.yaml
+    with:
+      version: ${{ needs.version.outputs.v }}
+    secrets:
+      RELEASE_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+
+  windows:
+    if: ${{ forgejo.ref_type == 'branch' || needs.check.outputs.exists == 'false' }}
+    runs-on: ubuntu
+    needs: [version]
+    uses: ./.forgejo/workflows/windows.yaml
+    with:
+      version: ${{ needs.version.outputs.v }}
+    secrets:
+      RELEASE_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+
+  release:
+    if: ${{ forgejo.ref_type == 'branch' || needs.check.outputs.exists == 'false' }}
+    runs-on: ubuntu
+    needs: [version, windows]
+    steps:
+      - run: mkdir release
+      - name: Download All Artifacts
+        uses: forgejo/download-artifact@v4
+        with:
+          path: release
+          pattern: release_*
+          merge-multiple: true
+      - uses: actions/forgejo-release@v2.7.3
+        with:
+          direction: upload
+          token: ${{ secrets.RELEASE_TOKEN }}
+          tag: ${{ needs.version.outputs.v }}
+          override: ${{ needs.version.outputs.override }}
+          prerelease: ${{ needs.version.outputs.pre }}
+          release-dir: release
+          release-notes: ""

@@ -1,0 +1,25 @@
+on:
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+
+jobs:
+  windows:
+    runs-on: ubuntu
+    steps:
+      - uses: actions/checkout@v5
+      - run: mkdir release
+      - name: Release Windows x86
+        run: |
+          cargo build --release --target x86_64-pc-windows-gnu
+          zip grim-${{ inputs.version }}-win-x86_64.zip target/x86_64-pc-windows-gnu/release/grim.exe
+          mv grim-${{ inputs.version }}-win-x86_64.zip release/
+      - name: Checksum Archive x86
+        working-directory: release
+        run: sha256sum grim-${{ inputs.version }}-win-x86_64.zip > grim-${{ inputs.version }}-win-x86_64-sha256sum.txt
+      - uses: forgejo/upload-artifact@v4
+        with:
+          name: release_windows
+          path: release/*

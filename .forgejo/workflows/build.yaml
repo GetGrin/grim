@@ -1,0 +1,15 @@
+on:
+  push:
+    tags-ignore:
+      - "*"
+    branches-ignore:
+      - master
+      - ci
+
+jobs:
+  build:
+    runs-on: ubuntu
+    steps:
+      - uses: actions/checkout@v5
+      - name: Build
+        run: cargo build --release
