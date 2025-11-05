@@ -94,7 +94,7 @@ jobs:
   windows:
     if: ${{ forgejo.ref_type == 'branch' || needs.check.outputs.exists == 'false' }}
     runs-on: ubuntu
-    needs: [version]
+    needs: [version, android, linux, macos]
     uses: ./.forgejo/workflows/windows.yaml
     with:
       version: ${{ needs.version.outputs.v }}
@@ -104,7 +104,7 @@ jobs:
   release:
     if: ${{ forgejo.ref_type == 'branch' || needs.check.outputs.exists == 'false' }}
     runs-on: ubuntu
-    needs: [version, windows]
+    needs: [version, android, linux, macos, windows]
     steps:
       - run: mkdir release
       - name: Download All Artifacts
