@@ -83,7 +83,7 @@ impl View {
 
     /// Get width and height of app window.
     pub fn window_size(ctx: &egui::Context) -> (f32, f32) {
-        let rect = ctx.screen_rect();
+        let rect = ctx.content_rect();
         (rect.width(), rect.height())
     }
 

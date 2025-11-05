@@ -201,7 +201,7 @@ impl Modal {
         // Setup background rect.
         let is_win = OperatingSystem::Windows == OperatingSystem::from_target_os();
         let bg_rect = if View::is_desktop() && !is_win {
-            let mut r = ctx.screen_rect();
+            let mut r = ctx.content_rect();
             let is_mac = OperatingSystem::Mac == OperatingSystem::from_target_os();
             if !is_mac && !is_fullscreen {
                 r = r.shrink(Content::WINDOW_FRAME_MARGIN - 1.0);
@@ -209,7 +209,7 @@ impl Modal {
             r.min.y += Content::WINDOW_TITLE_HEIGHT;
             r
         } else {
-            ctx.screen_rect()
+            ctx.content_rect()
         };
 
         // Draw modal background.
@@ -228,7 +228,7 @@ impl Modal {
 
         // Setup width of modal content.
         let side_insets = View::get_left_inset() + View::get_right_inset();
-        let available_width = ctx.screen_rect().width() - (side_insets + Self::DEFAULT_MARGIN);
+        let available_width = ctx.content_rect().width() - (side_insets + Self::DEFAULT_MARGIN);
         let width = f32::min(available_width, Self::DEFAULT_WIDTH);
 
         // Show main content window at given position.

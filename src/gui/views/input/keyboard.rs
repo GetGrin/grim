@@ -56,7 +56,7 @@ impl KeyboardContent {
 
     /// Draw keyboard content as separate [`Window`].
     pub fn window_ui(&mut self, numeric: bool, ctx: &egui::Context) {
-        let width = ctx.screen_rect().width();
+        let width = ctx.content_rect().width();
         let layer_id = egui::Window::new(Self::WINDOW_ID)
             .title_bar(false)
             .resizable(false)

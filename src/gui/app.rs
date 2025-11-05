@@ -64,7 +64,8 @@ impl<Platform: PlatformCallbacks> App<Platform> {
         }
 
         // Handle Esc keyboard key event.
-        if ctx.input_mut(|i| i.consume_key(Modifiers::NONE, egui::Key::Escape)) {
+        if ctx.input_mut(|i| i.consume_key(Modifiers::NONE, egui::Key::Escape) ||
+            i.consume_key(Modifiers::NONE, egui::Key::BrowserBack)) {
             self.content.on_back(&self.platform);
             // Request repaint to update previous content.
             ctx.request_repaint();

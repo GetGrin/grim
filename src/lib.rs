@@ -178,9 +178,8 @@ pub fn setup_fonts(ctx: &Context) {
             "../fonts/phosphor.ttf"
         )).tweak(egui::FontTweak {
             scale: 1.0,
-            y_offset_factor: -0.20,
+            y_offset_factor: -0.04,
             y_offset: 0.0,
-            baseline_offset_factor: 0.16,
         }),
     ));
     fonts
@@ -195,9 +194,8 @@ pub fn setup_fonts(ctx: &Context) {
             "../fonts/noto_sc_reg.otf"
         )).tweak(egui::FontTweak {
             scale: 1.0,
-            y_offset_factor: -0.25,
+            y_offset_factor: -0.08,
             y_offset: 0.0,
-            baseline_offset_factor: 0.17,
         }),
     ));
     fonts

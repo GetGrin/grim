@@ -67,8 +67,8 @@ grin_wallet_util = { git = "https://code.gri.mw/CORE/wallet", rev = "930a44d456b
 grin_wallet_controller = { git = "https://code.gri.mw/CORE/wallet", rev = "930a44d456b43172fc096eda0bbf6a3841f48c6a" }
 
 ## ui
-egui = { version = "0.31.1", default-features = false }
-egui_extras = { version = "0.31.1", features = ["image", "svg"] }
+egui = { version = "0.33.0", default-features = false }
+egui_extras = { version = "0.33.0", features = ["image", "svg"] }
 rust-i18n = "2.3.1"
 
 ## other
@@ -142,7 +142,7 @@ nokhwa-mac = { git = "https://code.gri.mw/ardocrat/nokhwa", rev = "612c861ef153c
 [target.'cfg(not(target_os = "android"))'.dependencies]
 env_logger = "0.11.3"
 winit = { version = "0.30.11" }
-eframe = { version = "0.31.1", default-features = false, features = ["glow"] }
+eframe = { version = "0.33.0", default-features = false, features = ["glow"] }
 arboard = "3.2.0"
 rfd = "0.15.0"
 interprocess = { version = "2.2.1", features = ["tokio"] }
@@ -152,11 +152,4 @@ android_logger = "0.15.0"
 jni = "0.21.1"
 android-activity = { version = "0.6.0", features = ["native-activity"] }
 winit = { version = "0.30.11", features = ["android-native-activity"] }
-eframe = { version = "0.31.1", default-features = false, features = ["glow", "android-native-activity"] }
-
-[patch.crates-io]
-egui_extras = { git = "https://code.gri.mw/GUI/egui", rev = "f11a3510ba07ae87747d744d952676476a88c24e" }
-egui = { git = "https://code.gri.mw/GUI/egui", rev = "f11a3510ba07ae87747d744d952676476a88c24e" }
-eframe = { git = "https://code.gri.mw/GUI/egui", rev = "f11a3510ba07ae87747d744d952676476a88c24e" }
-### patch grin store
-#grin_store = { path = "../grin-store" }
+eframe = { version = "0.33.0", default-features = false, features = ["glow", "android-native-activity"] }
