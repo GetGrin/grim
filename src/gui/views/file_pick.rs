@@ -33,6 +33,9 @@ pub struct FilePickContent {
     /// Content type.
     content_type: FilePickContentType,
 
+    /// Flag to check if button is active.
+    active: bool,
+
     /// Flag to check if file is picking.
     file_picking: Arc<AtomicBool>,
 
@@ -49,6 +52,7 @@ impl FilePickContent {
     pub fn new(content_type: FilePickContentType) -> Self {
         Self {
             content_type,
+            active: false,
             file_picking: Arc::new(AtomicBool::new(false)),
             parse_file: true,
             file_parsing: Arc::new(AtomicBool::new(false)),
@@ -62,8 +66,13 @@ impl FilePickContent {
         self
     }
 
+    /// Enable or disable the button.
+    pub fn set_active(&mut self, active: bool) {
+        self.active = active;
+    }
+
     /// Draw content with provided callback to return path of the file.
-    pub fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks, on_pick: impl FnOnce(String)) {
+    pub fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks, pick: impl FnOnce(String)) {
         if self.file_picking.load(Ordering::Relaxed) {
             View::small_loading_spinner(ui);
             // Check file pick result.
@@ -86,7 +95,7 @@ impl FilePickContent {
                     r_res.clone().unwrap()
                 };
                 // Callback on result.
-                on_pick(text);
+                pick(text);
                 // Clear result.
                 let mut w_res = self.file_parsing_result.write();
                 *w_res = None;
@@ -104,7 +113,7 @@ impl FilePickContent {
                                               || {
                                                   if let Some(path) = cb.pick_file() {
                                                       if !self.parse_file {
-                                                          on_pick(path);
+                                                          pick(path);
                                                           return;
                                                       }
                                                       self.on_file_pick(path);
@@ -115,7 +124,7 @@ impl FilePickContent {
                     View::item_button(ui, r, ARCHIVE_BOX, Some(Colors::blue()), || {
                         if let Some(path) = cb.pick_file() {
                             if !self.parse_file {
-                                on_pick(path);
+                                pick(path);
                                 return;
                             }
                             self.on_file_pick(path);
@@ -123,12 +132,15 @@ impl FilePickContent {
                     });
                 }
                 FilePickContentType::Tab => {
-                    let active = self.file_parsing.load(Ordering::Relaxed) ||
-                        self.file_picking.load(Ordering::Relaxed);
-                    View::tab_button(ui, ARCHIVE_BOX, Some(Colors::blue()), Some(active), |_| {
+                    let active = match self.active {
+                        true => Some(self.file_parsing.load(Ordering::Relaxed) ||
+                            self.file_picking.load(Ordering::Relaxed)),
+                        false => None
+                    };
+                    View::tab_button(ui, ARCHIVE_BOX, Some(Colors::blue()), active, |_| {
                         if let Some(path) = cb.pick_file() {
                             if !self.parse_file {
-                                on_pick(path);
+                                pick(path);
                                 return;
                             }
                             self.on_file_pick(path);

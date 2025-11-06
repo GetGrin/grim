@@ -203,7 +203,7 @@ impl View {
         ui.scope(|ui| {
             let text_color = if let Some(c) = color {
                 if selected.is_none() {
-                    Colors::inactive_text().gamma_multiply(1.2)
+                    Colors::inactive_text()
                 } else {
                     c
                 }
@@ -214,7 +214,7 @@ impl View {
                         false => Colors::item_button_text()
                     }
                 } else {
-                    Colors::inactive_text().gamma_multiply(1.2)
+                    Colors::inactive_text()
                 }
             };
 
@@ -245,7 +245,7 @@ impl View {
             };
 
             br.surrender_focus();
-            if br.clicked() {
+            if br.clicked() && active_not_selected {
                 action(ui);
             }
         });

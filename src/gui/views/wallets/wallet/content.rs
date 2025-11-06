@@ -357,17 +357,14 @@ impl WalletContent {
                         self.current_tab = Box::new(WalletTransactions::new(None));
                     });
                 });
+                let active = if has_wallet_data { Some(false) } else { None };
                 columns[1].vertical_centered_justified(|ui| {
                     if wallet.invoice_creating() {
                         ui.add_space(4.0);
                         View::small_loading_spinner(ui);
                     } else {
-                        let active = if has_wallet_data {
-                            Some(false)
-                        } else {
-                            None
-                        };
-                        View::tab_button(ui, FILE_ARROW_DOWN, Some(Colors::green()), active, |_| {
+                        let (icon, color) = (FILE_ARROW_DOWN, Some(Colors::green()));
+                        View::tab_button(ui, icon, color, active, |_| {
                             self.invoice_request_content = Some(InvoiceRequestContent::default());
                             Modal::new(INVOICE_MODAL_ID)
                                 .position(ModalPosition::CenterTop)
@@ -381,6 +378,7 @@ impl WalletContent {
                         ui.add_space(4.0);
                         View::small_loading_spinner(ui);
                     } else {
+                        self.file_pick_tab_button.set_active(active.is_some());
                         self.file_pick_tab_button.ui(ui, cb, |m| {
                             wallet.task(WalletTask::OpenMessage(m));
                         });
@@ -403,8 +401,7 @@ impl WalletContent {
                         }
                     });
                 }
-                let settings_index = if tabs_amount == 5 { 4 } else { 3 };
-                columns[settings_index].vertical_centered_justified(|ui| {
+                columns[tabs_amount - 1].vertical_centered_justified(|ui| {
                     let active = Some(current_type == WalletTabType::Settings);
                     View::tab_button(ui, GEAR_FINE, None, active, |ui| {
                         ExternalConnection::check(None, ui.ctx());
