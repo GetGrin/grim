@@ -1,6 +1,6 @@
 #!/bin/bash
 
-usage="Usage: android.sh [type] [platform|version]\n - type: 'build', 'release'\n - platform, for 'build' type: 'v7', 'v8', 'x86'\n - optional version for 'release' (needed on MacOS), example: '0.2.2'"
+usage="Usage: android.sh [type] [platform|version]\n - type: 'build', 'release'\n - platform, for 'build' type: 'v7', 'v8', 'x86'\n - version for 'release', example: '0.2.2'"
 case $1 in
   build|release)
     ;;
@@ -81,10 +81,10 @@ function build_apk() {
         adb -s "$SERIAL" shell am start -n mw.gri.android/.MainActivity;
     done
   else
-    if [[ "$OSTYPE" != "darwin"* ]]; then
-      version=$(grep -m 1 -Po 'version = "\K[^"]*' Cargo.toml)
-    else
-      version=v$2
+    # Get version
+    version=v$2
+    if [[ -z "$version" ]]; then
+      version=$(grep -m 1 -Po 'version = "\K[^"]*' ../Cargo.toml)
     fi
     # Setup release file name
     name=grim-${version}-android-$1.apk
