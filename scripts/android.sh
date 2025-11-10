@@ -82,9 +82,9 @@ function build_apk() {
     done
   else
     # Get version
-    version=$2
+    version=v$2
     if [[ -z "$version" ]]; then
-      version=$(grep -m 1 -Po 'version = "\K[^"]*' ../Cargo.toml)
+      version=v$(grep -m 1 -Po 'version = "\K[^"]*' ../Cargo.toml)
     fi
     # Setup release file name
     name=grim-${version}-android-$1.apk
