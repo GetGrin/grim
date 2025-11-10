@@ -18,12 +18,9 @@ jobs:
         run: |
           ver="$(grep -m 1 -Po 'version = "\K[^"]*' Cargo.toml)"
           [[ $ver == *"-dev"* ]] && ver=${ver} || ver=${ver}-dev
-          [[ ${{ forgejo.ref_type }} == 'tag' ]] && app_ver=${{ forgejo.ref_name }} || app_ver=${ver}
+          [[ ${{ forgejo.ref_type }} == 'tag' ]] && app_ver=${{ forgejo.ref_name }} || app_ver=v${ver}
           echo "v=${app_ver}" >> "$FORGEJO_OUTPUT"
           echo $app_ver
-          [[ ${{ forgejo.ref_type }} == 'branch' ]] && override=true || override=false
-          echo "override=${override}" >> "$FORGEJO_OUTPUT"
-          echo "override: ${override}"
           [[ ${{ forgejo.ref_type }} == 'tag' ]] && pre=false || pre=true
           echo "pre=${pre}" >> "$FORGEJO_OUTPUT"
           echo "pre-release: ${pre}"
@@ -118,7 +115,7 @@ jobs:
           direction: upload
           token: ${{ secrets.RELEASE_TOKEN }}
           tag: ${{ needs.version.outputs.v }}
-          override: ${{ needs.version.outputs.override }}
+          override: true
           prerelease: ${{ needs.version.outputs.pre }}
           release-dir: release
           release-notes: ""
