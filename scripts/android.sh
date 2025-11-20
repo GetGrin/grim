@@ -82,7 +82,7 @@ function build_apk() {
     done
   else
     # Get version
-    version=v$2
+    version=$2
     if [[ -z "$version" ]]; then
       version=v$(grep -m 1 -Po 'version = "\K[^"]*' ../Cargo.toml)
     fi

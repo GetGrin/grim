@@ -12,8 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::{Layout, TextBuffer, TextStyle, Widget, Align};
+use std::sync::Arc;
+use egui::{Layout, TextBuffer, TextStyle, Widget, Align, ViewportCommand};
 use egui::text_edit::TextEditState;
+use lazy_static::lazy_static;
+use parking_lot::RwLock;
+
 use crate::gui::Colors;
 use crate::gui::icons::{CLIPBOARD_TEXT, COPY, EYE, EYE_SLASH, SCAN};
 use crate::gui::platform::PlatformCallbacks;
@@ -24,11 +28,11 @@ use crate::gui::views::{KeyboardEvent, View};
 pub struct TextEdit {
     /// View identifier.
     id: egui::Id,
-    /// Check if horizontal centering is needed.
+    /// Horizontal text centering is needed.
     h_center: bool,
-    /// Check if focus is needed.
+    /// Focus is needed.
     focus: bool,
-    /// Check if focus request was passed.
+    /// Focus request was passed.
     focus_request: bool,
     /// Hide letters and draw button to show/hide letters.
     password: bool,
@@ -38,9 +42,9 @@ pub struct TextEdit {
     paste: bool,
     /// Show button to scan QR code into text.
     scan_qr: bool,
-    /// Callback when scan button was pressed.
+    /// Scan button was pressed.
     pub scan_pressed: bool,
-    /// Callback when Enter key was pressed.
+    /// Tab or Enter keys were pressed to focus on next line.
     pub enter_pressed: bool,
     /// Flag to enter only numbers.
     numeric: bool,
@@ -65,7 +69,7 @@ impl TextEdit {
             scan_pressed: false,
             enter_pressed: false,
             numeric: false,
-            no_soft_keyboard: false,
+            no_soft_keyboard: is_android(),
         }
     }
 
@@ -151,6 +155,7 @@ impl TextEdit {
 
                 // Reset keyboard state for newly focused.
                 if clicked || self.focus_request {
+                    ui.ctx().send_viewport_cmd(ViewportCommand::IMEAllowed(true));
                     KeyboardContent::reset_window_state();
                 }
 
@@ -160,9 +165,10 @@ impl TextEdit {
                         data.insert_temp(focused_input_id, self.id);
                     });
                     self.enter_pressed = self.on_soft_input(ui, self.id, false, input);
-                    // Check Enter key input.
+                    // Check Enter or Tab keys press.
                     if !self.focus_request {
-                        if ui.ctx().input(|i| i.key_pressed(egui::Key::Enter)) {
+                        if ui.ctx().input(|i| i.key_pressed(egui::Key::Enter) ||
+                            i.key_pressed(egui::Key::Tab)) {
                             self.enter_pressed = true;
                         }
                     }
@@ -175,12 +181,24 @@ impl TextEdit {
                 }
             });
         });
+        // Repaint on Android to handle input from Java code without delays.
+        if is_android() {
+            ui.ctx().request_repaint();
+        }
     }
 
     /// Apply soft keyboard input data to provided String, returns `true` if Enter was pressed.
     fn on_soft_input(&self, ui: &mut egui::Ui, id: egui::Id, multiline: bool, value: &mut String)
         -> bool {
-        if let Some(input) = KeyboardContent::consume_event() {
+        let event: Option<KeyboardEvent> = if is_android() {
+            let mut w_input = LAST_SOFT_KEYBOARD_EVENT.write();
+            w_input.take()
+        } else {
+            KeyboardContent::consume_event()
+        };
+
+        // Handle keyboard input event.
+        if let Some(e) = event {
             let mut enter_pressed = false;
             let mut state = TextEditState::load(ui.ctx(), id).unwrap();
             match state.cursor.char_range() {
@@ -194,7 +212,7 @@ impl TextEdit {
                                          r.secondary.index as f32) as usize;
                     let end_select = f32::max(r.primary.index as f32,
                                          r.secondary.index as f32) as usize;
-                    match input {
+                    match e {
                         KeyboardEvent::TEXT(text) => {
                             if selected {
                                 *value = {
@@ -318,4 +336,64 @@ impl TextEdit {
         self.no_soft_keyboard = true;
         self
     }
+}
+
+/// Check if current system is Android.
+fn is_android() -> bool {
+    egui::os::OperatingSystem::from_target_os() == egui::os::OperatingSystem::Android
+}
+
+lazy_static! {
+    static ref LAST_SOFT_KEYBOARD_EVENT: Arc<RwLock<Option<KeyboardEvent>>> = Arc::new(RwLock::new(None));
+}
+
+#[allow(dead_code)]
+#[cfg(target_os = "android")]
+#[allow(non_snake_case)]
+#[no_mangle]
+/// Callback from Java code with last entered character from soft keyboard.
+pub extern "C" fn Java_mw_gri_android_MainActivity_onTextInput(
+    _env: jni::JNIEnv,
+    _class: jni::objects::JObject,
+    char: jni::sys::jstring
+) {
+    use jni::objects::JString;
+
+    unsafe {
+        let j_obj = JString::from_raw(char);
+        let j_str = _env.get_string_unchecked(j_obj.as_ref()).unwrap();
+        match j_str.to_str() {
+            Ok(str) => {
+                let mut w_input = LAST_SOFT_KEYBOARD_EVENT.write();
+                *w_input = Some(KeyboardEvent::TEXT(str.to_string()));
+            }
+            Err(_) => {}
+        }
+    }
+}
+
+#[allow(dead_code)]
+#[cfg(target_os = "android")]
+#[allow(non_snake_case)]
+#[no_mangle]
+/// Callback from Java code when Clear key was pressed at soft keyboard.
+pub extern "C" fn Java_mw_gri_android_MainActivity_onClearInput(
+    _env: jni::JNIEnv,
+    _class: jni::objects::JObject,
+) {
+    let mut w_input = LAST_SOFT_KEYBOARD_EVENT.write();
+    *w_input = Some(KeyboardEvent::CLEAR);
+}
+
+#[allow(dead_code)]
+#[cfg(target_os = "android")]
+#[allow(non_snake_case)]
+#[no_mangle]
+/// Callback from Java code when Enter key was pressed at soft keyboard.
+pub extern "C" fn Java_mw_gri_android_MainActivity_onEnterInput(
+    _env: jni::JNIEnv,
+    _class: jni::objects::JObject,
+) {
+    let mut w_input = LAST_SOFT_KEYBOARD_EVENT.write();
+    *w_input = Some(KeyboardEvent::ENTER);
 }

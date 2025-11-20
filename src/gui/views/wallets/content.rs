@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::time::Duration;
 use egui::scroll_area::ScrollBarVisibility;
 use egui::{Align, CornerRadius, Id, Layout, Margin, RichText, ScrollArea, StrokeKind};
-use std::time::Duration;
-
+use egui::os::OperatingSystem;
 use crate::gui::icons::{ARROW_LEFT, CARET_RIGHT, COMPUTER_TOWER, FOLDER_OPEN, FOLDER_PLUS, GEAR, GLOBE, GLOBE_SIMPLE, LOCK_KEY, PLUS, SIDEBAR_SIMPLE, SUITCASE};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::settings::SettingsContent;
@@ -130,6 +130,12 @@ impl ContentContainer for WalletsContent {
     }
 
     fn container_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
+        ui.ctx().request_repaint_after(if OperatingSystem::from_target_os() == OperatingSystem::Android {
+            Duration::from_millis(100)
+        } else {
+            Duration::from_millis(1000)
+        });
+
         if let Some(data) = crate::consume_incoming_data() {
             if !data.is_empty() {
                 self.on_data(ui, Some(data), cb);
@@ -221,9 +227,6 @@ impl ContentContainer for WalletsContent {
                 ..Default::default()
             })
             .show_animated_inside(ui, !list_hidden, |ui| {
-                if !dual_panel && !showing_wallet {
-                    ui.ctx().request_repaint_after(Duration::from_millis(1000));
-                }
                 // Show wallet list.
                 self.wallet_list_ui(ui, cb);
             });

@@ -151,8 +151,8 @@ nokhwa-mac = { git = "https://code.gri.mw/ardocrat/nokhwa", rev = "612c861ef153c
 
 [target.'cfg(not(target_os = "android"))'.dependencies]
 env_logger = "0.11.3"
-winit = { version = "0.30.11" }
-eframe = { version = "0.33.0", default-features = false, features = ["glow", "wayland"] }
+winit = { version = "0.30.12" }
+eframe = { version = "0.33.2", default-features = false, features = ["glow", "wayland"] }
 arboard = "3.2.0"
 rfd = "0.15.0"
 interprocess = { version = "2.2.1", features = ["tokio"] }
@@ -160,6 +160,6 @@ interprocess = { version = "2.2.1", features = ["tokio"] }
 [target.'cfg(target_os = "android")'.dependencies]
 android_logger = "0.15.0"
 jni = "0.21.1"
-android-activity = { version = "0.6.0", features = ["native-activity"] }
-winit = { version = "0.30.11", features = ["android-native-activity"] }
-eframe = { version = "0.33.0", default-features = false, features = ["glow", "android-native-activity"] }
+android-activity = { version = "0.6.0", features = ["game-activity"] }
+winit = { version = "0.30.12", features = ["android-game-activity"] }
+eframe = { version = "0.33.2", default-features = false, features = ["glow", "android-game-activity"] }

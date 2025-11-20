@@ -16,7 +16,7 @@ import static android.app.Notification.EXTRA_NOTIFICATION_ID;
 
 public class BackgroundService extends Service {
     private static final String TAG = BackgroundService.class.getSimpleName();
-    
+
     private PowerManager.WakeLock mWakeLock;
 
     private final Handler mHandler = new Handler(Looper.getMainLooper());
@@ -31,7 +31,6 @@ public class BackgroundService extends Service {
 
     public static final String ACTION_START_NODE = "start_node";
     public static final String ACTION_STOP_NODE = "stop_node";
-    public static final String ACTION_EXIT = "exit";
 
     private final Runnable mUpdateSyncStatus = new Runnable() {
         @SuppressLint("RestrictedApi")
@@ -81,18 +80,6 @@ public class BackgroundService extends Service {
                         PendingIntent i = PendingIntent
                                 .getBroadcast(BackgroundService.this, 1, startStopIntent, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_ONE_SHOT);
                         mNotificationBuilder.addAction(R.drawable.ic_stop, getStopText(), i);
-                    }
-
-                    // Set up a button to exit from the app.
-                    if (canStart || canStop) {
-                        Intent exitIntent = new Intent(BackgroundService.this, NotificationActionsReceiver.class);
-                        if (Build.VERSION.SDK_INT > 25) {
-                            exitIntent.putExtra(EXTRA_NOTIFICATION_ID, NOTIFICATION_ID);
-                        }
-                        exitIntent.setAction(ACTION_EXIT);
-                        PendingIntent i = PendingIntent
-                                .getBroadcast(BackgroundService.this, 1, exitIntent, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_ONE_SHOT);
-                        mNotificationBuilder.addAction(R.drawable.ic_close, getExitText(), i);
                     }
                 }
 
@@ -246,9 +233,6 @@ public class BackgroundService extends Service {
     private native boolean canStartNode();
     // Check if stop node is possible.
     private native boolean canStopNode();
-
-    // Get exit text for notification.
-    private native String getExitText();
 
     // Check if app from the app is needed after node stop.
     private native boolean exitAppAfterNodeStop();

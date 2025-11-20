@@ -213,6 +213,16 @@ impl NetworkContent {
         }
     }
 
+    /// Navigate back, return `true` if action was not consumed.
+    pub fn on_back(&mut self) -> bool {
+        if self.showing_settings() {
+            // Close settings.
+            self.settings_content = None;
+            return false;
+        }
+        true
+    }
+
     /// Check if application settings content is showing.
     pub fn showing_settings(&self) -> bool {
         self.settings_content.is_some()

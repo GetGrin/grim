@@ -146,9 +146,15 @@ impl Content {
     pub const EXIT_CONFIRMATION_MODAL: &'static str = "exit_confirmation_modal";
 
     /// Called to navigate back, return `true` if action was not consumed.
-    pub fn on_back(&mut self, cb: &dyn PlatformCallbacks) -> bool {
+    pub fn on_back(&mut self, ctx: &egui::Context, cb: &dyn PlatformCallbacks) -> bool {
         if Modal::on_back() {
-            if self.wallets.on_back(cb) {
+            let dual_panel = Self::is_dual_panel_mode(ctx);
+            if !dual_panel && Self::is_network_panel_open() {
+                if self.network.on_back() {
+                    Self::toggle_network_panel();
+                    return false;
+                }
+            } else if self.wallets.on_back(cb) {
                 Self::show_exit_modal();
                 return false;
             }

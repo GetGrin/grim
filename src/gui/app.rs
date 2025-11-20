@@ -12,8 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::sync::atomic::{AtomicBool, Ordering};
 use egui::epaint::RectShape;
 use egui::{Align, Context, CornerRadius, CursorIcon, LayerId, Layout, Modifiers, Order, ResizeDirection, Stroke, StrokeKind, UiBuilder, ViewportCommand};
+use lazy_static::lazy_static;
 
 use crate::gui::icons::{ARROWS_IN, ARROWS_OUT, CARET_DOWN, MOON, SUN, X};
 use crate::gui::platform::PlatformCallbacks;
@@ -21,6 +23,11 @@ use crate::gui::views::types::ContentContainer;
 use crate::gui::views::{Content, KeyboardContent, Modal, TitlePanel, View};
 use crate::gui::Colors;
 use crate::AppConfig;
+
+lazy_static! {
+    /// State to check if platform Back button was pressed.
+    static ref BACK_BUTTON_PRESSED: AtomicBool = AtomicBool::new(false);
+}
 
 /// Implements ui entry point and contains platform-specific callbacks.
 pub struct App<Platform> {
@@ -63,10 +70,15 @@ impl<Platform: PlatformCallbacks> App<Platform> {
             self.first_draw = false;
         }
 
-        // Handle Esc keyboard key event.
-        if ctx.input_mut(|i| i.consume_key(Modifiers::NONE, egui::Key::Escape) ||
+        // Handle Esc keyboard key event and platform Back button key event.
+        let back_pressed = BACK_BUTTON_PRESSED.load(Ordering::Relaxed);
+        if back_pressed || ctx.input_mut(|i| i.consume_key(Modifiers::NONE, egui::Key::Escape) ||
             i.consume_key(Modifiers::NONE, egui::Key::BrowserBack)) {
-            self.content.on_back(&self.platform);
+            // Pass event to content.
+            self.content.on_back(ctx, &self.platform);
+            if back_pressed {
+                BACK_BUTTON_PRESSED.store(false, Ordering::Relaxed);
+            }
             // Request repaint to update previous content.
             ctx.request_repaint();
         }
@@ -134,7 +146,9 @@ impl<Platform: PlatformCallbacks> App<Platform> {
                 false
             };
             if keyboard_showing {
-                ctx.move_to_top(LayerId::new(Order::Middle, egui::Id::new(KeyboardContent::WINDOW_ID)));
+                ctx.move_to_top(
+                    LayerId::new(Order::Middle, egui::Id::new(KeyboardContent::WINDOW_ID))
+                );
             }
         }
         // Reset keyboard state for newly opened modal.
@@ -397,4 +411,17 @@ impl<Platform: PlatformCallbacks> eframe::App for App<Platform> {
         }
         Colors::TRANSPARENT.to_normalized_gamma_f32()
     }
+}
+
+#[allow(dead_code)]
+#[cfg(target_os = "android")]
+#[allow(non_snake_case)]
+#[no_mangle]
+/// Handle Back key code event from Android.
+pub extern "C" fn Java_mw_gri_android_MainActivity_onBack(
+    _env: jni::JNIEnv,
+    _class: jni::objects::JObject,
+    _activity: jni::objects::JObject,
+) {
+    BACK_BUTTON_PRESSED.store(true, Ordering::Relaxed);
 }

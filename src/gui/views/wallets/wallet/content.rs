@@ -15,7 +15,6 @@
 use egui::scroll_area::ScrollBarVisibility;
 use egui::{Id, Margin, RichText, ScrollArea};
 use grin_chain::SyncStatus;
-use std::time::Duration;
 
 use crate::gui::icons::{ARROWS_CLOCKWISE, FILE_ARROW_DOWN, FILE_ARROW_UP, GEAR_FINE, POWER, STACK};
 use crate::gui::platform::PlatformCallbacks;
@@ -83,12 +82,6 @@ impl WalletContentContainer for WalletContent {
     }
 
     fn container_ui(&mut self, ui: &mut egui::Ui, wallet: &Wallet, cb: &dyn PlatformCallbacks) {
-        if self.account_content.can_back() {
-            ui.ctx().request_repaint();
-        } else {
-            ui.ctx().request_repaint_after(Duration::from_millis(1000));
-        }
-
         let dual_panel = Content::is_dual_panel_mode(ui.ctx());
         let show_wallets_dual = AppConfig::show_wallets_at_dual_panel();
 

@@ -3,7 +3,6 @@ package mw.gri.android;
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
-import android.app.NativeActivity;
 import android.content.*;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
@@ -13,19 +12,26 @@ import android.os.Process;
 import android.provider.Settings;
 import android.system.ErrnoException;
 import android.system.Os;
+import android.util.Log;
+import android.util.Size;
+import android.view.KeyEvent;
 import android.view.View;
-import android.view.inputmethod.InputMethodManager;
+import android.window.OnBackInvokedDispatcher;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.camera.core.*;
 import androidx.camera.lifecycle.ProcessCameraProvider;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 import androidx.core.graphics.Insets;
+import androidx.core.os.BuildCompat;
 import androidx.core.view.DisplayCutoutCompat;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
-
+import com.google.androidgamesdk.GameActivity;
+import com.google.androidgamesdk.gametextinput.State;
 import com.google.common.util.concurrent.ListenableFuture;
 
 import java.io.*;
@@ -36,30 +42,27 @@ import java.util.concurrent.Executors;
 import static android.content.ClipDescription.MIMETYPE_TEXT_HTML;
 import static android.content.ClipDescription.MIMETYPE_TEXT_PLAIN;
 
-public class MainActivity extends NativeActivity {
-    private static final int FILE_PICK_REQUEST = 1001;
-    private static final int FILE_PERMISSIONS_REQUEST = 1002;
+public class MainActivity extends GameActivity {
+    public static String STOP_APP_ACTION = "STOP_APP";
 
     private static final int NOTIFICATIONS_PERMISSION_CODE = 1;
     private static final int CAMERA_PERMISSION_CODE = 2;
-
-    public static final String STOP_APP_ACTION = "STOP_APP_ACTION";
 
     static {
         System.loadLibrary("grim");
     }
 
-    private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
-        @SuppressLint("RestrictedApi")
+    private final BroadcastReceiver mBroadcastReceiver = new BroadcastReceiver() {
         @Override
-        public void onReceive(Context context, Intent intent) {
-            if (Objects.equals(intent.getAction(), MainActivity.STOP_APP_ACTION)) {
+        public void onReceive(Context ctx, Intent i) {
+            if (Objects.equals(i.getAction(), STOP_APP_ACTION)) {
                 exit();
             }
         }
     };
 
     private final ImageAnalysis mImageAnalysis = new ImageAnalysis.Builder()
+            .setTargetResolution(new Size(640, 480))
             .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
             .build();
 
@@ -67,6 +70,9 @@ public class MainActivity extends NativeActivity {
     private ProcessCameraProvider mCameraProvider = null;
     private ExecutorService mCameraExecutor = null;
     private boolean mUseBackCamera = true;
+
+    private ActivityResultLauncher<Intent> mFilePickResult = null;
+    private ActivityResultLauncher<Intent> mOpenFilePermissionsResult = null;
 
     @SuppressLint("UnspecifiedRegisterReceiverFlag")
     @Override
@@ -79,15 +85,14 @@ public class MainActivity extends NativeActivity {
         }
 
         // Clear cache on start.
-        String cacheDir = Objects.requireNonNull(getExternalCacheDir()).getPath();
-        if (savedInstanceState == null) {
-            Utils.deleteDirectoryContent(new File(cacheDir), false);
+        if (savedInstanceState == null && getExternalCacheDir() != null) {
+            Utils.deleteDirectoryContent(new File(getExternalCacheDir().getPath()), false);
         }
 
         // Setup environment variables for native code.
         try {
             Os.setenv("HOME", Objects.requireNonNull(getExternalFilesDir("")).getPath(), true);
-            Os.setenv("XDG_CACHE_HOME", cacheDir, true);
+            Os.setenv("XDG_CACHE_HOME", Objects.requireNonNull(getExternalCacheDir()).getPath(), true);
             Os.setenv("ARTI_FS_DISABLE_PERMISSION_CHECKS", "true", true);
         } catch (ErrnoException e) {
             throw new RuntimeException(e);
@@ -95,10 +100,56 @@ public class MainActivity extends NativeActivity {
 
         super.onCreate(null);
 
-        ContextCompat.registerReceiver(this, mReceiver, new IntentFilter(STOP_APP_ACTION), ContextCompat.RECEIVER_NOT_EXPORTED);
+        // Register receiver to finish activity from the BackgroundService.
+        ContextCompat.registerReceiver(this, mBroadcastReceiver, new IntentFilter(STOP_APP_ACTION), ContextCompat.RECEIVER_NOT_EXPORTED);
+
+        // Register associated file opening result.
+        mOpenFilePermissionsResult = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(),
+                result -> {
+                    if (Build.VERSION.SDK_INT >= 30) {
+                        if (Environment.isExternalStorageManager()) {
+                            onFile();
+                        }
+                    } else if (result.getResultCode() == RESULT_OK) {
+                        onFile();
+                    }
+                }
+        );
+        // Register file pick result.
+        mFilePickResult = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(),
+                result -> {
+                    int resultCode = result.getResultCode();
+                    Intent data = result.getData();
+                    if (resultCode == Activity.RESULT_OK) {
+                        String path = "";
+                        if (data != null && data.getData() != null) {
+                            Uri uri = data.getData();
+                            String name = "pick" + Utils.getFileExtension(uri, this);
+                            File file = new File(getExternalCacheDir(), name);
+                            try (InputStream is = getContentResolver().openInputStream(uri);
+                                 OutputStream os = new FileOutputStream(file)) {
+                                byte[] buffer = new byte[1024];
+                                int length;
+                                while (true) {
+                                    assert is != null;
+                                    if (!((length = is.read(buffer)) > 0)) break;
+                                    os.write(buffer, 0, length);
+                                }
+                            } catch (Exception e) {
+                                Log.e("grim", e.toString());
+                            }
+                            path = file.getPath();
+                        }
+                        onFilePick(path);
+                    } else {
+                        onFilePick("");
+                    }
+                });
 
         // Listener for display insets (cutouts) to pass values into native code.
-        View content = findViewById(android.R.id.content).getRootView();
+        View content = getWindow().getDecorView().findViewById(android.R.id.content);
         ViewCompat.setOnApplyWindowInsetsListener(content, (v, insets) -> {
             // Get display cutouts.
             DisplayCutoutCompat dc = insets.getDisplayCutout();
@@ -127,7 +178,7 @@ public class MainActivity extends NativeActivity {
             return insets;
         });
 
-        content.post(() -> {
+        findViewById(android.R.id.content).post(() -> {
             // Request notifications permissions if needed.
             if (Build.VERSION.SDK_INT >= 33) {
                 String notificationsPermission = Manifest.permission.POST_NOTIFICATIONS;
@@ -149,43 +200,8 @@ public class MainActivity extends NativeActivity {
         }
     }
 
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        switch (requestCode) {
-            case FILE_PICK_REQUEST:
-                if (Build.VERSION.SDK_INT >= 30) {
-                    if (Environment.isExternalStorageManager()) {
-                        onFile();
-                    }
-                } else if (resultCode == RESULT_OK) {
-                    onFile();
-                }
-            case FILE_PERMISSIONS_REQUEST:
-                if (resultCode == Activity.RESULT_OK) {
-                    String path = "";
-                    if (data != null) {
-                        Uri uri = data.getData();
-                        String name = "pick" + Utils.getFileExtension(uri, this);
-                        File file = new File(getExternalCacheDir(), name);
-                        try (InputStream is = getContentResolver().openInputStream(uri);
-                             OutputStream os = new FileOutputStream(file)) {
-                            byte[] buffer = new byte[1024];
-                            int length;
-                            while ((length = is.read(buffer)) > 0) {
-                                os.write(buffer, 0, length);
-                            }
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
-                        path = file.getPath();
-                    }
-                    onFilePick(path);
-                } else {
-                    onFilePick("");
-                }
-        }
-    }
+    // Pass display insets into native code.
+    public native void onDisplayInsets(int[] cutouts);
 
     @Override
     protected void onNewIntent(Intent intent) {
@@ -209,12 +225,13 @@ public class MainActivity extends NativeActivity {
         if (Build.VERSION.SDK_INT >= 30) {
             if (!Environment.isExternalStorageManager()) {
                 Intent i = new Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION);
-                startActivityForResult(i, FILE_PERMISSIONS_REQUEST);
+                mOpenFilePermissionsResult.launch(i);
                 return;
             }
         }
         try {
             ParcelFileDescriptor parcelFile = getContentResolver().openFileDescriptor(data, "r");
+            assert parcelFile != null;
             FileReader fileReader = new FileReader(parcelFile.getFileDescriptor());
             BufferedReader reader = new BufferedReader(fileReader);
             String line;
@@ -228,7 +245,7 @@ public class MainActivity extends NativeActivity {
             // Provide file content into native code.
             onData(buff.toString());
         } catch (Exception e) {
-            e.printStackTrace();
+            Log.e("grim", e.toString());
         }
     }
 
@@ -251,20 +268,87 @@ public class MainActivity extends NativeActivity {
         if (results.length != 0 && results[0] == PackageManager.PERMISSION_GRANTED) {
             switch (requestCode) {
                 case NOTIFICATIONS_PERMISSION_CODE: {
-                    // Start notification service.
                     BackgroundService.start(this);
                     return;
                 }
                 case CAMERA_PERMISSION_CODE: {
-                    // Start camera.
                     startCamera();
                 }
             }
         }
     }
 
-    // Implemented into native code to handle display insets change.
-    native void onDisplayInsets(int[] cutouts);
+    @Override
+    protected void onTextInputEventNative(long l, State state) {
+        super.onTextInputEventNative(l, state);
+        if (state.selectionEnd > state.composingRegionStart && state.composingRegionStart >= 0) {
+            String input = String.valueOf(state.text.charAt(state.composingRegionStart));
+            if (input.contains("\n")) {
+                onEnterInput();
+            } else {
+                onTextInput(input);
+            }
+        }
+    }
+
+    @Override
+    public boolean dispatchKeyEvent(KeyEvent event) {
+        if (event.getAction() == KeyEvent.ACTION_DOWN) {
+            if (event.getKeyCode() == KeyEvent.KEYCODE_BACK) {
+                onBack();
+                return false;
+            } else if (event.getKeyCode() == KeyEvent.KEYCODE_DEL) {
+                onClearInput();
+                return false;
+            } else if (event.getKeyCode() == KeyEvent.KEYCODE_ENTER) {
+                onEnterInput();
+                return false;
+            } else if (event.getKeyCode() == KeyEvent.KEYCODE_0) {
+                onTextInput("0");
+                return false;
+            } else if (event.getKeyCode() == KeyEvent.KEYCODE_1) {
+                onTextInput("1");
+                return false;
+            } else if (event.getKeyCode() == KeyEvent.KEYCODE_2) {
+                onTextInput("2");
+                return false;
+            } else if (event.getKeyCode() == KeyEvent.KEYCODE_3) {
+                onTextInput("3");
+                return false;
+            } else if (event.getKeyCode() == KeyEvent.KEYCODE_4) {
+                onTextInput("4");
+                return false;
+            } else if (event.getKeyCode() == KeyEvent.KEYCODE_5) {
+                onTextInput("5");
+                return false;
+            } else if (event.getKeyCode() == KeyEvent.KEYCODE_6) {
+                onTextInput("6");
+                return false;
+            } else if (event.getKeyCode() == KeyEvent.KEYCODE_7) {
+                onTextInput("7");
+                return false;
+            } else if (event.getKeyCode() == KeyEvent.KEYCODE_8) {
+                onTextInput("8");
+                return false;
+            } else if (event.getKeyCode() == KeyEvent.KEYCODE_9) {
+                onTextInput("9");
+                return false;
+            }
+        }
+        return super.dispatchKeyEvent(event);
+    }
+
+    // Pass back navigation event into native code.
+    public native void onBack();
+
+    // Pass clear key event into native code.
+    public native void onClearInput();
+
+    // Pass enter key event into native code.
+    public native void onEnterInput();
+
+    // Pass last entered character from soft keyboard into native code.
+    public native void onTextInput(String character);
 
     // Called from native code to exit app.
     public void exit() {
@@ -273,6 +357,7 @@ public class MainActivity extends NativeActivity {
 
     @Override
     protected void onDestroy() {
+        unregisterReceiver(mBroadcastReceiver);
         BackgroundService.stop(this);
 
         // Kill process after 3 secs if app was terminated from recent apps to prevent app hang.
@@ -315,18 +400,6 @@ public class MainActivity extends NativeActivity {
             text = item.getText().toString();
         }
         return text;
-    }
-
-    // Called from native code to show keyboard.
-    public void showKeyboard() {
-        InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-        imm.showSoftInput(getWindow().getDecorView(), InputMethodManager.SHOW_IMPLICIT);
-    }
-
-    // Called from native code to hide keyboard.
-    public void hideKeyboard() {
-        InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-        imm.hideSoftInputFromWindow(getWindow().getDecorView().getWindowToken(), 0);
     }
 
     // Called from native code to start camera.
@@ -379,7 +452,7 @@ public class MainActivity extends NativeActivity {
         }
         // Apply declared configs to CameraX using the same lifecycle owner
         mCameraProvider.unbindAll();
-//        mCameraProvider.bindToLifecycle(this, cameraSelector, mImageAnalysis);
+        mCameraProvider.bindToLifecycle(this, cameraSelector, mImageAnalysis);
     }
 
     // Called from native code to stop camera.
@@ -418,7 +491,7 @@ public class MainActivity extends NativeActivity {
         Uri uri = FileProvider.getUriForFile(this, "mw.gri.android.fileprovider", file);
         Intent intent = new Intent(Intent.ACTION_SEND);
         intent.putExtra(Intent.EXTRA_STREAM, uri);
-        intent.setType("*/*");
+        intent.setType("text/*");
         startActivity(Intent.createChooser(intent, "Share data"));
     }
 
@@ -431,10 +504,10 @@ public class MainActivity extends NativeActivity {
     // Called from native code to pick the file.
     public void pickFile() {
         Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-        intent.setType("*/*");
+        intent.setType("text/*");
         try {
-            startActivityForResult(Intent.createChooser(intent, "Pick file"), FILE_PICK_REQUEST);
-        } catch (ActivityNotFoundException ex) {
+            mFilePickResult.launch(Intent.createChooser(intent, "Pick file"));
+        } catch (android.content.ActivityNotFoundException ex) {
             onFilePick("");
         }
     }
