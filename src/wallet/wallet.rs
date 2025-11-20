@@ -1373,6 +1373,8 @@ async fn handle_task(w: &Wallet, t: WalletTask) {
             }
         }
         WalletTask::Post(s, id) => {
+            w.on_tx_action(id.to_string(), Some(WalletTransactionAction::Posting));
+
             let slate = match s {
                 None => &w.get_tx(*id).unwrap(),
                 Some(s) => s
@@ -1380,6 +1382,9 @@ async fn handle_task(w: &Wallet, t: WalletTask) {
             w.on_tx_error(slate.id.to_string(), None);
 
             // Cleanup broadcasting tx height.
+            let tx_height_store = TxHeightStore::new(w.get_config().get_extra_db_path());
+            tx_height_store.delete_broadcasting_height(*id);
+
             let has_data = {
                 let r_data = w.data.read();
                 r_data.is_some()

@@ -347,6 +347,12 @@ impl WalletTransaction {
             self.data.tx_type != TxLogEntryType::TxSentCancelled
     }
 
+    /// Check if transaction was canceled.
+    pub fn cancelled(&self) -> bool {
+        self.data.tx_type == TxLogEntryType::TxReceivedCancelled ||
+            self.data.tx_type == TxLogEntryType::TxSentCancelled
+    }
+
     /// Check if transaction is finalizing.
     pub fn finalizing(&self) -> bool {
         if let Some(a) = self.action.as_ref() {

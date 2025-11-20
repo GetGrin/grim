@@ -258,29 +258,31 @@ impl WalletTransactionContent {
                 });
             }
 
-            let rebroadcast = tx.broadcasting_timed_out(&wallet);
+            if !tx.cancelled() && !tx.cancelling() && !tx.posting() {
+                let rebroadcast = tx.broadcasting_timed_out(&wallet);
 
-            // Draw button to cancel transaction.
-            if tx.can_cancel() || rebroadcast {
-                let r = if tx.can_finalize() {
-                    CornerRadius::default()
-                } else {
-                    View::item_rounding(0, 2, true)
-                };
-                View::item_button(ui, r, PROHIBIT, Some(Colors::red()), || {
-                    wallet.task(WalletTask::Cancel(tx.clone()));
-                    Modal::close();
-                });
-            }
+                // Draw button to cancel transaction.
+                if tx.can_cancel() || rebroadcast {
+                    let r = if tx.can_finalize() {
+                        CornerRadius::default()
+                    } else {
+                        View::item_rounding(0, 2, true)
+                    };
+                    View::item_button(ui, r, PROHIBIT, Some(Colors::red()), || {
+                        wallet.task(WalletTask::Cancel(tx.clone()));
+                        Modal::close();
+                    });
+                }
 
-            // Draw button to repeat transaction action.
-            if tx.can_repeat_action() || rebroadcast {
-                let r = if tx.can_finalize() || tx.can_cancel() {
-                    CornerRadius::default()
-                } else {
-                    View::item_rounding(0, 2, true)
-                };
-                WalletTransactions::tx_repeat_button_ui(ui, r, tx, wallet, rebroadcast);
+                // Draw button to repeat transaction action.
+                if tx.can_repeat_action() || rebroadcast {
+                    let r = if tx.can_finalize() || tx.can_cancel() {
+                        CornerRadius::default()
+                    } else {
+                        View::item_rounding(0, 2, true)
+                    };
+                    WalletTransactions::tx_repeat_button_ui(ui, r, tx, wallet, rebroadcast);
+                }
             }
         });
 

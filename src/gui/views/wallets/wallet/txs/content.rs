@@ -175,24 +175,26 @@ impl WalletTransactions {
                     });
                 }
 
-                let rebroadcast = tx.broadcasting_timed_out(wallet);
+                if !tx.cancelled() && !tx.cancelling() && !tx.posting() {
+                    let rebroadcast = tx.broadcasting_timed_out(wallet);
 
-                // Draw button to cancel transaction.
-                if tx.can_cancel() || rebroadcast {
-                    let (icon, color) = (PROHIBIT, Some(Colors::red()));
-                    View::item_button(ui, CornerRadius::default(), icon, color, || {
-                        self.confirm_cancel_tx_id = Some(tx.data.id);
-                        // Show transaction cancellation confirmation modal.
-                        Modal::new(CANCEL_TX_CONFIRMATION_MODAL)
-                            .position(ModalPosition::Center)
-                            .title(t!("confirmation"))
-                            .show();
-                    });
-                }
-                
-                // Draw button to repeat transaction action.
-                if tx.can_repeat_action() || rebroadcast {
-                    Self::tx_repeat_button_ui(ui, CornerRadius::default(), tx, wallet, rebroadcast);
+                    // Draw button to cancel transaction.
+                    if tx.can_cancel() || rebroadcast {
+                        let (icon, color) = (PROHIBIT, Some(Colors::red()));
+                        View::item_button(ui, CornerRadius::default(), icon, color, || {
+                            self.confirm_cancel_tx_id = Some(tx.data.id);
+                            // Show transaction cancellation confirmation modal.
+                            Modal::new(CANCEL_TX_CONFIRMATION_MODAL)
+                                .position(ModalPosition::Center)
+                                .title(t!("confirmation"))
+                                .show();
+                        });
+                    }
+
+                    // Draw button to repeat transaction action.
+                    if tx.can_repeat_action() || rebroadcast {
+                        Self::tx_repeat_button_ui(ui, CornerRadius::default(), tx, wallet, rebroadcast);
+                    }
                 }
             });
         }
