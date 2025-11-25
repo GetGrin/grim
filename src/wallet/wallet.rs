@@ -12,6 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use crate::node::{Node, NodeConfig};
+use crate::tor::Tor;
+use crate::wallet::seed::WalletSeed;
+use crate::wallet::store::TxHeightStore;
+use crate::wallet::types::{ConnectionMethod, PhraseMode, WalletAccount, WalletData, WalletInstance, WalletTask, WalletTransaction, WalletTransactionAction};
+use crate::wallet::{ConnectionsConfig, Mnemonic, WalletConfig};
+use crate::AppConfig;
+
 use futures::channel::oneshot;
 use grin_api::{ApiServer, Router};
 use grin_chain::SyncStatus;
@@ -32,22 +40,15 @@ use rand::Rng;
 use serde_json::{json, Value};
 use std::fs::File;
 use std::io::Write;
-use std::net::{SocketAddr, TcpListener};
+use std::net::{SocketAddr, TcpListener, ToSocketAddrs};
 use std::path::PathBuf;
+use std::str::FromStr;
 use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
 use std::sync::mpsc::Sender;
 use std::sync::{mpsc, Arc};
 use std::thread::Thread;
 use std::time::Duration;
 use std::{fs, thread};
-
-use crate::node::{Node, NodeConfig};
-use crate::tor::Tor;
-use crate::wallet::seed::WalletSeed;
-use crate::wallet::store::TxHeightStore;
-use crate::wallet::types::{ConnectionMethod, PhraseMode, WalletAccount, WalletData, WalletInstance, WalletTask, WalletTransaction, WalletTransactionAction};
-use crate::wallet::{ConnectionsConfig, Mnemonic, WalletConfig};
-use crate::AppConfig;
 
 /// Contains wallet instance, configuration and state, handles wallet commands.
 #[derive(Clone)]
@@ -210,20 +211,39 @@ impl Wallet {
                 AppConfig::socks_proxy_url()
             } else {
                 AppConfig::http_proxy_url()
-            }.unwrap_or("".to_string());
-            let res = url.replace("http://", "").replace("socks5://", "").parse();
-            if let Ok(addr) = res {
-                let scheme = if socks {
-                    "socks5://"
-                } else {
-                    "http://"
-                };
-                HTTPNodeClient::new_proxy(&node_api_url, node_secret, Some((addr, scheme)))?
-            } else {
-                HTTPNodeClient::new_proxy(&node_api_url, node_secret, None)?
+            }.unwrap_or("".to_string()).replace("http://", "").replace("socks5://", "");
+
+            // Convert URL to SocketAddr.
+            let addr_res = match SocketAddr::from_str(url.as_str()) {
+                Ok(ip_addr) => Some(ip_addr),
+                Err(_) => {
+                    if let Ok(mut socket_addr_list) = url.to_socket_addrs() {
+                        if let Some(addr) = socket_addr_list.next() {
+                            Some(addr)
+                        } else {
+                            None
+                        }
+                    } else {
+                        None
+                    }
+                }
+            };
+
+            match addr_res {
+                None => {
+                    HTTPNodeClient::new(&node_api_url, node_secret)?
+                }
+                Some(addr) => {
+                    let scheme = if socks {
+                        "socks5://"
+                    } else {
+                        "http://"
+                    };
+                    HTTPNodeClient::new_proxy(&node_api_url, node_secret, Some((addr, scheme)))?
+                }
             }
         } else {
-            HTTPNodeClient::new_proxy(&node_api_url, node_secret, None)?
+            HTTPNodeClient::new(&node_api_url, node_secret)?
         };
         Ok(client)
     }
