@@ -9,7 +9,9 @@ jobs:
   release:
     runs-on: ubuntu
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
       - run: mkdir release
       - name: Release Linux x86
         run: cargo zigbuild --release --target x86_64-unknown-linux-gnu

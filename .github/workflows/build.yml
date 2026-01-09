@@ -6,7 +6,9 @@ jobs:
     name: Linux Build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
       - name: Release build
         run: cargo build --release
 
@@ -14,7 +16,9 @@ jobs:
     name: Windows Build
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
       - name: Release build
         run: cargo build --release
   
@@ -22,6 +26,8 @@ jobs:
     name: MacOS Build
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
       - name: Release build
         run: cargo build --release

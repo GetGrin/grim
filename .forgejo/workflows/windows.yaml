@@ -9,7 +9,9 @@ jobs:
   windows:
     runs-on: ubuntu
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
       - run: mkdir release
       - name: Release Windows x86
         run: |
