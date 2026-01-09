@@ -1,0 +1,7 @@
+[submodule "node"]
+	path = node
+	url = https://code.gri.mw/ardocrat/node
+[submodule "wallet"]
+	path = wallet
+	url = https://code.gri.mw/ardocrat/wallet
+    branch = grim

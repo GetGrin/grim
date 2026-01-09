@@ -38,24 +38,24 @@ log = "0.4.27"
 #grin_util = "5.3.3"
 
 # test
-grin_api = { git = "https://code.gri.mw/ardocrat/node", rev = "a3ee15a8b27216cd2ff4b3b99894cd98dd33fa7e" }
-grin_chain = { git = "https://code.gri.mw/ardocrat/node", rev = "a3ee15a8b27216cd2ff4b3b99894cd98dd33fa7e" }
-grin_config = { git = "https://code.gri.mw/ardocrat/node", rev = "a3ee15a8b27216cd2ff4b3b99894cd98dd33fa7e" }
-grin_core = { git = "https://code.gri.mw/ardocrat/node", rev = "a3ee15a8b27216cd2ff4b3b99894cd98dd33fa7e" }
-grin_p2p = { git = "https://code.gri.mw/ardocrat/node", rev = "a3ee15a8b27216cd2ff4b3b99894cd98dd33fa7e" }
-grin_servers = { git = "https://code.gri.mw/ardocrat/node", rev = "a3ee15a8b27216cd2ff4b3b99894cd98dd33fa7e" }
-grin_keychain = { git = "https://code.gri.mw/ardocrat/node", rev = "a3ee15a8b27216cd2ff4b3b99894cd98dd33fa7e" }
-grin_util = { git = "https://code.gri.mw/ardocrat/node", rev = "a3ee15a8b27216cd2ff4b3b99894cd98dd33fa7e" }
+#grin_api = { git = "https://code.gri.mw/ardocrat/node", rev = "a3ee15a8b27216cd2ff4b3b99894cd98dd33fa7e" }
+#grin_chain = { git = "https://code.gri.mw/ardocrat/node", rev = "a3ee15a8b27216cd2ff4b3b99894cd98dd33fa7e" }
+#grin_config = { git = "https://code.gri.mw/ardocrat/node", rev = "a3ee15a8b27216cd2ff4b3b99894cd98dd33fa7e" }
+#grin_core = { git = "https://code.gri.mw/ardocrat/node", rev = "a3ee15a8b27216cd2ff4b3b99894cd98dd33fa7e" }
+#grin_p2p = { git = "https://code.gri.mw/ardocrat/node", rev = "a3ee15a8b27216cd2ff4b3b99894cd98dd33fa7e" }
+#grin_servers = { git = "https://code.gri.mw/ardocrat/node", rev = "a3ee15a8b27216cd2ff4b3b99894cd98dd33fa7e" }
+#grin_keychain = { git = "https://code.gri.mw/ardocrat/node", rev = "a3ee15a8b27216cd2ff4b3b99894cd98dd33fa7e" }
+#grin_util = { git = "https://code.gri.mw/ardocrat/node", rev = "a3ee15a8b27216cd2ff4b3b99894cd98dd33fa7e" }
 
 # local
-#grin_api = { path = "../grin/api" }
-#grin_chain = { path = "../grin/chain" }
-#grin_config = { path = "../grin/config" }
-#grin_core = { path = "../grin/core" }
-#grin_p2p = { path = "../grin/p2p" }
-#grin_servers = { path = "../grin/servers" }
-#grin_keychain = { path = "../grin/keychain" }
-#grin_util = { path = "../grin/util" }
+grin_api = { path = "node/api" }
+grin_chain = { path = "node/chain" }
+grin_config = { path = "node/config" }
+grin_core = { path = "node/core" }
+grin_p2p = { path = "node/p2p" }
+grin_servers = { path = "node/servers" }
+grin_keychain = { path = "node/keychain" }
+grin_util = { path = "node/util" }
 
 ## grin wallet
 #grin_wallet_impls = "5.3.3"
@@ -65,18 +65,18 @@ grin_util = { git = "https://code.gri.mw/ardocrat/node", rev = "a3ee15a8b27216cd
 #grin_wallet_controller = "5.3.3"
 
 # test
-grin_wallet_impls = { git = "https://code.gri.mw/ardocrat/wallet", rev = "8c9171e640f4a95bec7e22d9acb1725ebb2e30a1" }
-grin_wallet_api = { git = "https://code.gri.mw/ardocrat/wallet", rev = "8c9171e640f4a95bec7e22d9acb1725ebb2e30a1" }
-grin_wallet_libwallet = { git = "https://code.gri.mw/ardocrat/wallet", rev = "8c9171e640f4a95bec7e22d9acb1725ebb2e30a1" }
-grin_wallet_util = { git = "https://code.gri.mw/ardocrat/wallet", rev = "8c9171e640f4a95bec7e22d9acb1725ebb2e30a1" }
-grin_wallet_controller = { git = "https://code.gri.mw/ardocrat/wallet", rev = "8c9171e640f4a95bec7e22d9acb1725ebb2e30a1" }
+#grin_wallet_impls = { git = "https://code.gri.mw/ardocrat/wallet", rev = "8c9171e640f4a95bec7e22d9acb1725ebb2e30a1" }
+#grin_wallet_api = { git = "https://code.gri.mw/ardocrat/wallet", rev = "8c9171e640f4a95bec7e22d9acb1725ebb2e30a1" }
+#grin_wallet_libwallet = { git = "https://code.gri.mw/ardocrat/wallet", rev = "8c9171e640f4a95bec7e22d9acb1725ebb2e30a1" }
+#grin_wallet_util = { git = "https://code.gri.mw/ardocrat/wallet", rev = "8c9171e640f4a95bec7e22d9acb1725ebb2e30a1" }
+#grin_wallet_controller = { git = "https://code.gri.mw/ardocrat/wallet", rev = "8c9171e640f4a95bec7e22d9acb1725ebb2e30a1" }
 
 # local
-#grin_wallet_impls = { path = "../wallet/impls" }
-#grin_wallet_api = { path = "../wallet/api"}
-#grin_wallet_libwallet = { path = "../wallet/libwallet" }
-#grin_wallet_util = { path = "../wallet/util" }
-#grin_wallet_controller = { path = "../wallet/controller" }
+grin_wallet_impls = { path = "wallet/impls" }
+grin_wallet_api = { path = "wallet/api"}
+grin_wallet_libwallet = { path = "wallet/libwallet" }
+grin_wallet_util = { path = "wallet/util" }
+grin_wallet_controller = { path = "wallet/controller" }
 
 ## ui
 egui = { version = "0.33.0", default-features = false }
