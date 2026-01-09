@@ -20,6 +20,7 @@ Follow instructions on [Windows](https://forge.rust-lang.org/infra/other-install
 To build and run application go to project directory and run:
 
 ```
+git submodule update --init --recursive
 cargo build --release
 ./target/release/grim
 ```
@@ -31,7 +32,7 @@ Install Android SDK / NDK / Platform Tools for your OS according to this [FAQ](h
 
 #### Build the project
 Run Android emulator or connect a real device. Command `adb devices` should show at least one device.
-In the root of the repo run `./scripts/build_run_android.sh debug|release v7|v8`, where is `v7`, `v8` - device CPU architecture.
+In the root of the repo run `./scripts/android.sh build|release v7|v8|x86`, where is `v7`, `v8`, `x86` - device CPU architecture for `build` type, for `release` specify version number in format `major.minor.patch`.
 
 ## License
 
