@@ -144,10 +144,7 @@ fn start_desktop_gui(platform: grim::gui::platform::Desktop) {
     let app = grim::gui::App::new(platform.clone());
     match grim::start(options.clone(), grim::app_creator(app)) {
         Ok(_) => {}
-        Err(e) => {
-            if is_win {
-                panic!("{}", e);
-            }
+        Err(_) => {
             // Start with another renderer on error.
             options.renderer = eframe::Renderer::Wgpu;
 

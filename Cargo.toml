@@ -154,7 +154,8 @@ nokhwa-mac = { git = "https://code.gri.mw/ardocrat/nokhwa", rev = "612c861ef153c
 [target.'cfg(not(target_os = "android"))'.dependencies]
 env_logger = "0.11.3"
 winit = { version = "0.30.12" }
-eframe = { version = "0.33.2", default-features = false, features = ["glow", "wgpu", "wayland"] }
+wgpu = { version = "27.0.1" }
+eframe = { version = "0.33.2", features = ["wgpu"] }
 arboard = "3.2.0"
 rfd = "0.15.0"
 interprocess = { version = "2.2.1", features = ["tokio"] }
