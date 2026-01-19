@@ -134,7 +134,7 @@ fn start_desktop_gui(platform: grim::gui::platform::Desktop) {
         .with_transparent(true)
         .with_decorations(is_mac || is_win);
 
-    let options = eframe::NativeOptions {
+    let mut options = eframe::NativeOptions {
         renderer: eframe::Renderer::Glow,
         viewport,
         ..Default::default()
@@ -142,7 +142,24 @@ fn start_desktop_gui(platform: grim::gui::platform::Desktop) {
 
     // Start GUI.
     let app = grim::gui::App::new(platform.clone());
-    grim::start(options.clone(), grim::app_creator(app)).unwrap();
+    match grim::start(options.clone(), grim::app_creator(app)) {
+        Ok(_) => {}
+        Err(e) => {
+            if is_win {
+                panic!("{}", e);
+            }
+            // Start with another renderer on error.
+            options.renderer = eframe::Renderer::Wgpu;
+
+            let app = grim::gui::App::new(platform);
+            match grim::start(options, grim::app_creator(app)) {
+                Ok(_) => {}
+                Err(e) => {
+                    panic!("{}", e);
+                }
+            }
+        }
+    }
 }
 
 /// Check if application is already running to pass data.
