@@ -18,3 +18,10 @@ jobs:
           chat_id: ${{ secrets.TELEGRAM_CHANNEL_ID }}
           status: ${{ job.status }}
           notify_fields: "actor,repository"
+      - name: Telegram Notify Group
+        uses: actions/telegram-notifier@ardocrat
+        with:
+          token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          chat_id: ${{ secrets.TELEGRAM_GROUP_ID }}
+          status: ${{ job.status }}
+          notify_fields: "actor,repository"

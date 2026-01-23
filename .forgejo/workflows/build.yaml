@@ -14,10 +14,18 @@ jobs:
       - uses: actions/checkout@v6
         with:
           submodules: recursive
+      - name: Check commit
+        id: check
+        run: |
+          git fetch && git checkout master
+          sha=$(git rev-parse HEAD)
+          [[ "${{ github.sha }}" == "${sha}" ]] && test=false || test=true
+          echo "test=${test}" >> "$FORGEJO_OUTPUT"
       - name: Build
+        if: ${{ steps.check.outputs.test == 'true' }}
         run: cargo build --release
       - name: Telegram Notify Channel
-        if: always()
+        if: ${{ steps.check.outputs.test == 'true' && (success() || failure()) }}
         uses: actions/telegram-notifier@ardocrat
         with:
           token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
@@ -25,7 +33,7 @@ jobs:
           status: ${{ job.status }}
           notify_fields: "actor,repository,workflow,branch,commit"
       - name: Telegram Notify Group
-        if: always()
+        if: ${{ steps.check.outputs.test == 'true' && (success() || failure()) }}
         uses: actions/telegram-notifier@ardocrat
         with:
           token: ${{ secrets.TELEGRAM_BOT_TOKEN }}

@@ -15,7 +15,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Download release
-        run: chmod +x .github/download_release.sh && .github/download_release.sh ${{ github.repository }} ${{ github.ref_name }}
+        run: chmod +x .github/download_release.sh && .github/download_release.sh GUI/grim ${{ github.ref_name }}
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
