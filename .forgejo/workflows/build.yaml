@@ -1,10 +1,11 @@
+name: Test build
+
 on:
   push:
     tags-ignore:
       - "*"
     branches-ignore:
       - master
-      - ci
 
 jobs:
   build:
@@ -15,3 +16,19 @@ jobs:
           submodules: recursive
       - name: Build
         run: cargo build --release
+      - name: Telegram Notify Channel
+        if: always()
+        uses: actions/telegram-notifier@ardocrat
+        with:
+          token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          chat_id: ${{ secrets.TELEGRAM_CHANNEL_ID }}
+          status: ${{ job.status }}
+          notify_fields: "actor,repository,workflow,branch,commit"
+      - name: Telegram Notify Group
+        if: always()
+        uses: actions/telegram-notifier@ardocrat
+        with:
+          token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          chat_id: ${{ secrets.TELEGRAM_GROUP_ID }}
+          status: ${{ job.status }}
+          notify_fields: "actor,repository,workflow,branch,commit"

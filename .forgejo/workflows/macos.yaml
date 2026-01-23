@@ -51,7 +51,7 @@ jobs:
       - name: Checksum Release Universal
         working-directory: release
         run: sha256sum grim-${{ inputs.version }}-macos-universal.zip > grim-${{ inputs.version }}-macos-universal-sha256sum.txt
-      - uses: forgejo/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: release_macos
           path: release/*

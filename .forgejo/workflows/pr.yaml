@@ -1,0 +1,20 @@
+name: Pull Request
+
+on:
+  pull_request:
+    types:
+      - closed
+      - opened
+
+jobs:
+  notify:
+    runs-on: ubuntu
+
+    steps:
+      - name: Telegram Notify Channel
+        uses: actions/telegram-notifier@ardocrat
+        with:
+          token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          chat_id: ${{ secrets.TELEGRAM_CHANNEL_ID }}
+          status: ${{ job.status }}
+          notify_fields: "actor,repository"

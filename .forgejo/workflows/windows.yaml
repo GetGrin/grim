@@ -21,7 +21,7 @@ jobs:
       - name: Checksum Archive x86
         working-directory: release
         run: sha256sum grim-${{ inputs.version }}-win-x86_64.zip > grim-${{ inputs.version }}-win-x86_64-sha256sum.txt
-      - uses: forgejo/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: release_windows
           path: release/*

@@ -33,7 +33,7 @@ jobs:
       - name: Checksum AppImage ARM
         working-directory: release
         run: sha256sum grim-${{ inputs.version }}-linux-arm.AppImage > grim-${{ inputs.version }}-linux-arm-appimage-sha256sum.txt
-      - uses: forgejo/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: release_linux
           path: release/*

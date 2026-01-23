@@ -13,10 +13,8 @@ import android.provider.Settings;
 import android.system.ErrnoException;
 import android.system.Os;
 import android.util.Log;
-import android.util.Size;
 import android.view.KeyEvent;
 import android.view.View;
-import android.window.OnBackInvokedDispatcher;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
@@ -26,7 +24,6 @@ import androidx.camera.lifecycle.ProcessCameraProvider;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 import androidx.core.graphics.Insets;
-import androidx.core.os.BuildCompat;
 import androidx.core.view.DisplayCutoutCompat;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
@@ -62,7 +59,6 @@ public class MainActivity extends GameActivity {
     };
 
     private final ImageAnalysis mImageAnalysis = new ImageAnalysis.Builder()
-            .setTargetResolution(new Size(640, 480))
             .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
             .build();
 

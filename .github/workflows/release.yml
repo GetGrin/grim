@@ -1,0 +1,32 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  create_release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Download release
+        run: chmod +x .github/download_release.sh && .github/download_release.sh ${{ github.repository }} ${{ github.ref_name }}
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          body_path: release_notes.txt
+          overwrite_files: true
+          files: |
+            grim-${{ github.ref_name }}-android.apk
+            grim-${{ github.ref_name }}-android-x86_64.apk
+            grim-${{ github.ref_name }}-linux-arm.AppImage
+            grim-${{ github.ref_name }}-linux-x86_64.AppImage
+            grim-${{ github.ref_name }}-macos-arm.zip
+            grim-${{ github.ref_name }}-macos-x86_64.zip
+            grim-${{ github.ref_name }}-macos-universal.zip
+            grim-${{ github.ref_name }}-win-x86_64.zip

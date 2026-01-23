@@ -2,7 +2,6 @@ on:
   push:
     branches:
       - master
-      - ci
     tags-ignore:
       - "*-dev*"
 
@@ -12,7 +11,9 @@ jobs:
     outputs:
       v: ${{ steps.version.outputs.v }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
       - name: Get version
         id: version
         run: |
@@ -34,7 +35,7 @@ jobs:
           echo "exists=${exists}" >> "$FORGEJO_OUTPUT"
           echo ${exists}
           mkdir release
-      - uses: actions/forgejo-release@v2.7.3
+      - uses: ardocrat/forgejo-release@grim
         if: ${{ forgejo.ref_type == 'tag' && steps.check.outputs.exists == 'true' }}
         with:
           direction: download
@@ -45,7 +46,7 @@ jobs:
         if: ${{ forgejo.ref_type == 'tag' && steps.check.outputs.exists == 'true' }}
         working-directory: release
         run: for f in *; do mv "$f" "$(echo "$f" | sed s/-dev-/-/)"; done
-      - uses: actions/forgejo-release@v2.7.3
+      - uses: ardocrat/forgejo-release@grim
         if: ${{ forgejo.ref_type == 'tag' && steps.check.outputs.exists == 'true' }}
         with:
           direction: upload
@@ -56,22 +57,92 @@ jobs:
           release-dir: ./release
           release-notes: ""
 
-  android:
+  android_libs:
     if: ${{ forgejo.ref_type == 'branch' || needs.check.outputs.exists == 'false' }}
     runs-on: ubuntu
     needs: version
-    uses: ./.forgejo/workflows/android.yaml
-    with:
-      version: ${{ needs.version.outputs.v }}
-    secrets:
-      RELEASE_TOKEN: ${{ secrets.RELEASE_TOKEN }}
-      ANDROID_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE }}
-      ANDROID_KEYSTORE_PROPS: ${{ secrets.ANDROID_KEYSTORE_PROPS }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
+      - name: Build libs
+        run: |
+          chmod +x scripts/android.sh && ./scripts/android.sh lib ${{ needs.version.outputs.v }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: libs_android
+          path: android/app/src/main/jniLibs/*
+
+  android_release:
+    if: ${{ forgejo.ref_type == 'branch' || needs.check.outputs.exists == 'false' }}
+    runs-on: ubuntu-android
+    needs: [version, android_libs]
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
+      - run: mkdir libs
+      - name: Download Libs Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: libs
+          pattern: libs_*
+          merge-multiple: true
+      - name: Setup Java build
+        run: |
+          chmod +x android/gradlew
+          echo "${{ secrets.ANDROID_KEYSTORE }}" > release.keystore.txt
+          base64 -d release.keystore.txt > android/keystore
+          echo "${{ secrets.ANDROID_KEYSTORE_PROPS }}" > release.keystore.props.txt
+          base64 -d release.keystore.props.txt > android/keystore.properties
+      - name: Prepare build
+        run: |
+          mkdir release
+          chmod +x android/gradlew
+      - name: Release ARMv7+v8 APK
+        working-directory: android
+        run: |
+          jni_path=app/src/main/jniLibs
+          mkdir ${jni_path}
+          mv ../libs/armeabi-v7a ${jni_path}
+          mv ../libs/arm64-v8a ${jni_path}
+          ./gradlew assembleSignedRelease
+          apk_path=app/build/outputs/apk/signedRelease/app-signedRelease.apk
+          name=grim-${{ needs.version.outputs.v }}-android.apk
+          mv ${apk_path} "${name}"
+      - name: Checksum ARM APK
+        working-directory: android
+        run: |
+          name=grim-${{ needs.version.outputs.v }}-android.apk
+          checksum=grim-${{ needs.version.outputs.v }}-android-sha256sum.txt
+          sha256sum "${name}" > "${checksum}"
+      - name: Release x86_64 APK
+        working-directory: android
+        run: |
+          ./gradlew clean
+          jni_path=app/src/main/jniLibs
+          rm -rf ${jni_path}/*
+          mv ../libs/x86_64 ${jni_path}
+          ./gradlew assembleSignedRelease
+          apk_path=app/build/outputs/apk/signedRelease/app-signedRelease.apk
+          name=grim-${{ needs.version.outputs.v }}-android-x86_64.apk
+          mv ${apk_path} "${name}"
+      - name: Checksum x86_64 APK
+        working-directory: android
+        run: |
+          name=grim-${{ needs.version.outputs.v }}-android.apk
+          checksum=grim-${{ needs.version.outputs.v }}-android-x86_64-sha256sum.txt
+          sha256sum "${name}" > "${checksum}"
+      - run: mv android/grim* release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release_android
+          path: release/*
 
   linux:
     if: ${{ forgejo.ref_type == 'branch' || needs.check.outputs.exists == 'false' }}
     runs-on: ubuntu
-    needs: [version, android]
+    needs: [version, android_libs, android_release]
     uses: ./.forgejo/workflows/linux.yaml
     with:
       version: ${{ needs.version.outputs.v }}
@@ -81,7 +152,7 @@ jobs:
   macos:
     if: ${{ forgejo.ref_type == 'branch' || needs.check.outputs.exists == 'false' }}
     runs-on: ubuntu
-    needs: [version, android, linux]
+    needs: [version, android_libs, android_release, linux]
     uses: ./.forgejo/workflows/macos.yaml
     with:
       version: ${{ needs.version.outputs.v }}
@@ -91,7 +162,7 @@ jobs:
   windows:
     if: ${{ forgejo.ref_type == 'branch' || needs.check.outputs.exists == 'false' }}
     runs-on: ubuntu
-    needs: [version, android, linux, macos]
+    needs: [version, android_libs, android_release, linux, macos]
     uses: ./.forgejo/workflows/windows.yaml
     with:
       version: ${{ needs.version.outputs.v }}
@@ -101,16 +172,17 @@ jobs:
   release:
     if: ${{ forgejo.ref_type == 'branch' || needs.check.outputs.exists == 'false' }}
     runs-on: ubuntu
-    needs: [version, android, linux, macos, windows]
+    needs: [version, android_libs, android_release, linux, macos, windows]
     steps:
       - run: mkdir release
       - name: Download All Artifacts
-        uses: forgejo/download-artifact@v4
+        uses: actions/download-artifact@v4
         with:
           path: release
           pattern: release_*
           merge-multiple: true
-      - uses: actions/forgejo-release@v2.7.3
+      - name: Upload release to Forgejo
+        uses: ardocrat/forgejo-release@grim
         with:
           direction: upload
           token: ${{ secrets.RELEASE_TOKEN }}
@@ -119,3 +191,38 @@ jobs:
           prerelease: ${{ needs.version.outputs.pre }}
           release-dir: release
           release-notes: ""
+      - name: Telegram Notify Channel
+        if: always()
+        uses: actions/telegram-notifier@ardocrat
+        with:
+          token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          chat_id: ${{ secrets.TELEGRAM_CHANNEL_ID }}
+          status: ${{ job.status }}
+          notify_fields: "actor,repository,workflow,branch,commit"
+      - name: Telegram Notify Group
+        if: always()
+        uses: actions/telegram-notifier@ardocrat
+        with:
+          token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          chat_id: ${{ secrets.TELEGRAM_GROUP_ID }}
+          status: ${{ job.status }}
+          notify_fields: "actor,repository,workflow,branch,commit"
+      - name: Upload files to Telegram
+        uses: actions/tg-file@main
+        with:
+          api-url: ${{ secrets.TELEGRAM_API_URL }}
+          chat-id: |
+            ${{ secrets.TELEGRAM_CHANNEL_ID }}
+            ${{ secrets.TELEGRAM_GROUP_ID }}
+          body: "🎁 Release ${{ needs.version.outputs.v }} is ready!"
+          token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          pin: true
+          files: |
+            release/grim-${{ needs.version.outputs.v }}-android.apk
+            release/grim-${{ needs.version.outputs.v }}-android-x86_64.apk
+            release/grim-${{ needs.version.outputs.v }}-linux-arm.AppImage
+            release/grim-${{ needs.version.outputs.v }}-linux-x86_64.AppImage
+            release/grim-${{ needs.version.outputs.v }}-macos-arm.zip
+            release/grim-${{ needs.version.outputs.v }}-macos-x86_64.zip
+            release/grim-${{ needs.version.outputs.v }}-macos-universal.zip
+            release/grim-${{ needs.version.outputs.v }}-win-x86_64.zip

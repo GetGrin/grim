@@ -1,8 +1,8 @@
 #!/bin/bash
 
-usage="Usage: android.sh [type] [platform|version]\n - type: 'build', 'release'\n - platform, for 'build' type: 'v7', 'v8', 'x86'\n - version for 'release', example: '0.2.2'"
+usage="Usage: android.sh [type] [platform|version]\n - type: 'build' to run locally, 'lib' - .so for all platforms, 'release' - .apk for all platforms\n - platform, for 'build' type: 'v7', 'v8', 'x86'\n - version for 'lib' and 'release', example: '0.2.2'"
 case $1 in
-  build|release)
+  build|lib|release)
     ;;
   *)
   printf "$usage"
@@ -42,18 +42,12 @@ function build_lib() {
   sed -i -e 's/"rlib"]/"cdylib","rlib"]/g' Cargo.toml
 
   # Fix for https://stackoverflow.com/questions/57193895/error-use-of-undeclared-identifier-pthread-mutex-robust-cargo-build-liblmdb-s
-  # Comment 3 lines below for faster 2nd+ build:
   export CPPFLAGS="-DMDB_USE_ROBUST=0" && export CFLAGS="-DMDB_USE_ROBUST=0"
-  cargo ndk -t ${arch} build --profile release-apk
-  unset CPPFLAGS && unset CFLAGS
-
   cargo ndk -t "${arch}" -o android/app/src/main/jniLibs build --profile release-apk
-  if [ $? -eq 0 ]
-  then
-    success=1
-  else
+  if [ $? -ne 0 ]; then
     success=0
   fi
+  unset CPPFLAGS && unset CFLAGS
 
   sed -i -e 's/"cdylib","rlib"]/"rlib"]/g' Cargo.toml
   rm -f Cargo.toml-e
@@ -66,13 +60,19 @@ function build_apk() {
   # Build signed apk if keystore exists
   if [ ! -f keystore.properties ]; then
     ./gradlew assembleDebug
+    if [ $? -ne 0 ]; then
+      success=0
+    fi
     apk_path=app/build/outputs/apk/debug/app-debug.apk
   else
     ./gradlew assembleSignedRelease
+    if [ $? -ne 0 ]; then
+      success=0
+    fi
     apk_path=app/build/outputs/apk/signedRelease/app-signedRelease.apk
   fi
 
-  if [[ $1 == "" ]]; then
+  if [[ $1 == "" ]] && [ $success -eq 1 ]; then
     # Launch application at all connected devices.
     for SERIAL in $(adb devices | grep -v List | cut -f 1);
       do
@@ -80,7 +80,7 @@ function build_apk() {
         sleep 1s
         adb -s "$SERIAL" shell am start -n mw.gri.android/.MainActivity;
     done
-  else
+  elif [ $success -eq 1 ]; then
     # Get version
     version=$2
     if [[ -z "$version" ]]; then
@@ -91,7 +91,6 @@ function build_apk() {
     [[ $1 == "arm" ]] && name=grim-${version}-android.apk
     rm -f "${name}"
     mv ${apk_path} "${name}"
-
     # Calculate checksum
     checksum=grim-${version}-android-$1-sha256sum.txt
     [[ $1 == "arm" ]] && checksum=grim-${version}-android-sha256sum.txt
@@ -103,20 +102,27 @@ function build_apk() {
 }
 
 rm -rf android/app/src/main/jniLibs/*
-
-if [[ $1 == "build" ]]; then
+if [[ $1 == "lib" ]]; then
+  build_lib "v7"
+  [ $success -eq 1 ] && build_lib "v8"
+  [ $success -eq 1 ] && build_lib "x86"
+  [ $success -eq 1 ] && exit 0
+elif [[ $1 == "build" ]]; then
   build_lib "$2"
   [ $success -eq 1 ] && build_apk
+  [ $success -eq 1 ] && exit 0
 else
   rm -rf target/release-apk
   rm -rf target/aarch64-linux-android
   rm -rf target/x86_64-linux-android
   rm -rf target/armv7-linux-androideabi
-
   build_lib "v7"
   [ $success -eq 1 ] && build_lib "v8"
   [ $success -eq 1 ] && build_apk "arm" "$2"
   rm -rf android/app/src/main/jniLibs/*
   [ $success -eq 1 ] && build_lib "x86"
   [ $success -eq 1 ] && build_apk "x86_64" "$2"
+  [ $success -eq 1 ] && exit 0
 fi
+
+exit 1
