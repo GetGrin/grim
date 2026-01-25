@@ -208,12 +208,10 @@ jobs:
           status: ${{ job.status }}
           notify_fields: "actor,repository,workflow,branch,commit"
       - name: Upload files to Telegram
-        uses: actions/tg-file@main
+        uses: ardocrat/tg-send-file-action@main
         with:
-          api-url: ${{ secrets.TELEGRAM_API_URL }}
-          chat-id: |
-            ${{ secrets.TELEGRAM_CHANNEL_ID }}
-            ${{ secrets.TELEGRAM_GROUP_ID }}
+          api_url: ${{ secrets.TELEGRAM_API_URL }}
+          chat_ids: ${{ secrets.TEST_ID }}
           body: "🎁 Release ${{ needs.version.outputs.v }} is ready!"
           token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           pin: true
