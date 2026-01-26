@@ -211,7 +211,9 @@ jobs:
         uses: ardocrat/tg-send-file-action@main
         with:
           api_url: ${{ secrets.TELEGRAM_API_URL }}
-          chat_ids: ${{ secrets.TEST_ID }}
+          chat_ids: |
+            ${{ secrets.TELEGRAM_GROUP_ID }}
+            ${{ secrets.TELEGRAM_CHANNEL_ID }}
           body: "🎁 Release ${{ needs.version.outputs.v }} is ready!"
           token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           pin: true
