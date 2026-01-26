@@ -13,44 +13,18 @@ jobs:
         with:
           submodules: recursive
       - run: mkdir release
-      - name: Release MacOS x86
-        run: |
-          cargo zigbuild --release --target x86_64-apple-darwin
-          mv target/x86_64-apple-darwin/release/grim macos/Grim.app/Contents/MacOS
-      - name: Archive x86
-        working-directory: macos
-        run: |
-          zip -r grim-${{ inputs.version }}-macos-x86_64.zip Grim.app
-          mv grim-${{ inputs.version }}-macos-x86_64.zip ../release
-      - name: Checksum Archive x86
-        working-directory: release
-        run: sha256sum grim-${{ inputs.version }}-macos-x86_64.zip > grim-${{ inputs.version }}-macos-x86_64-sha256sum.txt
-      - name: Release ARM
-        run: |
-          cargo zigbuild --release --target aarch64-apple-darwin
-          mv target/aarch64-apple-darwin/release/grim macos/Grim.app/Contents/MacOS
-      - name: Archive ARM
-        working-directory: macos
-        run: |
-          zip -r grim-${{ inputs.version }}-macos-arm.zip Grim.app
-          mv grim-${{ inputs.version }}-macos-arm.zip ../release
-      - name: Checksum Archive ARM
-        working-directory: release
-        run: sha256sum grim-${{ inputs.version }}-macos-arm.zip > grim-${{ inputs.version }}-macos-arm-sha256sum.txt
       - name: Release MacOS Universal
         run: |
-          rm ~/.cargo/.package-cache
-          cargo clean
           cargo zigbuild --release --target universal2-apple-darwin
           mv target/universal2-apple-darwin/release/grim macos/Grim.app/Contents/MacOS
       - name: Archive Universal
         working-directory: macos
         run: |
-          zip -r grim-${{ inputs.version }}-macos-universal.zip Grim.app
-          mv grim-${{ inputs.version }}-macos-universal.zip ../release
+          zip -r grim-${{ inputs.version }}-macos.zip Grim.app
+          mv grim-${{ inputs.version }}-macos.zip ../release
       - name: Checksum Release Universal
         working-directory: release
-        run: sha256sum grim-${{ inputs.version }}-macos-universal.zip > grim-${{ inputs.version }}-macos-universal-sha256sum.txt
+        run: sha256sum grim-${{ inputs.version }}-macos.zip > grim-${{ inputs.version }}-macos-sha256sum.txt
       - uses: actions/upload-artifact@v4
         with:
           name: release_macos

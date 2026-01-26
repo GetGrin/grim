@@ -224,7 +224,5 @@ jobs:
             release/grim-${{ needs.version.outputs.v }}-android-x86_64.apk
             release/grim-${{ needs.version.outputs.v }}-linux-arm.AppImage
             release/grim-${{ needs.version.outputs.v }}-linux-x86_64.AppImage
-            release/grim-${{ needs.version.outputs.v }}-macos-arm.zip
-            release/grim-${{ needs.version.outputs.v }}-macos-x86_64.zip
-            release/grim-${{ needs.version.outputs.v }}-macos-universal.zip
+            release/grim-${{ needs.version.outputs.v }}-macos.zip
             release/grim-${{ needs.version.outputs.v }}-win-x86_64.zip
