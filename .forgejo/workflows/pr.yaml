@@ -14,6 +14,7 @@ jobs:
       - name: Telegram Notify Channel
         uses: actions/telegram-notifier@ardocrat
         with:
+          api_url: ${{ secrets.TELEGRAM_API_URL }}
           token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           chat_id: ${{ secrets.TELEGRAM_CHANNEL_ID }}
           status: ${{ job.status }}
@@ -21,6 +22,7 @@ jobs:
       - name: Telegram Notify Group
         uses: actions/telegram-notifier@ardocrat
         with:
+          api_url: ${{ secrets.TELEGRAM_API_URL }}
           token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           chat_id: ${{ secrets.TELEGRAM_GROUP_ID }}
           status: ${{ job.status }}
