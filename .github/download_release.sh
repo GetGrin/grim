@@ -5,7 +5,7 @@ REPO_NAME=$1
 TAG=$2
 DOWNLOAD_URL=${HOST}/${REPO_NAME}/releases/download/${TAG}
 
-FILES=( "grim-${TAG}-android.apk" "grim-${TAG}-android-x86_64.apk" "grim-${TAG}-linux-arm.AppImage" "grim-${TAG}-linux-x86_64.AppImage" "grim-${TAG}-macos-arm.zip" "grim-${TAG}-macos-x86_64.zip" "grim-${TAG}-macos-universal.zip" "grim-${TAG}-win-x86_64.zip" )
+FILES=( "grim-${TAG}-android.apk" "grim-${TAG}-android-x86_64.apk" "grim-${TAG}-linux-arm.AppImage" "grim-${TAG}-linux-x86_64.AppImage" "grim-${TAG}-macos.zip" "grim-${TAG}-win-x86_64.zip" )
 
 # Download release files
 for f in "${FILES[@]}"; do
