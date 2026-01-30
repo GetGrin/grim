@@ -45,4 +45,4 @@ jobs:
       - name: Upload artifacts
         run: |
           tar -czf windows.tar.gz release
-          curl -v -u ${{ secrets.MAVEN_USER }}:${{ secrets.MAVEN_PASSWORD }} --upload-file windows.tar.gz ${{ secrets.MAVEN_HOST }}/repository/grim-ci-artifacts/windows.tar.gz
+          curl -v -u ${{ secrets.MAVEN_USER }}:${{ secrets.MAVEN_PASSWORD }} --upload-file windows.tar.gz ${{ secrets.MAVEN_HOST }}/repository/grim-ci-artifacts/${{ forgejo.repository }}/windows.tar.gz

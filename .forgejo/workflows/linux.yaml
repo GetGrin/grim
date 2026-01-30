@@ -57,4 +57,4 @@ jobs:
       - name: Upload artifacts
         run: |
           tar -czf linux.tar.gz release
-          curl -v -u ${{ secrets.MAVEN_USER }}:${{ secrets.MAVEN_PASSWORD }} --upload-file linux.tar.gz ${{ secrets.MAVEN_HOST }}/repository/grim-ci-artifacts/linux.tar.gz
+          curl -v -u ${{ secrets.MAVEN_USER }}:${{ secrets.MAVEN_PASSWORD }} --upload-file linux.tar.gz ${{ secrets.MAVEN_HOST }}/repository/grim-ci-artifacts/${{ forgejo.repository }}/linux.tar.gz

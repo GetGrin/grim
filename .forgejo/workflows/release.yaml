@@ -13,6 +13,8 @@ jobs:
     runs-on: ubuntu
     outputs:
       v: ${{ steps.version.outputs.v }}
+      exists: ${{ steps.check.outputs.exists }}
+      last_tag: ${{ steps.check_prev.outputs.last_tag }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -73,7 +75,7 @@ jobs:
           release_name: "${{ forgejo.ref_name }}-dev"
 
   android_libs:
-    if: ${{ forgejo.ref_type == 'branch' || needs.check.outputs.exists == 'false' }}
+    if: ${{ forgejo.ref_type == 'branch' || needs.version.outputs.exists == 'false' }}
     runs-on: ubuntu
     needs: version
     steps:
@@ -96,10 +98,10 @@ jobs:
         run: |
           cd android/app/src/main
           tar -czf jniLibs.tar.gz jniLibs
-          curl -v -u ${{ secrets.MAVEN_USER }}:${{ secrets.MAVEN_PASSWORD }} --upload-file jniLibs.tar.gz ${{ secrets.MAVEN_HOST }}/repository/grim-ci-artifacts/jniLibs.tar.gz
+          curl -v -u ${{ secrets.MAVEN_USER }}:${{ secrets.MAVEN_PASSWORD }} --upload-file jniLibs.tar.gz ${{ secrets.MAVEN_HOST }}/repository/grim-ci-artifacts/${{ forgejo.repository }}/jniLibs.tar.gz
 
   android_release:
-    if: ${{ forgejo.ref_type == 'branch' || needs.check.outputs.exists == 'false' }}
+    if: ${{ forgejo.ref_type == 'branch' || needs.version.outputs.exists == 'false' }}
     runs-on: ubuntu-android
     needs: [version, android_libs]
     steps:
@@ -117,7 +119,7 @@ jobs:
       - name: Download artifacts
         run: |
           cd android/app/src/main
-          curl -o jniLibs.tar.gz -u ${{ secrets.MAVEN_USER }}:${{ secrets.MAVEN_PASSWORD }} ${{ secrets.MAVEN_HOST }}/repository/grim-ci-artifacts/jniLibs.tar.gz
+          curl -o jniLibs.tar.gz -u ${{ secrets.MAVEN_USER }}:${{ secrets.MAVEN_PASSWORD }} ${{ secrets.MAVEN_HOST }}/repository/grim-ci-artifacts/${{ forgejo.repository }}/jniLibs.tar.gz
           tar -xzf jniLibs.tar.gz
           rm jniLibs.tar.gz
       - name: Setup build
@@ -168,10 +170,10 @@ jobs:
           mkdir release
           mv android/grim* release
           tar -czf android.tar.gz release
-          curl -v -u ${{ secrets.MAVEN_USER }}:${{ secrets.MAVEN_PASSWORD }} --upload-file android.tar.gz ${{ secrets.MAVEN_HOST }}/repository/grim-ci-artifacts/android.tar.gz
+          curl -v -u ${{ secrets.MAVEN_USER }}:${{ secrets.MAVEN_PASSWORD }} --upload-file android.tar.gz ${{ secrets.MAVEN_HOST }}/repository/grim-ci-artifacts/${{ forgejo.repository }}/android.tar.gz
 
   linux:
-    if: ${{ forgejo.ref_type == 'branch' || needs.check.outputs.exists == 'false' }}
+    if: ${{ forgejo.ref_type == 'branch' || needs.version.outputs.exists == 'false' }}
     runs-on: ubuntu
     needs: [version, android_libs, android_release]
     uses: ./.forgejo/workflows/linux.yaml
@@ -184,7 +186,7 @@ jobs:
       MAVEN_PASSWORD: ${{ secrets.MAVEN_PASSWORD }}
 
   macos:
-    if: ${{ forgejo.ref_type == 'branch' || needs.check.outputs.exists == 'false' }}
+    if: ${{ forgejo.ref_type == 'branch' || needs.version.outputs.exists == 'false' }}
     runs-on: ubuntu
     needs: [version, android_libs, android_release, linux]
     uses: ./.forgejo/workflows/macos.yaml
@@ -197,7 +199,7 @@ jobs:
       MAVEN_PASSWORD: ${{ secrets.MAVEN_PASSWORD }}
 
   windows:
-    if: ${{ forgejo.ref_type == 'branch' || needs.check.outputs.exists == 'false' }}
+    if: ${{ forgejo.ref_type == 'branch' || needs.version.outputs.exists == 'false' }}
     runs-on: ubuntu
     needs: [version, android_libs, android_release, linux, macos]
     uses: ./.forgejo/workflows/windows.yaml
@@ -210,22 +212,22 @@ jobs:
       MAVEN_PASSWORD: ${{ secrets.MAVEN_PASSWORD }}
 
   release:
-    if: ${{ forgejo.ref_type == 'branch' || needs.check.outputs.exists == 'false' }}
+    if: ${{ forgejo.ref_type == 'branch' || needs.version.outputs.exists == 'false' }}
     runs-on: ubuntu
     needs: [version, android_libs, android_release, linux, macos, windows]
     steps:
       - name: Download All Artifacts
         run: |
-          curl -o android.tar.gz -u ${{ secrets.MAVEN_USER }}:${{ secrets.MAVEN_PASSWORD }} ${{ secrets.MAVEN_HOST }}/repository/grim-ci-artifacts/android.tar.gz
+          curl -o android.tar.gz -u ${{ secrets.MAVEN_USER }}:${{ secrets.MAVEN_PASSWORD }} ${{ secrets.MAVEN_HOST }}/repository/grim-ci-artifacts/${{ forgejo.repository }}/android.tar.gz
           tar -xzf android.tar.gz
           rm android.tar.gz
-          curl -o linux.tar.gz -u ${{ secrets.MAVEN_USER }}:${{ secrets.MAVEN_PASSWORD }} ${{ secrets.MAVEN_HOST }}/repository/grim-ci-artifacts/linux.tar.gz
+          curl -o linux.tar.gz -u ${{ secrets.MAVEN_USER }}:${{ secrets.MAVEN_PASSWORD }} ${{ secrets.MAVEN_HOST }}/repository/grim-ci-artifacts/${{ forgejo.repository }}/linux.tar.gz
           tar -xzf linux.tar.gz
           rm linux.tar.gz
-          curl -o macos.tar.gz -u ${{ secrets.MAVEN_USER }}:${{ secrets.MAVEN_PASSWORD }} ${{ secrets.MAVEN_HOST }}/repository/grim-ci-artifacts/macos.tar.gz
+          curl -o macos.tar.gz -u ${{ secrets.MAVEN_USER }}:${{ secrets.MAVEN_PASSWORD }} ${{ secrets.MAVEN_HOST }}/repository/grim-ci-artifacts/${{ forgejo.repository }}/macos.tar.gz
           tar -xzf macos.tar.gz
           rm macos.tar.gz
-          curl -o windows.tar.gz -u ${{ secrets.MAVEN_USER }}:${{ secrets.MAVEN_PASSWORD }} ${{ secrets.MAVEN_HOST }}/repository/grim-ci-artifacts/windows.tar.gz
+          curl -o windows.tar.gz -u ${{ secrets.MAVEN_USER }}:${{ secrets.MAVEN_PASSWORD }} ${{ secrets.MAVEN_HOST }}/repository/grim-ci-artifacts/${{ forgejo.repository }}/windows.tar.gz
           tar -xzf windows.tar.gz
           rm windows.tar.gz
       - name: Upload release to Forgejo

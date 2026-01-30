@@ -49,4 +49,4 @@ jobs:
       - name: Upload artifacts
         run: |
           tar -czf macos.tar.gz release
-          curl -v -u ${{ secrets.MAVEN_USER }}:${{ secrets.MAVEN_PASSWORD }} --upload-file macos.tar.gz ${{ secrets.MAVEN_HOST }}/repository/grim-ci-artifacts/macos.tar.gz
+          curl -v -u ${{ secrets.MAVEN_USER }}:${{ secrets.MAVEN_PASSWORD }} --upload-file macos.tar.gz ${{ secrets.MAVEN_HOST }}/repository/grim-ci-artifacts/${{ forgejo.repository }}/macos.tar.gz
