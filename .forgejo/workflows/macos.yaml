@@ -13,10 +13,31 @@ jobs:
         with:
           submodules: recursive
       - run: mkdir release
+      - name: Restore cargo cache
+        id: cache-cargo-restore
+        uses: actions/cache/restore@v5
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - name: Release MacOS Universal
         run: |
           cargo zigbuild --release --target universal2-apple-darwin
-          mv target/universal2-apple-darwin/release/grim macos/Grim.app/Contents/MacOS
+          cp target/universal2-apple-darwin/release/grim macos/Grim.app/Contents/MacOS
+      - name: Save cargo cache
+        uses: actions/cache/save@v5
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ steps.cache-cargo-restore.outputs.cache-primary-key }}
       - name: Archive Universal
         working-directory: macos
         run: |
@@ -25,7 +46,7 @@ jobs:
       - name: Checksum Release Universal
         working-directory: release
         run: sha256sum grim-${{ inputs.version }}-macos.zip > grim-${{ inputs.version }}-macos-sha256sum.txt
-      - uses: actions/upload-artifact@v4
-        with:
-          name: release_macos
-          path: release/*
+      - name: Upload artifacts
+        run: |
+          tar -czf macos.tar.gz release
+          curl -v -u ${{ secrets.MAVEN_USER }}:${{ secrets.MAVEN_PASSWORD }} --upload-file macos.tar.gz ${{ secrets.MAVEN_HOST }}/repository/grim-ci-artifacts/macos.tar.gz

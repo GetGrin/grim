@@ -1,16 +1,29 @@
 pluginManagement {
     repositories {
-        gradlePluginPortal()
-        google()
-        mavenCentral()
+        maven {
+            credentials {
+                username "$mavenUser"
+                password "$mavenPassword"
+            }
+            url "$mavenHost/repository/gradle-plugin-portal/"
+            allowInsecureProtocol = true
+        }
+        maven {
+            credentials {
+                username "$mavenUser"
+                password "$mavenPassword"
+            }
+            url "$mavenHost/repository/google-maven/"
+            allowInsecureProtocol = true
+        }
+        maven {
+            credentials {
+                username "$mavenUser"
+                password "$mavenPassword"
+            }
+            url "$mavenHost/repository/maven-central/"
+            allowInsecureProtocol = true
+        }
     }
 }
-dependencyResolutionManagement {
-    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
-    repositories {
-        google()
-        mavenCentral()
-    }
-}
-//rootProject.name = "Rust Template"
 include ':app'

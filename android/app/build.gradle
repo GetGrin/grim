@@ -56,6 +56,47 @@ android {
         targetCompatibility JavaVersion.VERSION_17
     }
     namespace 'mw.gri.android'
+
+    flavorDimensions "mode"
+
+    productFlavors {
+        ci {
+            dimension "mode"
+        }
+        local {
+            dimension "mode"
+        }
+    }
+
+    applicationVariants.all { variant ->
+        def flavor = variant.productFlavors[0].name
+
+        if (flavor == "ci") {
+            repositories {
+                maven {
+                    credentials {
+                        username "$mavenUser"
+                        password "$mavenPassword"
+                    }
+                    url "$mavenHost/repository/maven-central/"
+                    allowInsecureProtocol = true
+                }
+                maven {
+                    credentials {
+                        username "$mavenUser"
+                        password "$mavenPassword"
+                    }
+                    url "$mavenHost/repository/google-android-maven/"
+                    allowInsecureProtocol = true
+                }
+            }
+        } else if (flavor == "local") {
+            repositories {
+                google()
+                mavenCentral()
+            }
+        }
+    }
 }
 
 dependencies {

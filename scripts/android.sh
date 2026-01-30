@@ -1,6 +1,6 @@
 #!/bin/bash
 
-usage="Usage: android.sh [type] [platform|version]\n - type: 'build' to run locally, 'lib' - .so for all platforms, 'release' - .apk for all platforms\n - platform, for 'build' type: 'v7', 'v8', 'x86'\n - version for 'lib' and 'release', example: '0.2.2'"
+usage="Usage: android.sh [type] [platform|version] [flavor]\n - type: 'build' to run locally, 'lib' - .so for all platforms, 'release' - .apk for all platforms\n - platform, for 'build' type: 'v7', 'v8', 'x86'\n - version for 'lib' and 'release', example: '0.2.2'\n - flavor, for non-'lib' type: 'ci' for local maven, 'local' for external"
 case $1 in
   build|lib|release)
     ;;
@@ -12,6 +12,16 @@ esac
 if [[ $1 == "build" ]]; then
   case $2 in
     v7|v8|x86)
+      ;;
+    *)
+    printf "$usage"
+    exit 1
+  esac
+fi
+
+if [[ $1 != "lib" ]]; then
+  case $3 in
+    ci|local)
       ;;
     *)
     printf "$usage"
@@ -59,17 +69,17 @@ function build_apk() {
   ./gradlew clean
   # Build signed apk if keystore exists
   if [ ! -f keystore.properties ]; then
-    ./gradlew assembleDebug
+    ./gradlew assemble$3Debug
     if [ $? -ne 0 ]; then
       success=0
     fi
-    apk_path=app/build/outputs/apk/debug/app-debug.apk
+    apk_path=app/build/outputs/apk/$3/debug/app-$3-debug.apk
   else
-    ./gradlew assembleSignedRelease
+    ./gradlew assemble$3SignedRelease
     if [ $? -ne 0 ]; then
       success=0
     fi
-    apk_path=app/build/outputs/apk/signedRelease/app-signedRelease.apk
+    apk_path=app/build/outputs/apk/$3/signedRelease/app-$3-signedRelease.apk
   fi
 
   if [[ $1 == "" ]] && [ $success -eq 1 ]; then
@@ -118,10 +128,10 @@ else
   rm -rf target/armv7-linux-androideabi
   build_lib "v7"
   [ $success -eq 1 ] && build_lib "v8"
-  [ $success -eq 1 ] && build_apk "arm" "$2"
+  [ $success -eq 1 ] && build_apk "arm" "$2" "$3"
   rm -rf android/app/src/main/jniLibs/*
   [ $success -eq 1 ] && build_lib "x86"
-  [ $success -eq 1 ] && build_apk "x86_64" "$2"
+  [ $success -eq 1 ] && build_apk "x86_64" "$2" "$3"
   [ $success -eq 1 ] && exit 0
 fi
 

@@ -6,6 +6,7 @@ on:
       - "*"
     branches-ignore:
       - master
+      - ci
 
 jobs:
   build:
@@ -21,12 +22,22 @@ jobs:
           sha=$(git rev-parse HEAD)
           [[ "${{ github.sha }}" == "${sha}" ]] && test=false || test=true
           echo "test=${test}" >> "$FORGEJO_OUTPUT"
+      - uses: actions/cache@v5
+        if: ${{ steps.check.outputs.test == 'true' }}
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - name: Build
         if: ${{ steps.check.outputs.test == 'true' }}
         run: cargo build --release
       - name: Telegram Notify Channel
         if: ${{ steps.check.outputs.test == 'true' && (success() || failure()) }}
-        uses: actions/telegram-notifier@ardocrat
+        uses: actions/telegram-notifier@main
         with:
           api_url: ${{ secrets.TELEGRAM_API_URL }}
           token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
@@ -35,7 +46,7 @@ jobs:
           notify_fields: "actor,repository,workflow,branch,commit"
       - name: Telegram Notify Group
         if: ${{ steps.check.outputs.test == 'true' && (success() || failure()) }}
-        uses: actions/telegram-notifier@ardocrat
+        uses: actions/telegram-notifier@main
         with:
           api_url: ${{ secrets.TELEGRAM_API_URL }}
           token: ${{ secrets.TELEGRAM_BOT_TOKEN }}

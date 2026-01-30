@@ -12,7 +12,7 @@ jobs:
 
     steps:
       - name: Telegram Notify Channel
-        uses: actions/telegram-notifier@ardocrat
+        uses: actions/telegram-notifier@main
         with:
           api_url: ${{ secrets.TELEGRAM_API_URL }}
           token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
@@ -20,7 +20,7 @@ jobs:
           status: ${{ job.status }}
           notify_fields: "actor,repository"
       - name: Telegram Notify Group
-        uses: actions/telegram-notifier@ardocrat
+        uses: actions/telegram-notifier@main
         with:
           api_url: ${{ secrets.TELEGRAM_API_URL }}
           token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
