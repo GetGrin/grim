@@ -94,7 +94,7 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - name: Setup registry
         run: |
-          echo -e '[registries.nexus]\nindex = "sparse+${{ secrets.MAVEN_HOST }}/repository/cargo/"\n[registry]\ndefault = "nexus"\n[source.crates-io]\nreplace-with = "nexus"\n[source.nexus]\nregistry = "sparse+${{ secrets.MAVEN_HOST }}/repository/cargo/"'
+          echo -e '[registries.nexus]\nindex = "sparse+${{ secrets.MAVEN_HOST }}/repository/cargo/"\n[registry]\ndefault = "nexus"\n[source.crates-io]\nreplace-with = "nexus"\n[source.nexus]\nregistry = "sparse+${{ secrets.MAVEN_HOST }}/repository/cargo/"' > ~/.cargo/config.toml
       - name: Build libs
         run: |
           chmod +x scripts/android.sh && ./scripts/android.sh lib ${{ needs.version.outputs.v }}
