@@ -81,7 +81,9 @@ jobs:
       - uses: actions/checkout@v6
         with:
           submodules: recursive
-      - uses: actions/cache@v5
+      - name: Restore cargo cache
+        id: cache-cargo-restore
+        uses: actions/cache/restore@v5
         with:
           path: |
             ~/.cargo/bin/
@@ -96,6 +98,16 @@ jobs:
       - name: Build libs
         run: |
           chmod +x scripts/android.sh && ./scripts/android.sh lib ${{ needs.version.outputs.v }}
+      - name: Save cargo cache
+        uses: actions/cache/save@v5
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ steps.cache-cargo-restore.outputs.cache-primary-key }}
       - name: Upload artifacts
         run: |
           cd android/app/src/main
@@ -110,7 +122,9 @@ jobs:
       - uses: actions/checkout@v6
         with:
           submodules: recursive
-      - uses: actions/cache@v4
+      - name: Restore gradle cache
+        id: cache-gradle-restore
+        uses: actions/cache/restore@v5
         with:
           path: |
             ~/.gradle/caches
@@ -161,6 +175,13 @@ jobs:
           apk_path=app/build/outputs/apk/ci/signedRelease/app-ci-signedRelease.apk
           name=grim-${{ needs.version.outputs.v }}-android-x86_64.apk
           mv ${apk_path} "${name}"
+      - name: Save gradle cache
+        uses: actions/cache/save@v5
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ steps.cache-gradle-restore.outputs.cache-primary-key }}
       - name: Checksum x86_64 APK
         working-directory: android
         run: |
@@ -177,7 +198,7 @@ jobs:
   linux_arm:
     if: ${{ forgejo.ref_type == 'branch' || needs.version.outputs.exists == 'false' }}
     runs-on: ubuntu
-    needs: [version, android_libs, android_release]
+    needs: [version, android_libs]
     steps:
       - uses: actions/checkout@v6
         with:
@@ -225,7 +246,7 @@ jobs:
   linux_x86:
     if: ${{ forgejo.ref_type == 'branch' || needs.version.outputs.exists == 'false' }}
     runs-on: ubuntu-linux-x86
-    needs: [version, android_libs, android_release]
+    needs: [version]
     steps:
       - uses: actions/checkout@v6
         with:
@@ -240,7 +261,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-x86-cargo-${{ hashFiles('**/Cargo.lock') }}
       - name: Setup registry
         run: |
           echo -e '[registries.nexus]\nindex = "sparse+${{ secrets.MAVEN_HOST }}/repository/cargo/"\n[registry]\ndefault = "nexus"\n[source.crates-io]\nreplace-with = "nexus"\n[source.nexus]\nregistry = "sparse+${{ secrets.MAVEN_HOST }}/repository/cargo/"' > ~/.cargo/config.toml
@@ -257,7 +278,7 @@ jobs:
             target/
           key: ${{ steps.cache-cargo-restore.outputs.cache-primary-key }}
       - name: AppImage x86
-        run: |  
+        run: |
           mkdir release
           cp target/x86_64-unknown-linux-gnu/release/grim linux/Grim.AppDir/AppRun
           appimagetool linux/Grim.AppDir grim-${{ needs.version.outputs.v }}-linux-x86_64.AppImage
@@ -273,7 +294,7 @@ jobs:
   macos:
     if: ${{ forgejo.ref_type == 'branch' || needs.version.outputs.exists == 'false' }}
     runs-on: ubuntu
-    needs: [version, android_libs, android_release, linux]
+    needs: [version, android_libs, linux]
     steps:
       - uses: actions/checkout@v6
         with:
@@ -323,7 +344,7 @@ jobs:
   windows:
     if: ${{ forgejo.ref_type == 'branch' || needs.version.outputs.exists == 'false' }}
     runs-on: ubuntu
-    needs: [version, android_libs, android_release, linux, macos]
+    needs: [version, android_libs, linux, macos]
     steps:
       - uses: actions/checkout@v6
         with:
@@ -369,7 +390,7 @@ jobs:
   release:
     if: ${{ forgejo.ref_type == 'branch' || needs.version.outputs.exists == 'false' }}
     runs-on: ubuntu
-    needs: [version, android_libs, android_release, linux, linux_x86, macos, windows]
+    needs: [version, android_release, linux, linux_x86, macos, windows]
     steps:
       - name: Download All Artifacts
         run: |
@@ -423,7 +444,7 @@ jobs:
           chat_ids: |
             ${{ secrets.TELEGRAM_CHANNEL_ID }}
             ${{ secrets.TELEGRAM_GROUP_ID }}
-          body: '🎁 Release <a href="https://code.gri.mw/${{ forgejo.repository }}/releases/tag/${{ needs.version.outputs.v }}">${{ needs.version.outputs.v }}</a> is ready!'
+          body: '🎁 Release <a href="https://code.gri.mw/${{ forgejo.repository }}/releases">${{ needs.version.outputs.v }}</a> is ready!'
           token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           pin: true
           files: |
