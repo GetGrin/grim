@@ -1,6 +1,6 @@
 #!/bin/bash
 
-usage="Usage: android.sh [type] [platform|version] [flavor]\n - type: 'build' to run locally, 'lib' - .so for all platforms, 'release' - .apk for all platforms\n - platform, for 'build' type: 'v7', 'v8', 'x86'\n - version for 'lib' and 'release', example: '0.2.2'\n - flavor, for non-'lib' type: 'ci' for local maven, 'local' for external"
+usage="Usage: android.sh [type] [platform|version] [flavor]\n - type: 'build' to run locally, 'lib' - .so for all platforms, 'release' - .apk for all platforms\n - platform, for 'build' type: 'v7', 'v8', 'x86'\n - version for 'lib' and 'release', example: '0.2.2'\n - optional flavor, for non-'lib' type: 'ci' for local maven, default - 'local' for external"
 case $1 in
   build|lib|release)
     ;;
@@ -12,16 +12,6 @@ esac
 if [[ $1 == "build" ]]; then
   case $2 in
     v7|v8|x86)
-      ;;
-    *)
-    printf "$usage"
-    exit 1
-  esac
-fi
-
-if [[ $1 != "lib" ]]; then
-  case $3 in
-    ci|local)
       ;;
     *)
     printf "$usage"
@@ -65,21 +55,23 @@ function build_lib() {
 
 ### Build application
 function build_apk() {
+  flavor=$3
+  [[ flavor == "" ]] && flavor="local"
   cd android || exit 1
   ./gradlew clean
   # Build signed apk if keystore exists
   if [ ! -f keystore.properties ]; then
-    ./gradlew assemble$3Debug
+    ./gradlew assemble${flavor}Debug
     if [ $? -ne 0 ]; then
       success=0
     fi
-    apk_path=app/build/outputs/apk/$3/debug/app-$3-debug.apk
+    apk_path=app/build/outputs/apk/${flavor}/debug/app-${flavor}-debug.apk
   else
-    ./gradlew assemble$3SignedRelease
+    ./gradlew assemble${flavor}SignedRelease
     if [ $? -ne 0 ]; then
       success=0
     fi
-    apk_path=app/build/outputs/apk/$3/signedRelease/app-$3-signedRelease.apk
+    apk_path=app/build/outputs/apk/${flavor}/signedRelease/app-${flavor}-signedRelease.apk
   fi
 
   if [[ $1 == "" ]] && [ $success -eq 1 ]; then
@@ -119,7 +111,7 @@ if [[ $1 == "lib" ]]; then
   [ $success -eq 1 ] && exit 0
 elif [[ $1 == "build" ]]; then
   build_lib "$2"
-  [ $success -eq 1 ] && build_apk
+  [ $success -eq 1 ] && build_apk "" "" "$3"
   [ $success -eq 1 ] && exit 0
 else
   rm -rf target/release-apk
