@@ -109,12 +109,12 @@ impl Desktop {
     fn start_camera_capture(cameras_amount: Arc<AtomicUsize>,
                             camera_index: Arc<AtomicUsize>,
                             stop_camera: Arc<AtomicBool>) {
-        use nokhwa_mac::nokhwa_initialize;
-        use nokhwa_mac::pixel_format::RgbFormat;
-        use nokhwa_mac::utils::{CameraIndex, RequestedFormat, RequestedFormatType};
-        use nokhwa_mac::utils::ApiBackend;
-        use nokhwa_mac::query;
-        use nokhwa_mac::CallbackCamera;
+        use nokhwa::nokhwa_initialize;
+        use nokhwa::pixel_format::RgbFormat;
+        use nokhwa::utils::{CameraIndex, RequestedFormat, RequestedFormatType};
+        use nokhwa::utils::ApiBackend;
+        use nokhwa::query;
+        use nokhwa::CallbackCamera;
 
         // Ask permission to open camera.
         nokhwa_initialize(|_| {});

@@ -143,13 +143,13 @@ tokio-old = { version = "0.2", features = ["full"], package = "tokio" }
 tokio-util-old = { version = "0.2", features = ["codec"], package = "tokio-util" }
 
 [target.'cfg(target_os = "linux")'.dependencies]
-nokhwa = { version = "0.10.5", default-features = false, features = ["input-v4l"] }
+nokhwa = { version = "0.10.10", default-features = false, features = ["input-v4l"] }
 
 [target.'cfg(target_os = "windows")'.dependencies]
-nokhwa = { version = "0.10.5", default-features = false, features = ["input-msmf"] }
+nokhwa = { version = "0.10.10", default-features = false, features = ["input-msmf"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
-nokhwa-mac = { git = "https://code.gri.mw/GUI/nokhwa", rev = "612c861ef153cf0ee575d8dd1413b960e4e19dd6", features = ["input-avfoundation", "output-threaded"], package = "nokhwa" }
+nokhwa = { version = "0.10.10", default-features = false, features = ["input-avfoundation", "output-threaded"] }
 
 [target.'cfg(not(target_os = "android"))'.dependencies]
 env_logger = "0.11.3"
