@@ -13,7 +13,7 @@
 // limitations under the License.
 
 use egui::{Id, RichText};
-use grin_core::core::amount_from_hr_string;
+use grin_core::core::{amount_from_hr_string, amount_to_hr_string};
 
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, TextEdit, View};
@@ -79,21 +79,21 @@ impl InvoiceRequestContent {
             if !self.amount_edit.is_empty() {
                 self.amount_edit = self.amount_edit.trim().replace(",", ".");
                 match amount_from_hr_string(self.amount_edit.as_str()) {
-                    Ok(a) => {
+                    Ok(amount) => {
                         if !self.amount_edit.contains(".") {
-                            // To avoid input of several "0".
-                            if a == 0 {
-                                self.amount_edit = "0".to_string();
-                                return;
+                            // To avoid input of several `0` before `.` and put `.` after first `0`.
+                            if self.amount_edit.len() != 1 && self.amount_edit.starts_with("0") {
+                                let amount_text = amount_to_hr_string(amount, true);
+                                let amount_parts = amount_text.split(".").collect::<Vec<&str>>();
+                                self.amount_edit = format!("0.{}", amount_parts[0]);
+                                amount_edit.cursor_to_end(self.amount_edit.len(), ui);
                             }
                         } else {
-                            // Check input after ".".
-                            let parts = self.amount_edit
-                                .split(".")
-                                .collect::<Vec<&str>>();
-                            if parts.len() == 2 && parts[1].len() > 9 {
+                            // Check input after `.`.
+                            let parts = self.amount_edit.split(".").collect::<Vec<&str>>();
+                            if parts.len() == 2 && (parts[1].len() > 9 ||
+                                (amount == 0 && parts[1].len() > 8)) {
                                 self.amount_edit = amount_edit_before;
-                                return;
                             }
                         }
                     }

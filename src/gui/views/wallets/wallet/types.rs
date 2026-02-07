@@ -42,32 +42,6 @@ pub trait WalletContentContainer {
     }
 }
 
-/// Wallet tab content interface.
-pub trait WalletTab {
-    fn get_type(&self) -> WalletTabType;
-    fn ui(&mut self,
-          ui: &mut egui::Ui,
-          wallet: &Wallet,
-          cb: &dyn PlatformCallbacks);
-}
-
-/// Type of [`WalletTab`] content.
-#[derive(PartialEq)]
-pub enum WalletTabType {
-    Txs,
-    Settings
-}
-
-impl WalletTabType {
-    /// Name of wallet tab to show at ui.
-    pub fn name(&self) -> String {
-        match *self {
-            WalletTabType::Txs => t!("wallets.txs"),
-            WalletTabType::Settings => t!("wallets.settings")
-        }
-    }
-}
-
 /// Get wallet status text.
 pub fn wallet_status_text(wallet: &Wallet) -> String {
     if wallet.is_open() {

@@ -118,6 +118,7 @@ bytes = "1.10.1"
 hyper-socks2 = "0.9.1"
 hyper-proxy2 = "0.1.0"
 hyper-tls = "0.6.0"
+async-std = "1.13.2"
 
 ## tor
 arti-client = { version = "0.36.0", features = ["pt-client", "static", "onion-service-service", "onion-service-client"] }

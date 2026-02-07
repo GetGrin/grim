@@ -130,11 +130,16 @@ impl ContentContainer for WalletsContent {
     }
 
     fn container_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
-        ui.ctx().request_repaint_after(if OperatingSystem::from_target_os() == OperatingSystem::Android {
-            Duration::from_millis(100)
+        let is_android = OperatingSystem::from_target_os() == OperatingSystem::Android;
+        let account_list_showing = self.wallet_content.account_content.list_content.is_some();
+        // Small repaint delay is needed for Android back navigation and account list opening.
+        ui.ctx().request_repaint_after(Duration::from_millis(if account_list_showing {
+            10
+        } else if is_android {
+            100
         } else {
-            Duration::from_millis(1000)
-        });
+            1000
+        }));
 
         if let Some(data) = crate::consume_incoming_data() {
             if !data.is_empty() {

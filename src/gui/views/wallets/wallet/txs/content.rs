@@ -24,8 +24,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use crate::gui::icons::{ARCHIVE_BOX, ARROWS_CLOCKWISE, ARROW_CIRCLE_DOWN, ARROW_CIRCLE_UP, CALENDAR_CHECK, DOTS_THREE_CIRCLE, FILE_ARROW_DOWN, FILE_TEXT, GEAR_FINE, PROHIBIT, WARNING, X_CIRCLE};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::types::{LinePosition, ModalPosition};
-use crate::gui::views::wallets::types::WalletTab;
-use crate::gui::views::wallets::wallet::types::{WalletTabType, GRIN};
+use crate::gui::views::wallets::wallet::types::{WalletContentContainer, GRIN};
 use crate::gui::views::wallets::wallet::WalletTransactionContent;
 use crate::gui::views::{Content, Modal, PullToRefresh, View};
 use crate::gui::Colors;
@@ -33,7 +32,7 @@ use crate::wallet::types::{WalletData, WalletTask, WalletTransaction, WalletTran
 use crate::wallet::Wallet;
 
 /// Wallet transactions tab content.
-pub struct WalletTransactions {
+pub struct WalletTransactionsContent {
     /// Transaction information [`Modal`] content.
     tx_info_content: Option<WalletTransactionContent>,
 
@@ -44,22 +43,26 @@ pub struct WalletTransactions {
     manual_sync: Option<u128>
 }
 
-impl WalletTab for WalletTransactions {
-    fn get_type(&self) -> WalletTabType {
-        WalletTabType::Txs
+impl WalletContentContainer for WalletTransactionsContent {
+    fn modal_ids(&self) -> Vec<&'static str> {
+        vec![TX_INFO_MODAL, CANCEL_TX_CONFIRMATION_MODAL]
     }
 
-    fn ui(&mut self, ui: &mut egui::Ui, wallet: &Wallet, cb: &dyn PlatformCallbacks) {
-        if Modal::opened().is_none() {
-            // Show transaction modal on task result.
-            if let Some(id) = wallet.consume_tx_task_result() {
-                let tx = wallet.get_data().unwrap().tx_by_slate_id(id);
-                if let Some(tx) = tx {
-                    self.show_tx_info_modal(tx.data.id);
+    fn modal_ui(&mut self, ui: &mut egui::Ui, w: &Wallet, m: &Modal, cb: &dyn PlatformCallbacks) {
+        match m.id {
+            TX_INFO_MODAL => {
+                if let Some(content) = self.tx_info_content.as_mut() {
+                    content.ui(ui, w, m, cb);
                 }
             }
+            CANCEL_TX_CONFIRMATION_MODAL => {
+                self.cancel_confirmation_modal(ui, w);
+            }
+            _ => {}
         }
-        self.modal_content_ui(ui, wallet, cb);
+    }
+
+    fn container_ui(&mut self, ui: &mut egui::Ui, wallet: &Wallet, _: &dyn PlatformCallbacks) {
         self.txs_ui(ui, wallet);
     }
 }
@@ -69,7 +72,7 @@ const TX_INFO_MODAL: &'static str = "tx_info_modal";
 /// Identifier for transaction cancellation confirmation [`Modal`].
 const CANCEL_TX_CONFIRMATION_MODAL: &'static str = "cancel_tx_conf_modal";
 
-impl WalletTransactions {
+impl WalletTransactionsContent {
     /// Height of transaction list item.
     pub const TX_ITEM_HEIGHT: f32 = 75.0;
 
@@ -122,6 +125,7 @@ impl WalletTransactions {
         let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis();
         let refresh = self.manual_sync.unwrap_or(0) + 1600 > now;
         let refresh_resp = PullToRefresh::new(refresh)
+            .id(Id::from("refresh_tx_list").with(config.id))
             .can_refresh(!refresh && !wallet.syncing())
             .min_refresh_distance(70.0)
             .scroll_area_ui(ui, |ui| {
@@ -239,33 +243,6 @@ impl WalletTransactions {
         // Setup background size.
         bg.rect = resp.rect;
         ui.painter().set(bg_idx, bg);
-    }
-
-    /// Draw [`Modal`] content for this ui container.
-    fn modal_content_ui(&mut self,
-                        ui: &mut egui::Ui,
-                        wallet: &Wallet,
-                        cb: &dyn PlatformCallbacks) {
-        match Modal::opened() {
-            None => {}
-            Some(id) => {
-                match id {
-                    TX_INFO_MODAL => {
-                        Modal::ui(ui.ctx(), cb, |ui, modal, cb| {
-                            if let Some(content) = self.tx_info_content.as_mut() {
-                                content.ui(ui, wallet, modal, cb);
-                            }
-                        });
-                    }
-                    CANCEL_TX_CONFIRMATION_MODAL => {
-                        Modal::ui(ui.ctx(), cb, |ui, _, _| {
-                            self.cancel_confirmation_modal(ui, wallet);
-                        });
-                    }
-                    _ => {}
-                }
-            }
-        }
     }
 
     /// Draw transaction item.
@@ -417,7 +394,7 @@ impl WalletTransactions {
                             TxLogEntryType::TxSent | TxLogEntryType::TxReceived => {
                                 let min_conf = data.info.minimum_confirmations;
                                 if tx.height.is_none() || (tx.height.unwrap() != 0 &&
-                                    height - tx.height.unwrap() > min_conf - 1) {
+                                    height - tx.height.unwrap() >= min_conf - 1) {
                                     let (i, t) = if tx.data.tx_type == TxLogEntryType::TxSent {
                                         (ARROW_CIRCLE_UP, t!("wallets.tx_sent"))
                                     } else {

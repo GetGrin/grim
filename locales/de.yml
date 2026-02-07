@@ -32,6 +32,7 @@ crash_report: Absturzbericht
 crash_report_warning: Anwendung wurde beim letzten Mal unerwartet geschlossen, Sie können den Absturzbericht mit Entwicklern teilen.
 confirmation: Bestätigung
 enter_url: URL eingeben
+max_short: MAX
 wallets:
   await_conf_amount: Erwarte Bestätigung
   await_fin_amount: Warten auf die Fertigstellung
@@ -130,6 +131,7 @@ wallets:
   tx_receive_cancel_conf: 'Sind Sie sicher, dass Sie das Empfangen von %{amount} ツ abbrechen wollen?'
   rec_phrase_not_found: Wiederhestellungsphrase nicht gefunden.
   restore_wallet_desc: Stellen Sie das Wallet wieder her, indem Sie alle Dateien löschen. Wenn die normale Reparatur nicht geholfen hat, müssen Sie Ihr Wallet erneut öffnen.
+  fee_base_desc: 'Gebühr (basiswert%{value}):'
 transport:
   desc: 'Transport verwenden, um Nachrichten synchron zu empfangen oder zu senden:'
   tor_network: Tor Netzwek

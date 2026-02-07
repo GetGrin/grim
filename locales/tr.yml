@@ -32,6 +32,7 @@ crash_report: Ariza Raporu
 crash_report_warning: Uygulama beklenmedik bir sekilde kapandi son kez, kilitlenme raporunu gelistiricilerle paylasabilirsiniz.
 confirmation: Onay
 enter_url: URL'yi girin
+max_short: MAKS
 wallets:
   await_conf_amount: Onay bekleniyor
   await_fin_amount: Tamamlanma bekleniyor
@@ -130,6 +131,7 @@ wallets:
   tx_receive_cancel_conf: Gelen tx iptal
   rec_phrase_not_found: Sifre kelime bulunmuyor
   restore_wallet_desc: Cuzdani restore et
+  fee_base_desc: 'Ücret (taban değeri%{value}):'
 transport:
   desc: 'Adresten senkronize GONDER veya AL:'
   tor_network: Tor network

@@ -15,12 +15,11 @@
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::types::ContentContainer;
 use crate::gui::views::wallets::{CommonSettings, ConnectionSettings, RecoverySettings};
-use crate::gui::views::wallets::types::{WalletTab, WalletTabType};
 use crate::gui::views::wallets::wallet::types::WalletContentContainer;
 use crate::wallet::Wallet;
 
 /// Wallet settings tab content.
-pub struct WalletSettings {
+pub struct WalletSettingsContent {
     /// Common setup content.
     common_setup: CommonSettings,
     /// Connection setup content.
@@ -29,7 +28,7 @@ pub struct WalletSettings {
     recovery_setup: RecoverySettings
 }
 
-impl Default for WalletSettings {
+impl Default for WalletSettingsContent {
     fn default() -> Self {
         Self {
             common_setup: CommonSettings::default(),
@@ -39,12 +38,8 @@ impl Default for WalletSettings {
     }
 }
 
-impl WalletTab for WalletSettings {
-    fn get_type(&self) -> WalletTabType {
-        WalletTabType::Settings
-    }
-
-    fn ui(&mut self,
+impl WalletSettingsContent {
+    pub fn ui(&mut self,
           ui: &mut egui::Ui,
           wallet: &Wallet,
           cb: &dyn PlatformCallbacks) {

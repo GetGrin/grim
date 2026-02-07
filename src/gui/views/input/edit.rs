@@ -12,22 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::sync::Arc;
-use egui::{Layout, TextBuffer, TextStyle, Widget, Align, ViewportCommand};
 use egui::text_edit::TextEditState;
+use egui::{Align, Layout, TextBuffer, TextStyle, ViewportCommand, Widget};
 use lazy_static::lazy_static;
 use parking_lot::RwLock;
+use std::sync::Arc;
 
-use crate::gui::Colors;
 use crate::gui::icons::{CLIPBOARD_TEXT, COPY, EYE, EYE_SLASH, SCAN};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::input::keyboard::KeyboardContent;
 use crate::gui::views::{KeyboardEvent, View};
+use crate::gui::Colors;
 
 /// Text input content.
 pub struct TextEdit {
     /// View identifier.
     id: egui::Id,
+    /// Check if input is enabled or disabled.
+    enabled: bool,
     /// Horizontal text centering is needed.
     h_center: bool,
     /// Focus is needed.
@@ -59,6 +61,7 @@ impl TextEdit {
     pub fn new(id: egui::Id) -> Self {
         Self {
             id,
+            enabled: true,
             h_center: false,
             focus: true,
             focus_request: false,
@@ -73,8 +76,26 @@ impl TextEdit {
         }
     }
 
-    /// Draw text input content.
+    /// Draw text input.
     pub fn ui(&mut self, ui: &mut egui::Ui, input: &mut String, cb: &dyn PlatformCallbacks) {
+        self.input_ui(ui, input, |_| {}, cb);
+    }
+
+    /// Draw text input with additional buttons (right to left order).
+    pub fn custom_buttons_ui(&mut self,
+                             ui: &mut egui::Ui,
+                             input: &mut String,
+                             cb: &dyn PlatformCallbacks,
+                             buttons_content: impl FnOnce(&mut egui::Ui)) {
+        self.input_ui(ui, input, buttons_content, cb);
+    }
+
+    /// Draw text input content.
+    fn input_ui(&mut self,
+                ui: &mut egui::Ui,
+                input: &mut String,
+                buttons_content: impl FnOnce(&mut egui::Ui),
+                cb: &dyn PlatformCallbacks) {
         let mut layout_rect = ui.available_rect_before_wrap();
         layout_rect.set_height(Self::TEXT_EDIT_HEIGHT);
         ui.allocate_ui_with_layout(layout_rect.size(), Layout::right_to_left(Align::Max), |ui| {
@@ -94,6 +115,9 @@ impl TextEdit {
                 });
                 ui.add_space(8.0);
             }
+
+            // Extra buttons content.
+            (buttons_content)(ui);
 
             // Setup copy button.
             if self.copy {
@@ -137,6 +161,12 @@ impl TextEdit {
 
                 // Show text edit.
                 let text_edit_resp = egui::TextEdit::singleline(input)
+                    .text_color(if self.enabled {
+                        Colors::text(false)
+                    } else {
+                        Colors::inactive_text()
+                    })
+                    .interactive(self.enabled)
                     .id(self.id)
                     .font(TextStyle::Heading)
                     .min_size(edit_rect.size())
@@ -181,10 +211,8 @@ impl TextEdit {
                 }
             });
         });
-        // Repaint on Android to handle input from Java code without delays.
-        if is_android() {
-            ui.ctx().request_repaint();
-        }
+        // Immediate repaint when input is open.
+        ui.ctx().request_repaint();
     }
 
     /// Apply soft keyboard input data to provided String, returns `true` if Enter was pressed.
@@ -281,6 +309,27 @@ impl TextEdit {
             return enter_pressed;
         }
         false
+    }
+
+    /// Set cursor to the end of text.
+    pub fn cursor_to_end(&self, text_len: usize, ui: &mut egui::Ui) {
+        let mut state = TextEditState::load(ui.ctx(), self.id).unwrap();
+        match state.cursor.char_range() {
+            None => {}
+            Some(range) => {
+                let mut r = range.clone();
+                r.primary.index = text_len;
+                r.secondary.index = text_len;
+                state.cursor.set_char_range(Some(r));
+                TextEditState::store(state, ui.ctx(), self.id);
+            }
+        }
+    }
+
+    /// Disable input.
+    pub fn disable(mut self) -> Self {
+        self.enabled = false;
+        self
     }
 
     /// Center text horizontally.

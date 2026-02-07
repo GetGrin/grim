@@ -19,13 +19,11 @@ use grin_chain::SyncStatus;
 use crate::gui::icons::{ARROWS_CLOCKWISE, FILE_ARROW_DOWN, FILE_ARROW_UP, GEAR_FINE, POWER, STACK};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::types::{LinePosition, ModalPosition};
-use crate::gui::views::wallets::types::{WalletTab, WalletTabType};
 use crate::gui::views::wallets::wallet::account::AccountContent;
 use crate::gui::views::wallets::wallet::request::{InvoiceRequestContent, SendRequestContent};
 use crate::gui::views::wallets::wallet::transport::WalletTransportContent;
 use crate::gui::views::wallets::wallet::types::WalletContentContainer;
-use crate::gui::views::wallets::wallet::WalletSettings;
-use crate::gui::views::wallets::WalletTransactions;
+use crate::gui::views::wallets::wallet::{WalletSettingsContent, WalletTransactionsContent};
 use crate::gui::views::{Content, FilePickContent, FilePickContentType, Modal, View};
 use crate::gui::Colors;
 use crate::node::Node;
@@ -35,8 +33,11 @@ use crate::AppConfig;
 
 /// Wallet content.
 pub struct WalletContent {
-    /// Current tab content to show.
-    current_tab: Box<dyn WalletTab>,
+    /// Transactions content.
+    pub txs_content: Option<WalletTransactionsContent>,
+
+    /// Settings content.
+    pub settings_content: Option<WalletSettingsContent>,
 
     /// Account panel content.
     pub account_content: AccountContent,
@@ -44,9 +45,9 @@ pub struct WalletContent {
     pub transport_content: WalletTransportContent,
 
     /// Invoice request creation [`Modal`] content.
-    invoice_request_content: Option<InvoiceRequestContent>,
+    invoice_content: Option<InvoiceRequestContent>,
     /// Send request creation [`Modal`] content.
-    send_request_content: Option<SendRequestContent>,
+    send_content: Option<SendRequestContent>,
 
     /// Tab button to pick file for parsing.
     file_pick_tab_button: FilePickContent,
@@ -68,12 +69,12 @@ impl WalletContentContainer for WalletContent {
     fn modal_ui(&mut self, ui: &mut egui::Ui, w: &Wallet, m: &Modal, cb: &dyn PlatformCallbacks) {
         match m.id {
             INVOICE_MODAL_ID => {
-                if let Some(c) = self.invoice_request_content.as_mut() {
+                if let Some(c) = self.invoice_content.as_mut() {
                     c.modal_ui(ui, w, m, cb);
                 }
             }
             SEND_MODAL_ID => {
-                if let Some(c) = self.send_request_content.as_mut() {
+                if let Some(c) = self.send_content.as_mut() {
                     c.modal_ui(ui, w, m, cb);
                 }
             }
@@ -91,7 +92,7 @@ impl WalletContentContainer for WalletContent {
 
         // Show wallet account panel not on settings tab when navigation is not blocked and QR code
         // scanner is not showing and wallet data is not empty.
-        let mut show_account = self.current_tab.get_type() != WalletTabType::Settings && !block_nav
+        let mut show_account = self.settings_content.is_none() && !block_nav
             && !wallet.sync_error() && data.is_some();
         if wallet.get_current_connection() == ConnectionMethod::Integrated &&
             !Node::is_running() {
@@ -222,7 +223,7 @@ impl WalletContentContainer for WalletContent {
                     top: 0.0 as i8,
                     bottom: 4.0 as i8,
                 },
-                fill: if self.current_tab.get_type() == WalletTabType::Settings {
+                fill: if self.settings_content.is_some() {
                     Colors::fill_lite()
                 } else {
                     Colors::TRANSPARENT
@@ -231,25 +232,69 @@ impl WalletContentContainer for WalletContent {
             })
             .show_inside(ui, |ui| {
                 let rect = ui.available_rect_before_wrap();
-                let tab_type = self.current_tab.get_type();
-                let show_sync = (tab_type != WalletTabType::Settings || block_nav) &&
+                let show_settings = self.settings_content.is_some();
+                let show_txs = self.txs_content.is_some();
+                let show_sync = (!show_settings || block_nav) &&
                     sync_ui(ui, &wallet);
                 if !show_sync {
-                    if tab_type != WalletTabType::Txs {
+                    if show_settings {
                         ui.add_space(3.0);
                         ScrollArea::vertical()
-                            .id_salt(Id::from("wallet_tab_content_scroll")
-                                .with(tab_type.name())
-                                .with(wallet_id))
+                            .id_salt(Id::from("wallet_tab_content_scroll").with(wallet_id))
                             .auto_shrink([false; 2])
                             .scroll_bar_visibility(ScrollBarVisibility::AlwaysHidden)
                             .show(ui, |ui| {
                                 View::max_width_ui(ui, Content::SIDE_PANEL_WIDTH * 1.3, |ui| {
-                                    self.current_tab.ui(ui, &wallet, cb);
+                                    self.settings_content
+                                        .as_mut()
+                                        .unwrap()
+                                        .ui(ui, &wallet, cb);
                                 });
                             });
-                    } else {
-                        self.current_tab.ui(ui, &wallet, cb);
+                    } else if show_txs {
+                        self.txs_content
+                            .as_mut()
+                            .unwrap()
+                            .ui(ui, &wallet, cb);
+                    }
+
+                    // Handle wallet task result.
+                    if let Some((id, t)) = wallet.consume_task_result() {
+                        match Modal::opened() {
+                            None => {
+                                // Show transaction modal on wallet task result.
+                                if let Some(id) = id {
+                                    let tx = wallet.get_data().unwrap().tx_by_slate_id(id);
+                                    if tx.is_some() {
+                                        self.txs_content = Some(WalletTransactionsContent::new(tx));
+                                        self.settings_content = None;
+                                    }
+                                }
+                            }
+                            Some(modal_id) => {
+                                match modal_id {
+                                    SEND_MODAL_ID => {
+                                        match t {
+                                            WalletTask::CalculateFee(_, f) => {
+                                                // Setup calculated tx fee at modal.
+                                                if let Some(m) = self.send_content.as_mut() {
+                                                    if m.max_calculating {
+                                                        let data = wallet.get_data().unwrap();
+                                                        let a = data.info.amount_currently_spendable;
+                                                        let max = a - f;
+                                                        m.on_max_amount_calculated(max, f);
+                                                    } else {
+                                                        m.on_fee_calculated(f);
+                                                    }
+                                                }
+                                            }
+                                            _ => {}
+                                        }
+                                    }
+                                    _ => {}
+                                }
+                            }
+                        }
                     }
                 }
                 let rect = {
@@ -276,11 +321,12 @@ impl WalletContentContainer for WalletContent {
 impl Default for WalletContent {
     fn default() -> Self {
         Self {
-            current_tab: Box::new(WalletTransactions::new(None)),
+            txs_content: Some(WalletTransactionsContent::new(None)),
+            settings_content: None,
             account_content: AccountContent::default(),
             transport_content: WalletTransportContent::default(),
-            invoice_request_content: None,
-            send_request_content: None,
+            invoice_content: None,
+            send_content: None,
             file_pick_tab_button: FilePickContent::new(FilePickContentType::Tab),
         }
     }
@@ -297,8 +343,10 @@ impl WalletContent {
             t!("wallets.transport")
         } else if self.transport_content.qr_address_content.is_some() {
             t!("network_mining.address")
+        } else if self.settings_content.is_some() {
+            t!("wallets.settings")
         } else {
-            self.current_tab.get_type().name()
+            t!("wallets.txs")
         }
     }
 
@@ -342,12 +390,13 @@ impl WalletContent {
             let can_send = has_wallet_data &&
                 wallet.get_data().unwrap().info.amount_currently_spendable > 0;
 
-            let current_type = self.current_tab.get_type();
             let tabs_amount = if can_send { 5 } else { 4 };
             ui.columns(tabs_amount, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
-                    View::tab_button(ui, STACK, None, Some(current_type == WalletTabType::Txs), |_| {
-                        self.current_tab = Box::new(WalletTransactions::new(None));
+                    let active = self.settings_content.is_none() && self.txs_content.is_some();
+                    View::tab_button(ui, STACK, None, Some(active), |_| {
+                        self.txs_content = Some(WalletTransactionsContent::new(None));
+                        self.settings_content = None;
                     });
                 });
                 let active = if has_wallet_data { Some(false) } else { None };
@@ -358,7 +407,7 @@ impl WalletContent {
                     } else {
                         let (icon, color) = (FILE_ARROW_DOWN, Some(Colors::green()));
                         View::tab_button(ui, icon, color, active, |_| {
-                            self.invoice_request_content = Some(InvoiceRequestContent::default());
+                            self.invoice_content = Some(InvoiceRequestContent::default());
                             Modal::new(INVOICE_MODAL_ID)
                                 .position(ModalPosition::CenterTop)
                                 .title(t!("wallets.receive"))
@@ -385,7 +434,7 @@ impl WalletContent {
                         } else {
                             let (icon, color) = (FILE_ARROW_UP, Some(Colors::red()));
                             View::tab_button(ui, icon, color, Some(false), |_| {
-                                self.send_request_content = Some(SendRequestContent::new(None));
+                                self.send_content = Some(SendRequestContent::new(None));
                                 Modal::new(SEND_MODAL_ID)
                                     .position(ModalPosition::CenterTop)
                                     .title(t!("wallets.send"))
@@ -395,10 +444,11 @@ impl WalletContent {
                     });
                 }
                 columns[tabs_amount - 1].vertical_centered_justified(|ui| {
-                    let active = Some(current_type == WalletTabType::Settings);
-                    View::tab_button(ui, GEAR_FINE, None, active, |ui| {
+                    let active = self.settings_content.is_some();
+                    View::tab_button(ui, GEAR_FINE, None, Some(active), |ui| {
                         ExternalConnection::check(None, ui.ctx());
-                        self.current_tab = Box::new(WalletSettings::default());
+                        self.txs_content = None;
+                        self.settings_content = Some(WalletSettingsContent::default());
                     });
                 });
             });

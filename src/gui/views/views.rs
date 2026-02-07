@@ -460,12 +460,17 @@ impl View {
         });
     }
 
+    /// Draw loading spinner.
+    pub fn loading_spinner(ui: &mut egui::Ui, size: f32) {
+        Spinner::new().size(size).color(Colors::gold()).ui(ui);
+    }
+
     /// Size of big loading spinner.
     pub const BIG_SPINNER_SIZE: f32 = 104.0;
 
     /// Draw big gold loading spinner.
     pub fn big_loading_spinner(ui: &mut egui::Ui) {
-        Spinner::new().size(Self::BIG_SPINNER_SIZE).color(Colors::gold()).ui(ui);
+        View::loading_spinner(ui, View::BIG_SPINNER_SIZE);
     }
 
     /// Size of big loading spinner.
@@ -473,7 +478,7 @@ impl View {
 
     /// Draw small gold loading spinner.
     pub fn small_loading_spinner(ui: &mut egui::Ui) {
-        Spinner::new().size(30.0).color(Colors::gold()).ui(ui);
+        View::loading_spinner(ui, View::SMALL_SPINNER_SIZE);
     }
 
     /// Draw the button that looks like checkbox with callback on check.

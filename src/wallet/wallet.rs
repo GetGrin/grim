@@ -32,7 +32,7 @@ use grin_wallet_controller::command::parse_slatepack;
 use grin_wallet_controller::controller;
 use grin_wallet_controller::controller::ForeignAPIHandlerV2;
 use grin_wallet_impls::{DefaultLCProvider, DefaultWalletImpl, HTTPNodeClient, LMDBBackend};
-use grin_wallet_libwallet::api_impl::owner::{cancel_tx, retrieve_summary_info, retrieve_txs};
+use grin_wallet_libwallet::api_impl::owner::{cancel_tx, init_send_tx, retrieve_summary_info, retrieve_txs};
 use grin_wallet_libwallet::{address, Error, InitTxArgs, IssueInvoiceTxArgs, NodeClient, RetrieveTxQueryArgs, RetrieveTxQuerySortField, RetrieveTxQuerySortOrder, Slate, SlateState, SlateVersion, SlatepackAddress, StatusMessage, TxLogEntry, TxLogEntryType, VersionedSlate, WalletBackend, WalletInfo, WalletInitStatus, WalletInst, WalletLCProvider};
 use grin_wallet_util::OnionV3Address;
 use parking_lot::RwLock;
@@ -100,6 +100,8 @@ pub struct Wallet {
     /// Flag to check if Slatepack message file is opening.
     message_opening: Arc<AtomicBool>,
 
+    /// Amount requests to calculate fee.
+    fee_calculating: Arc<AtomicU8>,
     /// Flag to check if sending request is creating.
     send_creating: Arc<AtomicBool>,
     /// Flag to check if invoice is creating.
@@ -107,9 +109,8 @@ pub struct Wallet {
 
     /// Tasks sender.
     tasks_sender: Arc<RwLock<Option<Sender<WalletTask>>>>,
-    /// Transaction identifier after successful task completion.
-    /// To be replaced with https://github.com/lucasmerlin/hello_egui/tree/main/crates/egui_inbox.
-    task_result_slate_id: Arc<RwLock<Option<String>>>,
+    /// Task result with optional transaction identifier.
+    task_result: Arc<RwLock<Option<(Option<String>, WalletTask)>>>,
 }
 
 impl Wallet {
@@ -137,9 +138,10 @@ impl Wallet {
             repair_progress: Arc::new(AtomicU8::new(0)),
             message_opening: Arc::new(AtomicBool::from(false)),
             send_creating: Arc::new(AtomicBool::new(false)),
+            fee_calculating: Arc::new(AtomicU8::new(0)),
             invoice_creating: Arc::new(AtomicBool::new(false)),
             tasks_sender: Arc::new(RwLock::new(None)),
-            task_result_slate_id: Arc::new(RwLock::new(None)),
+            task_result: Arc::new(RwLock::new(None)),
         }
     }
 
@@ -586,6 +588,13 @@ impl Wallet {
     pub fn task(&self, task: WalletTask) {
         let r_tasks = self.tasks_sender.read();
         if r_tasks.is_some() {
+            match task {
+                WalletTask::CalculateFee(_, _) => {
+                    let calculating = self.fee_calculating.load(Ordering::Relaxed);
+                    self.fee_calculating.store(calculating + 1, Ordering::Relaxed);
+                }
+                _ => {}
+            }
             let _ = r_tasks.as_ref().unwrap().send(task);
         }
     }
@@ -706,76 +715,6 @@ impl Wallet {
         None
     }
 
-    /// Open Slatepack message with the wallet.
-    fn open_message(&self, message: &String) {
-        if !self.is_open() || message.is_empty() {
-            return;
-        }
-        let w = self.clone();
-        let load = self.message_opening.clone();
-        let msg = message.clone();
-        thread::spawn(move || {
-            load.store(true, Ordering::Relaxed);
-            if let Ok(s) = w.parse_slatepack(&msg) {
-                // Check if message with same id already exists.
-                let exists = {
-                    let mut exists = w.slatepack_exists(&s);
-                    if !exists && (s.state == SlateState::Invoice2 ||
-                        s.state == SlateState::Standard2) {
-                        let mut slate = s.clone();
-                        slate.state = if s.state == SlateState::Standard2 {
-                            SlateState::Standard3
-                        } else {
-                            SlateState::Invoice3
-                        };
-                        exists = w.slatepack_exists(&slate);
-                    }
-                    exists
-                };
-                if exists {
-                    w.on_tx_result(&s);
-                    load.store(false, Ordering::Relaxed);
-                    return;
-                }
-                // Create response or finalize.
-                match s.state {
-                    SlateState::Standard1 | SlateState::Invoice1 => {
-                        if s.state != SlateState::Standard1 {
-                            if let Ok(s) = w.pay(&s) {
-                                sync_wallet_data(&w, false);
-                                w.on_tx_result(&s);
-                            }
-                        } else {
-                            if let Ok(s) = w.receive(&s) {
-                                sync_wallet_data(&w, false);
-                                w.on_tx_result(&s);
-                            }
-                        }
-                    }
-                    SlateState::Standard2 | SlateState::Invoice2 => {
-                        match w.finalize(&s) {
-                            Ok(s) => {
-                                match w.post(&s) {
-                                    Ok(_) => {
-                                        sync_wallet_data(&w, false);
-                                    }
-                                    Err(e) => {
-                                        w.on_tx_error(s.id.to_string(), Some(e));
-                                    }
-                                }
-                            }
-                            Err(e) => {
-                                w.on_tx_error(s.id.to_string(), Some(e));
-                            }
-                        }
-                    }
-                    _ => {}
-                };
-            }
-            load.store(false, Ordering::Relaxed);
-        });
-    }
-
     /// Check if Slatepack message is opening.
     pub fn message_opening(&self) -> bool {
         self.message_opening.load(Ordering::Relaxed)
@@ -826,7 +765,46 @@ impl Wallet {
         None
     }
 
-    /// Initialize a transaction to send amount, return request for funds receiver.
+    /// Calculate transaction fee for provided amount.
+    fn calculate_fee(&self, a: u64) -> Result<u64, Error> {
+        let r_inst = self.instance.as_ref().read();
+        let instance = r_inst.clone().unwrap();
+        let mut w_lock = instance.lock();
+        let w = w_lock.lc_provider()?.wallet_inst()?;
+        let config = self.get_config();
+        let args = InitTxArgs {
+            src_acct_name: Some(config.account.clone()),
+            amount: a,
+            minimum_confirmations: config.min_confirmations,
+            num_change_outputs: 1,
+            selection_strategy_is_use_all: false,
+            estimate_only: Some(true),
+            ..Default::default()
+        };
+        let res = init_send_tx(&mut **w, None, args, false);
+        match res {
+            Ok(slate) => {
+                Ok(slate.fee_fields.fee())
+            }
+            Err(e) => {
+                match e {
+                    Error::NotEnoughFunds { available, needed, .. } => {
+                        Ok(needed - available)
+                    },
+                    e => {
+                        Err(e)
+                    }
+                }
+            }
+        }
+    }
+
+    /// Check if transaction fee is calculating.
+    pub fn fee_calculating(&self) -> bool {
+        self.fee_calculating.load(Ordering::Relaxed) > 0
+    }
+
+    /// Initialize a transaction to send amount.
     fn send(&self, a: u64, r: Option<SlatepackAddress>) -> Result<Slate, Error> {
         let config = self.get_config();
         let args = InitTxArgs {
@@ -1017,27 +995,25 @@ impl Wallet {
         w_data.as_mut().unwrap().on_tx_error(id, err);
     }
 
-    /// Save identifier of successful transaction after tasks completion to consume later.
-    fn on_tx_result(&self, slate: &Slate) {
-        let mut w_res = self.task_result_slate_id.write();
-        *w_res = Some(slate.id.to_string());
+    /// Save task result to consume later.
+    fn on_task_result(&self, id: Option<String>, task: &WalletTask) {
+        let mut w_res = self.task_result.write();
+        *w_res = Some((id, task.clone()));
     }
 
-    /// Consume identifier of successful transaction task.
-    pub fn consume_tx_task_result(&self) -> Option<String> {
+    /// Consume result of successful task.
+    pub fn consume_task_result(&self) -> Option<(Option<String>, WalletTask)> {
         let res = {
-            let r_res = self.task_result_slate_id.read();
+            let r_res = self.task_result.read();
             r_res.clone()
         };
-        // Clear result.
-        if res.is_some() {
-            let mut w_res = self.task_result_slate_id.write();
-            *w_res = None;
-        }
+        // Clear result for transaction task.
+        let mut w_res = self.task_result.write();
+        *w_res = None;
         res
     }
 
-    /// Get possible transaction confirmation height, .
+    /// Get possible transaction confirmation height.
     fn tx_height(&self, tx: &WalletTransaction) -> Result<Option<u64>, Error> {
         let mut tx_height = None;
         if tx.data.confirmed && tx.data.kernel_excess.is_some() {
@@ -1176,7 +1152,7 @@ fn start_sync(wallet: Wallet) -> Thread {
         *w_tasks = Some(tx);
     }
     let wallet_thread = wallet.clone();
-    thread::spawn(move ||  loop {
+    thread::spawn(move || loop {
         let wallet_task = wallet_thread.clone();
         if let Ok(task) = rx.recv() {
             thread::spawn(move || {
@@ -1186,7 +1162,8 @@ fn start_sync(wallet: Wallet) -> Thread {
                     .unwrap()
                     .block_on(async {
                         handle_task(&wallet_task, task).await;
-                    })});
+                    });
+            });
         }
         if wallet_thread.is_closing() || !wallet_thread.is_open() {
             break;
@@ -1233,7 +1210,7 @@ fn start_sync(wallet: Wallet) -> Thread {
                 // Reset loading progress.
                 wallet.info_sync_progress.store(0, Ordering::Relaxed);
             }
-            // Set an error when required integrated node is not enabled.
+            // Set an error when integrated node is not enabled.
             wallet.set_sync_error(not_enabled);
             // Skip cycle when node sync is not finished.
             if !Node::is_running() || Node::get_sync_status() != Some(SyncStatus::NoSync) {
@@ -1316,6 +1293,7 @@ fn start_sync(wallet: Wallet) -> Thread {
 /// Handle wallet task.
 async fn handle_task(w: &Wallet, t: WalletTask) {
     let send_tor = async |s: &Slate, r: &SlatepackAddress| {
+        let id = s.id.to_string();
         match w.send_tor(&s, r).await {
             Ok(s) => {
                 match w.finalize(&s) {
@@ -1323,39 +1301,128 @@ async fn handle_task(w: &Wallet, t: WalletTask) {
                         match w.post(&s) {
                             Ok(_) => {
                                 sync_wallet_data(&w, false);
-                                w.on_tx_result(&s);
+                                w.on_task_result(Some(id), &t);
                             }
                             Err(e) => {
-                                w.on_tx_error(s.id.to_string(), Some(e));
+                                w.on_tx_error(id, Some(e));
                             }
                         }
                     }
                     Err(e) => {
-                        w.on_tx_error(s.id.to_string(), Some(e));
+                        w.on_tx_error(id, Some(e));
                     }
                 }
             }
             Err(e) => {
-                w.on_tx_error(s.id.to_string(), Some(e));
-                w.on_tx_result(&s);
+                w.on_tx_error(id.clone(), Some(e));
+                w.on_task_result(Some(id), &t);
             }
         }
     };
     match &t {
         WalletTask::OpenMessage(m) => {
-            w.open_message(m);
+            if !w.is_open() || m.is_empty() {
+                return;
+            }
+            let w = w.clone();
+            let load = w.message_opening.clone();
+            let msg = m.clone();
+            thread::spawn(move || {
+                load.store(true, Ordering::Relaxed);
+                if let Ok(s) = w.parse_slatepack(&msg) {
+                    let id = s.id.to_string();
+                    // Check if message already exists.
+                    let exists = {
+                        let mut exists = w.slatepack_exists(&s);
+                        if !exists && (s.state == SlateState::Invoice2 ||
+                            s.state == SlateState::Standard2) {
+                            let mut slate = s.clone();
+                            slate.state = if s.state == SlateState::Standard2 {
+                                SlateState::Standard3
+                            } else {
+                                SlateState::Invoice3
+                            };
+                            exists = w.slatepack_exists(&slate);
+                        }
+                        exists
+                    };
+                    if exists {
+                        w.on_task_result(Some(id), &t);
+                        load.store(false, Ordering::Relaxed);
+                        return;
+                    }
+                    // Create response or finalize.
+                    match s.state {
+                        SlateState::Standard1 | SlateState::Invoice1 => {
+                            if s.state != SlateState::Standard1 {
+                                if let Ok(_) = w.pay(&s) {
+                                    sync_wallet_data(&w, false);
+                                    w.on_task_result(Some(id), &t);
+                                }
+                            } else {
+                                if let Ok(_) = w.receive(&s) {
+                                    sync_wallet_data(&w, false);
+                                    w.on_task_result(Some(id), &t);
+                                }
+                            }
+                        }
+                        SlateState::Standard2 | SlateState::Invoice2 => {
+                            match w.finalize(&s) {
+                                Ok(s) => {
+                                    match w.post(&s) {
+                                        Ok(_) => {
+                                            sync_wallet_data(&w, false);
+                                        }
+                                        Err(e) => {
+                                            w.on_tx_error(id, Some(e));
+                                        }
+                                    }
+                                }
+                                Err(e) => {
+                                    w.on_tx_error(id, Some(e));
+                                }
+                            }
+                        }
+                        _ => {}
+                    };
+                }
+                load.store(false, Ordering::Relaxed);
+            });
+        }
+        WalletTask::CalculateFee(a, _) => {
+            // Wait if there are no more fee tasks or handle next input value.
+            let calculating = w.fee_calculating.load(Ordering::Relaxed);
+            if calculating == 1 {
+                async_std::task::sleep(Duration::from_millis(100)).await;
+                let calculating = w.fee_calculating.load(Ordering::Relaxed);
+                if calculating > 1 {
+                    w.fee_calculating.store(calculating - 1, Ordering::Relaxed);
+                    return;
+                }
+            } else {
+                w.fee_calculating.store(calculating - 1, Ordering::Relaxed);
+                return;
+            }
+            // Calculate fee for provided amount.
+            if let Ok(fee) = w.calculate_fee(*a) {
+                w.on_task_result(None, &WalletTask::CalculateFee(*a, fee))
+            }
+            let calculating = w.fee_calculating.load(Ordering::Relaxed);
+            w.fee_calculating.store(calculating - 1, Ordering::Relaxed);
         }
         WalletTask::Send(a, r) => {
             w.send_creating.store(true, Ordering::Relaxed);
             if let Ok(s) = w.send(*a, r.clone()) {
                 sync_wallet_data(&w, false);
-                w.send_creating.store(false, Ordering::Relaxed);
                 if let Some(r) = r {
+                    w.send_creating.store(false, Ordering::Relaxed);
                     send_tor(&s, r).await;
+                    return;
                 } else {
-                    w.on_tx_result(&s);
+                    w.on_task_result(Some(s.id.to_string()), &t);
                 }
             }
+            w.send_creating.store(false, Ordering::Relaxed);
         }
         WalletTask::SendTor(id, r) => {
             if let Some(s) = w.get_tx(*id) {
@@ -1366,7 +1433,7 @@ async fn handle_task(w: &Wallet, t: WalletTask) {
             w.invoice_creating.store(true, Ordering::Relaxed);
             if let Ok(s) = w.issue_invoice(*a) {
                 sync_wallet_data(&w, false);
-                w.on_tx_result(&s);
+                w.on_task_result(Some(s.id.to_string()), &t);
             }
             w.invoice_creating.store(false, Ordering::Relaxed);
         },

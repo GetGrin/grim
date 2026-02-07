@@ -19,7 +19,7 @@ use grin_wallet_libwallet::TxLogEntryType;
 
 use crate::gui::icons::{CIRCLE_HALF, COPY, CUBE, FILE_ARCHIVE, FILE_TEXT, HASH_STRAIGHT, PROHIBIT, QR_CODE, SCAN};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::wallets::wallet::txs::WalletTransactions;
+use crate::gui::views::wallets::wallet::txs::WalletTransactionsContent;
 use crate::gui::views::{CameraContent, FilePickContent, FilePickContentType, Modal, QrCodeContent, View};
 use crate::gui::Colors;
 use crate::wallet::types::{WalletTask, WalletTransaction};
@@ -220,7 +220,7 @@ impl WalletTransactionContent {
         ui.add_space(6.0);
 
         let mut rect = ui.available_rect_before_wrap();
-        rect.set_height(WalletTransactions::TX_ITEM_HEIGHT);
+        rect.set_height(WalletTransactionsContent::TX_ITEM_HEIGHT);
 
         // Draw tx item background.
         let p = ui.painter();
@@ -229,7 +229,7 @@ impl WalletTransactionContent {
 
         // Show transaction amount status and time.
         let data = wallet.get_data().unwrap();
-        WalletTransactions::tx_item_ui(ui, tx, rect, &data, |ui| {
+        WalletTransactionsContent::tx_item_ui(ui, tx, rect, &data, |ui| {
             // Show block height or buttons.
             if let Some(h) = tx.height {
                 if h != 0 {
@@ -281,7 +281,7 @@ impl WalletTransactionContent {
                     } else {
                         View::item_rounding(0, 2, true)
                     };
-                    WalletTransactions::tx_repeat_button_ui(ui, r, tx, wallet, rebroadcast);
+                    WalletTransactionsContent::tx_repeat_button_ui(ui, r, tx, wallet, rebroadcast);
                 }
             }
         });

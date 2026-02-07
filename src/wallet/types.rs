@@ -394,6 +394,10 @@ impl WalletTransaction {
 pub enum WalletTask {
     /// Open Slatepack message parsing result and making an action.
     OpenMessage(String),
+    /// Calculate fee to send amount.
+    /// * amount
+    /// * fee (to read at result)
+    CalculateFee(u64, u64),
     /// Create request to send.
     /// * amount
     /// * receiver

@@ -32,6 +32,7 @@ crash_report: 崩溃报告
 crash_report_warning: 上次应用程序意外关闭，您可以报告开发人员崩溃事件.
 confirmation: 确认
 enter_url: 输入 URL
+max_short: 最大數量
 wallets:
   await_conf_amount: 等待确认中
   await_fin_amount: 等待确定中
@@ -131,6 +132,7 @@ wallets:
   tx_receive_cancel_conf: '您确定要取消 %{amount} ツ的接收吗?'
   rec_phrase_not_found: 找不到恢复助记词.
   restore_wallet_desc: 如果常规修复没有帮助，通过删除所有文件来恢复钱包.您将需要重新打开您的钱包.
+  fee_base_desc: '费用 (基值%{value}):'
 transport:
   desc: '使用传输同步接收或发送消息:'
   tor_network: Tor 网络
