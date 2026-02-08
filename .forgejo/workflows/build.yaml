@@ -22,8 +22,9 @@ jobs:
           sha=$(git rev-parse HEAD)
           [[ "${{ github.sha }}" == "${sha}" ]] && test=false || test=true
           echo "test=${test}" >> "$FORGEJO_OUTPUT"
-      - uses: actions/cache@v5
-        if: ${{ steps.check.outputs.test == 'true' }}
+      - name: Restore cargo cache
+        id: cache-cargo-restore
+        uses: actions/cache/restore@v5
         with:
           path: |
             ~/.cargo/bin/
@@ -31,13 +32,23 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-test-cargo-${{ hashFiles('**/Cargo.lock') }}
       - name: Setup registry
         run: |
           echo -e '[registries.nexus]\nindex = "sparse+${{ secrets.MAVEN_HOST }}/repository/cargo/"\n[registry]\ndefault = "nexus"\n[source.crates-io]\nreplace-with = "nexus"\n[source.nexus]\nregistry = "sparse+${{ secrets.MAVEN_HOST }}/repository/cargo/"' > ~/.cargo/config.toml
       - name: Build
         if: ${{ steps.check.outputs.test == 'true' }}
         run: cargo build --release
+      - name: Save cargo cache
+        uses: actions/cache/save@v5
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ steps.cache-cargo-restore.outputs.cache-primary-key }}
       - name: Telegram Notify Channel
         if: ${{ steps.check.outputs.test == 'true' && (success() || failure()) }}
         uses: actions/telegram-notifier@main

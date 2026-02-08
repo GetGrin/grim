@@ -91,7 +91,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: grim-android-cargo-${{ hashFiles('**/Cargo.lock') }}
       - name: Setup registry
         run: |
           echo -e '[registries.nexus]\nindex = "sparse+${{ secrets.MAVEN_HOST }}/repository/cargo/"\n[registry]\ndefault = "nexus"\n[source.crates-io]\nreplace-with = "nexus"\n[source.nexus]\nregistry = "sparse+${{ secrets.MAVEN_HOST }}/repository/cargo/"' > ~/.cargo/config.toml
@@ -129,7 +129,7 @@ jobs:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          key: grim-android-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
           restore-keys: |
             ${{ runner.os }}-gradle-
       - name: Download artifacts
@@ -213,7 +213,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: grim-linux-arm-cargo-${{ hashFiles('**/Cargo.lock') }}
       - name: Setup registry
         run: |
           echo -e '[registries.nexus]\nindex = "sparse+${{ secrets.MAVEN_HOST }}/repository/cargo/"\n[registry]\ndefault = "nexus"\n[source.crates-io]\nreplace-with = "nexus"\n[source.nexus]\nregistry = "sparse+${{ secrets.MAVEN_HOST }}/repository/cargo/"' > ~/.cargo/config.toml
@@ -261,7 +261,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-x86-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: grim-linux-x86-cargo-${{ hashFiles('**/Cargo.lock') }}
       - name: Setup registry
         run: |
           echo -e '[registries.nexus]\nindex = "sparse+${{ secrets.MAVEN_HOST }}/repository/cargo/"\n[registry]\ndefault = "nexus"\n[source.crates-io]\nreplace-with = "nexus"\n[source.nexus]\nregistry = "sparse+${{ secrets.MAVEN_HOST }}/repository/cargo/"' > ~/.cargo/config.toml
@@ -310,7 +310,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: grim-macos-cargo-${{ hashFiles('**/Cargo.lock') }}
       - name: Setup registry
         run: |
           echo -e '[registries.nexus]\nindex = "sparse+${{ secrets.MAVEN_HOST }}/repository/cargo/"\n[registry]\ndefault = "nexus"\n[source.crates-io]\nreplace-with = "nexus"\n[source.nexus]\nregistry = "sparse+${{ secrets.MAVEN_HOST }}/repository/cargo/"' > ~/.cargo/config.toml
@@ -360,7 +360,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: grim-win-cargo-${{ hashFiles('**/Cargo.lock') }}
       - name: Setup registry
         run: |
           echo -e '[registries.nexus]\nindex = "sparse+${{ secrets.MAVEN_HOST }}/repository/cargo/"\n[registry]\ndefault = "nexus"\n[source.crates-io]\nreplace-with = "nexus"\n[source.nexus]\nregistry = "sparse+${{ secrets.MAVEN_HOST }}/repository/cargo/"' > ~/.cargo/config.toml
