@@ -16,6 +16,7 @@ use egui::{Id, RichText};
 use grin_core::core::{amount_from_hr_string, amount_to_hr_string};
 use grin_core::global::get_accept_fee_base;
 use grin_wallet_libwallet::SlatepackAddress;
+
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{CameraContent, Modal, TextEdit, View};
 use crate::gui::Colors;

@@ -79,6 +79,8 @@ pub struct Wallet {
 
     /// Wallet data.
     data: Arc<RwLock<Option<WalletData>>>,
+    /// Flag to check if wallet data was synced from node.
+    from_node: Arc<AtomicBool>,
 
     /// Flag to check if wallet reopening is needed.
     reopen: Arc<AtomicBool>,
@@ -132,6 +134,7 @@ impl Wallet {
             info_sync_progress: Arc::from(AtomicU8::new(0)),
             accounts: Arc::new(RwLock::new(vec![])),
             data: Arc::new(RwLock::new(None)),
+            from_node: Arc::new(AtomicBool::new(false)),
             sync_attempts: Arc::new(AtomicU8::new(0)),
             syncing: Arc::new(AtomicBool::new(false)),
             repair_needed: Arc::new(AtomicBool::new(false)),
@@ -567,6 +570,11 @@ impl Wallet {
         self.sync_error.store(error, Ordering::Relaxed);
     }
 
+    /// Check if last synchronization finished from node.
+    pub fn synced_from_node(&self) -> bool {
+        self.from_node.load(Ordering::Relaxed)
+    }
+
     /// Get current wallet synchronization attempts before setting an error.
     fn get_sync_attempts(&self) -> u8 {
         self.sync_attempts.load(Ordering::Relaxed)
@@ -721,7 +729,7 @@ impl Wallet {
     }
 
     /// Parse Slatepack message into [`Slate`].
-    fn parse_slatepack(&self, text: &String) -> Result<Slate, grin_wallet_controller::Error> {
+    pub fn parse_slatepack(&self, text: &String) -> Result<Slate, grin_wallet_controller::Error> {
         let r_inst = self.instance.as_ref().read();
         let instance = r_inst.clone().unwrap();
         let mut api = Owner::new(instance, None);
@@ -754,15 +762,6 @@ impl Wallet {
     pub fn slatepack_exists(&self, slate: &Slate) -> bool {
         let slatepack_path = self.get_config().get_slate_path(slate);
         fs::exists(slatepack_path).unwrap()
-    }
-
-    /// Read Slatepack file content.
-    pub fn read_slatepack(&self, tx: &WalletTransaction) -> Option<String> {
-        let slatepack_path = self.get_config().get_tx_slate_path(tx);
-        if let Ok(m) = fs::read_to_string(slatepack_path) {
-            return Some(m);
-        }
-        None
     }
 
     /// Calculate transaction fee for provided amount.
@@ -1574,6 +1573,7 @@ fn sync_wallet_data(wallet: &Wallet, from_node: bool) {
 
                 // Update wallet transactions.
                 if update_txs(wallet, instance.clone(), info).is_ok() {
+                    wallet.from_node.store(from_node, Ordering::Relaxed);
                     wallet.reset_sync_attempts();
                     return;
                 }

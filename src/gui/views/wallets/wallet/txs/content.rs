@@ -52,7 +52,7 @@ impl WalletContentContainer for WalletTransactionsContent {
         match m.id {
             TX_INFO_MODAL => {
                 if let Some(content) = self.tx_info_content.as_mut() {
-                    content.ui(ui, w, m, cb);
+                    content.ui(ui, w, cb);
                 }
             }
             CANCEL_TX_CONFIRMATION_MODAL => {
@@ -180,10 +180,10 @@ impl WalletTransactionsContent {
                 }
 
                 if !tx.cancelled() && !tx.cancelling() && !tx.posting() {
-                    let rebroadcast = tx.broadcasting_timed_out(wallet);
+                    let resend = tx.broadcasting_timed_out(wallet);
 
                     // Draw button to cancel transaction.
-                    if tx.can_cancel() || rebroadcast {
+                    if tx.can_cancel() || resend {
                         let (icon, color) = (PROHIBIT, Some(Colors::red()));
                         View::item_button(ui, CornerRadius::default(), icon, color, || {
                             self.confirm_cancel_tx_id = Some(tx.data.id);
@@ -196,8 +196,8 @@ impl WalletTransactionsContent {
                     }
 
                     // Draw button to repeat transaction action.
-                    if tx.can_repeat_action() || rebroadcast {
-                        Self::tx_repeat_button_ui(ui, CornerRadius::default(), tx, wallet, rebroadcast);
+                    if tx.can_repeat_action() || resend {
+                        Self::tx_repeat_button_ui(ui, CornerRadius::default(), tx, wallet, resend);
                     }
                 }
             });

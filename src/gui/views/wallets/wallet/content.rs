@@ -16,15 +16,16 @@ use egui::scroll_area::ScrollBarVisibility;
 use egui::{Id, Margin, RichText, ScrollArea};
 use grin_chain::SyncStatus;
 
-use crate::gui::icons::{ARROWS_CLOCKWISE, FILE_ARROW_DOWN, FILE_ARROW_UP, GEAR_FINE, POWER, STACK};
+use crate::gui::icons::{ARROWS_CLOCKWISE, FILE_ARROW_DOWN, FILE_ARROW_UP, FILE_TEXT, GEAR_FINE, POWER, STACK};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::types::{LinePosition, ModalPosition};
 use crate::gui::views::wallets::wallet::account::AccountContent;
+use crate::gui::views::wallets::wallet::message::MessageInputContent;
 use crate::gui::views::wallets::wallet::request::{InvoiceRequestContent, SendRequestContent};
 use crate::gui::views::wallets::wallet::transport::WalletTransportContent;
 use crate::gui::views::wallets::wallet::types::WalletContentContainer;
 use crate::gui::views::wallets::wallet::{WalletSettingsContent, WalletTransactionsContent};
-use crate::gui::views::{Content, FilePickContent, FilePickContentType, Modal, View};
+use crate::gui::views::{Content, Modal, View};
 use crate::gui::Colors;
 use crate::node::Node;
 use crate::wallet::types::{ConnectionMethod, WalletTask};
@@ -48,21 +49,23 @@ pub struct WalletContent {
     invoice_content: Option<InvoiceRequestContent>,
     /// Send request creation [`Modal`] content.
     send_content: Option<SendRequestContent>,
-
-    /// Tab button to pick file for parsing.
-    file_pick_tab_button: FilePickContent,
+    /// Slatepack message input [`Modal`] content.
+    message_content: Option<MessageInputContent>
 }
 
 /// Identifier for invoice creation [`Modal`].
 const INVOICE_MODAL_ID: &'static str = "invoice_request_modal";
 /// Identifier for sending request creation [`Modal`].
 const SEND_MODAL_ID: &'static str = "send_request_modal";
+/// Identifier for Slatepack message input [`Modal`].
+pub const MESSAGE_MODAL_ID: &'static str = "input_message_modal";
 
 impl WalletContentContainer for WalletContent {
     fn modal_ids(&self) -> Vec<&'static str> {
         vec![
             INVOICE_MODAL_ID,
-            SEND_MODAL_ID
+            SEND_MODAL_ID,
+            MESSAGE_MODAL_ID
         ]
     }
 
@@ -76,6 +79,11 @@ impl WalletContentContainer for WalletContent {
             SEND_MODAL_ID => {
                 if let Some(c) = self.send_content.as_mut() {
                     c.modal_ui(ui, w, m, cb);
+                }
+            }
+            MESSAGE_MODAL_ID => {
+                if let Some(c) = self.message_content.as_mut() {
+                    c.ui(ui, w, m, cb);
                 }
             }
             _ => {}
@@ -114,7 +122,7 @@ impl WalletContentContainer for WalletContent {
             .show_animated_inside(ui, !block_nav, |ui| {
                 let r = ui.available_rect_before_wrap();
                 View::max_width_ui(ui, Content::SIDE_PANEL_WIDTH * 1.3, |ui| {
-                    self.tabs_ui(wallet, ui, cb);
+                    self.tabs_ui(wallet, ui);
                 });
                 let rect = {
                     let mut r = r.clone();
@@ -327,7 +335,7 @@ impl Default for WalletContent {
             transport_content: WalletTransportContent::default(),
             invoice_content: None,
             send_content: None,
-            file_pick_tab_button: FilePickContent::new(FilePickContentType::Tab),
+            message_content: None,
         }
     }
 }
@@ -378,7 +386,7 @@ impl WalletContent {
     }
 
     /// Draw tab buttons at the bottom of the screen.
-    fn tabs_ui(&mut self, wallet: &Wallet, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
+    fn tabs_ui(&mut self, wallet: &Wallet, ui: &mut egui::Ui) {
         ui.scope(|ui| {
             // Setup spacing between tabs.
             ui.style_mut().spacing.item_spacing = egui::vec2(View::TAB_ITEMS_PADDING, 0.0);
@@ -387,8 +395,7 @@ impl WalletContent {
             ui.style_mut().spacing.button_padding = egui::vec2(0.0, 4.0);
 
             let has_wallet_data = wallet.get_data().is_some();
-            let can_send = has_wallet_data &&
-                wallet.get_data().unwrap().info.amount_currently_spendable > 0;
+            let can_send = wallet.get_data().unwrap().info.amount_currently_spendable > 0;
 
             let tabs_amount = if can_send { 5 } else { 4 };
             ui.columns(tabs_amount, |columns| {
@@ -399,7 +406,8 @@ impl WalletContent {
                         self.settings_content = None;
                     });
                 });
-                let active = if has_wallet_data { Some(false) } else { None };
+                let active = if wallet.synced_from_node() &&
+                    has_wallet_data { Some(false) } else { None };
                 columns[1].vertical_centered_justified(|ui| {
                     if wallet.invoice_creating() {
                         ui.add_space(4.0);
@@ -420,9 +428,13 @@ impl WalletContent {
                         ui.add_space(4.0);
                         View::small_loading_spinner(ui);
                     } else {
-                        self.file_pick_tab_button.set_active(active.is_some());
-                        self.file_pick_tab_button.ui(ui, cb, |m| {
-                            wallet.task(WalletTask::OpenMessage(m));
+                        let (icon, color) = (FILE_TEXT, Some(Colors::gold_dark()));
+                        View::tab_button(ui, icon, color, active, |_| {
+                            self.message_content = Some(MessageInputContent::default());
+                            Modal::new(MESSAGE_MODAL_ID)
+                                .position(ModalPosition::Center)
+                                .title(t!("wallets.messages"))
+                                .show();
                         });
                     }
                 });
@@ -433,7 +445,7 @@ impl WalletContent {
                             View::small_loading_spinner(ui);
                         } else {
                             let (icon, color) = (FILE_ARROW_UP, Some(Colors::red()));
-                            View::tab_button(ui, icon, color, Some(false), |_| {
+                            View::tab_button(ui, icon, color, active, |_| {
                                 self.send_content = Some(SendRequestContent::new(None));
                                 Modal::new(SEND_MODAL_ID)
                                     .position(ModalPosition::CenterTop)

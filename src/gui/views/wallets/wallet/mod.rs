@@ -26,3 +26,4 @@ pub use content::WalletContent;
 mod account;
 mod transport;
 mod request;
+mod message;

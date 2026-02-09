@@ -142,10 +142,13 @@ impl AccountContent {
 
         ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
             // Draw button to show QR code scanner.
-            View::item_button(ui, View::item_rounding(0, 2, true), SCAN, None, || {
-                self.qr_scan_content = Some(CameraContent::default());
-                cb.start_camera();
-            });
+            let wallet_synced = wallet.synced_from_node();
+            if wallet_synced {
+                View::item_button(ui, View::item_rounding(0, 2, true), SCAN, None, || {
+                    self.qr_scan_content = Some(CameraContent::default());
+                    cb.start_camera();
+                });
+            }
 
             // Draw button to show list of accounts.
             let accounts = wallet.accounts();
@@ -154,7 +157,12 @@ impl AccountContent {
             } else {
                 USER_PLUS
             };
-            View::item_button(ui, View::item_rounding(1, 3, true), accounts_icon, None, || {
+            let rounding = if wallet_synced {
+                View::item_rounding(1, 3, true)
+            } else {
+                View::item_rounding(0, 2, true)
+            };
+            View::item_button(ui, rounding, accounts_icon, None, || {
                 if accounts.len() == 1 {
                     self.create_account_content = CreateAccountContent::default();
                     Modal::new(CREATE_MODAL_ID)
@@ -223,11 +231,8 @@ impl AccountContent {
                             }
                         }
                     };
-                    View::animate_text(ui,
-                                       status_text,
-                                       15.0,
-                                       Colors::gray(),
-                                       wallet.syncing() || wallet.message_opening());
+                    let animate = wallet.syncing() || wallet.message_opening();
+                    View::animate_text(ui, status_text, 15.0, Colors::gray(), animate);
                 })
             });
         });

@@ -26,6 +26,7 @@ const SEMI_TRANSPARENT: Color32 = Color32::from_black_alpha(100);
 const DARK_SEMI_TRANSPARENT: Color32 = Color32::from_black_alpha(170);
 
 const GOLD: Color32 = Color32::from_rgb(255, 215, 0);
+const GOLD_DARK: Color32 = Color32::from_rgb(240, 203, 1);
 
 const YELLOW: Color32 = Color32::from_rgb(254, 241, 2);
 const YELLOW_DARK: Color32 = Color32::from_rgb(239, 229, 3);
@@ -116,6 +117,14 @@ impl Colors {
             GOLD.gamma_multiply(0.9)
         } else {
             GOLD
+        }
+    }
+
+    pub fn gold_dark() -> Color32 {
+        if use_dark() {
+            GOLD_DARK.gamma_multiply(0.9)
+        } else {
+            GOLD_DARK
         }
     }
 
