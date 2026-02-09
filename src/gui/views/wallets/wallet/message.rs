@@ -101,6 +101,7 @@ impl MessageInputContent {
             ui.add_space(6.0);
 
             // Draw slatepack message content.
+            let message_before = self.message_edit.clone();
             ui.vertical_centered(|ui| {
                 let scroll_id = Id::from("message_input").with(wallet.identifier());
                 View::horizontal_line(ui, Colors::item_stroke());
@@ -124,6 +125,10 @@ impl MessageInputContent {
                         ui.add_space(6.0);
                     });
             });
+            // Parse message on input change.
+            if message_before != self.message_edit {
+                self.on_message_input(self.message_edit.clone(), wallet);
+            }
 
             ui.add_space(2.0);
             View::horizontal_line(ui, Colors::item_stroke());
@@ -189,6 +194,9 @@ impl MessageInputContent {
     fn on_message_input(&mut self, text: String, wallet: &Wallet) {
         self.parse_error = false;
         self.message_edit = text;
+        if self.message_edit.is_empty() {
+            return;
+        }
         match wallet.parse_slatepack(&self.message_edit) {
             Ok(_) => {
                 wallet.task(WalletTask::OpenMessage(self.message_edit.to_string()));
