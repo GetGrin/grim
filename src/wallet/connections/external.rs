@@ -35,10 +35,9 @@ pub struct ExternalConnection {
 }
 
 /// Default external node URL for main network.
-const DEFAULT_MAIN_URLS: [&'static str; 3] = [
+const DEFAULT_MAIN_URLS: [&'static str; 2] = [
     "https://main.gri.mw",
-    "https://grincoin.org",
-    "https://grinnode.live:3413"
+    "https://grincoin.org"
 ];
 
 /// Default external node URL for main network.

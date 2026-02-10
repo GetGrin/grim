@@ -275,26 +275,26 @@ impl Tor {
                         .nickname(hs_nickname.clone())
                         .build()
                         .unwrap();
-                    if let Ok((service, request)) =
-                        client_thread.launch_onion_service(service_config)
-                    {
-                        // Launch service proxy.
-                        let addr = SocketAddr::new(IpAddr::from(Ipv4Addr::LOCALHOST), port);
-                        tokio::spawn(Self::run_service_proxy(
-                            addr,
-                            client_thread.clone(),
-                            service.clone(),
-                            request,
-                            hs_nickname.clone(),
-                        )).await.unwrap();
-                        // Check service availability.
-                        let addr = service.onion_address()
-                            .unwrap()
-                            .display_unredacted()
-                            .to_string();
-                        let url = format!("http://{}/", addr);
-                        Self::check_service(service_id, client_thread, url, port, key);
-                        return;
+                    if let Ok(res) = client_thread.launch_onion_service(service_config) {
+                        if let Some((service, request)) = res {
+                            // Launch service proxy.
+                            let addr = SocketAddr::new(IpAddr::from(Ipv4Addr::LOCALHOST), port);
+                            tokio::spawn(Self::run_service_proxy(
+                                addr,
+                                client_thread.clone(),
+                                service.clone(),
+                                request,
+                                hs_nickname.clone(),
+                            )).await.unwrap();
+                            // Check service availability.
+                            let addr = service.onion_address()
+                                .unwrap()
+                                .display_unredacted()
+                                .to_string();
+                            let url = format!("http://{}/", addr);
+                            Self::check_service(service_id, client_thread, url, port, key);
+                            return;
+                        }
                     }
                     on_error(service_id);
                 })
@@ -333,11 +333,18 @@ impl Tor {
                     const MAX_ERRORS: i32 = 3;
                     let mut errors_count = 0;
                     loop {
-                        if !Self::is_service_running(&service_id) {
-                            // Remove service from checking.
-                            let mut w_services =
-                                TOR_SERVER_STATE.checking_services.write();
-                            w_services.remove(&service_id);
+                        // Check if service is running.
+                        fn is_running(service_id: &String) -> bool {
+                            let running = Tor::is_service_running(service_id);
+                            if !running {
+                                // Remove service from checking.
+                                let mut w_services =
+                                    TOR_SERVER_STATE.checking_services.write();
+                                w_services.remove(service_id);
+                            }
+                            running
+                        }
+                        if !is_running(&service_id) {
                             break;
                         }
                         // Send request.
@@ -354,10 +361,16 @@ impl Tor {
                                 let mut w_services =
                                     TOR_SERVER_STATE.failed_services.write();
                                 w_services.remove(&service_id);
+                                if !is_running(&service_id) {
+                                    break;
+                                }
                                 // Check again after 50 seconds.
                                 Duration::from_millis(50000)
                             }
                             Err(_) => {
+                                if !is_running(&service_id) {
+                                    break;
+                                }
                                 // Restart service on 3rd error.
                                 errors_count += 1;
                                 if errors_count == MAX_ERRORS {

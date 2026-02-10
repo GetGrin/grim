@@ -87,12 +87,23 @@ impl Node {
 
     /// Default Mainnet DNS Seeds
     pub const MAINNET_DNS_SEEDS: &'static[&'static str] = &[
+        "main.gri.mw",
+        "grincoin.org",
         "mainnet.seed.grin.lesceller.com",
         "grinseed.revcore.net",
         "mainnet-seed.grinnode.live",
         "mainnet.grin.punksec.de",
-        "grinnode.30-r.com",
-        "grincoin.org"
+        "grinnode.30-r.com"
+    ];
+
+    /// Default Testnet DNS Seeds
+    pub const TESTNET_DNS_SEEDS: &'static[&'static str] = &[
+        "test.gri.mw",
+        "testnet.grincoin.org",
+        "floonet.seed.grin.lesceller.com",
+        "grintestseed.revcore.net",
+        "testnet.grin.punksec.de",
+        "testnet.grinnode.30-r.com"
     ];
 
     /// Stop the [`Server`] and setup exit flag after if needed.

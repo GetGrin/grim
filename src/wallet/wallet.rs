@@ -533,6 +533,7 @@ impl Wallet {
                 let mut w_conn = conn.write();
                 *w_conn = wallet_close.get_config().connection();
             }
+            wallet_close.from_node.store(false, Ordering::Relaxed);
             // Start sync to exit from thread.
             wallet_close.sync();
         });
@@ -570,7 +571,7 @@ impl Wallet {
         self.sync_error.store(error, Ordering::Relaxed);
     }
 
-    /// Check if last synchronization finished from node.
+    /// Check if wallet was synced from node after opening.
     pub fn synced_from_node(&self) -> bool {
         self.from_node.load(Ordering::Relaxed)
     }
@@ -1573,7 +1574,9 @@ fn sync_wallet_data(wallet: &Wallet, from_node: bool) {
 
                 // Update wallet transactions.
                 if update_txs(wallet, instance.clone(), info).is_ok() {
-                    wallet.from_node.store(from_node, Ordering::Relaxed);
+                    if !wallet.from_node.load(Ordering::Relaxed) {
+                        wallet.from_node.store(from_node, Ordering::Relaxed);
+                    }
                     wallet.reset_sync_attempts();
                     return;
                 }

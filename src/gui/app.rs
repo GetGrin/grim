@@ -399,6 +399,7 @@ impl<Platform: PlatformCallbacks> App<Platform> {
 /// To draw with egui`s eframe (for wgpu, glow backends and wasm target).
 impl<Platform: PlatformCallbacks> eframe::App for App<Platform> {
     fn update(&mut self, ctx: &Context, _: &mut eframe::Frame) {
+        ctx.plugin_or_default::<egui_async::EguiAsyncPlugin>();
         self.ui(ctx);
     }
 

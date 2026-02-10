@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use egui::{Align, Id, Layout, RichText, StrokeKind};
+use egui_async::Bind;
 use grin_core::global::ChainTypes;
 
 use crate::AppConfig;
@@ -44,8 +45,10 @@ pub struct P2PSetup {
     /// Flag to check if p2p port from saved config value is available.
     is_port_available: bool,
 
-    /// Flag to check if entered peer address is correct and/or available.
-    is_correct_address_edit: bool,
+    /// Async check entered peer address.
+    address_check: Bind<bool, String>,
+    /// Flag to check if peer is correct and/or available.
+    address_available: Option<bool>,
     /// Peer edit value for modal.
     peer_edit: String,
 
@@ -92,14 +95,15 @@ impl Default for P2PSetup {
             .iter()
             .map(|s| s.to_string())
             .collect();
-        let default_test_seeds = grin_servers::TESTNET_DNS_SEEDS
+        let default_test_seeds = Node::TESTNET_DNS_SEEDS
             .into_iter()
             .map(|s| s.to_string())
             .collect();
         Self {
             port_edit: port,
             port_available_edit: is_port_available,
-            is_correct_address_edit: true,
+            address_check: Bind::new(false),
+            address_available: Some(true),
             is_port_available,
             peer_edit: "".to_string(),
             default_main_seeds,
@@ -191,7 +195,6 @@ impl ContentContainer for P2PSetup {
             ui.add_space(6.0);
             // Show preferred peers setup.
             self.peer_list_ui(ui, &PeerType::Preferred);
-
 
             ui.add_space(6.0);
             View::horizontal_line(ui, Colors::item_stroke());
@@ -377,7 +380,8 @@ impl P2PSetup {
             };
             View::button(ui, add_text, Colors::white_or_black(false), || {
                 // Setup values for modal.
-                self.is_correct_address_edit = true;
+                self.address_check = Bind::new(false);
+                self.address_available = Some(true);
                 self.peer_edit = "".to_string();
                 // Select modal id.
                 let modal_id = match peer_type {
@@ -405,26 +409,34 @@ impl P2PSetup {
 
     /// Draw peer creation [`Modal`] content.
     fn peer_modal(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
-        let on_save = |c: &mut P2PSetup| {
-            // Check if peer is correct and/or available.
-            let peer = c.peer_edit.clone();
-            let is_correct_address = PeersConfig::peer_to_addr(peer.clone()).is_some();
-            c.is_correct_address_edit = is_correct_address;
-
-            // Save peer at config.
-            if is_correct_address {
-                match modal.id {
-                    CUSTOM_SEED_MODAL => NodeConfig::save_custom_seed(peer),
-                    ALLOW_PEER_MODAL => NodeConfig::allow_peer(peer),
-                    DENY_PEER_MODAL => NodeConfig::deny_peer(peer),
-                    PREFER_PEER_MODAL => NodeConfig::prefer_peer(peer),
-                    &_ => {}
+        if self.address_available.is_none() {
+            let peer = self.peer_edit.clone();
+            if let Some(res) = self.address_check.read_or_request(|| async {
+                let available = PeersConfig::peer_to_addr(peer).is_some();
+                Ok(available)
+            }) {
+                match res {
+                    Ok(available) => {
+                        self.address_available = Some(*available);
+                        // Save peer at config.
+                        if *available {
+                            let peer = self.peer_edit.clone();
+                            match modal.id {
+                                CUSTOM_SEED_MODAL => NodeConfig::save_custom_seed(peer),
+                                ALLOW_PEER_MODAL => NodeConfig::allow_peer(peer),
+                                DENY_PEER_MODAL => NodeConfig::deny_peer(peer),
+                                PREFER_PEER_MODAL => NodeConfig::prefer_peer(peer),
+                                &_ => {}
+                            }
+                            Modal::close();
+                        }
+                    }
+                    Err(_) => {
+                        self.address_available = Some(false);
+                    }
                 }
-
-                c.is_port_available = true;
-                Modal::close();
             }
-        };
+        }
 
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
@@ -437,17 +449,22 @@ impl P2PSetup {
 
             // Draw peer address text edit.
             let mut edit = TextEdit::new(Id::from(modal.id)).paste();
+            if self.address_available.is_none() {
+                edit = edit.disable();
+            }
             edit.ui(ui, &mut self.peer_edit, cb);
             if edit.enter_pressed {
-                on_save(self);
+                self.address_available = None;
             }
 
             // Show error when specified address is incorrect.
-            if !self.is_correct_address_edit {
-                ui.add_space(10.0);
-                ui.label(RichText::new(t!("network_settings.peer_address_error"))
-                    .size(16.0)
-                    .color(Colors::red()));
+            if let Some(available) = self.address_available {
+                if !available {
+                    ui.add_space(10.0);
+                    ui.label(RichText::new(t!("network_settings.peer_address_error"))
+                        .size(16.0)
+                        .color(Colors::red()));
+                }
             }
             ui.add_space(12.0);
 
@@ -465,7 +482,9 @@ impl P2PSetup {
                     });
                     columns[1].vertical_centered_justified(|ui| {
                         View::button(ui, t!("modal.save"), Colors::white_or_black(false), || {
-                            on_save(self);
+                            if self.address_available.is_some() {
+                                self.address_available = None;
+                            }
                         });
                     });
                 });
