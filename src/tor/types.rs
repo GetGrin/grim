@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use egui::os;
 use serde_derive::{Deserialize, Serialize};
 use crate::tor::TorConfig;
 
@@ -43,6 +44,8 @@ impl TorProxy {
 #[derive(Serialize, Deserialize, Clone, PartialEq)]
 pub enum TorBridge {
     /// Obfs4 bridge with binary path and connection line.
+    Webtunnel(String, String),
+    /// Obfs4 bridge with binary path and connection line.
     Obfs4(String, String),
     /// Snowflake bridge with binary path and connection line.
     Snowflake(String, String)
@@ -54,6 +57,8 @@ impl TorBridge {
     /// Default Snowflake protocol client binary path.
     pub const DEFAULT_SNOWFLAKE_BIN_PATH: &'static str = "/usr/bin/snowflake-client";
 
+    /// Default webtunnel protocol connection line.
+    pub const DEFAULT_WEBTUNNEL_CONN_LINE: &'static str = "webtunnel [2001:db8:beb:5884:ffcc:bfe3:2858:b06b]:443 1E242C749707B4A68A269F0D31311CE36CDFEC28 url=https://wt.gri.mw/74Fm0lKUWWMMjZpKf6iSC0UH";
     /// Default Obfs4 protocol connection line.
     pub const DEFAULT_OBFS4_CONN_LINE: &'static str = "obfs4 45.76.43.226:3479 7AAFDC594147E72635DD64DB47A8CD8781F463F6 cert=bJ720bjXkmFGGAD77BsCMopkDzQ/cXDj0QntOmsBYw7Fqohq7Y7yZMV7FlECQNB1tyq1AA iat-mode=0";
     /// Default Snowflake protocol connection line.
@@ -62,14 +67,21 @@ impl TorBridge {
     /// Get bridge protocol name.
     pub fn protocol_name(&self) -> String {
         match *self {
+            TorBridge::Webtunnel(_, _) => "webtunnel".to_string(),
             TorBridge::Obfs4(_, _) => "obfs4".to_string(),
-            TorBridge::Snowflake(_, _) => "snowflake".to_string()
+            TorBridge::Snowflake(_, _) => "snowflake".to_string(),
         }
     }
 
     /// Get bridge client binary path.
     pub fn binary_path(&self) -> String {
+        let is_android = os::OperatingSystem::from_target_os() == os::OperatingSystem::Android;
         match self {
+            TorBridge::Webtunnel(path, _) => if is_android {
+                TorConfig::webtunnel_path()
+            } else {
+                path.clone()
+            },
             TorBridge::Obfs4(path, _) => path.clone(),
             TorBridge::Snowflake(path, _) => path.clone()
         }
@@ -78,6 +90,7 @@ impl TorBridge {
     /// Get bridge client connection line.
     pub fn connection_line(&self) -> String {
         match self {
+            TorBridge::Webtunnel(_, line) => line.clone(),
             TorBridge::Obfs4(_, line) => line.clone(),
             TorBridge::Snowflake(_, line) => line.clone()
         }
@@ -86,6 +99,9 @@ impl TorBridge {
     /// Save binary path to provided bridge.
     pub fn save_bridge_bin_path(bridge: &TorBridge, path: String) {
         match bridge {
+            TorBridge::Webtunnel(_, line) => {
+                TorConfig::save_bridge(Some(TorBridge::Webtunnel(path, line.into())));
+            }
             TorBridge::Obfs4(_, line) => {
                 TorConfig::save_bridge(Some(TorBridge::Obfs4(path, line.into())));
             }
@@ -98,6 +114,9 @@ impl TorBridge {
     /// Save connection line to provided bridge.
     pub fn save_bridge_conn_line(bridge: &TorBridge, line: String) {
         match bridge {
+            TorBridge::Webtunnel(path, _) => {
+                TorConfig::save_bridge(Some(TorBridge::Webtunnel(path.into(), line)));
+            }
             TorBridge::Obfs4(path, _) => {
                 TorConfig::save_bridge(
                     Some(TorBridge::Obfs4(path.into(), line))

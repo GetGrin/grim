@@ -52,7 +52,7 @@ fn android_main(app: AndroidApp) {
     {
         std::env::set_var("RUST_BACKTRACE", "full");
         let log_config = android_logger::Config::default()
-            .with_max_level(log::LevelFilter::Debug)
+            .with_max_level(log::LevelFilter::Info)
             .with_tag("grim");
         android_logger::init_once(log_config);
     }

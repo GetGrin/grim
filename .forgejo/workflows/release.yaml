@@ -367,7 +367,7 @@ jobs:
       - name: Release Windows x86
         run: |
           cargo build --release --target x86_64-pc-windows-gnu
-          zip grim-${{ needs.version.outputs.v }}-win-x86_64.zip target/x86_64-pc-windows-gnu/release/grim.exe
+          zip -j grim-${{ needs.version.outputs.v }}-win-x86_64.zip target/x86_64-pc-windows-gnu/release/grim.exe
           mv grim-${{ needs.version.outputs.v }}-win-x86_64.zip release/
       - name: Save cargo cache
         uses: actions/cache/save@v5
@@ -389,7 +389,7 @@ jobs:
 
   release:
     if: ${{ forgejo.ref_type == 'branch' || needs.version.outputs.exists == 'false' }}
-    runs-on: ubuntu
+    runs-on: debian-release
     needs: [version, android_release, linux, linux_x86, macos, windows]
     steps:
       - name: Download All Artifacts

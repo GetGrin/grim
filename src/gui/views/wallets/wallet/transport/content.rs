@@ -157,14 +157,14 @@ impl WalletTransportContent {
 
                         let is_running = Tor::is_service_running(service_id);
                         let has_error = Tor::is_service_failed(service_id);
-                        let address_color = if is_running {
+                        let is_starting = Tor::is_service_starting(service_id);
+                        let address_color = if is_running && !is_starting {
                             Colors::green()
                         } else if has_error {
                             Colors::red()
                         } else {
                             Colors::inactive_text()
                         };
-                        let is_starting = Tor::is_service_starting(service_id);
                         // Show slatepack address text.
                         View::animate_text(ui, addr.clone(), 17.0, address_color, is_starting);
                         ui.add_space(1.0);

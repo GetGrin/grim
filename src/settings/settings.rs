@@ -12,16 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::fs::{self, File};
-use std::io::Write;
-use std::path::PathBuf;
-use std::sync::Arc;
+use grin_config::ConfigError;
+use grin_core::global;
 use lazy_static::lazy_static;
 use parking_lot::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
-use grin_config::ConfigError;
-use grin_core::global;
+use std::fs::{self, File};
+use std::io::Write;
+use std::path::PathBuf;
+use std::sync::Arc;
 
 use crate::node::NodeConfig;
 use crate::settings::AppConfig;
@@ -61,7 +61,8 @@ impl Settings {
 
         // Initialize tor config.
         let tor_config_path = Settings::config_path(TorConfig::FILE_NAME, None);
-        let tor_config = Self::init_config::<TorConfig>(tor_config_path);
+        let mut tor_config = Self::init_config::<TorConfig>(tor_config_path);
+        tor_config.migrate();
 
         // Setup chain type.
         let chain_type = &app_config.chain_type;
@@ -183,10 +184,10 @@ impl Settings {
         match parsed {
             Ok(cfg) => Ok(cfg),
             Err(e) => {
-                return Err(ConfigError::ParseError(
+                Err(ConfigError::ParseError(
                     config_path.to_str().unwrap().to_string(),
                     format!("{}", e),
-                ));
+                ))
             }
         }
     }

@@ -12,22 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::os::OperatingSystem;
 use egui::RichText;
 
-use crate::gui::Colors;
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::settings::TorSettingsContent;
 use crate::gui::views::types::ContentContainer;
 use crate::gui::views::View;
+use crate::gui::Colors;
 use crate::tor::Tor;
 use crate::wallet::Wallet;
 
 /// Wallet transport settings content.
 pub struct WalletTransportSettingsContent {
-    /// Flag to check if settings were changed to restart Tor service.
-    settings_changed: bool,
-
     /// Tor transport content settings.
     tor_settings_content: TorSettingsContent,
 }
@@ -35,7 +31,6 @@ pub struct WalletTransportSettingsContent {
 impl Default for WalletTransportSettingsContent {
     fn default() -> Self {
         Self {
-            settings_changed: false,
             tor_settings_content: TorSettingsContent::default(),
         }
     }
@@ -50,18 +45,11 @@ impl WalletTransportSettingsContent {
               on_close: impl FnOnce()) {
         ui.add_space(8.0);
         ui.vertical_centered(|ui| {
-            // Do not show bridges settings on Android.
-            let os = OperatingSystem::from_target_os();
-            if os != OperatingSystem::Android {
-                // Show Tor settings.
-                self.tor_settings_content.ui(ui, cb);
-                if !self.tor_settings_content.settings_changed {
-                    self.settings_changed = true;
-                }
-                ui.add_space(4.0);
-                View::horizontal_line(ui, Colors::item_stroke());
-                ui.add_space(8.0);
-            }
+            // Show Tor settings.
+            self.tor_settings_content.ui(ui, cb);
+            ui.add_space(4.0);
+            View::horizontal_line(ui, Colors::item_stroke());
+            ui.add_space(8.0);
             ui.label(RichText::new(t!("transport.tor_autorun_desc"))
                 .size(17.0)
                 .color(Colors::inactive_text()));
@@ -69,14 +57,12 @@ impl WalletTransportSettingsContent {
             let autorun = wallet.auto_start_tor_listener();
             View::checkbox(ui, autorun, t!("network.autorun"), || {
                 wallet.update_auto_start_tor_listener(!autorun);
-                self.settings_changed = true;
             });
         });
         ui.add_space(8.0);
         ui.vertical_centered_justified(|ui| {
             View::button(ui, t!("close"), Colors::white_or_black(false), || {
-                if self.settings_changed {
-                    self.settings_changed = false;
+                if self.tor_settings_content.settings_changed {
                     // Restart running service or rebuild client.
                     let service_id = &wallet.identifier();
                     if Tor::is_service_running(service_id) {

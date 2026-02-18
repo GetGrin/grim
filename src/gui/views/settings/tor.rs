@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use egui::{Align, Id, Layout, RichText, StrokeKind};
+use egui::os::OperatingSystem;
 use url::Url;
 
 use crate::gui::icons::{CLOUD_CHECK, NOTCHES, PENCIL, SCAN, TERMINAL};
@@ -52,6 +53,29 @@ const BRIDGE_CONN_LINE_EDIT_MODAL: &'static str = "bridge_conn_line_edit_modal";
 /// Identifier for [`Modal`] to scan bridge line from QR code.
 const SCAN_BRIDGE_CONN_LINE_MODAL: &'static str = "scan_bridge_conn_line_modal";
 
+impl Default for TorSettingsContent {
+    fn default() -> Self {
+        // Setup Tor bridge binary path edit text.
+        let bridge = TorConfig::get_bridge();
+        let (bin_path, conn_line) = if let Some(b) = bridge {
+            (b.binary_path(), b.connection_line())
+        } else {
+            ("".to_string(), "".to_string())
+        };
+        Self {
+            settings_changed: false,
+            proxy_url_edit: "".to_string(),
+            proxy_url_error: false,
+            bridge_bin_path_edit: bin_path,
+            bridge_bin_pick_file: FilePickContent::new(
+                FilePickContentType::ItemButton(View::item_rounding(0, 1, true))
+            ).no_parse(),
+            bridge_conn_line_edit: conn_line,
+            bridge_qr_scan_content: None,
+        }
+    }
+}
+
 impl ContentContainer for TorSettingsContent {
     fn modal_ids(&self) -> Vec<&'static str> {
         vec![
@@ -71,11 +95,13 @@ impl ContentContainer for TorSettingsContent {
                 if let Some(content) = self.bridge_qr_scan_content.as_mut() {
                     let mut close = false;
                     content.modal_ui(ui, cb, |res| {
-                        let line = res.text();
                         // Save connection line after scanning.
+                        let line = res.text();
                         let bridge = TorConfig::get_bridge().unwrap();
-                        TorBridge::save_bridge_conn_line(&bridge, line);
-                        self.settings_changed = true;
+                        if bridge.connection_line() != line {
+                            TorBridge::save_bridge_conn_line(&bridge, line);
+                            self.settings_changed = true;
+                        }
                         close = true;
                     });
                     if close {
@@ -155,7 +181,7 @@ impl ContentContainer for TorSettingsContent {
                 let value = if bridge.is_some() {
                     None
                 } else {
-                    let default_bridge = TorConfig::get_obfs4();
+                    let default_bridge = TorConfig::get_webtunnel();
                     self.bridge_bin_path_edit = default_bridge.binary_path();
                     self.bridge_conn_line_edit = default_bridge.connection_line();
                     Some(default_bridge)
@@ -165,70 +191,58 @@ impl ContentContainer for TorSettingsContent {
             });
         });
 
-        // Draw bridges selection and path.
         if bridge.is_some() {
-            let current_bridge = bridge.unwrap();
-            let mut bridge = current_bridge.clone();
-
             ui.add_space(6.0);
-            ui.columns(2, |columns| {
-                columns[0].vertical_centered(|ui| {
-                    // Show Obfs4 bridge selector.
-                    let obfs4 = TorConfig::get_obfs4();
-                    let name = obfs4.protocol_name().to_uppercase();
-                    View::radio_value(ui, &mut bridge, obfs4, name);
+            // Show bridge selection for non-Android.
+            let is_android = OperatingSystem::from_target_os() == OperatingSystem::Android;
+            if !is_android {
+                let current_bridge = bridge.unwrap();
+                let mut bridge = current_bridge.clone();
+
+                ui.columns(2, |columns| {
+                    columns[0].vertical_centered(|ui| {
+                        // Show Webtunnel bridge selector.
+                        let webtunnel = TorConfig::get_webtunnel();
+                        let name = webtunnel.protocol_name().to_uppercase();
+                        View::radio_value(ui, &mut bridge, webtunnel, name);
+
+                    });
+                    columns[1].vertical_centered(|ui| {
+                        // Show Obfs4 bridge selector.
+                        let obfs4 = TorConfig::get_obfs4();
+                        let name = obfs4.protocol_name().to_uppercase();
+                        View::radio_value(ui, &mut bridge, obfs4, name);
+                    });
                 });
-                columns[1].vertical_centered(|ui| {
+                ui.add_space(10.0);
+                ui.vertical_centered(|ui| {
                     // Show Snowflake bridge selector.
                     let snowflake = TorConfig::get_snowflake();
                     let name = snowflake.protocol_name().to_uppercase();
                     View::radio_value(ui, &mut bridge, snowflake, name);
                 });
-            });
-            ui.add_space(14.0);
+                ui.add_space(16.0);
 
-            // Check if bridge type was changed to save.
-            if current_bridge != bridge {
-                TorConfig::save_bridge(Some(bridge.clone()));
-                self.bridge_bin_path_edit = bridge.binary_path();
-                self.bridge_conn_line_edit = bridge.connection_line();
-                self.settings_changed = true;
+                // Check if bridge type was changed to save.
+                if current_bridge != bridge {
+                    TorConfig::save_bridge(Some(bridge.clone()));
+                    self.bridge_bin_path_edit = bridge.binary_path();
+                    self.bridge_conn_line_edit = bridge.connection_line();
+                    self.settings_changed = true;
+                }
             }
 
             if let Some(br) = TorConfig::get_bridge().as_ref() {
-                // Show bridge binary setup.
-                self.bridge_bin_ui(ui, br, cb);
-
-                ui.add_space(10.0);
-
+                // Show bridge binary setup for non-Android.
+                if !is_android {
+                    self.bridge_bin_ui(ui, br, cb);
+                    ui.add_space(10.0);
+                }
                 // Show bridge connection line setup.
                 self.bridge_conn_line_ui(ui, br, cb);
             }
 
             ui.add_space(8.0);
-        }
-    }
-}
-
-impl Default for TorSettingsContent {
-    fn default() -> Self {
-        // Setup Tor bridge binary path edit text.
-        let bridge = TorConfig::get_bridge();
-        let (bin_path, conn_line) = if let Some(b) = bridge {
-            (b.binary_path(), b.connection_line())
-        } else {
-            ("".to_string(), "".to_string())
-        };
-        Self {
-            settings_changed: false,
-            proxy_url_edit: "".to_string(),
-            proxy_url_error: false,
-            bridge_bin_path_edit: bin_path,
-            bridge_bin_pick_file: FilePickContent::new(
-                FilePickContentType::ItemButton(View::item_rounding(0, 1, true))
-            ).no_parse(),
-            bridge_conn_line_edit: conn_line,
-            bridge_qr_scan_content: None,
         }
     }
 }
@@ -363,8 +377,10 @@ impl TorSettingsContent {
 
         ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
             self.bridge_bin_pick_file.ui(ui, cb, |path| {
-                TorBridge::save_bridge_bin_path(bridge, path);
-                self.settings_changed = true;
+                if bridge.binary_path() != path {
+                    TorBridge::save_bridge_bin_path(bridge, path);
+                    self.settings_changed = true;
+                }
             });
             View::item_button(ui, View::item_rounding(1, 3, true), PENCIL, None, || {
                 self.bridge_bin_path_edit = bridge.binary_path();
@@ -396,7 +412,10 @@ impl TorSettingsContent {
     fn bridge_bin_edit_modal_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         let on_save = |c: &mut TorSettingsContent| {
             let bridge = TorConfig::get_bridge().unwrap();
-            TorBridge::save_bridge_bin_path(&bridge, c.bridge_bin_path_edit.clone());
+            if bridge.binary_path() != c.bridge_bin_path_edit {
+                TorBridge::save_bridge_bin_path(&bridge, c.bridge_bin_path_edit.clone());
+                c.settings_changed = true;
+            }
             Modal::close();
         };
 
@@ -502,7 +521,10 @@ impl TorSettingsContent {
     fn bridge_conn_line_edit_modal_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         let on_save = |c: &mut TorSettingsContent| {
             let bridge = TorConfig::get_bridge().unwrap();
-            TorBridge::save_bridge_conn_line(&bridge, c.bridge_conn_line_edit.clone());
+            if bridge.connection_line() != c.bridge_conn_line_edit {
+                TorBridge::save_bridge_conn_line(&bridge, c.bridge_conn_line_edit.clone());
+                c.settings_changed = true;
+            }
             Modal::close();
         };
 

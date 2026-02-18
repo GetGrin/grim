@@ -4,4 +4,8 @@
 [submodule "wallet"]
 	path = wallet
 	url = https://code.gri.mw/ardocrat/wallet
-    branch = grim
+	branch = grim
+[submodule "tor/webtunnel"]
+	path = tor/webtunnel
+	url = https://code.gri.mw/WEB/webtunnel
+	branch = grim

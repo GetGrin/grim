@@ -90,6 +90,7 @@ public class MainActivity extends GameActivity {
             Os.setenv("HOME", Objects.requireNonNull(getExternalFilesDir("")).getPath(), true);
             Os.setenv("XDG_CACHE_HOME", Objects.requireNonNull(getExternalCacheDir()).getPath(), true);
             Os.setenv("ARTI_FS_DISABLE_PERMISSION_CHECKS", "true", true);
+            Os.setenv("NATIVE_LIBS_DIR", getApplicationInfo().nativeLibraryDir, true);
         } catch (ErrnoException e) {
             throw new RuntimeException(e);
         }
