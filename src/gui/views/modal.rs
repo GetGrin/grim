@@ -120,7 +120,9 @@ impl Modal {
     /// Return `false` if modal existed in state before call.
     pub fn on_back() -> bool {
         if Self::opened().is_some() {
-            Self::close();
+            if Self::opened_closeable() {
+                Self::close();
+            }
             return false;
         }
         true
@@ -310,7 +312,7 @@ impl Modal {
                 sw: 8.0 as u8,
                 se: 8.0 as u8,
             }
-        }, Colors::fill(), Stroke::NONE, StrokeKind::Middle);
+        }, Colors::fill(), Stroke::NONE, StrokeKind::Outside);
         let bg_idx = ui.painter().add(bg_shape.clone());
 
         rect.min += egui::emath::vec2(6.0, 0.0);
@@ -341,7 +343,7 @@ fn title_ui(title: &String, ui: &mut egui::Ui) {
         ne: 8.0 as u8,
         sw: 0.0 as u8,
         se: 0.0 as u8,
-    }, Colors::yellow(), Stroke::NONE, StrokeKind::Middle);
+    }, Colors::yellow(), Stroke::NONE, StrokeKind::Outside);
     let bg_idx = ui.painter().add(bg_shape.clone());
 
     // Draw title content.

@@ -228,7 +228,7 @@ impl WalletTransactionContent {
         // Draw tx item background.
         let p = ui.painter();
         let r = View::item_rounding(0, 2, false);
-        p.rect(rect, r, Colors::TRANSPARENT, View::item_stroke(), StrokeKind::Middle);
+        p.rect(rect, r, Colors::TRANSPARENT, View::item_stroke(), StrokeKind::Outside);
 
         // Show transaction amount status and time.
         let data = wallet.get_data().unwrap();
@@ -304,7 +304,7 @@ fn info_item_ui(ui: &mut egui::Ui,
     let bg_rect = rect.clone();
     let mut rounding = View::item_rounding(1, 3, false);
 
-    ui.painter().rect(bg_rect, rounding, Colors::fill(), View::item_stroke(), StrokeKind::Middle);
+    ui.painter().rect(bg_rect, rounding, Colors::fill(), View::item_stroke(), StrokeKind::Outside);
 
     ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
         // Draw button to copy transaction info value.

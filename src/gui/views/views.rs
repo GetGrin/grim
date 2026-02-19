@@ -410,7 +410,7 @@ impl View {
             ne: if r[1] { 8.0 as u8 } else { 0.0 as u8 },
             sw: if r[2] { 8.0 as u8 } else { 0.0 as u8 },
             se: if r[3] { 8.0 as u8 } else { 0.0 as u8 },
-        }, Colors::fill_lite(), Self::item_stroke(), StrokeKind::Middle);
+        }, Colors::fill_lite(), Self::item_stroke(), StrokeKind::Outside);
         let bg_idx = ui.painter().add(bg_shape.clone());
 
         // Draw box content.

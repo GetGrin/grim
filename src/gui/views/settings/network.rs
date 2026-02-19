@@ -213,7 +213,7 @@ impl NetworkSettingsContent {
                           item_rounding,
                           Colors::fill(),
                           View::item_stroke(),
-                          StrokeKind::Middle);
+                          StrokeKind::Outside);
 
         ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
             View::item_button(ui, View::item_rounding(0, 1, true), PENCIL, None, || {

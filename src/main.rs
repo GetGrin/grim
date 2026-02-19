@@ -134,8 +134,14 @@ fn start_desktop_gui(platform: grim::gui::platform::Desktop) {
         .with_transparent(true)
         .with_decorations(is_mac || is_win);
 
+    let renderer = if is_win {
+        eframe::Renderer::Wgpu
+    } else {
+        eframe::Renderer::Glow
+    };
+
     let mut options = eframe::NativeOptions {
-        renderer: eframe::Renderer::Glow,
+        renderer,
         viewport,
         ..Default::default()
     };
@@ -146,7 +152,11 @@ fn start_desktop_gui(platform: grim::gui::platform::Desktop) {
         Ok(_) => {}
         Err(_) => {
             // Start with another renderer on error.
-            options.renderer = eframe::Renderer::Wgpu;
+            if is_win {
+                options.renderer = eframe::Renderer::Glow;
+            } else {
+                options.renderer = eframe::Renderer::Wgpu;
+            }
 
             let app = grim::gui::App::new(platform);
             match grim::start(options, grim::app_creator(app)) {

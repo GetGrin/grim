@@ -539,7 +539,7 @@ impl WalletsContent {
         } else {
             Colors::fill()
         };
-        ui.painter().rect(rect, rounding, bg, View::item_stroke(), StrokeKind::Middle);
+        ui.painter().rect(rect, rounding, bg, View::item_stroke(), StrokeKind::Outside);
 
         ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
             if !wallet.is_open() {
@@ -547,7 +547,7 @@ impl WalletsContent {
                 View::item_button(ui, View::item_rounding(0, 1, true), FOLDER_OPEN, None, || {
                     self.show_opening_modal(wallet, None, cb);
                 });
-                if !wallet.syncing() {
+                if !wallet.is_repairing() {
                     View::item_button(ui, CornerRadius::default(), GLOBE, None, || {
                         self.select_wallet(wallet, None, cb);
                         self.conn_selection_content =
@@ -606,7 +606,7 @@ impl WalletsContent {
                         }
                         ConnectionMethod::External(_, url) => format!("{} {}", GLOBE_SIMPLE, url)
                     };
-                    ui.label(RichText::new(conn_text).size(15.0).color(Colors::gray()));
+                    View::ellipsize_text(ui, conn_text, 15.0, Colors::gray());
                     ui.add_space(3.0);
                 });
             });

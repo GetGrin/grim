@@ -130,7 +130,7 @@ impl ConnectionsContent {
         let mut rect = ui.available_rect_before_wrap();
         rect.set_height(78.0);
         let rounding = View::item_rounding(0, 1, false);
-        ui.painter().rect(rect, rounding, Colors::fill(), View::item_stroke(), StrokeKind::Middle);
+        ui.painter().rect(rect, rounding, Colors::fill(), View::item_stroke(), StrokeKind::Outside);
 
         ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
             // Draw custom button.
@@ -206,7 +206,7 @@ impl ConnectionsContent {
                           item_rounding,
                           Colors::fill(),
                           View::item_stroke(),
-                          StrokeKind::Middle);
+                          StrokeKind::Outside);
 
         ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
             // Draw provided buttons.

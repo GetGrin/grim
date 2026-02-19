@@ -788,7 +788,7 @@ fn peer_item_ui(ui: &mut egui::Ui,
                       item_rounding,
                       Colors::white_or_black(false),
                       View::item_stroke(),
-                      StrokeKind::Middle);
+                      StrokeKind::Outside);
 
     ui.vertical(|ui| {
         ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {

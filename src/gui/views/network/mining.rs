@@ -201,7 +201,7 @@ fn worker_item_ui(ui: &mut egui::Ui, ws: &WorkerStats, rounding: CornerRadius) {
                               rounding,
                               Colors::white_or_black(false),
                               View::item_stroke(),
-                              StrokeKind::Middle);
+                              StrokeKind::Outside);
 
             ui.add_space(2.0);
             ui.horizontal(|ui| {

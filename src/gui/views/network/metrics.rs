@@ -154,7 +154,7 @@ fn block_item_ui(ui: &mut egui::Ui, db: &DiffBlock, rounding: CornerRadius) {
                                   rounding,
                                   Colors::white_or_black(false),
                                   View::item_stroke(),
-                                  StrokeKind::Middle);
+                                  StrokeKind::Outside);
 
                 // Draw block hash.
                 ui.horizontal(|ui| {

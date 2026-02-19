@@ -78,7 +78,7 @@ impl WalletAccountsContent {
                           item_rounding,
                           Colors::fill(),
                           View::item_stroke(),
-                          StrokeKind::Middle);
+                          StrokeKind::Outside);
 
         ui.vertical(|ui| {
             ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {

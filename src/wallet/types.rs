@@ -242,15 +242,13 @@ impl WalletTransaction {
         } else {
             tx.amount_credited - tx.amount_debited
         };
-        let receiver: Option<SlatepackAddress> = {
-            if let Some(proof) = &tx.payment_proof {
-                let onion_addr = OnionV3Address::from_bytes(proof.receiver_address.to_bytes());
-                if let Ok(addr) = SlatepackAddress::try_from(onion_addr) {
-                    Some(addr);
-                }
+        let mut receiver: Option<SlatepackAddress> = None;
+        if let Some(proof) = &tx.payment_proof {
+            let onion_addr = OnionV3Address::from_bytes(proof.receiver_address.to_bytes());
+            if let Ok(addr) = SlatepackAddress::try_from(onion_addr) {
+                receiver = Some(addr);
             }
-            None
-        };
+        }
         let mut t = Self {
             data: tx,
             state: SlateState::Unknown,

@@ -21,7 +21,7 @@ use grin_wallet_libwallet::TxLogEntryType;
 use std::ops::Range;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::gui::icons::{ARCHIVE_BOX, ARROWS_CLOCKWISE, ARROW_CIRCLE_DOWN, ARROW_CIRCLE_UP, CALENDAR_CHECK, DOTS_THREE_CIRCLE, FILE_ARROW_DOWN, FILE_TEXT, GEAR_FINE, PROHIBIT, WARNING, X_CIRCLE};
+use crate::gui::icons::{ARROWS_CLOCKWISE, ARROW_CIRCLE_DOWN, ARROW_CIRCLE_UP, CALENDAR_CHECK, DOTS_THREE_CIRCLE, FILE_ARROW_DOWN, FILE_TEXT, GEAR_FINE, PROHIBIT, WARNING, X_CIRCLE};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::types::{LinePosition, ModalPosition};
 use crate::gui::views::wallets::wallet::types::{WalletContentContainer, GRIN};
@@ -107,7 +107,7 @@ impl WalletTransactionsContent {
                     let empty_text = t!(
                             "wallets.txs_empty",
                             "message" => FILE_ARROW_DOWN,
-                            "transport" => ARCHIVE_BOX,
+                            "transport" => FILE_TEXT,
                             "settings" => GEAR_FINE
                         );
                     ui.label(RichText::new(empty_text)
@@ -126,7 +126,7 @@ impl WalletTransactionsContent {
         let refresh = self.manual_sync.unwrap_or(0) + 1600 > now;
         let refresh_resp = PullToRefresh::new(refresh)
             .id(Id::from("refresh_tx_list").with(config.id))
-            .can_refresh(!refresh && !wallet.syncing())
+            .can_refresh(!refresh && !wallet.syncing() && !txs.is_empty())
             .min_refresh_distance(70.0)
             .scroll_area_ui(ui, |ui| {
                 ScrollArea::vertical()
@@ -166,7 +166,7 @@ impl WalletTransactionsContent {
             // Draw tx item background.
             let mut r = View::item_rounding(index, txs.len(), false);
             let p = ui.painter();
-            p.rect(rect, r, Colors::fill(), View::item_stroke(), StrokeKind::Middle);
+            p.rect(rect, r, Colors::fill(), View::item_stroke(), StrokeKind::Outside);
 
             let tx = txs.get(index).unwrap();
             Self::tx_item_ui(ui, tx, rect, &data, |ui| {
@@ -220,7 +220,7 @@ impl WalletTransactionsContent {
             ne: 0.0 as u8,
             sw: 8.0 as u8,
             se: 8.0 as u8,
-        }, Colors::fill(), View::item_stroke(), StrokeKind::Middle);
+        }, Colors::fill(), View::item_stroke(), StrokeKind::Outside);
         let bg_idx = ui.painter().add(bg.clone());
         let resp = ui.allocate_ui(rect.size(), |ui| {
             ui.vertical_centered_justified(|ui| {

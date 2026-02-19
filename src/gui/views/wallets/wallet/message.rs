@@ -151,6 +151,7 @@ impl MessageInputContent {
                         let scan_text = format!("{} {}", SCAN, t!("scan"));
                         View::button(ui, scan_text, Colors::white_or_black(false), || {
                             self.scan_qr_content = Some(CameraContent::default());
+                            cb.start_camera();
                         });
                     }
                 });

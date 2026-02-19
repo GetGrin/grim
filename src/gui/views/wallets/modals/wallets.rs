@@ -96,7 +96,7 @@ impl WalletsModal {
                           rounding,
                           Colors::fill(),
                           View::hover_stroke(),
-                          StrokeKind::Middle);
+                          StrokeKind::Outside);
 
         ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
             if self.can_open {

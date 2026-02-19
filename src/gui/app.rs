@@ -171,7 +171,7 @@ impl<Platform: PlatformCallbacks> App<Platform> {
                                         CornerRadius::ZERO,
                                         Colors::fill_lite(),
                                         View::default_stroke(),
-                                        StrokeKind::Middle);
+                                        StrokeKind::Outside);
         // Draw content background.
         ui.painter().add(content_bg);
 
@@ -250,7 +250,7 @@ impl<Platform: PlatformCallbacks> App<Platform> {
                 sw: 0.0 as u8,
                 se: 0.0 as u8,
             }
-        }, Colors::yellow_dark(), Stroke::new(1.0, Colors::STROKE), StrokeKind::Middle);
+        }, Colors::yellow_dark(), Stroke::new(1.0, Colors::STROKE), StrokeKind::Outside);
         // Draw title background.
         ui.painter().add(window_title_bg);
 

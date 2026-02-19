@@ -184,7 +184,7 @@ fn peer_item_ui(ui: &mut egui::Ui, peer: &PeerStats, rounding: CornerRadius) {
             ui.add_space(4.0);
 
             // Draw round background.
-            ui.painter().rect(rect, rounding, Colors::fill_lite(), View::item_stroke(), StrokeKind::Middle);
+            ui.painter().rect(rect, rounding, Colors::fill_lite(), View::item_stroke(), StrokeKind::Outside);
 
             // Draw IP address.
             ui.horizontal(|ui| {
