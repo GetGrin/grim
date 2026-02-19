@@ -31,7 +31,7 @@ fn main() {
 
     // Build if Webtunnel binary is empty or not exists.
     let empty = match fs::File::open(&webtunnel_file) {
-        Ok(file) => file.metadata().unwrap().len() != 0,
+        Ok(file) => file.metadata().unwrap().len() == 0,
         Err(_) => true
     };
     let build = !exists || empty;
@@ -51,8 +51,12 @@ fn main() {
             "amd64"
         };
         // Run Webtunnel Go build.
-        if let Ok(out) = Command::new("bash")
-            .arg("./scripts/webtunnel.sh")
+        let mut command = if env::consts::OS == "windows" {
+            Command::new("./scripts/webtunnel.bat")
+        } else {
+            Command::new("bash ./scripts/webtunnel.sh")
+        };
+        if let Ok(out) = command
             .arg(go_os)
             .arg(go_arch)
             .arg(webtunnel_file)
