@@ -94,7 +94,7 @@ impl MessageInputContent {
                 let (text, color) = if self.parse_error {
                     (t!("wallets.parse_slatepack_err"), Colors::red())
                 } else {
-                   (t!("wallets.input_slatepack_desc"), Colors::gray())
+                    (t!("wallets.input_slatepack_desc"), Colors::gray())
                 };
                 ui.label(RichText::new(text).size(16.0).color(color));
             });
@@ -150,6 +150,7 @@ impl MessageInputContent {
                         // Draw button to scan Slatepack message QR code.
                         let scan_text = format!("{} {}", SCAN, t!("scan"));
                         View::button(ui, scan_text, Colors::white_or_black(false), || {
+                            modal.disable_closing();
                             self.scan_qr_content = Some(CameraContent::default());
                             cb.start_camera();
                         });
