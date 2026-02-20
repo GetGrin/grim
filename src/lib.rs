@@ -93,9 +93,8 @@ fn use_dark_theme(platform: &gui::platform::Android) -> bool {
 
 /// [`App`] setup for [`eframe`].
 pub fn app_creator<T: 'static>(app: App<T>) -> eframe::AppCreator<'static>
-    where App<T>: eframe::App, T: PlatformCallbacks {
+where App<T>: eframe::App, T: PlatformCallbacks {
     Box::new(|cc| {
-        setup_fonts(&cc.egui_ctx);
         // Setup images support.
         egui_extras::install_image_loaders(&cc.egui_ctx);
         Ok(Box::new(app))
@@ -180,8 +179,8 @@ pub fn setup_fonts(ctx: &Context) {
             scale: 1.0,
             y_offset_factor: -0.04,
             y_offset: 0.0,
-        }),
-    ));
+        }))
+    );
     fonts
         .families
         .entry(Proportional)
@@ -196,8 +195,8 @@ pub fn setup_fonts(ctx: &Context) {
             scale: 1.0,
             y_offset_factor: -0.08,
             y_offset: 0.0,
-        }),
-    ));
+        }))
+    );
     fonts
         .families
         .entry(Proportional)
@@ -272,7 +271,7 @@ lazy_static! {
     pub static ref INCOMING_DATA: Arc<RwLock<Option<String>>> = Arc::new(RwLock::new(None));
 }
 
-/// Callback from Java code with with passed data.
+/// Callback from Java code with passed data.
 #[allow(dead_code)]
 #[allow(non_snake_case)]
 #[cfg(target_os = "android")]

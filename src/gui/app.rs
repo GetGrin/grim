@@ -60,6 +60,7 @@ impl<Platform: PlatformCallbacks> App<Platform> {
             self.platform.set_context(ctx);
         }
         // Setup visuals.
+        crate::setup_fonts(ctx);
         crate::setup_visuals(ctx);
     }
 
