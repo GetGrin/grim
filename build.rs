@@ -51,16 +51,21 @@ fn main() {
             "amd64"
         };
         // Run Webtunnel Go build.
-        let mut command = if env::consts::OS == "windows" {
+        let output = if env::consts::OS == "windows" {
             Command::new("./scripts/webtunnel.bat")
+                .arg(go_os)
+                .arg(go_arch)
+                .arg(webtunnel_file)
+                .output()
         } else {
-            Command::new("bash ./scripts/webtunnel.sh")
+            Command::new("bash")
+                .arg("./scripts/webtunnel.sh")
+                .arg(go_os)
+                .arg(go_arch)
+                .arg(webtunnel_file)
+                .output()
         };
-        if let Ok(out) = command
-            .arg(go_os)
-            .arg(go_arch)
-            .arg(webtunnel_file)
-            .output() {
+        if let Ok(out) = output {
             if out.status.code().is_none() || out.status.code().unwrap() != 0 {
                 panic!("webtunnel go build failed:\n{:?}", out);
             }
