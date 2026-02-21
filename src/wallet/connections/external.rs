@@ -35,15 +35,17 @@ pub struct ExternalConnection {
 }
 
 /// Default external node URL for main network.
-const DEFAULT_MAIN_URLS: [&'static str; 2] = [
+const DEFAULT_MAIN_URLS: [&'static str; 3] = [
     "https://main.gri.mw",
-    "https://grincoin.org"
+    "https://grincoin.org",
+    "mainnet.grinffindor.org"
 ];
 
 /// Default external node URL for main network.
-const DEFAULT_TEST_URLS: [&'static str; 2] = [
+const DEFAULT_TEST_URLS: [&'static str; 3] = [
     "https://test.gri.mw",
-    "https://testnet.grincoin.org"
+    "https://testnet.grincoin.org",
+    "testnet.grinffindor.org"
 ];
 
 impl ExternalConnection {

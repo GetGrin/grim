@@ -89,6 +89,7 @@ impl Node {
     pub const MAINNET_DNS_SEEDS: &'static[&'static str] = &[
         "main.gri.mw",
         "grincoin.org",
+        "mainnet.grinffindor.org",
         "mainnet.seed.grin.lesceller.com",
         "grinseed.revcore.net",
         "mainnet-seed.grinnode.live",
@@ -100,6 +101,7 @@ impl Node {
     pub const TESTNET_DNS_SEEDS: &'static[&'static str] = &[
         "test.gri.mw",
         "testnet.grincoin.org",
+        "testnet.grinffindor.org",
         "floonet.seed.grin.lesceller.com",
         "grintestseed.revcore.net",
         "testnet.grin.punksec.de",
