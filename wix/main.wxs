@@ -7,7 +7,7 @@
 <?endif ?>
 
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
-    <Product Id="*" Version="0.2.4" UpgradeCode="C19F9B41-CD13-4F0E-B27D-E0EF8CF1CE91" Language="1033" Name="Grim" Manufacturer="Ardocrat">
+    <Product Id="*" Version="0.3.0" UpgradeCode="C19F9B41-CD13-4F0E-B27D-E0EF8CF1CE91" Language="1033" Name="Grim" Manufacturer="Ardocrat">
         <Package Id="FA6823B7-7FB1-49A4-BF64-0442BCD2724B" InstallerVersion="300" Compressed="yes"/>
         <Media Id="1" Cabinet="grim.cab" EmbedCab="yes" />
 
