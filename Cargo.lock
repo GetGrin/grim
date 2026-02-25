@@ -3994,7 +3994,7 @@ dependencies = [
 
 [[package]]
 name = "grim"
-version = "0.3.0-alpha"
+version = "0.3.0"
 dependencies = [
  "android-activity",
  "android_logger",

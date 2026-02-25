@@ -343,48 +343,28 @@ jobs:
 
   windows:
     if: ${{ forgejo.ref_type == 'branch' || needs.version.outputs.exists == 'false' }}
-    runs-on: ubuntu
-    needs: [version, android_libs, linux, macos]
+    runs-on: windows
+    needs: [version]
     steps:
       - uses: actions/checkout@v6
         with:
           submodules: recursive
       - run: mkdir release
-      - name: Restore cargo cache
-        id: cache-cargo-restore
-        uses: actions/cache/restore@v5
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: grim-win-cargo-${{ hashFiles('**/Cargo.lock') }}
-      - name: Setup registry
-        run: |
-          echo -e '[registries.nexus]\nindex = "sparse+${{ secrets.MAVEN_HOST }}/repository/cargo/"\n[registry]\ndefault = "nexus"\n[source.crates-io]\nreplace-with = "nexus"\n[source.nexus]\nregistry = "sparse+${{ secrets.MAVEN_HOST }}/repository/cargo/"' > ~/.cargo/config.toml
       - name: Release Windows x86
         run: |
-          cargo build --release --target x86_64-pc-windows-gnu
-          zip -j grim-${{ needs.version.outputs.v }}-win-x86_64.zip target/x86_64-pc-windows-gnu/release/grim.exe
-          mv grim-${{ needs.version.outputs.v }}-win-x86_64.zip release/
-      - name: Save cargo cache
-        uses: actions/cache/save@v5
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ steps.cache-cargo-restore.outputs.cache-primary-key }}
+          cargo wix -p grim -o grim-${{ needs.version.outputs.v }}-win-x86_64.msi --nocapture
+          mv grim-${{ needs.version.outputs.v }}-win-x86_64.msi release\
+          Compress-Archive -Path target\release\grim.exe -DestinationPath grim-${{ needs.version.outputs.v }}-win-x86_64.zip
+          mv grim-${{ needs.version.outputs.v }}-win-x86_64.zip release\
       - name: Checksum Archive x86
         working-directory: release
-        run: sha256sum grim-${{ needs.version.outputs.v }}-win-x86_64.zip > grim-${{ needs.version.outputs.v }}-win-x86_64-sha256sum.txt
+        run: |
+          certutil -hashfile grim-${{ needs.version.outputs.v }}-win-x86_64.msi SHA256 > grim-${{ needs.version.outputs.v }}-win-x86_64-msi-sha256sum.txt
+          certutil -hashfile grim-${{ needs.version.outputs.v }}-win-x86_64.zip SHA256 > grim-${{ needs.version.outputs.v }}-win-x86_64-sha256sum.txt
       - name: Upload artifacts
         run: |
           tar -czf windows.tar.gz release
+          Remove-Item alias:curl
           curl -v -u ${{ secrets.MAVEN_USER }}:${{ secrets.MAVEN_PASSWORD }} --upload-file windows.tar.gz ${{ secrets.MAVEN_HOST }}/repository/grim-ci-artifacts/${{ forgejo.repository }}/windows.tar.gz
 
   release:
@@ -453,4 +433,5 @@ jobs:
             release/grim-${{ needs.version.outputs.v }}-linux-arm.AppImage
             release/grim-${{ needs.version.outputs.v }}-linux-x86_64.AppImage
             release/grim-${{ needs.version.outputs.v }}-macos.zip
+            release/grim-${{ needs.version.outputs.v }}-win-x86_64.msi
             release/grim-${{ needs.version.outputs.v }}-win-x86_64.zip
