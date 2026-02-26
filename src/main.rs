@@ -134,10 +134,10 @@ fn start_desktop_gui(platform: grim::gui::platform::Desktop) {
         .with_transparent(true)
         .with_decorations(is_mac || is_win);
 
-    let renderer = if is_win {
-        eframe::Renderer::Wgpu
-    } else {
+    let renderer = if is_mac {
         eframe::Renderer::Glow
+    } else {
+        eframe::Renderer::Wgpu
     };
 
     let mut options = eframe::NativeOptions {
@@ -152,10 +152,10 @@ fn start_desktop_gui(platform: grim::gui::platform::Desktop) {
         Ok(_) => {}
         Err(_) => {
             // Start with another renderer on error.
-            if is_win {
-                options.renderer = eframe::Renderer::Glow;
-            } else {
+            if is_mac {
                 options.renderer = eframe::Renderer::Wgpu;
+            } else {
+                options.renderer = eframe::Renderer::Glow;
             }
 
             let app = grim::gui::App::new(platform);
