@@ -27,4 +27,5 @@ jobs:
             grim-${{ github.ref_name }}-linux-arm.AppImage
             grim-${{ github.ref_name }}-linux-x86_64.AppImage
             grim-${{ github.ref_name }}-macos.zip
+            grim-${{ github.ref_name }}-win-x86_64.msi
             grim-${{ github.ref_name }}-win-x86_64.zip
