@@ -66,9 +66,10 @@ impl WalletTransportSettingsContent {
                     // Restart running service or rebuild client.
                     let service_id = &wallet.identifier();
                     if Tor::is_service_running(service_id) {
-                        if let Ok(key) = wallet.get_secret_key() {
-                            let api_port = wallet.foreign_api_port().unwrap();
-                            Tor::restart_service(api_port, key, service_id);
+                        if let Some(key) = wallet.secret_key() {
+                            if let Some(api_port) = wallet.foreign_api_port() {
+                                Tor::restart_service(api_port, key, service_id);
+                            }
                         }
                     } else {
                         Tor::rebuild_client();

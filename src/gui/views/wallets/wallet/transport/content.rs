@@ -126,14 +126,14 @@ impl WalletTransportContent {
 
                 // Draw button to enable/disable Tor listener for current wallet.
                 let service_id = &wallet.identifier();
-                if  !Tor::is_service_starting(service_id) && wallet.foreign_api_port().is_some() {
+                if  !Tor::is_service_starting(service_id) && wallet.foreign_api_port().is_some() &&
+                    wallet.secret_key().is_some() {
                     if !Tor::is_service_running(service_id) {
                         let r = CornerRadius::default();
                         View::item_button(ui, r, POWER, Some(Colors::green()), || {
-                            if let Ok(key) = wallet.get_secret_key() {
-                                let api_port = wallet.foreign_api_port().unwrap();
-                                Tor::start_service(api_port, key, service_id);
-                            }
+                            let api_port = wallet.foreign_api_port().unwrap();
+                            let key = wallet.secret_key().unwrap();
+                            Tor::start_service(api_port, key, service_id);
                         });
                     } else {
                         let r = CornerRadius::default();

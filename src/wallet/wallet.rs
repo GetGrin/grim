@@ -93,6 +93,8 @@ pub struct Wallet {
 
     /// Running wallet foreign API server and port.
     foreign_api_server: Arc<RwLock<Option<(ApiServer, u16)>>>,
+    /// Running wallet foreign API server and port.
+    secret_key: Arc<RwLock<Option<SecretKey>>>,
 
     /// Flag to check if wallet repairing and restoring missing outputs is needed.
     repair_needed: Arc<AtomicBool>,
@@ -126,6 +128,7 @@ impl Wallet {
             slatepack_address: Arc::new(RwLock::new(None)),
             sync_thread: Arc::from(RwLock::new(None)),
             foreign_api_server: Arc::new(RwLock::new(None)),
+            secret_key: Arc::new(RwLock::new(None)),
             reopen: Arc::new(AtomicBool::new(false)),
             is_open: Arc::from(AtomicBool::new(false)),
             closing: Arc::new(AtomicBool::new(false)),
@@ -370,8 +373,14 @@ impl Wallet {
         Ok(w_inst.parent_key_id())
     }
 
-    /// Get wallet [`SecretKey`] for transports.
-    pub fn get_secret_key(&self) -> Result<SecretKey, Error> {
+    /// Get wallet [`SecretKey`] for transport.
+    pub fn secret_key(&self) -> Option<SecretKey> {
+        let r_key = self.secret_key.read();
+        r_key.clone()
+    }
+
+    /// Retrieve wallet [`SecretKey`] for transport.
+    fn get_secret_key(&self) -> Result<SecretKey, Error> {
         let r_inst = self.instance.as_ref().read();
         let instance = r_inst.clone().unwrap();
         let mut w_lock = instance.lock();
@@ -657,6 +666,10 @@ impl Wallet {
         // Clear wallet info.
         let mut w_data = self.data.write();
         *w_data = None;
+
+        // Clear secret key for previous account.
+        let mut w_key = self.secret_key.write();
+        *w_key = None;
 
         // Reset progress values.
         self.info_sync_progress.store(0, Ordering::Relaxed);
@@ -1250,14 +1263,22 @@ fn start_sync(wallet: Wallet) -> Thread {
                     }
                 }
 
+                // Setup secret key if not set.
+                if wallet.secret_key().is_none() {
+                    let mut w_key = wallet.secret_key.write();
+                    if let Ok(key) = wallet.get_secret_key() {
+                        *w_key = Some(key);
+                    }
+                }
+
                 // Start unfailed Tor service if API server is running.
                 let service_id = wallet.identifier();
                 if wallet.auto_start_tor_listener() && api_server_running &&
                     !Tor::is_service_failed(&service_id) {
                     let r_foreign_api = wallet.foreign_api_server.read();
                     let api = r_foreign_api.as_ref().unwrap();
-                    if let Ok(sec_key) = wallet.get_secret_key() {
-                        Tor::start_service(api.1, sec_key, &wallet.identifier());
+                    if let Some(key) = wallet.secret_key() {
+                        Tor::start_service(api.1, key, &wallet.identifier());
                     }
                 }
             }
