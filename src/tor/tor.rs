@@ -348,7 +348,7 @@ impl Tor {
             let runtime = client.runtime();
             runtime
                 .spawn(async move {
-                    const MAX_ERRORS: i32 = 5;
+                    const MAX_ERRORS: i32 = 12;
                     let mut errors_count = 0;
                     loop {
                         // Check if service is running.
@@ -397,8 +397,8 @@ impl Tor {
                                 }
                                 false
                             };
-                            // Check with timeout of 60s.
-                            match tokio::time::timeout(Duration::from_millis(60000), check).await {
+                            // Check with timeout of 20s.
+                            match tokio::time::timeout(Duration::from_millis(20000), check).await {
                                 Ok(resp) => {
                                     match resp {
                                         Ok(_) => {
@@ -416,8 +416,8 @@ impl Tor {
                                             if on_error(&service_id) {
                                                 break;
                                             }
-                                            // Check again after 30s.
-                                            Duration::from_millis(30000)
+                                            // Check again after 5s.
+                                            Duration::from_millis(5000)
                                         }
                                     }
                                 }
