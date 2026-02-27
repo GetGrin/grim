@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::fs;
 use egui::{Align, Id, Layout, RichText, StrokeKind};
 use egui::os::OperatingSystem;
 use url::Url;
@@ -412,6 +413,10 @@ impl TorSettingsContent {
     fn bridge_bin_edit_modal_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         let on_save = |c: &mut TorSettingsContent| {
             let bridge = TorConfig::get_bridge().unwrap();
+            let exists = fs::exists(&c.bridge_bin_path_edit).unwrap_or_default();
+            if !exists {
+                return;
+            }
             if bridge.binary_path() != c.bridge_bin_path_edit {
                 TorBridge::save_bridge_bin_path(&bridge, c.bridge_bin_path_edit.clone());
                 c.settings_changed = true;

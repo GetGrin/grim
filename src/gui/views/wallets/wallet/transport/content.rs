@@ -119,7 +119,12 @@ impl WalletTransportContent {
         ui.vertical(|ui| {
             ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
                 // Show button to show QR code address.
-                View::item_button(ui,  View::item_rounding(1, 2, true), QR_CODE, None, || {
+                let r = if awaiting_balance {
+                    View::item_rounding(1, 3, true)
+                } else {
+                    View::item_rounding(1, 2, true)
+                };
+                View::item_button(ui,  r, QR_CODE, None, || {
                     self.qr_address_content = Some(QrCodeContent::new(addr.clone(), false)
                         .with_max_size(320.0));
                 });

@@ -33,6 +33,9 @@ crash_report_warning: Application closed unexpectedly last time, you can share c
 confirmation: Confirmation
 enter_url: Enter URL
 max_short: MAX
+files_location: Files location
+moving_files: Moving files
+wrong_path_error: Wrong path specified
 wallets:
   await_conf_amount: Awaiting confirmation
   await_fin_amount: Awaiting finalization

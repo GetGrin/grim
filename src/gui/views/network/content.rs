@@ -274,7 +274,7 @@ impl NetworkContent {
         // Setup values for title panel.
         let title_text = self.node_tab_content.get_type().title();
         let subtitle_text = Node::get_sync_status_text();
-        let not_syncing = Node::not_syncing();
+        let not_syncing = Node::not_syncing() && !Node::data_dir_changing();
         let title_content = if show_settings {
             TitleContentType::Title(t!("settings"))
         } else if !show_connections {

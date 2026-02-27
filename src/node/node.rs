@@ -13,7 +13,7 @@
 // limitations under the License.
 
 use std::{fs, thread};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
@@ -59,6 +59,8 @@ pub struct Node {
     exit_after_stop: AtomicBool,
     /// Flag to reset peers data and restart the [`Server`].
     reset_peers: AtomicBool,
+    /// Flag to change data directory and restart the [`Server`].
+    change_data_dir: AtomicBool,
 
     /// An error occurred on [`Server`] start.
     error: Arc<RwLock<Option<Error>>>
@@ -77,6 +79,7 @@ impl Default for Node {
             start_stratum_needed: AtomicBool::new(false),
             error: Arc::new(RwLock::new(None)),
             reset_peers: AtomicBool::new(false),
+            change_data_dir: AtomicBool::new(false),
         }
     }
 }
@@ -187,10 +190,10 @@ impl Node {
 
     /// Check if [`Server`] is not syncing (disabled or just running after synchronization).
     pub fn not_syncing() -> bool {
-        return match Node::get_sync_status() {
+        match Node::get_sync_status() {
             None => true,
             Some(ss) => ss == SyncStatus::NoSync
-        };
+        }
     }
 
     /// Get synchronization status, empty when [`Server`] is not running.
@@ -218,7 +221,7 @@ impl Node {
         let r_err = NODE_STATE.error.read();
         if r_err.is_some() {
             let e = r_err.as_ref().unwrap();
-            // Setup a flag to show an error to clean up data.
+            // Flag setup to show an error to clean up data.
             let store_err = match e {
                 Error::Store(_) => true,
                 Error::Chain(_) => true,
@@ -228,7 +231,7 @@ impl Node {
                 return Some(NodeError::Storage);
             }
 
-            // Setup a flag to show P2P or API server error.
+            // Flag setup to show P2P or API server error.
             let p2p_api_err = match e {
                 Error::P2P(_) => Some(NodeError::P2P),
                 Error::API(_) => Some(NodeError::API),
@@ -238,7 +241,7 @@ impl Node {
                 return p2p_api_err;
             }
 
-            // Setup a flag to show configuration error.
+            // Flag setup to show configuration error.
             let config_err = match e {
                 Error::Configuration(_) => true,
                 _ => false
@@ -282,7 +285,7 @@ impl Node {
                                     NODE_STATE.restart_needed.store(false, Ordering::Relaxed);
                                 }
                                 Err(e) => {
-                                    // Setup an error.
+                                    // Set an error.
                                     {
                                         let mut w_err = NODE_STATE.error.write();
                                         *w_err = Some(e);
@@ -336,7 +339,7 @@ impl Node {
                     }
                 }
                 Err(e) => {
-                    // Setup an error.
+                    // Set an error.
                     {
                         let mut w_err = NODE_STATE.error.write();
                         *w_err = Some(e);
@@ -370,6 +373,48 @@ impl Node {
             let mut w_err = NODE_STATE.error.write();
             *w_err = None;
         }
+    }
+
+    /// Change chain data directory.
+    pub fn change_data_dir(path: String) {
+        if Self::data_dir_changing() || NodeConfig::get_chain_data_path() == path {
+            return;
+        }
+        NODE_STATE.change_data_dir.store(true, Ordering::Relaxed);
+        thread::spawn(move || {
+            let running = Node::is_running();
+            if running {
+                Node::stop(false);
+                // Wait node to stop before moving files.
+                while Node::is_running() {
+                    thread::sleep(Self::STATS_UPDATE_DELAY);
+                }
+            }
+            let cfg_path = NodeConfig::get_chain_data_path();
+            let old = Path::new(cfg_path.as_str());
+            let new = Path::new(path.as_str());
+            if !old.exists() {
+                NodeConfig::save_chain_data_path(path);
+            } else {
+                fs::create_dir_all(&new).unwrap_or_default();
+                if let Ok(_) = fs::rename(old, new) {
+                    NodeConfig::save_chain_data_path(path);
+                } else {
+                    fs::remove_dir_all(old).unwrap();
+                    NodeConfig::save_chain_data_path(path);
+                }
+            }
+            NODE_STATE.change_data_dir.store(false, Ordering::Relaxed);
+            // Restart node after migration.
+            if running && !Node::is_stopping() {
+                Node::start();
+            }
+        });
+    }
+
+    /// Check if chain data directory is changing.
+    pub fn data_dir_changing() -> bool {
+        NODE_STATE.change_data_dir.load(Ordering::Relaxed)
     }
 
     /// Clean-up [`Server`] data if server is not running.
@@ -412,14 +457,16 @@ impl Node {
 
     /// Get synchronization status i18n text.
     pub fn get_sync_status_text() -> String {
+        if Node::data_dir_changing() {
+            return t!("moving_files");
+        }
+
         if Node::is_stopping() {
             return t!("sync_status.shutdown");
         };
-
         if Node::is_starting() {
             return t!("sync_status.initial");
         };
-
         if Node::is_restarting() {
             return t!("sync_status.node_restarting");
         }

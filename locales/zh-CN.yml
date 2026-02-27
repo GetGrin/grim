@@ -33,6 +33,9 @@ crash_report_warning: 上次应用程序意外关闭，您可以报告开发人�
 confirmation: 确认
 enter_url: 输入 URL
 max_short: 最大數量
+files_location: 檔案位置
+moving_files: 檔案移動
+wrong_path_error: 指定錯誤路徑
 wallets:
   await_conf_amount: 等待确认中
   await_fin_amount: 等待确定中

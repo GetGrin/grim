@@ -12,21 +12,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::{Id, RichText};
+use eframe::emath::Align;
+use eframe::epaint::StrokeKind;
+use egui::{Id, Layout, RichText};
 use grin_core::global::ChainTypes;
 
-use crate::gui::icons::{CLOCK_CLOCKWISE, COMPUTER_TOWER, PLUG, POWER, SHIELD, SHIELD_SLASH};
+use crate::gui::icons::{CLOCK_CLOCKWISE, COMPUTER_TOWER, FOLDERS, PENCIL, PLUG, POWER, SHIELD, SHIELD_SLASH};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::network::settings::NetworkSettings;
 use crate::gui::views::network::NetworkContent;
 use crate::gui::views::types::{ContentContainer, ModalPosition};
-use crate::gui::views::{Modal, TextEdit, View};
+use crate::gui::views::{FilePickContent, FilePickContentType, Modal, TextEdit, View};
 use crate::gui::Colors;
 use crate::node::{Node, NodeConfig};
 use crate::AppConfig;
 
 /// Integrated node general setup section content.
 pub struct NodeSetup {
+    /// Data path value value for [`Modal`].
+    data_path_edit: String,
+    /// Button to pick directory for chain data.
+    pick_data_dir: FilePickContent,
+
     /// IP Addresses available at system.
     available_ips: Vec<String>,
 
@@ -45,20 +52,26 @@ pub struct NodeSetup {
     ftl_edit: String,
 }
 
+/// Identifier for chain data path value [`Modal`].
+const DATA_PATH_MODAL: &'static str = "node_data_path";
 /// Identifier for API port value [`Modal`].
-pub const API_PORT_MODAL: &'static str = "api_port";
+const API_PORT_MODAL: &'static str = "node_api_port";
 /// Identifier for API secret value [`Modal`].
-pub const API_SECRET_MODAL: &'static str = "api_secret";
+const API_SECRET_MODAL: &'static str = "node_api_secret";
 /// Identifier for Foreign API secret value [`Modal`].
-pub const FOREIGN_API_SECRET_MODAL: &'static str = "foreign_api_secret";
+const FOREIGN_API_SECRET_MODAL: &'static str = "node_foreign_api_secret";
 /// Identifier for FTL value [`Modal`].
-pub const FTL_MODAL: &'static str = "ftl";
+const FTL_MODAL: &'static str = "node_ftl";
 
 impl Default for NodeSetup {
     fn default() -> Self {
         let (api_ip, api_port) = NodeConfig::get_api_ip_port();
         let is_api_port_available = NodeConfig::is_api_port_available(&api_ip, &api_port);
         Self {
+            data_path_edit: NodeConfig::get_chain_data_path(),
+            pick_data_dir: FilePickContent::new(
+                FilePickContentType::ItemButton(View::item_rounding(0, 1, true))
+            ).no_parse().pick_folder(),
             available_ips: NodeConfig::get_ip_addrs(),
             api_port_edit: api_port,
             api_port_available_edit: is_api_port_available,
@@ -72,6 +85,7 @@ impl Default for NodeSetup {
 impl ContentContainer for NodeSetup {
     fn modal_ids(&self) -> Vec<&'static str> {
         vec![
+            DATA_PATH_MODAL,
             API_PORT_MODAL,
             API_SECRET_MODAL,
             FOREIGN_API_SECRET_MODAL,
@@ -84,6 +98,7 @@ impl ContentContainer for NodeSetup {
                 modal: &Modal,
                 cb: &dyn PlatformCallbacks) {
         match modal.id {
+            DATA_PATH_MODAL => self.data_path_edit_modal_ui(ui, cb),
             API_PORT_MODAL => self.api_port_modal(ui, modal, cb),
             API_SECRET_MODAL => self.secret_modal(ui, modal, cb),
             FOREIGN_API_SECRET_MODAL => self.secret_modal(ui, modal, cb),
@@ -92,7 +107,7 @@ impl ContentContainer for NodeSetup {
         }
     }
 
-    fn container_ui(&mut self, ui: &mut egui::Ui, _: &dyn PlatformCallbacks) {
+    fn container_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         View::sub_title(ui, format!("{} {}", COMPUTER_TOWER, t!("network_settings.server")));
         View::horizontal_line(ui, Colors::stroke());
         ui.add_space(6.0);
@@ -102,7 +117,8 @@ impl ContentContainer for NodeSetup {
         ui.add_space(2.0);
 
         // Show loading indicator or controls to stop/start/restart node.
-        if Node::is_stopping() || Node::is_restarting() || Node::is_starting() {
+        if Node::is_stopping() || Node::is_restarting() || Node::is_starting()
+            || Node::data_dir_changing() {
             ui.vertical_centered(|ui| {
                 ui.add_space(8.0);
                 View::small_loading_spinner(ui);
@@ -153,6 +169,13 @@ impl ContentContainer for NodeSetup {
             }
         });
         ui.add_space(6.0);
+
+        // Show data location selection for Desktop when it already started or turned off.
+        if !Node::is_restarting() && !Node::is_stopping() && !Node::is_starting() &&
+            View::is_desktop() {
+            self.pick_data_dir_ui(ui, cb);
+            ui.add_space(6.0);
+        }
 
         if self.available_ips.is_empty() {
             // Show message when IP addresses are not available on the system.
@@ -212,6 +235,92 @@ impl ContentContainer for NodeSetup {
 }
 
 impl NodeSetup {
+    /// Draw content to change chain data directory.
+    fn pick_data_dir_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
+        // Setup layout size.
+        let mut rect = ui.available_rect_before_wrap();
+        rect.set_height(56.0);
+
+        // Draw round background.
+        let bg_rect = rect.clone();
+        let item_rounding = View::item_rounding(0, 1, false);
+        ui.painter().rect(bg_rect,
+                          item_rounding,
+                          Colors::fill(),
+                          View::item_stroke(),
+                          StrokeKind::Outside);
+
+        ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
+            self.pick_data_dir.ui(ui, cb, |path| {
+                Node::change_data_dir(path);
+            });
+            View::item_button(ui, View::item_rounding(1, 3, true), PENCIL, None, || {
+                self.data_path_edit = NodeConfig::get_chain_data_path();
+                // Show chain data path edit modal.
+                Modal::new(DATA_PATH_MODAL)
+                    .position(ModalPosition::CenterTop)
+                    .title(t!("network.node"))
+                    .show();
+            });
+            let layout_size = ui.available_size();
+            ui.allocate_ui_with_layout(layout_size, Layout::left_to_right(Align::Center), |ui| {
+                ui.add_space(12.0);
+                ui.vertical(|ui| {
+                    ui.add_space(4.0);
+                    let path = NodeConfig::get_chain_data_path();
+                    View::ellipsize_text(ui, path, 18.0, Colors::title(false));
+                    ui.add_space(1.0);
+                    let desc = format!("{} {}", FOLDERS, t!("files_location"));
+                    ui.label(RichText::new(desc).size(15.0).color(Colors::gray()));
+                    ui.add_space(8.0);
+                });
+            });
+        });
+    }
+
+    /// Draw data path input [`Modal`] content.
+    fn data_path_edit_modal_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
+        ui.add_space(6.0);
+        ui.vertical_centered(|ui| {
+            let on_save = |path: &String| {
+                Node::change_data_dir(path.clone());
+                Modal::close();
+            };
+            ui.label(RichText::new(format!("{}:", t!("files_location")))
+                .size(17.0)
+                .color(Colors::gray()));
+            ui.add_space(8.0);
+
+            // Draw chain data path text edit.
+            let mut edit = TextEdit::new(Id::from(DATA_PATH_MODAL)).paste();
+            edit.ui(ui, &mut self.data_path_edit, cb);
+            if edit.enter_pressed {
+                on_save(&self.data_path_edit);
+            }
+            ui.add_space(12.0);
+
+            // Show modal buttons.
+            ui.scope(|ui| {
+                // Setup spacing between buttons.
+                ui.spacing_mut().item_spacing = egui::Vec2::new(8.0, 0.0);
+
+                ui.columns(2, |columns| {
+                    columns[0].vertical_centered_justified(|ui| {
+                        View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
+                            Modal::close();
+                        });
+                    });
+                    columns[1].vertical_centered_justified(|ui| {
+                        View::button(ui, t!("modal.save"), Colors::white_or_black(false), || {
+                            on_save(&self.data_path_edit);
+                        });
+                    });
+                });
+                ui.add_space(6.0);
+            });
+        });
+    }
+
     /// Draw [`ChainTypes`] setup content.
     pub fn chain_type_ui(ui: &mut egui::Ui) {
         ui.vertical_centered(|ui| {

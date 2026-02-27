@@ -33,6 +33,9 @@ crash_report_warning: Uygulama beklenmedik bir sekilde kapandi son kez, kilitlen
 confirmation: Onay
 enter_url: URL'yi girin
 max_short: MAKS
+files_location: Dosya konumu
+moving_files: Dosyalari Tasima
+wrong_path_error: Yanlis yol belirtildi
 wallets:
   await_conf_amount: Onay bekleniyor
   await_fin_amount: Tamamlanma bekleniyor

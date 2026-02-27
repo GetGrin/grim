@@ -93,13 +93,16 @@ pub struct Wallet {
 
     /// Running wallet foreign API server and port.
     foreign_api_server: Arc<RwLock<Option<(ApiServer, u16)>>>,
-    /// Running wallet foreign API server and port.
+    /// Wallet secret key for transport service.
     secret_key: Arc<RwLock<Option<SecretKey>>>,
 
     /// Flag to check if wallet repairing and restoring missing outputs is needed.
     repair_needed: Arc<AtomicBool>,
     /// Wallet repair progress in percents.
     repair_progress: Arc<AtomicU8>,
+
+    /// Flag to check if wallet files are moving.
+    files_moving: Arc<AtomicBool>,
 
     /// Flag to check if Slatepack message file is opening.
     message_opening: Arc<AtomicBool>,
@@ -142,6 +145,7 @@ impl Wallet {
             syncing: Arc::new(AtomicBool::new(false)),
             repair_needed: Arc::new(AtomicBool::new(false)),
             repair_progress: Arc::new(AtomicU8::new(0)),
+            files_moving: Arc::new(AtomicBool::new(false)),
             message_opening: Arc::new(AtomicBool::from(false)),
             send_creating: Arc::new(AtomicBool::new(false)),
             fee_calculating: Arc::new(AtomicU8::new(0)),
@@ -190,7 +194,7 @@ impl Wallet {
 
     /// Initialize [`Wallet`] from provided data path.
     pub fn init(data_path: PathBuf) -> Option<Wallet> {
-        let wallet_config = WalletConfig::load(data_path.clone());
+        let wallet_config = WalletConfig::load(data_path);
         if let Some(config) = wallet_config {
             return Some(Wallet::new(config));
         }
@@ -284,7 +288,7 @@ impl Wallet {
         let mut wallet = Box::new(DefaultWalletImpl::<'static, C>::new(node_client).unwrap())
             as Box<dyn WalletInst<'static, L, C, K>>;
         let lc = wallet.lc_provider()?;
-        lc.set_top_level_directory(config.get_wallet_path().as_str())?;
+        lc.set_top_level_directory(config.get_data_path().as_str())?;
         Ok(Arc::new(Mutex::new(wallet)))
     }
 
@@ -1089,26 +1093,71 @@ impl Wallet {
         self.repair_progress.load(Ordering::Relaxed)
     }
 
-    /// Deleting wallet database files.
-    pub fn delete_db(&self, reopen: bool) {
-        let wallet_delete = self.clone();
+    /// Change wallet data path, migrating all files to new directory.
+    pub fn change_data_path(&self, path: String) {
+        let wallet = self.clone();
+        wallet.files_moving.store(true, Ordering::Relaxed);
         // Close wallet if open.
         if self.is_open() {
             self.close();
         }
         thread::spawn(move || {
             // Wait wallet to be closed.
-            if wallet_delete.is_open() {
-                thread::sleep(Duration::from_millis(300));
+            while wallet.is_open() || wallet.syncing() {
+                thread::sleep(Duration::from_millis(100));
+            }
+            // Move wallet db files.
+            if let Some(old_path) = wallet.get_config().data_path {
+                let mut old = PathBuf::from(old_path.as_str());
+                old.push(WalletConfig::DATA_DIR_NAME);
+                let mut new = PathBuf::from(path.as_str());
+                new.push(WalletConfig::DATA_DIR_NAME);
+                if old.exists() {
+                    fs::create_dir_all(&new).unwrap_or_default();
+                    if let Ok(_) = fs::rename(old.as_path(), new.as_path()) {
+                        // Save new path to config.
+                        let mut w_config = wallet.config.write();
+                        w_config.data_path = Some(path);
+                        w_config.save();
+                    }
+                }
+            }
+            wallet.files_moving.store(false, Ordering::Relaxed);
+            // Mark wallet to reopen.
+            if !wallet.is_open() {
+                wallet.set_reopen(true);
+            }
+        });
+    }
+
+    /// Deleting wallet database files.
+    pub fn delete_db(&self) {
+        let wallet = self.clone();
+        wallet.files_moving.store(true, Ordering::Relaxed);
+        // Close wallet if open.
+        if self.is_open() {
+            self.close();
+        }
+        thread::spawn(move || {
+            // Wait wallet to be closed.
+            while wallet.is_open() || wallet.syncing() {
+                thread::sleep(Duration::from_millis(100));
             }
             // Remove wallet db files.
-            let _ = fs::remove_dir_all(wallet_delete.get_config().get_db_path());
-            // Start sync to close thread.
-            wallet_delete.sync();
-            wallet_delete.repair();
+            let _ = fs::remove_dir_all(wallet.get_config().get_db_path());
+            wallet.files_moving.store(false, Ordering::Relaxed);
+            // Mark wallet to repair.
+            wallet.repair();
             // Mark wallet to reopen.
-            wallet_delete.set_reopen(reopen);
+            if !wallet.is_open() {
+                wallet.set_reopen(true);
+            }
         });
+    }
+
+    /// Check if data files are moving.
+    pub fn files_moving(&self) -> bool {
+        self.files_moving.load(Ordering::Relaxed)
     }
 
     /// Get recovery phrase.

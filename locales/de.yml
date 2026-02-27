@@ -33,6 +33,9 @@ crash_report_warning: Anwendung wurde beim letzten Mal unerwartet geschlossen, S
 confirmation: Bestätigung
 enter_url: URL eingeben
 max_short: MAX
+files_location: Dateistandort
+moving_files: Dateien verschieben
+wrong_path_error: Falscher Weg angegeben
 wallets:
   await_conf_amount: Erwarte Bestätigung
   await_fin_amount: Warten auf die Fertigstellung

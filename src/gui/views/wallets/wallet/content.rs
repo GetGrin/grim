@@ -473,7 +473,7 @@ fn sync_ui(ui: &mut egui::Ui, wallet: &Wallet) -> bool {
     if wallet.is_repairing() && !wallet.sync_error() {
         sync_progress_ui(ui, wallet);
         return true;
-    } else if wallet.is_closing() {
+    } else if wallet.is_closing() || wallet.files_moving() {
         sync_progress_ui(ui, wallet);
         return true;
     } else if wallet.get_current_connection() == ConnectionMethod::Integrated {
@@ -539,7 +539,9 @@ fn sync_progress_ui(ui: &mut egui::Ui, wallet: &Wallet) {
                 let int_ready = Node::get_sync_status() == Some(SyncStatus::NoSync);
                 let info_progress = wallet.info_sync_progress();
 
-                if wallet.is_closing() {
+                if wallet.files_moving() {
+                    t!("moving_files")
+                } else if wallet.is_closing() {
                     t!("wallets.wallet_closing")
                 } else if int_node && !int_ready {
                     t!("wallets.node_loading", "settings" => GEAR_FINE)

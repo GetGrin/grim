@@ -194,7 +194,7 @@ impl Content {
     /// Draw exit confirmation modal content.
     fn exit_modal_content(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
         if self.show_exit_progress {
-            if !Node::is_running() {
+            if !Node::is_running() && !Node::data_dir_changing() {
                 self.exit_allowed = true;
                 cb.exit();
                 Modal::close();
@@ -203,7 +203,12 @@ impl Content {
             ui.vertical_centered(|ui| {
                 View::small_loading_spinner(ui);
                 ui.add_space(12.0);
-                ui.label(RichText::new(t!("sync_status.shutdown"))
+                let exit_status_text = if Node::data_dir_changing() {
+                    t!("moving_files")
+                } else {
+                    t!("sync_status.shutdown")
+                };
+                ui.label(RichText::new(exit_status_text)
                     .size(17.0)
                     .color(Colors::text(false)));
             });
@@ -228,7 +233,7 @@ impl Content {
                 });
                 columns[1].vertical_centered_justified(|ui| {
                     View::button_ui(ui, t!("modal_exit.exit"), Colors::white_or_black(false), |_| {
-                        if !Node::is_running() {
+                        if !Node::is_running() && !Node::data_dir_changing() {
                             self.exit_allowed = true;
                             cb.exit();
                             Modal::close();

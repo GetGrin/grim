@@ -304,6 +304,19 @@ impl NodeConfig {
         true
     }
 
+    /// Get chain data path.
+    pub fn get_chain_data_path() -> String {
+        let r_config = Settings::node_config_to_read();
+        r_config.node.server.db_root.clone()
+    }
+
+    /// Save chain data path.
+    pub fn save_chain_data_path(path: String) {
+        let mut w_config = Settings::node_config_to_update();
+        w_config.node.server.db_root = path;
+        w_config.save();
+    }
+
     /// Get stratum server IP address and port.
     pub fn get_stratum_address() -> (String, String) {
         let r_config = Settings::node_config_to_read();

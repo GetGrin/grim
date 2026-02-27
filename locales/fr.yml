@@ -33,6 +33,9 @@ crash_report_warning: L'application s'est fermée de manière inattendue la dern
 confirmation: Confirmation
 enter_url: Entrez l'URL
 max_short: MAX
+files_location: Emplacement du fichier
+moving_files: Déplacer des fichiers
+wrong_path_error: Chemin incorrect spécifié
 wallets:
   await_conf_amount: En attente de confirmation
   await_fin_amount: En attente de finalisation

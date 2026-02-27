@@ -33,6 +33,9 @@ crash_report_warning: В прошлый раз приложение неожид
 confirmation: Подтверждение
 enter_url: Введите URL-адрес
 max_short: МАКС
+files_location: Расположение файлов
+moving_files: Перемещение файлов
+wrong_path_error: Указан неправильный путь
 wallets:
   await_conf_amount: Ожидает подтверждения
   await_fin_amount: Ожидает завершения

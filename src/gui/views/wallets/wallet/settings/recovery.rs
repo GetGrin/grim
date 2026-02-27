@@ -107,7 +107,7 @@ impl WalletContentContainer for RecoverySettings {
                                       format!("{} {}", LIFEBUOY, t!("wallets.recover")),
                                       Colors::green(),
                                       Colors::white_or_black(false), || {
-                    wallet.delete_db(true);
+                    wallet.delete_db();
                 });
             ui.add_space(6.0);
             ui.label(RichText::new(t!("wallets.restore_wallet_desc"))

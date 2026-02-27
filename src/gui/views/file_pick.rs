@@ -39,6 +39,8 @@ pub struct FilePickContent {
     /// Flag to check if file is picking.
     file_picking: Arc<AtomicBool>,
 
+    /// Flag to check if folder should be picked.
+    pick_folder: bool,
     /// Flag to parse file content after pick.
     parse_file: bool,
     /// Flag to check if file is parsing.
@@ -54,10 +56,17 @@ impl FilePickContent {
             content_type,
             active: false,
             file_picking: Arc::new(AtomicBool::new(false)),
+            pick_folder: false,
             parse_file: true,
             file_parsing: Arc::new(AtomicBool::new(false)),
             file_parsing_result: Arc::new(RwLock::new(None)),
         }
+    }
+
+    /// Pick folder.
+    pub fn pick_folder(mut self) -> Self {
+        self.pick_folder = true;
+        self
     }
 
     /// Do not parse file content.
@@ -79,7 +88,11 @@ impl FilePickContent {
             if let Some(path) = cb.picked_file() {
                 self.file_picking.store(false, Ordering::Relaxed);
                 if !path.is_empty() {
-                    self.on_file_pick(path);
+                    if self.parse_file {
+                        self.parse_file(path);
+                    } else {
+                        pick(path);
+                    }
                 }
             }
         } else if self.file_parsing.load(Ordering::Relaxed) {
@@ -106,29 +119,15 @@ impl FilePickContent {
             match self.content_type {
                 FilePickContentType::Button => {
                     let text = format!("{} {}", ARCHIVE_BOX, t!("choose_file"));
-                    View::colored_text_button(ui,
-                                              text,
-                                              Colors::blue(),
-                                              Colors::white_or_black(false),
-                                              || {
-                                                  if let Some(path) = cb.pick_file() {
-                                                      if !self.parse_file {
-                                                          pick(path);
-                                                          return;
-                                                      }
-                                                      self.on_file_pick(path);
-                                                  }
-                                              });
+                    let text_color = Colors::blue();
+                    let fill = Colors::white_or_black(false);
+                    View::colored_text_button(ui, text, text_color, fill, || {
+                        self.on_file_pick(pick, cb);
+                    });
                 }
                 FilePickContentType::ItemButton(r) => {
                     View::item_button(ui, r, ARCHIVE_BOX, Some(Colors::blue()), || {
-                        if let Some(path) = cb.pick_file() {
-                            if !self.parse_file {
-                                pick(path);
-                                return;
-                            }
-                            self.on_file_pick(path);
-                        }
+                        self.on_file_pick(pick, cb);
                     });
                 }
                 FilePickContentType::Tab => {
@@ -138,30 +137,39 @@ impl FilePickContent {
                         false => None
                     };
                     View::tab_button(ui, ARCHIVE_BOX, Some(Colors::blue()), active, |_| {
-                        if let Some(path) = cb.pick_file() {
-                            if !self.parse_file {
-                                pick(path);
-                                return;
-                            }
-                            self.on_file_pick(path);
-                        }
+                        self.on_file_pick(pick, cb);
                     });
                 }
             }
         }
     }
 
-    /// Handle picked file path.
-    fn on_file_pick(&self, path: String) {
+    /// Handle pick file request.
+    fn on_file_pick(&self, on_pick: impl FnOnce(String), cb: &dyn PlatformCallbacks) {
+        let path = if self.pick_folder {
+            cb.pick_folder()
+        } else {
+            cb.pick_file()
+        };
+        if path.is_none() {
+            return;
+        }
+        let path = path.unwrap();
         // Wait for asynchronous file pick result if path is empty.
         if path.is_empty() {
             self.file_picking.store(true, Ordering::Relaxed);
             return;
         }
-        // Do not parse result.
-        if !self.parse_file {
-            return;
+        // Parse result if needed.
+        if self.parse_file {
+            self.parse_file(path);
+        } else {
+            on_pick(path);
         }
+    }
+
+    /// Handle picked file path.
+    fn parse_file(&self, path: String) {
         self.file_parsing.store(true, Ordering::Relaxed);
         let result = self.file_parsing_result.clone();
         thread::spawn(move || {

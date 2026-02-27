@@ -542,7 +542,7 @@ impl WalletsContent {
         ui.painter().rect(rect, rounding, bg, View::item_stroke(), StrokeKind::Outside);
 
         ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
-            if !wallet.is_open() {
+            if !wallet.is_open() && !wallet.files_moving() {
                 // Show button to open closed wallet.
                 View::item_button(ui, View::item_rounding(0, 1, true), FOLDER_OPEN, None, || {
                     self.show_opening_modal(wallet, None, cb);

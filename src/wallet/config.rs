@@ -48,14 +48,18 @@ pub struct WalletConfig {
     pub api_port: Option<u16>,
     /// Delay in blocks before another transaction broadcasting attempt.
     pub tx_broadcast_timeout: Option<u64>,
+
+    /// Wallet data directory path.
+    pub data_path: Option<String>,
+
+    /// Config version.
+    ver: Option<i32>
 }
 
 /// Base wallets directory name.
 const BASE_DIR_NAME: &'static str = "wallets";
 /// Base wallets directory name.
 const DB_DIR_NAME: &'static str = "db";
-/// Wallet data directory name.
-const DATA_DIR_NAME: &'static str = "wallet_data";
 /// Wallet configuration file name.
 const CONFIG_FILE_NAME: &'static str = "grim-wallet.toml";
 /// Slatepacks directory name.
@@ -66,7 +70,12 @@ const SEED_FILE: &str = "wallet.seed";
 /// Default value of minimal amount of confirmations.
 const MIN_CONFIRMATIONS_DEFAULT: u64 = 10;
 
+const WALLET_CONFIG_VERSION: i32 = 1;
+
 impl WalletConfig {
+    /// Wallet data directory name.
+    pub const DATA_DIR_NAME: &'static str = "wallet_data";
+
     /// Default account name value.
     pub const DEFAULT_ACCOUNT_LABEL: &'static str = "default";
 
@@ -94,6 +103,8 @@ impl WalletConfig {
             enable_tor_listener: Some(false),
             api_port: Some(rand::rng().random_range(10000..30000)),
             tx_broadcast_timeout: Some(Self::BROADCASTING_TIMEOUT_DEFAULT),
+            data_path: Some(Self::wallet_path(id.to_string())),
+            ver: Some(WALLET_CONFIG_VERSION),
         };
         Settings::write_to_file(&config, config_path);
         config
@@ -103,7 +114,8 @@ impl WalletConfig {
     pub fn load(wallet_dir: PathBuf) -> Option<WalletConfig> {
         let mut config_path: PathBuf = wallet_dir.clone();
         config_path.push(CONFIG_FILE_NAME);
-        if let Ok(config) = Settings::read_from_file::<WalletConfig>(config_path) {
+        if let Ok(mut config) = Settings::read_from_file::<WalletConfig>(config_path) {
+            config.migrate();
             return Some(config)
         }
         None
@@ -169,24 +181,32 @@ impl WalletConfig {
         config_path
     }
 
-    /// Get current wallet path.
-    pub fn get_wallet_path(&self) -> String {
+    /// Get wallet path from provided identifier.
+    fn wallet_path(id: String) -> String {
         let chain_type = AppConfig::chain_type();
         let mut data_path = Self::get_base_path(chain_type);
-        data_path.push(self.id.to_string());
+        data_path.push(id);
         data_path.to_str().unwrap().to_string()
+    }
+
+    /// Get current wallet path.
+    pub fn get_wallet_path(&self) -> String {
+        Self::wallet_path(self.id.to_string())
     }
 
     /// Get wallet data path.
     pub fn get_data_path(&self) -> String {
-        let mut data_path = PathBuf::from(self.get_wallet_path());
-        data_path.push(DATA_DIR_NAME);
-        data_path.to_str().unwrap().to_string()
+        if let Some(path) = &self.data_path {
+            path.clone()
+        } else {
+            self.get_wallet_path()
+        }
     }
 
     /// Get wallet seed path.
     pub fn seed_path(&self) -> String {
         let mut path = PathBuf::from(self.get_data_path());
+        path.push(Self::DATA_DIR_NAME);
         path.push(SEED_FILE);
         path.to_str().unwrap().to_string()
     }
@@ -194,13 +214,15 @@ impl WalletConfig {
     /// Get wallet database data path.
     pub fn get_db_path(&self) -> String {
         let mut path = PathBuf::from(self.get_data_path());
+        path.push(Self::DATA_DIR_NAME);
         path.push(DB_DIR_NAME);
         path.to_str().unwrap().to_string()
     }
 
     /// Get Slatepack file path for transaction.
     pub fn get_tx_slate_path(&self, tx: &WalletTransaction) -> PathBuf {
-        let mut path = PathBuf::from(self.get_wallet_path());
+        let mut path = PathBuf::from(self.get_data_path());
+        path.push(Self::DATA_DIR_NAME);
         path.push(SLATEPACKS_DIR_NAME);
         if !path.exists() {
             let _ = fs::create_dir_all(path.clone());
@@ -212,7 +234,8 @@ impl WalletConfig {
 
     /// Get Slatepack file path for Slate.
     pub fn get_slate_path(&self, slate: &Slate) -> PathBuf {
-        let mut path = PathBuf::from(self.get_wallet_path());
+        let mut path = PathBuf::from(self.get_data_path());
+        path.push(Self::DATA_DIR_NAME);
         path.push(SLATEPACKS_DIR_NAME);
         if !path.exists() {
             let _ = fs::create_dir_all(path.clone());
@@ -230,5 +253,29 @@ impl WalletConfig {
             let _ = fs::create_dir_all(path.clone());
         }
         path.to_str().unwrap().to_string()
+    }
+
+    /// Check config version to migrate if needed.
+    fn migrate(&mut self) {
+        match self.ver {
+            None => {
+                // Migrate Slatepack data.
+                let mut old_slate_path = PathBuf::from(self.get_wallet_path());
+                old_slate_path.push(SLATEPACKS_DIR_NAME);
+                if old_slate_path.exists() {
+                    let mut new_slate_path = PathBuf::from(self.get_data_path());
+                    new_slate_path.push(SLATEPACKS_DIR_NAME);
+                    let _ = fs::rename(&old_slate_path, &new_slate_path);
+                }
+                // Write data path to config.
+                if self.data_path.is_none() {
+                    self.data_path = Some(self.get_wallet_path());
+                }
+                // Migrate to 1st version.
+                self.ver = Some(1);
+            }
+            Some(_) => {}
+        }
+        self.save();
     }
 }
