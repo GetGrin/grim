@@ -155,7 +155,12 @@ impl CommonSettings {
                           StrokeKind::Outside);
 
         ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
-            View::item_button(ui, View::item_rounding(0, 2, true), PASSWORD, None, || {
+            let r = if View::is_desktop() {
+                View::item_rounding(0, 2, true)
+            } else {
+                View::item_rounding(0, 1, true)
+            };
+            View::item_button(ui, r, PASSWORD, None, || {
                 self.old_pass_edit = "".to_string();
                 self.new_pass_edit = "".to_string();
                 self.wrong_pass = false;
