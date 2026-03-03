@@ -135,6 +135,10 @@ wallets:
   rec_phrase_not_found: Sifre kelime bulunmuyor
   restore_wallet_desc: Cuzdani restore et
   fee_base_desc: 'Ücret (taban değeri%{value}):'
+  payment_proof: Ödeme kaniti
+  payment_proof_desc: 'Islemi doğrulamak için alinan ödeme kanitini girin:'
+  payment_proof_valid: 'Girilen ödeme kaniti geçerlidir:'
+  payment_proof_error: 'Girilen ödeme kaniti geçerli değildir:'
 transport:
   desc: 'Adresten senkronize GONDER veya AL:'
   tor_network: Tor network

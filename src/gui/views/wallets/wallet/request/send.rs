@@ -63,8 +63,13 @@ impl SendRequestContent {
     /// Setup maximum amount to send and fee.
     pub fn on_max_amount_calculated(&mut self, amount: u64, fee: u64) {
         self.max_calculating = false;
-        self.amount_edit = amount_to_hr_string(amount, true);
-        self.fee_edit = amount_to_hr_string(fee, true);
+        if amount == 0 {
+            self.amount_edit = "".to_string();
+            self.fee_edit = "".to_string();
+        } else {
+            self.amount_edit = amount_to_hr_string(amount, true);
+            self.fee_edit = amount_to_hr_string(fee, true);
+        }
     }
 
     /// Draw [`Modal`] content.

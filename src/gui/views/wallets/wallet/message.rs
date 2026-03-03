@@ -15,10 +15,11 @@
 use egui::scroll_area::ScrollBarVisibility;
 use egui::{Id, RichText, ScrollArea};
 
-use crate::gui::icons::{BROOM, CLIPBOARD_TEXT, SCAN};
+use crate::gui::icons::{BROOM, CLIPBOARD_TEXT, SCAN, SEAL_CHECK};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{CameraContent, FilePickContent, FilePickContentType, Modal, View};
 use crate::gui::Colors;
+use crate::gui::views::wallets::wallet::proof::PaymentProofContent;
 use crate::wallet::types::WalletTask;
 use crate::wallet::Wallet;
 
@@ -27,12 +28,13 @@ pub struct MessageInputContent {
     message_edit: String,
     /// Flag to check if error happened at Slatepack message parsing.
     parse_error: bool,
-
     /// QR code scanner content.
     scan_qr_content: Option<CameraContent>,
-
     /// Button to parse picked file content.
     file_pick_button: FilePickContent,
+
+    /// Payment proof input content.
+    pub proof_content: Option<PaymentProofContent>,
 }
 
 /// Hint for Slatepack message input.
@@ -45,6 +47,7 @@ impl Default for MessageInputContent {
             parse_error: false,
             scan_qr_content: None,
             file_pick_button: FilePickContent::new(FilePickContentType::Button),
+            proof_content: None,
         }
     }
 }
@@ -88,6 +91,19 @@ impl MessageInputContent {
                     });
                 });
             });
+        } else if let Some(proof_content) = self.proof_content.as_mut() {
+            proof_content.input_ui(ui, wallet, cb);
+            ui.add_space(8.0);
+            View::horizontal_line(ui, Colors::item_stroke());
+            ui.add_space(8.0);
+
+            // Show button to close modal.
+            ui.vertical_centered_justified(|ui| {
+                View::button(ui, t!("close"), Colors::white_or_black(false), || {
+                    self.message_edit = "".to_string();
+                    Modal::close();
+                });
+            });
         } else {
             ui.add_space(6.0);
             ui.vertical_centered(|ui| {
@@ -114,14 +130,18 @@ impl MessageInputContent {
                     .show(ui, |ui| {
                         ui.add_space(7.0);
                         let input_id = scroll_id.with("_input");
-                        egui::TextEdit::multiline(&mut self.message_edit)
+                        let resp = egui::TextEdit::multiline(&mut self.message_edit)
                             .id(input_id)
                             .font(egui::TextStyle::Small)
                             .desired_rows(5)
                             .interactive(true)
                             .hint_text(SLATEPACK_MESSAGE_HINT)
                             .desired_width(f32::INFINITY)
-                            .show(ui).response;
+                            .show(ui)
+                            .response;
+                        if View::is_desktop() {
+                            resp.request_focus();
+                        }
                         ui.add_space(6.0);
                     });
             });
@@ -177,6 +197,20 @@ impl MessageInputContent {
                 }
             });
 
+            ui.add_space(8.0);
+            View::horizontal_line(ui, Colors::item_stroke());
+            ui.add_space(8.0);
+
+            ui.vertical_centered(|ui| {
+                let proof_label = format!("{} {}", SEAL_CHECK, t!("wallets.payment_proof"));
+                View::colored_text_button(ui,
+                                          proof_label,
+                                          Colors::gold_dark(),
+                                          Colors::white_or_black(false), || {
+                        Modal::set_title(t!("wallets.payment_proof"));
+                        self.proof_content = Some(PaymentProofContent::new(None));
+                    });
+            });
             ui.add_space(8.0);
             View::horizontal_line(ui, Colors::item_stroke());
             ui.add_space(8.0);

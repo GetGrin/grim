@@ -398,7 +398,6 @@ impl NodeConfig {
             .unwrap()
             .wallet_listener_url = id.to_string();
         w_config.save();
-        println!()
     }
 
     /// Get the amount of time in seconds to attempt to mine on a particular header.

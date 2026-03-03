@@ -85,7 +85,6 @@ wallets:
   tx_sent: 已发送
   tx_received: 已接收
   tx_sending: 发送中
-  tx_sending_tor: 通过 Tor 发送
   tx_receiving: 接收中
   tx_confirming: 等待确认
   tx_canceled: 已取消
@@ -136,6 +135,10 @@ wallets:
   rec_phrase_not_found: 找不到恢复助记词.
   restore_wallet_desc: 如果常规修复没有帮助，通过删除所有文件来恢复钱包.您将需要重新打开您的钱包.
   fee_base_desc: '费用 (基值%{value}):'
+  payment_proof: 付款證明
+  payment_proof_desc: '輸入已收款證明以驗證交易:'
+  payment_proof_valid: '輸入的付款證明有效:'
+  payment_proof_error: '輸入的付款證明無效:'
 transport:
   desc: '使用传输同步接收或发送消息:'
   tor_network: Tor 网络
@@ -148,6 +151,7 @@ transport:
   incorrect_addr_err: '输入的地址不正确:'
   tor_send_error: 通过 Tor 发送时出错，请确保接收方在线, 交易已取消.
   tor_autorun_desc: 是否在开钱包时启动 Tor 服务以同步接收交易.
+  tor_sending: 通过 Tor 发送
   tor_settings: Tor 设置
   bridges: 桥梁
   bridges_desc: 如果常规连接不正常，设置网桥，可以绕过 Tor 网络审查.

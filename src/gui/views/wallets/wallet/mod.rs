@@ -27,3 +27,4 @@ mod account;
 mod transport;
 mod request;
 mod message;
+mod proof;

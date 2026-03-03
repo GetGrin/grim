@@ -15,7 +15,7 @@
 use grin_keychain::ExtKeychain;
 use grin_util::Mutex;
 use grin_wallet_impls::{DefaultLCProvider, HTTPNodeClient};
-use grin_wallet_libwallet::{Error, Slate, SlateState, SlatepackAddress, TxLogEntry, TxLogEntryType, WalletInfo, WalletInst};
+use grin_wallet_libwallet::{Error, PaymentProof, Slate, SlateState, SlatepackAddress, TxLogEntry, TxLogEntryType, WalletInfo, WalletInst};
 use grin_wallet_util::OnionV3Address;
 use serde_derive::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -198,6 +198,19 @@ impl WalletData {
         }
         None
     }
+
+    /// Get transaction by identifier.
+    pub fn tx_by_id(&self, id: u32) -> Option<WalletTransaction> {
+        if self.txs.is_none() {
+            return None;
+        }
+        for tx in self.txs.as_ref().unwrap() {
+            if tx.data.id == id {
+                return Some(tx.clone());
+            }
+        }
+        None
+    }
 }
 
 /// Wallet transaction action.
@@ -213,11 +226,15 @@ pub struct WalletTransaction {
     pub data: TxLogEntry,
     /// State of transaction Slate.
     pub state: SlateState,
+    /// Payment proof.
+    pub(crate) proof: Option<PaymentProof>,
 
     /// Transaction amount without fees.
     pub amount: u64,
     /// Possible receiver of transaction.
     pub receiver: Option<SlatepackAddress>,
+    /// Possible sender of transaction.
+    pub sender: Option<SlatepackAddress>,
     /// Block height where tx was included.
     pub height: Option<u64>,
     /// Block height where tx started broadcasting.
@@ -232,6 +249,7 @@ pub struct WalletTransaction {
 impl WalletTransaction {
     /// Create new wallet transaction.
     pub fn new(tx: TxLogEntry,
+               proof: Option<PaymentProof>,
                wallet: &Wallet,
                height: Option<u64>,
                broadcasting_height: Option<u64>,
@@ -243,17 +261,24 @@ impl WalletTransaction {
             tx.amount_credited - tx.amount_debited
         };
         let mut receiver: Option<SlatepackAddress> = None;
+        let mut sender: Option<SlatepackAddress> = None;
         if let Some(proof) = &tx.payment_proof {
-            let onion_addr = OnionV3Address::from_bytes(proof.receiver_address.to_bytes());
-            if let Ok(addr) = SlatepackAddress::try_from(onion_addr) {
+            let rec_onion_addr = OnionV3Address::from_bytes(proof.receiver_address.to_bytes());
+            if let Ok(addr) = SlatepackAddress::try_from(rec_onion_addr) {
                 receiver = Some(addr);
+            }
+            let send_onion_addr = OnionV3Address::from_bytes(proof.sender_address.to_bytes());
+            if let Ok(addr) = SlatepackAddress::try_from(send_onion_addr) {
+                sender = Some(addr);
             }
         }
         let mut t = Self {
             data: tx,
             state: SlateState::Unknown,
+            proof,
             amount,
             receiver,
+            sender,
             height,
             broadcasting_height,
             action,
@@ -289,10 +314,15 @@ impl WalletTransaction {
                 self.state = slate.state;
             } else {
                 // Transaction just was created.
-                self.state = match tx.tx_type {
+                slate.state = match tx.tx_type {
                     TxLogEntryType::TxReceived => SlateState::Invoice1,
                     _ => SlateState::Standard1
                 };
+                if wallet.slatepack_exists(&slate) {
+                    self.state = slate.state;
+                } else {
+                    self.state = SlateState::Unknown;
+                }
             }
         }
     }
@@ -361,9 +391,8 @@ impl WalletTransaction {
 
     /// Check if possible to repeat transaction action.
     pub fn can_repeat_action(&self) -> bool {
-        if let Some(a) =  &self.action {
-            return self.action_error.is_some() && a != &WalletTransactionAction::SendingTor &&
-                a != &WalletTransactionAction::Cancelling
+        if let Some(a) = &self.action {
+            return self.action_error.is_some() && a != &WalletTransactionAction::Cancelling
         }
         false
     }
@@ -379,6 +408,9 @@ impl WalletTransaction {
             if self.broadcasting() {
                 let last_height = data.info.last_confirmed_height;
                 let broadcasting_height = self.broadcasting_height.unwrap_or(0);
+                if broadcasting_height == 0 {
+                    return false;
+                }
                 let delay = wallet.broadcasting_delay();
                 return last_height - broadcasting_height > delay;
             }
@@ -396,6 +428,10 @@ pub enum WalletTask {
     /// * amount
     /// * fee (to read at result)
     CalculateFee(u64, u64),
+    /// Verify payment proof.
+    /// * payment proof
+    /// * result (tx id, sender mine, receiver mine)
+    VerifyProof(PaymentProof, Option<Result<(u32, bool, bool), Error>>),
     /// Create request to send.
     /// * amount
     /// * receiver
@@ -408,14 +444,12 @@ pub enum WalletTask {
     /// * amount
     Receive(u64),
     /// Transaction finalization.
-    /// * tx
     /// * local tx id
-    Finalize(Option<Slate>, u32),
+    Finalize(u32),
     /// Post transaction to blockchain.
-    /// * tx
     /// * local tx id
-    Post(Option<Slate>, u32),
+    Post(u32),
     /// Cancel transaction.
     /// * tx
-    Cancel(WalletTransaction),
+    Cancel(TxLogEntry),
 }

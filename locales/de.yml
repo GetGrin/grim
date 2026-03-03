@@ -135,6 +135,10 @@ wallets:
   rec_phrase_not_found: Wiederhestellungsphrase nicht gefunden.
   restore_wallet_desc: Stellen Sie das Wallet wieder her, indem Sie alle Dateien löschen. Wenn die normale Reparatur nicht geholfen hat, müssen Sie Ihr Wallet erneut öffnen.
   fee_base_desc: 'Gebühr (basiswert%{value}):'
+  payment_proof: Zahlungsnachweis
+  payment_proof_desc: 'Geben Sie den erhaltenen Zahlungsnachweis ein, um die Transaktion zu verifizieren:'
+  payment_proof_valid: 'Der eingegebene Zahlungsnachweis ist gültig:'
+  payment_proof_error: 'Der eingetragene Zahlungsnachweis ist nicht gültig:'
 transport:
   desc: 'Transport verwenden, um Nachrichten synchron zu empfangen oder zu senden:'
   tor_network: Tor Netzwek

@@ -14,6 +14,8 @@
 
 #![windows_subsystem = "windows"]
 
+use log::error;
+
 pub fn main() {
     #[allow(dead_code)]
     #[cfg(not(target_os = "android"))]
@@ -23,7 +25,6 @@ pub fn main() {
 #[allow(dead_code)]
 #[cfg(not(target_os = "android"))]
 fn real_main() {
-    #[cfg(debug_assertions)]
     env_logger::builder()
         .filter_level(log::LevelFilter::Info)
         .parse_default_env()
@@ -249,7 +250,7 @@ fn start_app_socket(platform: grim::gui::platform::Desktop) {
                 let opts = ListenerOptions::new().name(name);
                 let listener = match opts.create_tokio() {
                     Err(e) if e.kind() == io::ErrorKind::AddrInUse => {
-                        eprintln!("Socket file is occupied.");
+                        error!("Socket file is occupied.");
                         return Err::<Listener, io::Error>(e);
                     }
                     x => x?,
@@ -259,7 +260,7 @@ fn start_app_socket(platform: grim::gui::platform::Desktop) {
                     let conn = match listener.accept().await {
                         Ok(c) => c,
                         Err(e) => {
-                            println!("{:?}", e);
+                            error!("{:?}", e);
                             continue
                         }
                     };

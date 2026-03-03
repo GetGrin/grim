@@ -31,7 +31,7 @@ use crate::gui::Colors;
 /// QR code image from text.
 pub struct QrCodeContent {
     /// QR code text.
-    text: String,
+    pub text: String,
 
     /// Maximum QR code size.
     max_size: f32,

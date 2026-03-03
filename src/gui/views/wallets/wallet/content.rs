@@ -31,6 +31,7 @@ use crate::node::Node;
 use crate::wallet::types::{ConnectionMethod, WalletTask};
 use crate::wallet::{ExternalConnection, Wallet};
 use crate::AppConfig;
+use crate::gui::views::wallets::wallet::proof::PaymentProofContent;
 
 /// Wallet content.
 pub struct WalletContent {
@@ -267,43 +268,7 @@ impl WalletContentContainer for WalletContent {
                     }
 
                     // Handle wallet task result.
-                    if let Some((id, t)) = wallet.consume_task_result() {
-                        match Modal::opened() {
-                            None => {
-                                // Show transaction modal on wallet task result.
-                                if let Some(id) = id {
-                                    let tx = wallet.get_data().unwrap().tx_by_slate_id(id);
-                                    if tx.is_some() {
-                                        self.txs_content = Some(WalletTransactionsContent::new(tx));
-                                        self.settings_content = None;
-                                    }
-                                }
-                            }
-                            Some(modal_id) => {
-                                match modal_id {
-                                    SEND_MODAL_ID => {
-                                        match t {
-                                            WalletTask::CalculateFee(_, f) => {
-                                                // Setup calculated tx fee at modal.
-                                                if let Some(m) = self.send_content.as_mut() {
-                                                    if m.max_calculating {
-                                                        let data = wallet.get_data().unwrap();
-                                                        let a = data.info.amount_currently_spendable;
-                                                        let max = a - f;
-                                                        m.on_max_amount_calculated(max, f);
-                                                    } else {
-                                                        m.on_fee_calculated(f);
-                                                    }
-                                                }
-                                            }
-                                            _ => {}
-                                        }
-                                    }
-                                    _ => {}
-                                }
-                            }
-                        }
-                    }
+                    self.handle_task_result(wallet);
                 }
                 let rect = {
                     let mut r = rect.clone();
@@ -465,6 +430,89 @@ impl WalletContent {
                 });
             });
         });
+    }
+
+    /// Handle wallet task result.
+    fn handle_task_result(&mut self, wallet: &Wallet) {
+        let res = wallet.consume_task_result();
+        if res.is_none() {
+            return;
+        }
+        let (id, t) = res.unwrap();
+        match Modal::opened() {
+            None => {
+                // Show transaction modal on wallet task result.
+                if let Some(id) = id {
+                    let tx = wallet.get_data().unwrap().tx_by_slate_id(id);
+                    if tx.is_some() {
+                        self.txs_content = Some(WalletTransactionsContent::new(tx));
+                        self.settings_content = None;
+                    }
+                }
+            }
+            Some(modal_id) => {
+                match modal_id {
+                    SEND_MODAL_ID => {
+                        match t {
+                            WalletTask::CalculateFee(_, f) => {
+                                // Setup calculated tx fee at modal.
+                                if let Some(m) = self.send_content.as_mut() {
+                                    if m.max_calculating {
+                                        let data = wallet.get_data().unwrap();
+                                        let a = data.info.amount_currently_spendable;
+                                        let max = if f > a {
+                                            0
+                                        } else {
+                                            a - f
+                                        };
+                                        m.on_max_amount_calculated(max, f);
+                                    } else {
+                                        m.on_fee_calculated(f);
+                                    }
+                                }
+                            }
+                            _ => {}
+                        }
+                    }
+                    MESSAGE_MODAL_ID => {
+                        match t {
+                            WalletTask::VerifyProof(proof, res) => {
+                                if let Some(res) = res {
+                                    // Update message content on validation error
+                                    // or when tx not belongs to current wallet.
+                                    if res.is_err() || (!res.as_ref().unwrap().1 &&
+                                        !res.as_ref().unwrap().2) {
+                                        if let Some(m) = self.message_content.as_mut() {
+                                            if let Ok(p) = serde_json::to_string_pretty(&proof) {
+                                                let mut c = PaymentProofContent::new(Some(p));
+                                                c.validation_result = Some(res);
+                                                m.proof_content = Some(c);
+                                            }
+                                        }
+                                    } else if let Ok((id, _, _)) = res {
+                                        let tx = wallet.get_data().unwrap().tx_by_id(id);
+                                        if let Some(tx) = tx {
+                                            let mut tx_c = WalletTransactionsContent::new(Some(tx));
+                                            if let Ok(p) = serde_json::to_string_pretty(&proof) {
+                                                let proof_c = PaymentProofContent::new(Some(p));
+                                                tx_c.tx_info_content
+                                                    .as_mut()
+                                                    .unwrap()
+                                                    .proof_content = Some(proof_c);
+                                                self.txs_content = Some(tx_c);
+                                                self.settings_content = None;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            _ => {}
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
     }
 }
 

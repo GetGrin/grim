@@ -19,8 +19,9 @@ use grin_util::ToHex;
 use grin_wallet_libwallet::TxLogEntryType;
 use std::fs;
 
-use crate::gui::icons::{CIRCLE_HALF, COPY, CUBE, FILE_ARCHIVE, FILE_TEXT, HASH_STRAIGHT, PROHIBIT, QR_CODE};
+use crate::gui::icons::{CIRCLE_HALF, COPY, CUBE, FILE_ARCHIVE, FILE_TEXT, HASH_STRAIGHT, PROHIBIT, QR_CODE, SEAL_CHECK};
 use crate::gui::platform::PlatformCallbacks;
+use crate::gui::views::wallets::wallet::proof::PaymentProofContent;
 use crate::gui::views::wallets::wallet::txs::WalletTransactionsContent;
 use crate::gui::views::{Modal, QrCodeContent, View};
 use crate::gui::Colors;
@@ -36,15 +37,19 @@ pub struct WalletTransactionContent {
 
     /// QR code Slatepack message image content.
     qr_code_content: Option<QrCodeContent>,
+
+    /// Payment proof sharing content.
+    pub proof_content: Option<PaymentProofContent>,
 }
 
 impl WalletTransactionContent {
     /// Create new content instance with [`Wallet`] from provided [`WalletTransaction`].
-    pub fn new(id: u32) -> Self {
+    pub fn new(tx_id: u32) -> Self {
         Self {
-            tx_id: id,
+            tx_id,
             message: None,
             qr_code_content: None,
+            proof_content: None,
         }
     }
 
@@ -92,9 +97,35 @@ impl WalletTransactionContent {
             // Show transaction information.
             self.info_ui(ui, tx, wallet, cb);
 
-            // Show transaction sharing content when can cancel or finalized.
-            if tx.can_cancel() && !tx.finalized() {
+            // Show transaction sharing content or payment proof.
+            if self.proof_content.is_none() && tx.can_cancel() && !tx.finalized() {
                 self.share_ui(ui, wallet, tx, cb);
+            } else {
+                if let Some(proof_content) = self.proof_content.as_mut() {
+                    // Payment proof file name setup.
+                    let file_name = if let Some(slate_id) = tx.data.tx_slate_id {
+                        slate_id.to_string()
+                    } else {
+                        tx.data.id.to_string()
+                    };
+                    // Draw payment proof sharing content.
+                    proof_content.share_ui(ui, file_name, cb);
+                } else if tx.proof.is_some() && !tx.sending_tor() &&
+                    tx.action_error.is_none() {
+                    ui.vertical_centered(|ui| {
+                        ui.add_space(8.0);
+                        let label = format!("{} {}", SEAL_CHECK, t!("wallets.payment_proof"));
+                        let text_color = Colors::gold_dark();
+                        let btn_color = Colors::white_or_black(false);
+                        // Draw button to show payment proof sharing content.
+                        View::colored_text_button(ui, label, text_color, btn_color, || {
+                            if let Ok(p) = serde_json::to_string_pretty(&tx.proof) {
+                                let c = PaymentProofContent::new(Some(p));
+                                self.proof_content = Some(c);
+                            }
+                        });
+                    });
+                }
             }
 
             ui.add_space(8.0);
@@ -125,6 +156,7 @@ impl WalletTransactionContent {
             if m.is_empty() {
                 return;
             }
+
             let amount = amount_to_hr_string(tx.amount, true);
             let desc_text = if tx.can_finalize() {
                 if tx.data.tx_type == TxLogEntryType::TxSent {
@@ -146,7 +178,7 @@ impl WalletTransactionContent {
             ui.add_space(6.0);
 
             let mut message = m.clone();
-            // Draw slatepack message content.
+            // Draw Slatepack message content.
             ui.vertical_centered(|ui| {
                 let scroll_id = Id::from("tx_info_message_request").with(tx.data.id);
                 View::horizontal_line(ui, Colors::item_stroke());
@@ -165,7 +197,7 @@ impl WalletTransactionContent {
                             .desired_rows(5)
                             .interactive(false)
                             .desired_width(f32::INFINITY)
-                            .show(ui).response;
+                            .show(ui);
                         ui.add_space(6.0);
                     });
             });
@@ -255,7 +287,7 @@ impl WalletTransactionContent {
                 if tx.can_cancel() || rebroadcast {
                     let r = View::item_rounding(0, 2, true);
                     View::item_button(ui, r, PROHIBIT, Some(Colors::red()), || {
-                        wallet.task(WalletTask::Cancel(tx.clone()));
+                        wallet.task(WalletTask::Cancel(tx.data.clone()));
                         Modal::close();
                     });
                 }
@@ -282,10 +314,15 @@ impl WalletTransactionContent {
             let label = format!("{} {}", FILE_ARCHIVE, t!("kernel"));
             info_item_ui(ui, kernel.0.to_hex(), label, true, cb);
         }
-        // Show receiver address.
-        if let Some(rec) = &tx.receiver {
+        // Show receiver or sender address.
+        let addr = if tx.data.tx_type == TxLogEntryType::TxSent {
+            &tx.receiver
+        } else {
+            &tx.sender
+        };
+        if let Some(addr) = addr {
             let label = format!("{} {}", CIRCLE_HALF, t!("network_mining.address"));
-            info_item_ui(ui, rec.to_string(), label, true, cb);
+            info_item_ui(ui, addr.to_string(), label, true, cb);
         }
     }
 }

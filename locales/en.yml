@@ -135,6 +135,10 @@ wallets:
   rec_phrase_not_found: Recovery phrase not found.
   restore_wallet_desc: Restore wallet by deleting all files if usual repair not helped, you will need to re-open your wallet.
   fee_base_desc: 'Fee (base value%{value}):'
+  payment_proof: Payment proof
+  payment_proof_desc: 'Enter received payment proof to verify transaction:'
+  payment_proof_valid: 'Entered payment proof is valid:'
+  payment_proof_error: 'Entered payment proof is not valid:'
 transport:
   desc: 'Use transport to receive or send messages synchronously:'
   tor_network: Tor network

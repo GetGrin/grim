@@ -34,7 +34,7 @@ use crate::wallet::Wallet;
 /// Wallet transactions tab content.
 pub struct WalletTransactionsContent {
     /// Transaction information [`Modal`] content.
-    tx_info_content: Option<WalletTransactionContent>,
+    pub tx_info_content: Option<WalletTransactionContent>,
 
     /// Transaction identifier to use at confirmation [`Modal`].
     confirm_cancel_tx_id: Option<u32>,
@@ -69,6 +69,7 @@ impl WalletContentContainer for WalletTransactionsContent {
 
 /// Identifier for transaction information [`Modal`].
 const TX_INFO_MODAL: &'static str = "tx_info_modal";
+
 /// Identifier for transaction cancellation confirmation [`Modal`].
 const CANCEL_TX_CONFIRMATION_MODAL: &'static str = "cancel_tx_conf_modal";
 
@@ -171,7 +172,7 @@ impl WalletTransactionsContent {
             let tx = txs.get(index).unwrap();
             Self::tx_item_ui(ui, tx, rect, &data, |ui| {
                 // Draw button to show transaction info.
-                if tx.data.tx_slate_id.is_some() {
+                if tx.data.tx_slate_id.is_some() || tx.data.payment_proof.is_some() {
                     r.nw = 0.0 as u8;
                     r.sw = 0.0 as u8;
                     View::item_button(ui, r, FILE_TEXT, None, || {
@@ -459,17 +460,17 @@ impl WalletTransactionsContent {
         let (icon, color) = (ARROWS_CLOCKWISE, Some(Colors::green()));
         View::item_button(ui, rounding, icon, color, || {
             if repost {
-                wallet.task(WalletTask::Post(None, tx.data.id));
+                wallet.task(WalletTask::Post(tx.data.id));
             } else {
                 match tx.action.as_ref().unwrap() {
                     WalletTransactionAction::Cancelling => {
-                        wallet.task(WalletTask::Cancel(tx.clone()));
+                        wallet.task(WalletTask::Cancel(tx.data.clone()));
                     }
                     WalletTransactionAction::Finalizing => {
-                        wallet.task(WalletTask::Finalize(None, tx.data.id));
+                        wallet.task(WalletTask::Finalize(tx.data.id));
                     }
                     WalletTransactionAction::Posting => {
-                        wallet.task(WalletTask::Post(None, tx.data.id));
+                        wallet.task(WalletTask::Post(tx.data.id));
                     }
                     WalletTransactionAction::SendingTor => {
                         if let Some(a) = &tx.receiver {
@@ -536,7 +537,7 @@ impl WalletTransactionsContent {
                 });
                 columns[1].vertical_centered_justified(|ui| {
                     View::button(ui, "OK".to_string(), Colors::white_or_black(false), || {
-                        wallet.task(WalletTask::Cancel(tx.clone()));
+                        wallet.task(WalletTask::Cancel(tx.data.clone()));
                         self.confirm_cancel_tx_id = None;
                         Modal::close();
                     });

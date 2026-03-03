@@ -203,26 +203,33 @@ impl WalletConfig {
         }
     }
 
-    /// Get wallet seed path.
-    pub fn seed_path(&self) -> String {
+    /// Get base wallet data path.
+    fn get_base_data_path(&self) -> String {
         let mut path = PathBuf::from(self.get_data_path());
         path.push(Self::DATA_DIR_NAME);
+        if !path.exists() {
+            let _ = fs::create_dir_all(path.clone());
+        }
+        path.to_str().unwrap().to_string()
+    }
+
+    /// Get wallet seed path.
+    pub fn seed_path(&self) -> String {
+        let mut path = PathBuf::from(self.get_base_data_path());
         path.push(SEED_FILE);
         path.to_str().unwrap().to_string()
     }
 
     /// Get wallet database data path.
     pub fn get_db_path(&self) -> String {
-        let mut path = PathBuf::from(self.get_data_path());
-        path.push(Self::DATA_DIR_NAME);
+        let mut path = PathBuf::from(self.get_base_data_path());
         path.push(DB_DIR_NAME);
         path.to_str().unwrap().to_string()
     }
 
     /// Get Slatepack file path for transaction.
     pub fn get_tx_slate_path(&self, tx: &WalletTransaction) -> PathBuf {
-        let mut path = PathBuf::from(self.get_data_path());
-        path.push(Self::DATA_DIR_NAME);
+        let mut path = PathBuf::from(self.get_base_data_path());
         path.push(SLATEPACKS_DIR_NAME);
         if !path.exists() {
             let _ = fs::create_dir_all(path.clone());
@@ -234,8 +241,7 @@ impl WalletConfig {
 
     /// Get Slatepack file path for Slate.
     pub fn get_slate_path(&self, slate: &Slate) -> PathBuf {
-        let mut path = PathBuf::from(self.get_data_path());
-        path.push(Self::DATA_DIR_NAME);
+        let mut path = PathBuf::from(self.get_base_data_path());
         path.push(SLATEPACKS_DIR_NAME);
         if !path.exists() {
             let _ = fs::create_dir_all(path.clone());
@@ -246,13 +252,13 @@ impl WalletConfig {
     }
 
     /// Get path to extra db storage.
-    pub fn get_extra_db_path(&self) -> String {
+    pub fn get_extra_db_path(&self) -> PathBuf {
         let mut path = PathBuf::from(self.get_db_path());
         path.push("extra");
         if !path.exists() {
             let _ = fs::create_dir_all(path.clone());
         }
-        path.to_str().unwrap().to_string()
+        path
     }
 
     /// Check config version to migrate if needed.

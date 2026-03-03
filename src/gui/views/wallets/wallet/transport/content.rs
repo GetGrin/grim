@@ -40,11 +40,16 @@ impl WalletContentContainer for WalletTransportContent {
 
     fn container_ui(&mut self, ui: &mut egui::Ui, wallet: &Wallet, cb: &dyn PlatformCallbacks) {
         if let Some(content) = self.qr_address_content.as_mut() {
-            ui.add_space(6.0);
-
+            // Close panel on wallet change.
+            if let Some(address) = wallet.slatepack_address() {
+                if address != content.text {
+                    self.qr_address_content = None;
+                    return;
+                }
+            }
             // Draw QR code content.
+            ui.add_space(6.0);
             content.ui(ui, cb);
-
             ui.vertical_centered_justified(|ui| {
                 View::button(ui, t!("close"), Colors::white_or_black(false), || {
                     self.qr_address_content = None;
