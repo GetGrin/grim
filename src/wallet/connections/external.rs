@@ -38,14 +38,14 @@ pub struct ExternalConnection {
 const DEFAULT_MAIN_URLS: [&'static str; 3] = [
     "https://main.gri.mw",
     "https://grincoin.org",
-    "mainnet.grinffindor.org"
+    "https://mainnet.grinffindor.org"
 ];
 
 /// Default external node URL for main network.
 const DEFAULT_TEST_URLS: [&'static str; 3] = [
     "https://test.gri.mw",
     "https://testnet.grincoin.org",
-    "testnet.grinffindor.org"
+    "https://testnet.grinffindor.org"
 ];
 
 impl ExternalConnection {
@@ -102,7 +102,31 @@ fn check_ext_conn(conn: &ExternalConnection, ui_ctx: &egui::Context) {
             .build()
             .unwrap()
             .block_on(async {
-                let url = url::Url::parse(conn.url.as_str()).unwrap();
+                // Check URL format.
+                let conn_url = url::Url::parse(conn.url.as_str());
+                let url_res = match conn_url {
+                    Ok(url) => Some(url),
+                    Err(_) => {
+                        let mut url_res = None;
+                        if !conn.url.starts_with("http") {
+                            let mut conn = conn.clone();
+                            let url_text = format!("https://{}", conn.url);
+                            let url = url::Url::parse(url_text.as_str());
+                            if let Ok(url) = url {
+                                url_res = Some(url);
+                                conn.url = url_text;
+                                ConnectionsConfig::add_ext_conn(conn.clone());
+                            }
+                        }
+                        url_res
+                    }
+                };
+                if url_res.is_none() {
+                    ConnectionsConfig::remove_ext_conn(conn.id);
+                    return;
+                }
+                let url = url_res.unwrap();
+
                 if let Ok(_) = url.socket_addrs(|| None) {
                     let addr = format!("{}v2/foreign", url.to_string());
                     let mut req_setup = hyper::Request::builder()

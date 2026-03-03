@@ -66,7 +66,7 @@ impl ExternalConnectionModal {
         // Add connection button callback.
         let on_add = |ui: &mut egui::Ui, m: &mut ExternalConnectionModal| {
             let url = if !m.ext_node_url_edit.starts_with("http") {
-                format!("http://{}", m.ext_node_url_edit)
+                format!("https://{}", m.ext_node_url_edit)
             } else {
                 m.ext_node_url_edit.clone()
             };
