@@ -165,8 +165,10 @@ impl Wallet {
         let config = WalletConfig::create(name.clone(), conn_method);
         let w = Wallet::new(config.clone());
         {
-            // create directory if it doesn't exist
-            fs::create_dir_all(config.get_data_path())
+            // Wallet directory setup.
+            let mut path = PathBuf::from(config.get_data_path());
+            path.push(WalletConfig::DATA_DIR_NAME);
+            fs::create_dir_all(&path)
                 .map_err(|_| Error::IO("Directory creation error".to_string()))?;
             // Create seed file.
             let _ = WalletSeed::init_file(config.seed_path().as_str(),
@@ -175,13 +177,13 @@ impl Wallet {
                 .map_err(|_| Error::IO("Seed file creation error".to_string()))?;
             let node_client = Self::create_node_client(&config)?;
             let mut wallet: LMDBBackend<'static, HTTPNodeClient, ExtKeychain> =
-                match LMDBBackend::new(config.get_data_path().as_str(), node_client) {
+                match LMDBBackend::new(path.to_str().unwrap(), node_client) {
                     Err(_) => {
                         return Err(Error::Lifecycle("DB creation error".to_string()).into());
                     }
                     Ok(d) => d,
                 };
-            // Save init status of this wallet, to determine whether it needs a full UTXO scan
+            // Save init status of this wallet, to determine whether it needs a full UTXO scan.
             let mut batch = wallet.batch_no_mask()?;
             match mnemonic.mode() {
                 PhraseMode::Generate => batch.save_init_status(WalletInitStatus::InitNoScanning)?,
