@@ -25,13 +25,13 @@ use crate::wallet::Wallet;
 /// Wallet transport settings content.
 pub struct WalletTransportSettingsContent {
     /// Tor transport content settings.
-    tor_settings_content: TorSettingsContent,
+    pub tor_settings_content: TorSettingsContent,
 }
 
 impl Default for WalletTransportSettingsContent {
     fn default() -> Self {
         Self {
-            tor_settings_content: TorSettingsContent::default(),
+            tor_settings_content: TorSettingsContent::default()
         }
     }
 }
@@ -62,19 +62,7 @@ impl WalletTransportSettingsContent {
         ui.add_space(8.0);
         ui.vertical_centered_justified(|ui| {
             View::button(ui, t!("close"), Colors::white_or_black(false), || {
-                if self.tor_settings_content.settings_changed {
-                    // Restart running service or rebuild client.
-                    let service_id = &wallet.identifier();
-                    if Tor::is_service_running(service_id) {
-                        if let Some(key) = wallet.secret_key() {
-                            if let Some(api_port) = wallet.foreign_api_port() {
-                                Tor::restart_service(api_port, key, service_id);
-                            }
-                        }
-                    } else {
-                        Tor::rebuild_client();
-                    }
-                }
+                Tor::restart_services();
                 on_close();
             });
         });

@@ -360,7 +360,11 @@ impl WalletContent {
             ui.style_mut().spacing.button_padding = egui::vec2(0.0, 4.0);
 
             let has_wallet_data = wallet.get_data().is_some();
-            let can_send = wallet.get_data().unwrap().info.amount_currently_spendable > 0;
+            let can_send = if has_wallet_data {
+                wallet.get_data().unwrap().info.amount_currently_spendable > 0
+            } else {
+                false
+            };
 
             let tabs_amount = if can_send { 5 } else { 4 };
             ui.columns(tabs_amount, |columns| {
@@ -435,7 +439,7 @@ impl WalletContent {
     /// Handle wallet task result.
     fn handle_task_result(&mut self, wallet: &Wallet) {
         let res = wallet.consume_task_result();
-        if res.is_none() {
+        if res.is_none() || wallet.get_data().is_none() {
             return;
         }
         let (id, t) = res.unwrap();

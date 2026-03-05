@@ -59,7 +59,7 @@ impl WalletContentContainer for RecoverySettings {
                 self.recovery_phrase_modal_ui(ui, wallet, modal, cb);
             }
             DELETE_CONFIRMATION_MODAL => {
-                self.deletion_modal_ui(ui, wallet);
+                Self::deletion_modal_ui(ui, wallet);
             }
             _ => {}
         }
@@ -260,9 +260,7 @@ impl RecoverySettings {
     }
 
     /// Draw wallet deletion [`Modal`] content.
-    fn deletion_modal_ui(&mut self,
-                         ui: &mut egui::Ui,
-                         wallet: &Wallet) {
+    pub fn deletion_modal_ui(ui: &mut egui::Ui, wallet: &Wallet) {
         ui.add_space(8.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new(t!("wallets.delete_conf"))

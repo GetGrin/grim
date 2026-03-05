@@ -4043,6 +4043,7 @@ dependencies = [
  "local-ip-address",
  "log",
  "nokhwa",
+ "num-bigint 0.4.6",
  "parking_lot 0.12.5",
  "pin-project",
  "qrcode",

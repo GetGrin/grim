@@ -16,16 +16,18 @@ use egui::{RichText, ScrollArea};
 use egui::scroll_area::ScrollBarVisibility;
 
 use crate::gui::Colors;
-use crate::gui::icons::{CHECK, CHECK_FAT, PLUS_CIRCLE};
+use crate::gui::icons::{CHECK, CHECK_FAT, PLUS_CIRCLE, TRASH};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, View};
 use crate::gui::views::network::ConnectionsContent;
 use crate::gui::views::network::modals::ExternalConnectionModal;
+use crate::gui::views::types::ModalPosition;
+use crate::gui::views::wallets::WalletsContent;
 use crate::wallet::{ConnectionsConfig, ExternalConnection};
 use crate::wallet::types::ConnectionMethod;
 
 /// Wallet connection selection [`Modal`] content.
-pub struct WalletConnectionModal {
+pub struct WalletSettingsModal {
     /// Current connection method.
     pub conn: ConnectionMethod,
 
@@ -33,7 +35,7 @@ pub struct WalletConnectionModal {
     new_ext_conn_content: Option<ExternalConnectionModal>
 }
 
-impl WalletConnectionModal {
+impl WalletSettingsModal {
     /// Create from provided wallet connection.
     pub fn new(conn: ConnectionMethod) -> Self {
         Self {
@@ -139,6 +141,21 @@ impl WalletConnectionModal {
             });
 
         ui.add_space(2.0);
+        View::horizontal_line(ui, Colors::item_stroke());
+        ui.add_space(6.0);
+        ui.vertical_centered(|ui| {
+            // Draw button to delete the wallet.
+            View::colored_text_button(ui,
+                                      format!("{} {}", TRASH, t!("wallets.delete")),
+                                      Colors::red(),
+                                      Colors::white_or_black(false), || {
+                    Modal::new(WalletsContent::DELETE_CONFIRMATION_MODAL)
+                        .position(ModalPosition::Center)
+                        .title(t!("confirmation"))
+                        .show();
+                });
+        });
+        ui.add_space(6.0);
         View::horizontal_line(ui, Colors::item_stroke());
         ui.add_space(6.0);
 

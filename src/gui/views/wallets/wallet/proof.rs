@@ -1,12 +1,13 @@
 use egui::scroll_area::ScrollBarVisibility;
 use egui::{Id, RichText, ScrollArea};
-use grin_wallet_libwallet::{Error, PaymentProof};
+use grin_util::ToHex;
+use grin_wallet_libwallet::{Error, PaymentProof, TxLogEntryType};
 
 use crate::gui::icons::{BROOM, CLIPBOARD_TEXT, COPY, FILE_TEXT, SEAL_CHECK};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{FilePickContent, FilePickContentType, Modal, View};
 use crate::gui::Colors;
-use crate::wallet::types::WalletTask;
+use crate::wallet::types::{WalletTask, WalletTransaction};
 use crate::wallet::Wallet;
 
 pub struct PaymentProofContent {
@@ -151,11 +152,19 @@ impl PaymentProofContent {
     }
 
     /// Draw transaction payment proof content to share.
-    pub fn share_ui(&mut self, ui: &mut egui::Ui, file_name: String, cb: &dyn PlatformCallbacks) {
+    pub fn share_ui(&mut self,
+                    ui: &mut egui::Ui,
+                    tx: &WalletTransaction,
+                    cb: &dyn PlatformCallbacks) {
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
-            let desc = format!("{} {}:", SEAL_CHECK, t!("wallets.payment_proof"));
-            ui.label(RichText::new(desc).size(16.0).color(Colors::inactive_text()));
+            let (desc_text, color) = if tx.data.tx_type == TxLogEntryType::TxReceived {
+                (t!("wallets.payment_proof_valid"), Colors::green())
+            } else {
+                (format!("{}:", t!("wallets.payment_proof")), Colors::inactive_text())
+            };
+            let desc = format!("{} {}", SEAL_CHECK, desc_text);
+            ui.label(RichText::new(desc).size(16.0).color(color));
         });
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
@@ -203,7 +212,7 @@ impl PaymentProofContent {
                                           share_text,
                                           Colors::blue(),
                                           Colors::white_or_black(false), || {
-                        let file_name = format!("{}.txt", file_name);
+                        let file_name = format!("{}.txt", tx.data.kernel_excess.unwrap().to_hex());
                         let data = self.input_edit.as_bytes().to_vec();
                         cb.share_data(file_name, data).unwrap_or_default();
                         Modal::close();

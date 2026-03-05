@@ -130,11 +130,17 @@ impl WalletTransactionsContent {
             .can_refresh(!refresh && !wallet.syncing() && !txs.is_empty())
             .min_refresh_distance(70.0)
             .scroll_area_ui(ui, |ui| {
+                let rows_size = if txs.is_empty() {
+                    0
+                } else {
+                    // Last index is for list pagination.
+                    txs.len() + 1
+                };
                 ScrollArea::vertical()
                     .id_salt(Id::from("wallet_tx_list_scroll").with(config.id))
                     .scroll_bar_visibility(ScrollBarVisibility::AlwaysHidden)
                     .auto_shrink([false; 2])
-                    .show_rows(ui, Self::TX_ITEM_HEIGHT, txs.len(), |ui, row_range| {
+                    .show_rows(ui, Self::TX_ITEM_HEIGHT, rows_size, |ui, row_range| {
                         ui.add_space(1.0);
                         View::max_width_ui(ui, Content::SIDE_PANEL_WIDTH * 1.3, |ui| {
                             self.tx_list_ui(ui, row_range, &wallet, txs);
@@ -159,6 +165,24 @@ impl WalletTransactionsContent {
                   txs: &Vec<WalletTransaction>) {
         let data = wallet.get_data().unwrap();
         for index in row_range {
+            if index == txs.len() && ui.is_visible() {
+                // Load more txs when needed.
+                if !wallet.more_txs_loading() {
+                    if let Some(data) = wallet.get_data() {
+                        if txs.len() as u32 >= data.txs_limit {
+                            wallet.load_more_txs();
+                        }
+                    }
+                }
+                // Show loader when more txs are loading.
+                if wallet.more_txs_loading() {
+                    ui.vertical_centered(|ui| {
+                        ui.add_space(24.0);
+                        View::small_loading_spinner(ui);
+                    });
+                }
+                return;
+            }
             let mut rect = ui.available_rect_before_wrap();
             rect.min += egui::emath::vec2(6.0, 0.0);
             rect.max -= egui::emath::vec2(6.0, 0.0);

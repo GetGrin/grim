@@ -21,7 +21,7 @@ use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, TextEdit, View};
 use crate::gui::views::network::settings::NetworkSettings;
 use crate::gui::views::types::{ContentContainer, ModalPosition};
-use crate::gui::views::wallets::modals::WalletsModal;
+use crate::gui::views::wallets::modals::WalletListModal;
 use crate::node::{Node, NodeConfig};
 use crate::wallet::{WalletConfig, WalletList};
 
@@ -30,7 +30,7 @@ pub struct StratumSetup {
     /// Wallet list to select for mining rewards.
     wallets: WalletList,
     /// Wallets [`Modal`] content.
-    wallets_modal: WalletsModal,
+    wallets_modal: WalletListModal,
 
     /// IP Addresses available at system.
     available_ips: Vec<String>,
@@ -80,7 +80,7 @@ impl Default for StratumSetup {
 
         Self {
             wallets: WalletList::default(),
-            wallets_modal: WalletsModal::new(wallet_id, None, false),
+            wallets_modal: WalletListModal::new(wallet_id, None, false),
             available_ips: NodeConfig::get_ip_addrs(),
             stratum_port_edit: port,
             stratum_port_available_edit: is_port_available,
@@ -238,7 +238,7 @@ impl ContentContainer for StratumSetup {
 impl StratumSetup {
     /// Show wallet selection [`Modal`].
     fn show_wallets_modal(&mut self) {
-        self.wallets_modal = WalletsModal::new(NodeConfig::get_stratum_wallet_id(), None, false);
+        self.wallets_modal = WalletListModal::new(NodeConfig::get_stratum_wallet_id(), None, false);
         // Show modal.
         Modal::new(WALLET_SELECTION_MODAL)
             .position(ModalPosition::Center)

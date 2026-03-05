@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-mod conn;
-pub use conn::*;
+mod settings;
+pub use settings::*;
 
-mod wallets;
-pub use wallets::*;
+mod list;
+pub use list::*;
 
 mod open;
 pub use open::*;

@@ -148,11 +148,17 @@ pub struct WalletAccount {
 pub struct WalletData {
     /// Balance data for current account.
     pub info: WalletInfo,
+
     /// Transactions data.
-    pub txs: Option<Vec<WalletTransaction>>
+    pub txs: Option<Vec<WalletTransaction>>,
+    /// Number of txs to show on select from database.
+    pub txs_limit: u32,
 }
 
 impl WalletData {
+    /// Number of transactions per select to show at list.
+    pub const TXS_LIMIT: u32 = 30;
+
     /// Update transaction action status.
     pub fn on_tx_action(&mut self, id: String, action: Option<WalletTransactionAction>) {
         if self.txs.is_none() {

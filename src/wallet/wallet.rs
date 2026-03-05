@@ -23,7 +23,7 @@ use crate::AppConfig;
 use futures::channel::oneshot;
 use grin_api::{ApiServer, Router};
 use grin_chain::SyncStatus;
-use grin_keychain::{ExtKeychain, Identifier, Keychain};
+use grin_keychain::{ExtKeychain, Keychain};
 use grin_util::secp::SecretKey;
 use grin_util::types::ZeroingString;
 use grin_util::{Mutex, ToHex};
@@ -33,7 +33,7 @@ use grin_wallet_controller::controller;
 use grin_wallet_controller::controller::ForeignAPIHandlerV2;
 use grin_wallet_impls::{DefaultLCProvider, DefaultWalletImpl, HTTPNodeClient, LMDBBackend};
 use grin_wallet_libwallet::api_impl::owner::{cancel_tx, init_send_tx, retrieve_summary_info, retrieve_txs, verify_payment_proof};
-use grin_wallet_libwallet::{address, Error, InitTxArgs, IssueInvoiceTxArgs, NodeClient, PaymentProof, RetrieveTxQueryArgs, RetrieveTxQuerySortField, RetrieveTxQuerySortOrder, Slate, SlateState, SlateVersion, SlatepackAddress, StatusMessage, StoredProofInfo, TxLogEntry, TxLogEntryType, VersionedSlate, WalletBackend, WalletInfo, WalletInitStatus, WalletInst, WalletLCProvider};
+use grin_wallet_libwallet::{address, Error, InitTxArgs, IssueInvoiceTxArgs, NodeClient, PaymentProof, Slate, SlateState, SlateVersion, SlatepackAddress, StatusMessage, StoredProofInfo, TxLogEntry, TxLogEntryType, VersionedSlate, WalletBackend, WalletInitStatus, WalletInst, WalletLCProvider};
 use grin_wallet_util::OnionV3Address;
 use parking_lot::RwLock;
 use rand::Rng;
@@ -43,13 +43,15 @@ use std::io::Write;
 use std::net::{SocketAddr, TcpListener, ToSocketAddrs};
 use std::path::PathBuf;
 use std::str::FromStr;
-use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicI64, AtomicU8, Ordering};
 use std::sync::mpsc::Sender;
 use std::sync::{mpsc, Arc};
 use std::thread::Thread;
 use std::time::Duration;
 use std::{fs, thread};
+use chrono::Utc;
 use log::error;
+use num_bigint::BigInt;
 use uuid::Uuid;
 
 /// Contains wallet instance, configuration and state, handles wallet commands.
@@ -69,6 +71,8 @@ pub struct Wallet {
 
     /// Wallet accounts.
     accounts: Arc<RwLock<Vec<WalletAccount>>>,
+    /// Timestamp when wallet account was selected to form unique identifier for transport.
+    account_time: Arc<AtomicI64>,
 
     /// Wallet sync thread.
     sync_thread: Arc<RwLock<Option<Thread>>>,
@@ -85,6 +89,8 @@ pub struct Wallet {
     data: Arc<RwLock<Option<WalletData>>>,
     /// Flag to check if wallet data was synced from node.
     from_node: Arc<AtomicBool>,
+    /// Flag to check if more transactions need to be loaded.
+    more_txs_loading: Arc<AtomicBool>,
 
     /// Flag to check if wallet reopening is needed.
     reopen: Arc<AtomicBool>,
@@ -138,20 +144,22 @@ impl Wallet {
             connection: Arc::new(RwLock::new(connection)),
             keychain_mask: Arc::new(RwLock::new(None)),
             slatepack_address: Arc::new(RwLock::new(None)),
+            accounts: Arc::new(RwLock::new(vec![])),
+            account_time: Arc::new(Default::default()),
             sync_thread: Arc::from(RwLock::new(None)),
-            foreign_api_server: Arc::new(RwLock::new(None)),
-            secret_key: Arc::new(RwLock::new(None)),
+            syncing: Arc::new(AtomicBool::new(false)),
+            info_sync_progress: Arc::from(AtomicU8::new(0)),
+            sync_error: Arc::from(AtomicBool::new(false)),
+            sync_attempts: Arc::new(AtomicU8::new(0)),
+            data: Arc::new(RwLock::new(None)),
+            from_node: Arc::new(AtomicBool::new(false)),
+            more_txs_loading: Arc::new(AtomicBool::new(false)),
             reopen: Arc::new(AtomicBool::new(false)),
             is_open: Arc::from(AtomicBool::new(false)),
             closing: Arc::new(AtomicBool::new(false)),
             deleted: Arc::new(AtomicBool::new(false)),
-            sync_error: Arc::from(AtomicBool::new(false)),
-            info_sync_progress: Arc::from(AtomicU8::new(0)),
-            accounts: Arc::new(RwLock::new(vec![])),
-            data: Arc::new(RwLock::new(None)),
-            from_node: Arc::new(AtomicBool::new(false)),
-            sync_attempts: Arc::new(AtomicU8::new(0)),
-            syncing: Arc::new(AtomicBool::new(false)),
+            foreign_api_server: Arc::new(RwLock::new(None)),
+            secret_key: Arc::new(RwLock::new(None)),
             repair_needed: Arc::new(AtomicBool::new(false)),
             repair_progress: Arc::new(AtomicU8::new(0)),
             files_moving: Arc::new(AtomicBool::new(false)),
@@ -349,6 +357,7 @@ impl Wallet {
                     let wallet_inst = lc.wallet_inst()?;
                     let label = self.get_config().account.to_owned();
                     wallet_inst.set_parent_key_id_by_name(label.as_str())?;
+                    self.account_time.store(Utc::now().timestamp(), Ordering::Relaxed);
 
                     // Start new synchronization thread or wake up existing one.
                     let mut thread_w = self.sync_thread.write();
@@ -370,27 +379,15 @@ impl Wallet {
             }
         }
 
-        // Set slatepack address.
-        let r_inst = self.instance.as_ref().read();
-        let instance = r_inst.clone().unwrap();
-        let mut api = Owner::new(instance, None);
-        controller::owner_single_use(None, self.keychain_mask().as_ref(), Some(&mut api), |api, m| {
+        // Set Slatepack address and secret key.
+        if let Ok((key, addr)) = self.get_secret_key_addr() {
+            let mut w_key = self.secret_key.write();
+            *w_key = Some(key);
             let mut w_address = self.slatepack_address.write();
-            *w_address = Some(api.get_slatepack_address(m, 0)?.to_string());
-            Ok(())
-        })?;
+            *w_address = Some(addr.to_string());
+        }
 
         Ok(())
-    }
-
-    /// Get parent key identifier for current account.
-    fn get_parent_key_id(&self) -> Result<Identifier, Error> {
-        let r_inst = self.instance.as_ref().read();
-        let instance = r_inst.clone().unwrap();
-        let mut w_lock = instance.lock();
-        let lc = w_lock.lc_provider()?;
-        let w_inst = lc.wallet_inst()?;
-        Ok(w_inst.parent_key_id())
     }
 
     /// Get keychain mask [`SecretKey`].
@@ -405,8 +402,8 @@ impl Wallet {
         r_key.clone()
     }
 
-    /// Retrieve wallet [`SecretKey`] for transport.
-    fn get_secret_key(&self) -> Result<SecretKey, Error> {
+    /// Retrieve wallet [`SecretKey`] and Slatepack address for transport.
+    fn get_secret_key_addr(&self) -> Result<(SecretKey, SlatepackAddress), Error> {
         let r_inst = self.instance.as_ref().read();
         let instance = r_inst.clone().unwrap();
         let mut w_lock = instance.lock();
@@ -416,13 +413,15 @@ impl Wallet {
         let parent_key_id = w_inst.parent_key_id();
         let sec_key = address::address_from_derivation_path(&k, &parent_key_id, 0)
             .map_err(|e| Error::TorConfig(format!("{:?}", e)))?;
-        Ok(sec_key)
+        let addr = SlatepackAddress::try_from(&sec_key)?;
+        Ok((sec_key, addr))
     }
 
     /// Get unique opened wallet identifier, including current account.
     pub fn identifier(&self) -> String {
         let config = self.get_config();
-        format!("wallet_{}_{}", config.id, config.account.to_hex())
+        let account_ts = self.account_time.load(Ordering::Relaxed);
+        format!("{}_{}_{}", config.id, config.account.to_hex(), account_ts)
     }
 
     /// Get Slatepack address to receive txs at transport.
@@ -629,7 +628,7 @@ impl Wallet {
     }
 
     /// Select transaction by slate id.
-    fn tx_by_id(&self, id: Uuid) -> Option<TxLogEntry> {
+    fn retrieve_tx_by_id(&self, id: Uuid) -> Option<TxLogEntry> {
         let r_inst = self.instance.as_ref().read();
         let inst = r_inst.clone().unwrap();
         let mask = self.keychain_mask();
@@ -640,6 +639,44 @@ impl Wallet {
             }
         }
         None
+    }
+
+    /// Select transactions with provided limit.
+    fn retrieve_txs(&self, limit: u32) -> Result<Vec<TxLogEntry>, Error> {
+        let r_inst = self.instance.as_ref().read();
+        let inst = r_inst.clone().unwrap();
+        let mut wallet_lock = inst.lock();
+        let lc = wallet_lock.lc_provider()?;
+        let w = lc.wallet_inst()?;
+        let parent_key_id = w.parent_key_id();
+        // Retrieve txs from database.
+        let txs_iter = w.tx_log_iter()
+            .filter(|tx_entry| tx_entry.parent_key_id == parent_key_id)
+            .filter(|tx_entry| {
+                if tx_entry.tx_type == TxLogEntryType::TxSent
+                    || tx_entry.tx_type == TxLogEntryType::TxSentCancelled {
+                    BigInt::from(tx_entry.amount_debited)
+                        - BigInt::from(tx_entry.amount_credited)
+                        >= BigInt::from(1)
+                } else {
+                    BigInt::from(tx_entry.amount_credited)
+                        - BigInt::from(tx_entry.amount_debited)
+                        >= BigInt::from(1)
+                }
+            });
+        let mut return_txs: Vec<TxLogEntry> = txs_iter.collect();
+        // Sort txs by creation date and confirmation status reversing an order.
+        return_txs.sort_by_key(|tx| if !tx.confirmed && (tx.tx_type == TxLogEntryType::TxSent ||
+            tx.tx_type == TxLogEntryType::TxReceived) {
+            i64::MAX
+        } else {
+            tx.creation_ts.timestamp()
+        });
+        // return_txs.sort_by_key(|tx| tx.confirmed);
+        return_txs.reverse();
+        // Apply limit.
+        return_txs = return_txs.into_iter().take(limit as usize).collect();
+        Ok(return_txs)
     }
 
     /// Send a task to the wallet.
@@ -683,20 +720,33 @@ impl Wallet {
 
     /// Set active account from provided label.
     pub fn set_active_account(&self, label: &String) -> Result<(), Error> {
-        let r_inst = self.instance.as_ref().read();
-        let instance = r_inst.clone().unwrap();
-        let mut api = Owner::new(instance, None);
-        controller::owner_single_use(None, self.keychain_mask().as_ref(), Some(&mut api), |api, m| {
-            api.set_active_account(m, label)?;
-            // Set Slatepack address.
-            let mut w_address = self.slatepack_address.write();
-            *w_address = Some(api.get_slatepack_address(m, 0)?.to_string());
-            Ok(())
-        })?;
-
         // Stop service from previous account.
         let cur_service_id = self.identifier();
         Tor::stop_service(&cur_service_id);
+
+        // Clear secret key for previous account.
+        {
+            let mut w_key = self.secret_key.write();
+            *w_key = None;
+        }
+
+        // Set new active account.
+        let r_inst = self.instance.as_ref().read();
+        let instance = r_inst.clone().unwrap();
+        let mut api = Owner::new(instance.clone(), None);
+        controller::owner_single_use(None, self.keychain_mask().as_ref(), Some(&mut api), |api, m| {
+            api.set_active_account(m, label)?;
+            self.account_time.store(Utc::now().timestamp(), Ordering::Relaxed);
+            Ok(())
+        })?;
+
+        // Setup secret key and Slatepack address.
+        if let Ok((key, addr)) = self.get_secret_key_addr() {
+            let mut w_key = self.secret_key.write();
+            *w_key = Some(key);
+            let mut w_address = self.slatepack_address.write();
+            *w_address = Some(addr.to_string());
+        }
 
         // Save account label into config.
         let mut w_config = self.config.write();
@@ -706,10 +756,6 @@ impl Wallet {
         // Clear wallet info.
         let mut w_data = self.data.write();
         *w_data = None;
-
-        // Clear secret key for previous account.
-        let mut w_key = self.secret_key.write();
-        *w_key = None;
 
         // Reset progress values.
         self.info_sync_progress.store(0, Ordering::Relaxed);
@@ -752,6 +798,32 @@ impl Wallet {
     pub fn get_data(&self) -> Option<WalletData> {
         let r_data = self.data.read();
         r_data.clone()
+    }
+
+    /// Load more transactions at list by increasing limit.
+    pub fn load_more_txs(&self) {
+        self.more_txs_loading.store(true, Ordering::Relaxed);
+        let wallet = self.clone();
+        thread::spawn(move || {
+            // Wait when current sync will be finished.
+            if wallet.syncing() {
+                thread::sleep(Duration::from_secs(1));
+            }
+            // Sync wallet data with new limit.
+            {
+                let mut w_data = wallet.data.write();
+                if w_data.is_some() {
+                    w_data.as_mut().unwrap().txs_limit += WalletData::TXS_LIMIT;
+                }
+            }
+            sync_wallet_data(&wallet, false);
+            wallet.more_txs_loading.store(false, Ordering::Relaxed);
+        });
+    }
+
+    /// Check if more transaction are loading.
+    pub fn more_txs_loading(&self) -> bool {
+        self.more_txs_loading.load(Ordering::Relaxed)
     }
 
     /// Sync wallet data from node at sync thread or locally synchronously.
@@ -1463,14 +1535,6 @@ fn start_sync(wallet: Wallet) -> Thread {
                     }
                 }
 
-                // Setup secret key if not set.
-                if wallet.secret_key().is_none() {
-                    let mut w_key = wallet.secret_key.write();
-                    if let Ok(key) = wallet.get_secret_key() {
-                        *w_key = Some(key);
-                    }
-                }
-
                 // Start unfailed Tor service if API server is running.
                 let service_id = wallet.identifier();
                 if wallet.auto_start_tor_listener() && api_server_running &&
@@ -1531,10 +1595,11 @@ async fn handle_task(w: &Wallet, t: WalletTask) {
                         }
                     }
                     Err(e) => {
-                        if let Some(tx) = w.tx_by_id(s.id) {
+                        error!("send tor finalize error: {:?}", e);
+                        sync_wallet_data(&w, false);
+                        if let Some(tx) = w.retrieve_tx_by_id(s.id) {
                             let _ = w.cancel(&tx);
                         }
-                        error!("send tor finalize error: {:?}", e);
                         w.on_tx_error(id, Some(e));
                     }
                 }
@@ -1607,7 +1672,7 @@ async fn handle_task(w: &Wallet, t: WalletTask) {
                                     }
                                 }
                                 Err(e) => {
-                                    if let Some(tx) = w.tx_by_id(s.id) {
+                                    if let Some(tx) = w.retrieve_tx_by_id(s.id) {
                                         let _ = w.cancel(&tx);
                                     }
                                     error!("message tx finalize error: {:?}", e);
@@ -1686,7 +1751,7 @@ async fn handle_task(w: &Wallet, t: WalletTask) {
                     }
                 }
                 Err(e) => {
-                    if let Some(tx) = w.tx_by_id(slate.id) {
+                    if let Some(tx) = w.retrieve_tx_by_id(slate.id) {
                         let _ = w.cancel(&tx);
                     }
                     error!("tx finalize error: {:?}", e);
@@ -1799,19 +1864,27 @@ fn sync_wallet_data(wallet: &Wallet, from_node: bool) {
             update_accounts(wallet, last_height, spendable);
 
             if wallet.info_sync_progress() == 100 || !from_node {
+                // Transactions limit setup.
+                let txs_limit = {
+                    let r_data = wallet.data.read();
+                    if r_data.is_some() {
+                        let data = r_data.as_ref().unwrap();
+                        data.txs_limit
+                    } else {
+                        WalletData::TXS_LIMIT
+                    }
+                };
                 // Update wallet info.
                 {
                     let mut w_data = wallet.data.write();
-                    let txs = if w_data.is_some() {
-                        w_data.clone().unwrap().txs
+                    if w_data.is_some() {
+                        w_data.as_mut().unwrap().info = info;
                     } else {
-                        None
-                    };
-                    *w_data = Some(WalletData { info: info.clone(), txs });
+                        *w_data = Some(WalletData { info, txs: None, txs_limit });
+                    }
                 }
-
                 // Update wallet transactions.
-                if update_txs(wallet, instance.clone(), info).is_ok() {
+                if update_txs(wallet, txs_limit).is_ok() {
                     if !wallet.from_node.load(Ordering::Relaxed) {
                         wallet.from_node.store(from_node, Ordering::Relaxed);
                     }
@@ -1845,42 +1918,39 @@ fn sync_wallet_data(wallet: &Wallet, from_node: bool) {
 }
 
 /// Update wallet transactions.
-fn update_txs(wallet: &Wallet, inst: WalletInstance, info: WalletInfo)
-              -> Result<(), Error> {
-    // Retrieve txs from local database.
-    let txs_args = RetrieveTxQueryArgs {
-        exclude_cancelled: Some(false),
-        sort_field: Some(RetrieveTxQuerySortField::CreationTimestamp),
-        sort_order: Some(RetrieveTxQuerySortOrder::Desc),
-        min_amount: Some(1),
-        ..Default::default()
-    };
-    let mask = wallet.keychain_mask();
-    let txs = retrieve_txs(inst, mask.as_ref(), &None, false, None, None, Some(txs_args.clone()))?;
+fn update_txs(wallet: &Wallet, mut txs_limit: u32) -> Result<(), Error> {
+    let txs = wallet.retrieve_txs(txs_limit)?;
 
     // Exit if wallet was closed.
     if !wallet.is_open() || wallet.is_closing() {
         return Err(Error::GenericError("Wallet is not open".to_string()));
     }
 
-    // Filter transactions for current account.
-    let account_txs = txs.1.iter().map(|v| v.clone()).filter(|tx| {
-        match wallet.get_parent_key_id() {
-            Ok(key) => {
-                tx.parent_key_id == key && (tx.tx_slate_id.is_some() ||
-                    (tx.tx_slate_id.is_none() && tx.payment_proof.is_some()))
-            }
-            Err(_) => {
-                true
-            }
-        }
+    // Filter transactions to not show txs without slate (usually unspent outputs).
+    let mut filter_txs = txs.iter().map(|v| v.clone()).filter(|tx| {
+        tx.tx_slate_id.is_some() || (tx.tx_slate_id.is_none() && tx.payment_proof.is_some())
     }).collect::<Vec<TxLogEntry>>();
 
+    // Sort to show unconfirmed at top.
+    filter_txs.sort_by_key(|tx| {
+        tx.confirmed || tx.tx_type == TxLogEntryType::TxReceivedCancelled ||
+            tx.tx_type == TxLogEntryType::TxSentCancelled ||
+            tx.tx_type == TxLogEntryType::TxReverted
+    });
+
+    // Update limit with actual length.
+    let txs_size = txs.len() as u32;
+    let filter_size = filter_txs.len() as u32;
+    if txs_size > filter_size && txs_limit >= filter_size {
+        txs_limit = txs_limit - (txs_size - filter_size);
+    }
+
+    // Update existing tx list.
     let tx_height_store = TxHeightStore::new(wallet.get_config().get_extra_db_path());
     let data = wallet.get_data().unwrap();
     let data_txs = data.txs.unwrap_or(vec![]);
     let mut new_txs: Vec<WalletTransaction> = vec![];
-    for tx in &account_txs {
+    for tx in &filter_txs {
         let mut height: Option<u64> = None;
         let mut broadcasting_height: Option<u64> = None;
         let mut action: Option<WalletTransactionAction> = None;
@@ -1892,6 +1962,7 @@ fn update_txs(wallet: &Wallet, inst: WalletInstance, info: WalletInfo)
                 action_error = t.action_error.clone();
                 height = t.height;
                 broadcasting_height = t.broadcasting_height;
+                proof = t.proof.clone();
                 break;
             }
         }
@@ -1908,7 +1979,6 @@ fn update_txs(wallet: &Wallet, inst: WalletInstance, info: WalletInfo)
         if unconfirmed {
             new.update_slate_state(wallet);
         }
-
         // Payment proof setup.
         if proof.is_none() && tx.payment_proof.is_some() &&
             tx.payment_proof.as_ref().unwrap().receiver_signature.is_some() &&
@@ -1919,7 +1989,6 @@ fn update_txs(wallet: &Wallet, inst: WalletInstance, info: WalletInfo)
                 new.proof = proof;
             }
         }
-
         // Initial tx heights setup.
         if let Some(slate_id) = tx.tx_slate_id {
             let id = slate_id.to_string();
@@ -1952,7 +2021,10 @@ fn update_txs(wallet: &Wallet, inst: WalletInstance, info: WalletInfo)
     }
     // Update wallet txs.
     let mut w_data = wallet.data.write();
-    *w_data = Some(WalletData { info, txs: Some(new_txs) });
+    if w_data.is_some() {
+        w_data.as_mut().unwrap().txs_limit = txs_limit;
+        w_data.as_mut().unwrap().txs = Some(new_txs);
+    }
     Ok(())
 }
 

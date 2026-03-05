@@ -102,14 +102,8 @@ impl WalletTransactionContent {
                 self.share_ui(ui, wallet, tx, cb);
             } else {
                 if let Some(proof_content) = self.proof_content.as_mut() {
-                    // Payment proof file name setup.
-                    let file_name = if let Some(slate_id) = tx.data.tx_slate_id {
-                        slate_id.to_string()
-                    } else {
-                        tx.data.id.to_string()
-                    };
                     // Draw payment proof sharing content.
-                    proof_content.share_ui(ui, file_name, cb);
+                    proof_content.share_ui(ui, tx, cb);
                 } else if tx.proof.is_some() && !tx.sending_tor() &&
                     tx.action_error.is_none() {
                     ui.vertical_centered(|ui| {

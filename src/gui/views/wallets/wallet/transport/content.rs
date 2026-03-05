@@ -88,6 +88,7 @@ impl WalletTransportContent {
     /// Navigate back on navigation stack.
     pub fn back(&mut self) {
         if self.settings_content.is_some() {
+            Tor::restart_services();
             self.settings_content = None;
         } else if self.qr_address_content.is_some() {
             self.qr_address_content = None;
@@ -134,25 +135,25 @@ impl WalletTransportContent {
                         .with_max_size(320.0));
                 });
 
-                // Draw button to enable/disable Tor listener for current wallet.
                 let service_id = &wallet.identifier();
-                if  !Tor::is_service_starting(service_id) && wallet.foreign_api_port().is_some() &&
-                    wallet.secret_key().is_some() {
-                    if !Tor::is_service_running(service_id) {
-                        let r = CornerRadius::default();
-                        View::item_button(ui, r, POWER, Some(Colors::green()), || {
-                            let api_port = wallet.foreign_api_port().unwrap();
-                            let key = wallet.secret_key().unwrap();
-                            Tor::start_service(api_port, key, service_id);
-                        });
-                    } else {
-                        let r = CornerRadius::default();
-                        View::item_button(ui, r, POWER, Some(Colors::red()), || {
-                            Tor::stop_service(service_id);
-                        });
+                // Draw button to enable/disable Tor listener for current wallet.
+                if wallet.foreign_api_port().is_some() && wallet.secret_key().is_some() {
+                    let port = wallet.foreign_api_port().unwrap();
+                    let key = wallet.secret_key().unwrap();
+                    if  !Tor::is_service_starting(service_id) {
+                        if !Tor::is_service_running(service_id) {
+                            let r = CornerRadius::default();
+                            View::item_button(ui, r, POWER, Some(Colors::green()), || {
+                                Tor::start_service(port, key.clone(), service_id);
+                            });
+                        } else {
+                            let r = CornerRadius::default();
+                            View::item_button(ui, r, POWER, Some(Colors::red()), || {
+                                Tor::stop_service(service_id);
+                            });
+                        }
                     }
                 }
-
                 // Draw button to show Tor transport settings.
                 let button_rounding = View::item_rounding(1, 3, true);
                 View::item_button(ui, button_rounding, WRENCH, None, || {

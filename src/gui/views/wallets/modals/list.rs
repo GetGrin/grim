@@ -23,7 +23,7 @@ use crate::wallet::types::ConnectionMethod;
 use crate::wallet::{Wallet, WalletList};
 
 /// Wallet list [`Modal`] content
-pub struct WalletsModal {
+pub struct WalletListModal {
     /// Selected wallet id.
     selected_id: Option<i64>,
 
@@ -34,7 +34,7 @@ pub struct WalletsModal {
     can_open: bool,
 }
 
-impl WalletsModal {
+impl WalletListModal {
     /// Create new content instance.
     pub fn new(selected_id: Option<i64>, data: Option<String>, can_open: bool) -> Self {
         Self { selected_id, data, can_open }

@@ -16,12 +16,13 @@ use std::time::Duration;
 use egui::scroll_area::ScrollBarVisibility;
 use egui::{Align, CornerRadius, Id, Layout, Margin, RichText, ScrollArea, StrokeKind};
 use egui::os::OperatingSystem;
-use crate::gui::icons::{ARROW_LEFT, CARET_RIGHT, COMPUTER_TOWER, FOLDER_OPEN, FOLDER_PLUS, GEAR, GLOBE, GLOBE_SIMPLE, LOCK_KEY, PLUS, SIDEBAR_SIMPLE, SUITCASE};
+
+use crate::gui::icons::{ARROW_LEFT, CARET_RIGHT, COMPUTER_TOWER, FOLDER_OPEN, FOLDER_PLUS, GEAR, GEAR_FINE, GLOBE, GLOBE_SIMPLE, LOCK_KEY, PLUS, SIDEBAR_SIMPLE, SUITCASE};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::settings::SettingsContent;
 use crate::gui::views::types::{ContentContainer, LinePosition, ModalPosition, TitleContentType, TitleType};
 use crate::gui::views::wallets::creation::WalletCreationContent;
-use crate::gui::views::wallets::modals::{AddWalletModal, OpenWalletModal, WalletConnectionModal, WalletsModal};
+use crate::gui::views::wallets::modals::{AddWalletModal, OpenWalletModal, WalletSettingsModal, WalletListModal};
 use crate::gui::views::wallets::wallet::types::{wallet_status_text, WalletContentContainer};
 use crate::gui::views::wallets::WalletContent;
 use crate::gui::views::{Content, Modal, TitlePanel, View};
@@ -29,6 +30,7 @@ use crate::gui::Colors;
 use crate::wallet::types::{ConnectionMethod, WalletTask};
 use crate::wallet::{Wallet, WalletList};
 use crate::AppConfig;
+use crate::gui::views::wallets::wallet::RecoverySettings;
 
 /// Wallets content.
 pub struct WalletsContent {
@@ -39,10 +41,10 @@ pub struct WalletsContent {
     add_wallet_modal_content: AddWalletModal,
     /// Wallet opening [`Modal`] content.
     open_wallet_content: OpenWalletModal,
-    /// Wallet connection selection [`Modal`] content.
-    conn_selection_content: WalletConnectionModal,
+    /// Wallet settings [`Modal`] content.
+    wallet_settings_content: WalletSettingsModal,
     /// Wallet selection [`Modal`] content.
-    wallet_selection_content: WalletsModal,
+    wallet_selection_content: WalletListModal,
 
     /// Selected [`Wallet`] content.
     wallet_content: WalletContent,
@@ -53,19 +55,23 @@ pub struct WalletsContent {
     settings_content: Option<SettingsContent>,
 }
 
+/// Identifier for [`Modal`] to add the wallet.
 const ADD_WALLET_MODAL: &'static str = "wallets_add_modal";
+/// Identifier for [`Modal`] to open the wallet.
 const OPEN_WALLET_MODAL: &'static str = "wallets_open_wallet";
-const SELECT_CONNECTION_MODAL: &'static str = "wallets_select_conn_modal";
+/// Identifier for wallet settings [`Modal`].
+const WALLET_SETTINGS_MODAL: &'static str = "wallets_settings_modal";
+/// Identifier for wallet selection [`Modal`].
 const SELECT_WALLET_MODAL: &'static str = "wallets_select_modal";
 
 impl Default for WalletsContent {
     fn default() -> Self {
         Self {
             wallets: WalletList::default(),
-            wallet_selection_content: WalletsModal::new(None, None, true),
+            wallet_selection_content: WalletListModal::new(None, None, true),
             open_wallet_content: OpenWalletModal::new(),
             add_wallet_modal_content: AddWalletModal::default(),
-            conn_selection_content: WalletConnectionModal::new(ConnectionMethod::Integrated),
+            wallet_settings_content: WalletSettingsModal::new(ConnectionMethod::Integrated),
             wallet_content: WalletContent::default(),
             creation_content: None,
             settings_content: None,
@@ -78,8 +84,9 @@ impl ContentContainer for WalletsContent {
         vec![
             ADD_WALLET_MODAL,
             OPEN_WALLET_MODAL,
-            SELECT_CONNECTION_MODAL,
+            WALLET_SETTINGS_MODAL,
             SELECT_WALLET_MODAL,
+            Self::DELETE_CONFIRMATION_MODAL
         ]
     }
 
@@ -103,8 +110,8 @@ impl ContentContainer for WalletsContent {
                     true
                 });
             },
-            SELECT_CONNECTION_MODAL => {
-                self.conn_selection_content.ui(ui, modal, cb, |conn| {
+            WALLET_SETTINGS_MODAL => {
+                self.wallet_settings_content.ui(ui, modal, cb, |conn| {
                     if let Some(w) = self.wallets.selected().as_ref() {
                         w.update_connection(&conn);
                     }
@@ -123,6 +130,11 @@ impl ContentContainer for WalletsContent {
                     } else {
                         self.select_wallet(wallet, d, cb);
                     }
+                }
+            }
+            Self::DELETE_CONFIRMATION_MODAL => {
+                if let Some(w) = self.wallets.selected().as_ref() {
+                    RecoverySettings::deletion_modal_ui(ui, w);
                 }
             }
             _ => {}
@@ -314,6 +326,9 @@ impl ContentContainer for WalletsContent {
 }
 
 impl WalletsContent {
+    /// Identifier for wallet deletion confirmation [`Modal`].
+    pub const DELETE_CONFIRMATION_MODAL: &'static str = "wallets_delete_confirmation_modal";
+
     /// Called to navigate back, return `true` if action was not consumed.
     pub fn on_back(&mut self, cb: &dyn PlatformCallbacks) -> bool {
         if self.showing_settings() {
@@ -377,7 +392,7 @@ impl WalletsContent {
                 self.show_opening_modal(&w, data, cb);
             }
         } else {
-            self.wallet_selection_content = WalletsModal::new(None, data, true);
+            self.wallet_selection_content = WalletListModal::new(None, data, true);
             Modal::new(SELECT_WALLET_MODAL)
                 .position(ModalPosition::Center)
                 .title(t!("network_settings.choose_wallet"))
@@ -548,14 +563,14 @@ impl WalletsContent {
                     self.show_opening_modal(wallet, None, cb);
                 });
                 if !wallet.is_repairing() {
-                    View::item_button(ui, CornerRadius::default(), GLOBE, None, || {
+                    View::item_button(ui, CornerRadius::default(), GEAR_FINE, None, || {
                         self.select_wallet(wallet, None, cb);
-                        self.conn_selection_content =
-                            WalletConnectionModal::new(wallet.get_current_connection());
+                        let conn = wallet.get_current_connection();
+                        self.wallet_settings_content = WalletSettingsModal::new(conn);
                         // Show connection selection modal.
-                        Modal::new(SELECT_CONNECTION_MODAL)
+                        Modal::new(WALLET_SETTINGS_MODAL)
                             .position(ModalPosition::CenterTop)
-                            .title(t!("wallets.conn_method"))
+                            .title(t!("wallets.settings"))
                             .show();
                     });
                 }
