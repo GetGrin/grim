@@ -87,8 +87,10 @@ impl WalletTransportContent {
 
     /// Navigate back on navigation stack.
     pub fn back(&mut self) {
-        if self.settings_content.is_some() {
-            Tor::restart_services();
+        if let Some(content) = self.settings_content.as_ref() {
+            if content.tor_settings_content.settings_changed {
+                Tor::restart_services();
+            }
             self.settings_content = None;
         } else if self.qr_address_content.is_some() {
             self.qr_address_content = None;
