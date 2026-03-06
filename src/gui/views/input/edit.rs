@@ -56,7 +56,7 @@ pub struct TextEdit {
 
 impl TextEdit {
     /// Default height of [`egui::TextEdit`] view.
-    const TEXT_EDIT_HEIGHT: f32 = 41.0;
+    const TEXT_EDIT_HEIGHT: f32 = 42.0;
 
     pub fn new(id: egui::Id) -> Self {
         Self {
@@ -170,6 +170,11 @@ impl TextEdit {
                     .id(self.id)
                     .font(TextStyle::Heading)
                     .min_size(edit_rect.size())
+                    .margin(if View::is_desktop() {
+                        egui::Margin::symmetric(4, 2)
+                    } else {
+                        egui::Margin::symmetric(8, 8)
+                    })
                     .horizontal_align(if self.h_center { Align::Center } else { Align::Min })
                     .vertical_align(Align::Center)
                     .password(hide_input)

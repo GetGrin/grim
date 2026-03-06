@@ -12,19 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::{RichText, ScrollArea};
 use egui::scroll_area::ScrollBarVisibility;
+use egui::{RichText, ScrollArea};
 
-use crate::gui::Colors;
-use crate::gui::icons::{CHECK, CHECK_FAT, PLUS_CIRCLE, TRASH};
+use crate::gui::icons::{CHECK, PLUS_CIRCLE, TRASH};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Modal, View};
-use crate::gui::views::network::ConnectionsContent;
 use crate::gui::views::network::modals::ExternalConnectionModal;
+use crate::gui::views::network::ConnectionsContent;
 use crate::gui::views::types::ModalPosition;
 use crate::gui::views::wallets::WalletsContent;
-use crate::wallet::{ConnectionsConfig, ExternalConnection};
+use crate::gui::views::{Modal, View};
+use crate::gui::Colors;
 use crate::wallet::types::ConnectionMethod;
+use crate::wallet::{ConnectionsConfig, ExternalConnection};
 
 /// Wallet connection selection [`Modal`] content.
 pub struct WalletSettingsModal {
@@ -82,9 +82,7 @@ impl WalletSettingsModal {
                 ConnectionsContent::integrated_node_item_ui(ui, |ui| {
                     match self.conn {
                         ConnectionMethod::Integrated => {
-                            ui.add_space(14.0);
-                            ui.label(RichText::new(CHECK_FAT).size(20.0).color(Colors::green()));
-                            ui.add_space(14.0);
+                            View::selected_item_check(ui);
                         }
                         _ => {
                             View::item_button(ui, View::item_rounding(0, 1, true), CHECK, None, || {
@@ -119,7 +117,9 @@ impl WalletSettingsModal {
                                     ConnectionMethod::Integrated => false,
                                     ConnectionMethod::External(id, _) => id == conn.id
                                 };
-                                if !current_ext_conn {
+                                if current_ext_conn {
+                                    View::selected_item_check(ui);
+                                } else {
                                     let button_rounding = View::item_rounding(index, len, true);
                                     View::item_button(ui, button_rounding, CHECK, None, || {
                                         on_select(
@@ -127,11 +127,6 @@ impl WalletSettingsModal {
                                         );
                                         Modal::close();
                                     });
-                                } else {
-                                    ui.add_space(12.0);
-                                    ui.label(RichText::new(CHECK_FAT)
-                                        .size(20.0)
-                                        .color(Colors::green()));
                                 }
                             });
                         });

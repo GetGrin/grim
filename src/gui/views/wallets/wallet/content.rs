@@ -109,14 +109,20 @@ impl WalletContentContainer for WalletContent {
         }
 
         // Show wallet tabs.
+        let side_padding = View::TAB_ITEMS_PADDING + if View::is_desktop() {
+            0.0
+        } else {
+            4.0
+        };
+        let tabs_margin = Margin {
+            left: (View::far_left_inset_margin(ui) + side_padding) as i8,
+            right: (View::get_right_inset() + side_padding) as i8,
+            top: View::TAB_ITEMS_PADDING as i8,
+            bottom: (View::get_bottom_inset() + View::TAB_ITEMS_PADDING) as i8,
+        };
         egui::TopBottomPanel::bottom("wallet_tabs")
             .frame(egui::Frame {
-                inner_margin: Margin {
-                    left: (View::far_left_inset_margin(ui) + View::TAB_ITEMS_PADDING) as i8,
-                    right: (View::get_right_inset() + View::TAB_ITEMS_PADDING) as i8,
-                    top: View::TAB_ITEMS_PADDING as i8,
-                    bottom: (View::get_bottom_inset() + View::TAB_ITEMS_PADDING) as i8,
-                },
+                inner_margin: tabs_margin,
                 fill: Colors::fill(),
                 ..Default::default()
             })
@@ -127,10 +133,10 @@ impl WalletContentContainer for WalletContent {
                 });
                 let rect = {
                     let mut r = r.clone();
-                    r.min.x -= View::far_left_inset_margin(ui) + View::TAB_ITEMS_PADDING;
-                    r.min.y -= View::TAB_ITEMS_PADDING;
-                    r.max.x += View::get_right_inset() + View::TAB_ITEMS_PADDING;
-                    r.max.y += View::get_bottom_inset() + View::TAB_ITEMS_PADDING;
+                    r.min.x -= tabs_margin.left as f32;
+                    r.min.y -= tabs_margin.top as f32;
+                    r.max.x += tabs_margin.right as f32;
+                    r.max.y += tabs_margin.bottom as f32;
                     r
                 };
                 // Draw cover for content below opened panel.
@@ -158,9 +164,9 @@ impl WalletContentContainer for WalletContent {
             egui::TopBottomPanel::top(Id::from("wallet_account").with(wallet.identifier()))
                 .frame(egui::Frame {
                     inner_margin: Margin {
-                        left: (View::far_left_inset_margin(ui) + 4.0) as i8,
-                        right: (View::get_right_inset() + 4.0) as i8,
-                        top: 4.0 as i8,
+                        left: (View::far_left_inset_margin(ui) + View::content_padding()) as i8,
+                        right: (View::get_right_inset() + View::content_padding()) as i8,
+                        top: View::content_padding() as i8,
                         bottom: 0.0 as i8,
                     },
                     fill: if top_panel_expanded {
@@ -176,9 +182,9 @@ impl WalletContentContainer for WalletContent {
                     // Draw content divider lines.
                     let r = {
                         let mut r = rect.clone();
-                        r.min.x -= 4.0 + View::far_left_inset_margin(ui);
-                        r.min.y -= 4.0;
-                        r.max.x += 4.0 + View::get_right_inset();
+                        r.min.x -= View::content_padding() + View::far_left_inset_margin(ui);
+                        r.min.y -= View::content_padding();
+                        r.max.x += View::content_padding() + View::get_right_inset();
                         r
                     };
                     if dual_panel && show_wallets_dual {
@@ -192,8 +198,8 @@ impl WalletContentContainer for WalletContent {
             egui::TopBottomPanel::top(Id::from("wallet_transport").with(wallet.identifier()))
                 .frame(egui::Frame {
                     inner_margin: Margin {
-                        left: (View::far_left_inset_margin(ui) + 4.0) as i8,
-                        right: (View::get_right_inset() + 4.0) as i8,
+                        left: (View::far_left_inset_margin(ui) + View::content_padding()) as i8,
+                        right: (View::get_right_inset() + View::content_padding()) as i8,
                         top: 1.0 as i8,
                         bottom: 1.0 as i8,
                     },
@@ -212,9 +218,9 @@ impl WalletContentContainer for WalletContent {
                     // Draw content divider lines.
                     let r = {
                         let mut r = rect.clone();
-                        r.min.x -= 4.0 + View::far_left_inset_margin(ui);
+                        r.min.x -= View::content_padding() + View::far_left_inset_margin(ui);
                         r.min.y -= 1.0;
-                        r.max.x += 4.0 + View::get_right_inset();
+                        r.max.x += View::content_padding() + View::get_right_inset();
                         r
                     };
                     if dual_panel && show_wallets_dual {
@@ -227,8 +233,8 @@ impl WalletContentContainer for WalletContent {
         egui::CentralPanel::default()
             .frame(egui::Frame {
                 inner_margin: Margin {
-                    left: (View::far_left_inset_margin(ui) + 4.0) as i8,
-                    right: (View::get_right_inset() + 4.0) as i8,
+                    left: (View::far_left_inset_margin(ui) + View::content_padding()) as i8,
+                    right: (View::get_right_inset() + View::content_padding()) as i8,
                     top: 0.0 as i8,
                     bottom: 4.0 as i8,
                 },
@@ -272,8 +278,8 @@ impl WalletContentContainer for WalletContent {
                 }
                 let rect = {
                     let mut r = rect.clone();
-                    r.min.x -= View::far_left_inset_margin(ui) + 4.0;
-                    r.max.x += View::get_right_inset() + 4.0;
+                    r.min.x -= View::far_left_inset_margin(ui) + View::content_padding();
+                    r.max.x += View::get_right_inset() + View::content_padding();
                     r.max.y += 4.0;
                     r
                 };
@@ -355,9 +361,6 @@ impl WalletContent {
         ui.scope(|ui| {
             // Setup spacing between tabs.
             ui.style_mut().spacing.item_spacing = egui::vec2(View::TAB_ITEMS_PADDING, 0.0);
-
-            // Setup vertical padding inside buttons.
-            ui.style_mut().spacing.button_padding = egui::vec2(0.0, 4.0);
 
             let has_wallet_data = wallet.get_data().is_some();
             let can_send = if has_wallet_data {

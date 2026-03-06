@@ -14,7 +14,7 @@
 
 use egui::{Align, Layout, RichText, StrokeKind};
 
-use crate::gui::icons::{CHECK, CHECK_CIRCLE, CHECK_FAT, DOTS_THREE_CIRCLE, GLOBE, GLOBE_SIMPLE, PLUS_CIRCLE, X_CIRCLE};
+use crate::gui::icons::{CHECK, CHECK_CIRCLE, DOTS_THREE_CIRCLE, GLOBE, GLOBE_SIMPLE, PLUS_CIRCLE, X_CIRCLE};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::network::modals::ExternalConnectionModal;
 use crate::gui::views::network::ConnectionsContent;
@@ -77,9 +77,7 @@ impl ContentContainer for ConnectionSettings {
                         self.method = ConnectionMethod::Integrated;
                     });
                 } else {
-                    ui.add_space(14.0);
-                    ui.label(RichText::new(CHECK_FAT).size(20.0).color(Colors::green()));
-                    ui.add_space(14.0);
+                    View::selected_item_check(ui);
                 }
             });
 
@@ -165,8 +163,7 @@ impl ConnectionSettings {
         ui.vertical(|ui| {
             ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
                 if is_current {
-                    ui.add_space(12.0);
-                    ui.label(RichText::new(CHECK_FAT).size(20.0).color(Colors::green()));
+                    View::selected_item_check(ui);
                 } else {
                     // Draw button to select connection.
                     let button_rounding = View::item_rounding(index, len, true);

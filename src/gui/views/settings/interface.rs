@@ -15,7 +15,7 @@
 use egui::scroll_area::ScrollBarVisibility;
 use egui::{Align, Layout, RichText, ScrollArea, StrokeKind};
 
-use crate::gui::icons::{CHECK, CHECK_FAT, PENCIL, TRANSLATE};
+use crate::gui::icons::{CHECK, PENCIL, TRANSLATE};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::types::{ContentContainer, ModalPosition};
 use crate::gui::views::{Modal, View};
@@ -178,9 +178,7 @@ impl InterfaceSettingsContent {
                         Modal::close();
                     });
                 } else {
-                    ui.add_space(14.0);
-                    ui.label(RichText::new(CHECK_FAT).size(20.0).color(Colors::green()));
-                    ui.add_space(14.0);
+                    View::selected_item_check(ui);
                 }
 
                 let layout_size = ui.available_size();

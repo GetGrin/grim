@@ -58,16 +58,22 @@ impl NetworkContent {
 
         // Show integrated node tabs content.
         if !show_connections && !show_settings {
+            let side_padding = View::TAB_ITEMS_PADDING + if View::is_desktop() {
+                0.0
+            } else {
+                4.0
+            };
+            let tabs_margin = Margin {
+                left: (View::get_left_inset() + side_padding) as i8,
+                right: (View::far_right_inset_margin(ui) + side_padding) as i8,
+                top: View::TAB_ITEMS_PADDING as i8,
+                bottom: (View::get_bottom_inset() + View::TAB_ITEMS_PADDING) as i8,
+            };
             egui::TopBottomPanel::bottom("network_tabs_content")
                 .min_height(0.5)
                 .resizable(false)
                 .frame(egui::Frame {
-                    inner_margin: Margin {
-                        left: (View::get_left_inset() + View::TAB_ITEMS_PADDING) as i8,
-                        right: (View::far_right_inset_margin(ui) + View::TAB_ITEMS_PADDING) as i8,
-                        top: View::TAB_ITEMS_PADDING as i8,
-                        bottom: (View::get_bottom_inset() + View::TAB_ITEMS_PADDING) as i8,
-                    },
+                    inner_margin: tabs_margin,
                     fill: Colors::fill(),
                     ..Default::default()
                 })
@@ -79,9 +85,9 @@ impl NetworkContent {
                     // Draw content divider line.
                     let r = {
                         let mut r = rect.clone();
-                        r.min.x -= View::get_left_inset() + View::TAB_ITEMS_PADDING;
-                        r.min.y -= View::TAB_ITEMS_PADDING;
-                        r.max.x += View::far_right_inset_margin(ui) + View::TAB_ITEMS_PADDING;
+                        r.min.x -= tabs_margin.left as f32;
+                        r.min.y -= tabs_margin.top as f32;
+                        r.max.x += tabs_margin.right as f32;
                         r
                     };
                     View::line(ui, LinePosition::TOP, &r, Colors::stroke());
@@ -99,8 +105,9 @@ impl NetworkContent {
                 egui::CentralPanel::default()
                     .frame(egui::Frame {
                         inner_margin: Margin {
-                            left: (View::get_left_inset() + 4.0) as i8,
-                            right: (View::far_right_inset_margin(ui) + 4.0) as i8,
+                            left: (View::get_left_inset() + View::content_padding()) as i8,
+                            right: (View::far_right_inset_margin(ui) +
+                                View::content_padding()) as i8,
                             top: 3.0 as i8,
                             bottom: 4.0 as i8,
                         },
@@ -141,13 +148,12 @@ impl NetworkContent {
                         } else {
                             self.node_tab_content.tab_ui(ui, cb);
                         }
-
                         // Draw content divider line.
                         let r = {
                             let mut r = rect.clone();
                             r.min.y -= 3.0;
-                            r.max.x += 4.0;
-                            r.max.y += 4.0;
+                            r.max.x += View::content_padding();
+                            r.max.y += View::content_padding();
                             r
                         };
                         if dual_panel {
@@ -161,17 +167,17 @@ impl NetworkContent {
             .frame(egui::Frame {
                 inner_margin: Margin {
                     left: if show_connections {
-                        View::get_left_inset() + 4.0
+                        View::get_left_inset() + View::content_padding()
                     } else {
                         0.0
                     } as i8,
                     right: if show_connections {
-                        View::far_right_inset_margin(ui) + 4.0
+                        View::far_right_inset_margin(ui) + View::content_padding()
                     } else {
                         0.0
                     } as i8,
                     top: 3.0 as i8,
-                    bottom:(4.0 + View::get_bottom_inset()) as i8,
+                    bottom: 0.0 as i8,
                 },
                 ..Default::default()
             })
@@ -193,13 +199,14 @@ impl NetworkContent {
                                 self.connections.ui(ui, cb);
                             });
                         });
+                        ui.add_space(32.0);
                     });
                 // Draw content divider line.
                 let r = {
                     let mut r = rect.clone();
                     r.min.y -= 3.0;
-                    r.max.x += 4.0;
-                    r.max.y += 4.0 + View::get_bottom_inset();
+                    r.max.x += View::content_padding();
+                    r.max.y += View::content_padding() + View::get_bottom_inset();
                     r
                 };
                 if show_connections && dual_panel {
@@ -233,8 +240,6 @@ impl NetworkContent {
         ui.vertical_centered(|ui| {
             // Setup spacing between tabs.
             ui.style_mut().spacing.item_spacing = egui::vec2(View::TAB_ITEMS_PADDING, 0.0);
-            // Setup vertical padding inside tab button.
-            ui.style_mut().spacing.button_padding = egui::vec2(0.0, 4.0);
 
             // Draw tab buttons.
             let current_type = self.node_tab_content.get_type();

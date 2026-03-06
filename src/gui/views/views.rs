@@ -23,7 +23,7 @@ use egui::text::{LayoutJob, TextFormat};
 use egui::{lerp, Button, CornerRadius, CursorIcon, Rect, Response, Rgba, RichText, Sense, SizeHint, Spinner, StrokeKind, TextureHandle, TextureOptions, UiBuilder, Widget};
 use egui_extras::image::load_svg_bytes_with_size;
 
-use crate::gui::icons::{CHECK_SQUARE, SQUARE};
+use crate::gui::icons::{CHECK_FAT, CHECK_SQUARE, SQUARE};
 use crate::gui::views::types::LinePosition;
 use crate::gui::Colors;
 use crate::AppConfig;
@@ -109,6 +109,15 @@ impl View {
         }
     }
 
+    /// Content padding for current platform.
+    pub fn content_padding() -> f32 {
+        if View::is_desktop() {
+            4.0
+        } else {
+            8.0
+        }
+    }
+
     /// Cut long text with ﹍ character.
     fn ellipsize(text: String, size: f32, color: Color32) -> LayoutJob {
         let mut job = LayoutJob::single_section(text, TextFormat {
@@ -170,6 +179,10 @@ impl View {
     /// Draw title button with transparent background color, contains only icon.
     fn title_button(ui: &mut egui::Ui, size: f32, icon: &str, action: impl FnOnce(&mut egui::Ui)) {
         ui.scope(|ui| {
+            // Setup padding for title buttons.
+            if !View::is_desktop() {
+                ui.style_mut().spacing.button_padding = egui::vec2(20.0, 8.0);
+            }
             // Disable strokes.
             ui.style_mut().visuals.widgets.inactive.bg_stroke = Stroke::NONE;
             ui.style_mut().visuals.widgets.hovered.bg_stroke = Stroke::NONE;
@@ -181,11 +194,16 @@ impl View {
             let wt = RichText::new(icon.to_string()).size(size).color(Colors::title(true));
             // Draw button.
             let br = Button::new(wt)
+                .sense(if View::is_desktop() {
+                    Sense::click()
+                } else {
+                    Sense::click_and_drag()
+                })
                 .fill(Colors::TRANSPARENT)
                 .ui(ui)
                 .on_hover_cursor(CursorIcon::PointingHand);
             br.surrender_focus();
-            if br.clicked() {
+            if br.clicked() || (!View::is_desktop() && br.drag_stopped()) {
                 action(ui);
             }
         });
@@ -236,6 +254,13 @@ impl View {
             } else {
                 button = button.fill(Colors::fill()).stroke(Stroke::NONE);
             }
+
+            // Setup paddings for tab buttons.
+           if Self::is_desktop() {
+                ui.style_mut().spacing.button_padding = egui::vec2(10.0, 4.0);
+            } else {
+                ui.style_mut().spacing.button_padding = egui::vec2(14.0, 8.0);
+            };
 
             // Setup pointer style.
             let br = if active_not_selected {
@@ -328,7 +353,12 @@ impl View {
 
         ui.scope(|ui| {
             // Setup padding for item buttons.
-            ui.style_mut().spacing.button_padding = egui::vec2(14.0, 0.0);
+            let padding = if Self::is_desktop() {
+                14.0
+            } else {
+                18.0
+            };
+            ui.style_mut().spacing.button_padding = egui::vec2(padding, 0.0);
             // Disable expansion on click/hover.
             ui.style_mut().visuals.widgets.hovered.expansion = 0.0;
             ui.style_mut().visuals.widgets.active.expansion = 0.0;
@@ -395,6 +425,18 @@ impl View {
             sw: if corners[3] { 8.0 as u8 } else { 0.0 as u8 },
             se: if corners[2] { 8.0 as u8 } else { 0.0 as u8 },
         }
+    }
+
+    /// Draw selected item check.
+    pub fn selected_item_check(ui: &mut egui::Ui) {
+        let padding = if View::is_desktop() {
+            14.0
+        } else {
+            18.0
+        };
+        ui.add_space(padding);
+        ui.label(RichText::new(CHECK_FAT).size(20.0).color(Colors::green()));
+        ui.add_space(padding);
     }
 
     /// Draw rounded box with some value and label in the middle,

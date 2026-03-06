@@ -126,7 +126,11 @@ pub fn setup_visuals(ctx: &Context) {
     style.interaction.selectable_labels = false;
     style.interaction.multi_widget_text_select = false;
     // Setup spacing for buttons.
-    style.spacing.button_padding = egui::vec2(12.0, 8.0);
+    if View::is_desktop() {
+        style.spacing.button_padding = egui::vec2(12.0, 8.0);
+    } else {
+        style.spacing.button_padding = egui::vec2(14.0, 10.0);
+    }
     // Make scroll-bar thinner and lighter.
     style.spacing.scroll.bar_width = 4.0;
     style.spacing.scroll.bar_outer_margin = -2.0;

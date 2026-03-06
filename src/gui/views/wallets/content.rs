@@ -188,14 +188,21 @@ impl ContentContainer for WalletsContent {
                 }
             });
 
+        // Show wallet list tabs.
+        let side_padding = View::TAB_ITEMS_PADDING + if View::is_desktop() {
+            0.0
+        } else {
+            4.0
+        };
+        let tabs_margin = Margin {
+            left: (View::far_left_inset_margin(ui) + side_padding) as i8,
+            right: (View::far_right_inset_margin(ui) + side_padding) as i8,
+            top: View::TAB_ITEMS_PADDING as i8,
+            bottom: (View::get_bottom_inset() + View::TAB_ITEMS_PADDING) as i8,
+        };
         egui::TopBottomPanel::bottom("wallets_bottom_panel")
             .frame(egui::Frame {
-                inner_margin: Margin {
-                    left: (View::far_left_inset_margin(ui) + View::TAB_ITEMS_PADDING) as i8,
-                    right: (View::far_right_inset_margin(ui) + View::TAB_ITEMS_PADDING) as i8,
-                    top: View::TAB_ITEMS_PADDING as i8,
-                    bottom: (View::get_bottom_inset() + View::TAB_ITEMS_PADDING) as i8,
-                },
+                inner_margin: tabs_margin,
                 fill: Colors::fill(),
                 ..Default::default()
             })
@@ -205,8 +212,6 @@ impl ContentContainer for WalletsContent {
 
                 // Setup spacing between tabs.
                 ui.style_mut().spacing.item_spacing = egui::vec2(View::TAB_ITEMS_PADDING, 0.0);
-                // Setup vertical padding inside buttons.
-                ui.style_mut().spacing.button_padding = egui::vec2(10.0, 4.0);
 
                 ui.vertical_centered(|ui| {
                     let pressed = Modal::opened() == Some(ADD_WALLET_MODAL);
@@ -218,9 +223,9 @@ impl ContentContainer for WalletsContent {
                 // Draw content divider line.
                 let r = {
                     let mut r = rect.clone();
-                    r.min.y -= View::TAB_ITEMS_PADDING;
-                    r.min.x -= View::TAB_ITEMS_PADDING;
-                    r.max.x += View::TAB_ITEMS_PADDING;
+                    r.min.y -= tabs_margin.top as f32;
+                    r.min.x -= tabs_margin.left as f32;
+                    r.max.x += tabs_margin.right as f32;
                     r
                 };
                 View::line(ui, LinePosition::TOP, &r, Colors::stroke());
@@ -235,8 +240,8 @@ impl ContentContainer for WalletsContent {
             .resizable(false)
             .frame(egui::Frame {
                 inner_margin: Margin {
-                    left: (View::far_left_inset_margin(ui) + 4.0) as i8,
-                    right: (View::far_right_inset_margin(ui) + 4.0) as i8,
+                    left: (View::far_left_inset_margin(ui) + View::content_padding()) as i8,
+                    right: (View::far_right_inset_margin(ui) + View::content_padding()) as i8,
                     top: 3.0 as i8,
                     bottom: 4.0 as i8,
                 },
@@ -252,8 +257,8 @@ impl ContentContainer for WalletsContent {
             .frame(egui::Frame {
                 inner_margin: if self.showing_settings() {
                     Margin {
-                        left: (View::far_left_inset_margin(ui) + 4.0) as i8,
-                        right: (View::far_right_inset_margin(ui) + 4.0) as i8,
+                        left: (View::far_left_inset_margin(ui) + View::content_padding()) as i8,
+                        right: (View::far_right_inset_margin(ui) + View::content_padding()) as i8,
                         top: 0,
                         bottom: 0,
                     }

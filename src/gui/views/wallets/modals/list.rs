@@ -15,7 +15,7 @@
 use egui::scroll_area::ScrollBarVisibility;
 use egui::{Align, Layout, RichText, ScrollArea, StrokeKind};
 
-use crate::gui::icons::{CHECK, CHECK_FAT, COMPUTER_TOWER, FOLDER_OPEN, GLOBE_SIMPLE, PLUGS_CONNECTED};
+use crate::gui::icons::{CHECK, COMPUTER_TOWER, FOLDER_OPEN, GLOBE_SIMPLE, PLUGS_CONNECTED};
 use crate::gui::views::wallets::wallet::types::wallet_status_text;
 use crate::gui::views::{Modal, View};
 use crate::gui::Colors;
@@ -111,10 +111,8 @@ impl WalletListModal {
                 });
             } else {
                 // Draw button to select wallet.
-                let current = self.selected_id.unwrap_or(0) == id;
-                if current {
-                    ui.add_space(12.0);
-                    ui.label(RichText::new(CHECK_FAT).size(20.0).color(Colors::green()));
+                if self.selected_id.unwrap_or(0) == id {
+                    View::selected_item_check(ui);
                 } else {
                     View::item_button(ui, View::item_rounding(0, 1, true), CHECK, None, || {
                         on_select();

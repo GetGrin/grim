@@ -12,16 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::gui::icons::{CHECK, CHECK_FAT, FOLDER_USER, PATH};
+use egui::scroll_area::ScrollBarVisibility;
+use egui::{Align, Layout, RichText, ScrollArea, StrokeKind};
+use grin_core::core::amount_to_hr_string;
+
+use crate::gui::icons::{CHECK, FOLDER_USER, PATH};
 use crate::gui::views::wallets::wallet::types::GRIN;
 use crate::gui::views::View;
 use crate::gui::Colors;
 use crate::wallet::types::WalletAccount;
 use crate::wallet::WalletConfig;
-
-use egui::scroll_area::ScrollBarVisibility;
-use egui::{Align, Layout, RichText, ScrollArea, StrokeKind};
-use grin_core::core::amount_to_hr_string;
 
 /// Wallet account list content.
 pub struct WalletAccountsContent {
@@ -83,15 +83,13 @@ impl WalletAccountsContent {
         ui.vertical(|ui| {
             ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
                 // Draw button to select account.
-                let is_current_account = self.current_label == acc.label;
-                if !is_current_account {
+                if self.current_label == acc.label {
+                    View::selected_item_check(ui);
+                } else {
                     let button_rounding = View::item_rounding(index, size, true);
                     View::item_button(ui, button_rounding, CHECK, None, || {
                         on_select();
                     });
-                } else {
-                    ui.add_space(12.0);
-                    ui.label(RichText::new(CHECK_FAT).size(20.0).color(Colors::green()));
                 }
 
                 let layout_size = ui.available_size();
