@@ -104,8 +104,8 @@ impl Modal {
     }
 
     /// Set title text on [`Modal`] creation.
-    pub fn title(mut self, title: String) -> Self {
-        self.title = Some(title.to_uppercase());
+    pub fn title(mut self, title: impl Into<String>) -> Self {
+        self.title = Some(title.into().to_uppercase());
         self
     }
 
@@ -157,11 +157,11 @@ impl Modal {
     }
 
     /// Set title text for current opened [`Modal`].
-    pub fn set_title(title: String) {
+    pub fn set_title(title: impl Into<String>) {
         let mut w_state = MODAL_STATE.write();
         if w_state.modal.is_some() {
             let mut modal = w_state.modal.clone().unwrap();
-            modal.title = Some(title.to_uppercase());
+            modal.title = Some(title.into().to_uppercase());
             w_state.modal = Some(modal);
         }
     }

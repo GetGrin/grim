@@ -119,8 +119,8 @@ impl View {
     }
 
     /// Cut long text with ﹍ character.
-    fn ellipsize(text: String, size: f32, color: Color32) -> LayoutJob {
-        let mut job = LayoutJob::single_section(text, TextFormat {
+    fn ellipsize(text: impl Into<String>, size: f32, color: Color32) -> LayoutJob {
+        let mut job = LayoutJob::single_section(text.into(), TextFormat {
             font_id: FontId::proportional(size), color, ..Default::default()
         });
         job.wrap = TextWrapping {
@@ -133,12 +133,16 @@ impl View {
     }
 
     /// Draw ellipsized text.
-    pub fn ellipsize_text(ui: &mut egui::Ui, text: String, size: f32, color: Color32) {
+    pub fn ellipsize_text(ui: &mut egui::Ui, text: impl Into<String>, size: f32, color: Color32) {
         ui.label(Self::ellipsize(text, size, color));
     }
 
     /// Draw animated ellipsized text.
-    pub fn animate_text(ui: &mut egui::Ui, text: String, size: f32, color: Color32, animate: bool) {
+    pub fn animate_text(ui: &mut egui::Ui,
+                        text: impl Into<String>,
+                        size: f32,
+                        color: Color32,
+                        animate: bool) {
         // Setup text color animation if needed.
         let (dark, bright) = (0.3, 1.0);
         let color_factor = if animate {
@@ -287,10 +291,10 @@ impl View {
     }
 
     /// Draw [`Button`] with specified background fill color and default text color.
-    pub fn button(ui: &mut egui::Ui, text: String, fill: Color32, action: impl FnOnce()) {
-        let br = Self::button_resp(ui, text, Colors::text_button(), fill);
+    pub fn button(ui: &mut egui::Ui, text: impl Into<String>, fill: Color32, cb: impl FnOnce()) {
+        let br = Self::button_resp(ui, text.into(), Colors::text_button(), fill);
         if br.clicked() {
-            action();
+            cb();
         }
     }
 
@@ -320,16 +324,16 @@ impl View {
 
     /// Draw gold action [`Button`].
     pub fn action_button(ui: &mut egui::Ui,
-                         text: String, action: impl FnOnce()) {
-        Self::colored_text_button(ui, text, Colors::title(true), Colors::gold(), action);
+                         text: impl Into<String>, action: impl FnOnce()) {
+        Self::colored_text_button(ui, text.into(), Colors::title(true), Colors::gold(), action);
     }
 
     /// Draw [`Button`] with specified background fill color and ui at callback.
     pub fn button_ui(ui: &mut egui::Ui,
-                     text: String,
+                     text: impl Into<String>,
                      fill: Color32,
                      action: impl FnOnce(&mut egui::Ui)) {
-        let button_text = Self::ellipsize(text.to_uppercase(), 17.0, Colors::text_button());
+        let button_text = Self::ellipsize(text.into().to_uppercase(), 17.0, Colors::text_button());
         let br = Button::new(button_text)
             .stroke(Self::default_stroke())
             .fill(fill)
@@ -443,7 +447,7 @@ impl View {
     /// where is r = (top_left, top_right, bottom_left, bottom_right).
     /// | VALUE |
     /// | label |
-    pub fn label_box(ui: &mut egui::Ui, text: String, label: String, r: [bool; 4]) {
+    pub fn label_box(ui: &mut egui::Ui, v: impl Into<String>, l: impl Into<String>, r: [bool; 4]) {
         let rect = ui.available_rect_before_wrap();
 
         // Create background shape.
@@ -464,7 +468,7 @@ impl View {
                     ui.style_mut().spacing.item_spacing.y = -3.0;
 
                     // Draw box value.
-                    let mut job = LayoutJob::single_section(text, TextFormat {
+                    let mut job = LayoutJob::single_section(v.into(), TextFormat {
                         font_id: FontId::proportional(17.0),
                         color: Colors::white_or_black(true),
                         ..Default::default()
@@ -478,7 +482,7 @@ impl View {
                     ui.label(job);
 
                     // Draw box label.
-                    ui.label(RichText::new(label).color(Colors::gray()).size(15.0));
+                    ui.label(RichText::new(l).color(Colors::gray()).size(15.0));
                 });
                 ui.add_space(2.0);
             });
@@ -524,10 +528,10 @@ impl View {
     }
 
     /// Draw the button that looks like checkbox with callback on check.
-    pub fn checkbox(ui: &mut egui::Ui, checked: bool, text: String, action: impl FnOnce()) {
+    pub fn checkbox(ui: &mut egui::Ui, checked: bool, text: impl Into<String>, cb: impl FnOnce()) {
         let (text_value, color) = match checked {
-            true => (format!("{} {}", CHECK_SQUARE, text), Colors::text_button()),
-            false => (format!("{} {}", SQUARE, text), Colors::checkbox())
+            true => (format!("{} {}", CHECK_SQUARE, text.into()), Colors::text_button()),
+            false => (format!("{} {}", SQUARE, text.into()), Colors::checkbox())
         };
 
         let br = Button::new(RichText::new(text_value).size(17.0).color(color))
@@ -537,18 +541,21 @@ impl View {
             .ui(ui)
             .on_hover_cursor(CursorIcon::PointingHand);
         if br.clicked() {
-            action();
+            cb();
         }
     }
 
     /// Show a [`RadioButton`]. It is selected if `*current_value == selected_value`.
     /// If clicked, `selected_value` is assigned to `*current_value`.
-    pub fn radio_value<T: PartialEq>(ui: &mut egui::Ui, current: &mut T, value: T, text: String) {
+    pub fn radio_value<T: PartialEq>(ui: &mut egui::Ui,
+                                     current: &mut T,
+                                     value: T,
+                                     text: impl Into<String>) {
         ui.scope(|ui| {
             // Setup background color.
             ui.visuals_mut().widgets.inactive.bg_fill = Colors::fill_deep();
             // Draw radio button.
-            let mut response = ui.radio(*current == value, text)
+            let mut response = ui.radio(*current == value, text.into())
                 .on_hover_cursor(CursorIcon::PointingHand);
             if response.clicked() && *current != value {
                 *current = value;

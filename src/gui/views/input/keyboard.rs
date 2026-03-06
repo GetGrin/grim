@@ -458,7 +458,7 @@ impl KeyboardContent {
     /// Draw input button.
     fn input_button_ui(&mut self, s: &str, translate: bool, ui: &mut egui::Ui) -> Rect {
         let value = if translate {
-            t!(format!("keyboard.{}", s).as_str(), locale = Self::input_locale().as_str())
+            t!(format!("keyboard.{}", s), locale = Self::input_locale().as_str()).into()
         } else {
             s.to_string()
         };

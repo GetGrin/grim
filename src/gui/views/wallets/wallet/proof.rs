@@ -26,7 +26,7 @@ impl PaymentProofContent {
     pub fn new(proof_text: Option<String>) -> Self {
         Self {
             input_edit: proof_text.unwrap_or("".to_string()),
-            pick_button: FilePickContent::new(FilePickContentType::Button),
+            pick_button: FilePickContent::new(FilePickContentType::Button(t!("file").into())),
             parse_error: false,
             validation_result: None,
         }
@@ -159,7 +159,7 @@ impl PaymentProofContent {
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {
             let (desc_text, color) = if tx.data.tx_type == TxLogEntryType::TxReceived {
-                (t!("wallets.payment_proof_valid"), Colors::green())
+                (t!("wallets.payment_proof_valid").into(), Colors::green())
             } else {
                 (format!("{}:", t!("wallets.payment_proof")), Colors::inactive_text())
             };

@@ -573,7 +573,7 @@ impl WalletTransactionsContent {
 }
 
 /// Draw awaiting balance item content.
-fn awaiting_item_ui(ui: &mut egui::Ui, amount: u64, label: String) {
+fn awaiting_item_ui(ui: &mut egui::Ui, amount: u64, label: impl Into<String>) {
     let rect = ui.available_rect_before_wrap();
     View::line(ui, LinePosition::TOP, &rect, Colors::item_stroke());
     ui.add_space(4.0);

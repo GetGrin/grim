@@ -46,7 +46,9 @@ impl Default for MessageInputContent {
             message_edit: "".to_string(),
             parse_error: false,
             scan_qr_content: None,
-            file_pick_button: FilePickContent::new(FilePickContentType::Button),
+            file_pick_button: FilePickContent::new(
+                FilePickContentType::Button(t!("choose_file").into())
+            ),
             proof_content: None,
         }
     }

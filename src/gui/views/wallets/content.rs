@@ -424,7 +424,7 @@ impl WalletsContent {
         // Setup title.
         let title_content = if show_wallet && (!dual_panel
             || (dual_panel && !show_list)) && !creating_wallet && !showing_settings {
-            let title = self.wallet_content.title();
+            let title = self.wallet_content.title().into();
             let subtitle = self.wallets.selected().unwrap().get_config().name;
             TitleType::Single(TitleContentType::WithSubTitle(title, subtitle, false))
         } else {
@@ -434,11 +434,11 @@ impl WalletsContent {
                 t!("wallets.add")
             } else {
                 t!("wallets.title")
-            };
+            }.into();
             let dual_title = !showing_settings && !creating_wallet &&
                 show_wallet && dual_panel;
             if dual_title {
-                let title = self.wallet_content.title();
+                let title = self.wallet_content.title().into();
                 let subtitle = self.wallets.selected().unwrap().get_config().name;
                 let wallet_title_content = TitleContentType::WithSubTitle(title, subtitle, false);
                 TitleType::Dual(TitleContentType::Title(title_text), wallet_title_content)

@@ -32,10 +32,10 @@ pub enum NodeTabType {
 impl NodeTabType {
     pub fn title(&self) -> String {
         match *self {
-            NodeTabType::Info => { t!("network.node") }
-            NodeTabType::Metrics => { t!("network.metrics") }
-            NodeTabType::Mining => { t!("network.mining") }
-            NodeTabType::Settings => { t!("network.settings") }
+            NodeTabType::Info => t!("network.node").into(),
+            NodeTabType::Metrics => t!("network.metrics").into(),
+            NodeTabType::Mining => t!("network.mining").into(),
+            NodeTabType::Settings => t!("network.settings").into()
         }
     }
 }

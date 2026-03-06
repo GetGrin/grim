@@ -25,7 +25,7 @@ use crate::gui::Colors;
 
 /// Type of button.
 pub enum FilePickContentType {
-    Button, ItemButton(CornerRadius), Tab
+    Button(String), ItemButton(CornerRadius), Tab
 }
 
 /// Button to pick file and parse its data into text.
@@ -116,9 +116,9 @@ impl FilePickContent {
             }
         } else {
             // Draw button to pick file.
-            match self.content_type {
-                FilePickContentType::Button => {
-                    let text = format!("{} {}", ARCHIVE_BOX, t!("choose_file"));
+            match &self.content_type {
+                FilePickContentType::Button(text) => {
+                    let text = format!("{} {}", ARCHIVE_BOX, text);
                     let text_color = Colors::blue();
                     let fill = Colors::white_or_black(false);
                     View::colored_text_button(ui, text, text_color, fill, || {
@@ -126,7 +126,7 @@ impl FilePickContent {
                     });
                 }
                 FilePickContentType::ItemButton(r) => {
-                    View::item_button(ui, r, ARCHIVE_BOX, Some(Colors::blue()), || {
+                    View::item_button(ui, r.clone(), ARCHIVE_BOX, Some(Colors::blue()), || {
                         self.on_file_pick(pick, cb);
                     });
                 }

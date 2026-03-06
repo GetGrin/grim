@@ -244,7 +244,7 @@ impl NetworkSettingsContent {
                         (url, Colors::title(false), CLOUD_CHECK, t!("network_settings.enabled"))
                     } else {
                         (
-                            t!("enter_url"),
+                            t!("enter_url").into(),
                             Colors::inactive_text(),
                             CLOUD_SLASH,
                             t!("network_settings.disabled")

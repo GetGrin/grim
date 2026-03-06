@@ -213,7 +213,7 @@ impl WalletCreationContent {
                     .color(Colors::red()));
                 ui.add_space(10.0);
             } else {
-                ui.label(RichText::new(&t!("wallets.not_valid_phrase"))
+                ui.label(RichText::new(t!("wallets.not_valid_phrase"))
                     .size(16.0)
                     .color(Colors::red()));
                 ui.add_space(4.0);
@@ -303,7 +303,7 @@ impl WalletCreationContent {
         let (next_text, text_color, bg_color) = if self.step == Step::SetupConnection {
             (format!("{} {}", CHECK, t!("complete")), Colors::title(true), Colors::gold())
         } else {
-            (t!("continue"), Colors::green(), Colors::white_or_black(false))
+            (t!("continue").into(), Colors::green(), Colors::white_or_black(false))
         };
 
         // Show next step button.

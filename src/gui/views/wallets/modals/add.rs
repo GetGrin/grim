@@ -30,7 +30,7 @@ pub struct AddWalletModal {
 impl Default for AddWalletModal {
     fn default() -> Self {
         Self {
-            name_edit: t!("wallets.default_wallet"),
+            name_edit: t!("wallets.default_wallet").into(),
             pass_edit: "".to_string(),
         }
     }

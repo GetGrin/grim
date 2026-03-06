@@ -196,7 +196,7 @@ impl AccountContent {
                     let account = wallet.get_config().account;
                     let default_acc_label = WalletConfig::DEFAULT_ACCOUNT_LABEL.to_string();
                     let acc_label = if account == default_acc_label {
-                        t!("wallets.default_account")
+                        t!("wallets.default_account").into()
                     } else {
                         account.to_owned()
                     };

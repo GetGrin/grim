@@ -14,6 +14,7 @@
 
 #[macro_use]
 extern crate rust_i18n;
+rust_i18n::i18n!("locales");
 
 use eframe::NativeOptions;
 use egui::{Context, Stroke, Theme};
@@ -31,8 +32,6 @@ use crate::gui::{Colors, App};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::View;
 use crate::node::Node;
-
-i18n!("locales");
 
 mod node;
 mod wallet;

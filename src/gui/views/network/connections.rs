@@ -173,9 +173,9 @@ impl ConnectionsContent {
                         DOTS_THREE_CIRCLE
                     };
                     let status_text = format!("{} {}", status_icon, if has_error {
-                        t!("error")
+                        t!("error").into()
                     } else {
-                        Node::get_sync_status_text()
+                        Node::get_sync_status_text().into()
                     });
                     View::ellipsize_text(ui, status_text, 15.0, Colors::text(false));
                     ui.add_space(1.0);

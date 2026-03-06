@@ -392,9 +392,9 @@ impl P2PSetup {
                 };
                 // Select modal title.
                 let modal_title = match peer_type {
-                    PeerType::Allowed => t!("network_settings.allow_list"),
-                    PeerType::Denied => t!("network_settings.deny_list"),
-                    PeerType::Preferred => t!("network_settings.favourites"),
+                    PeerType::Allowed => t!("network_settings.allow_list").into(),
+                    PeerType::Denied => t!("network_settings.deny_list").into(),
+                    PeerType::Preferred => t!("network_settings.favourites").into(),
                     _ => DNS_SEEDS_TITLE.to_string()
                 };
                 // Show modal to add peer.

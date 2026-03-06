@@ -82,7 +82,7 @@ impl Default for InterfaceSettingsContent {
         let locale = if let Some(lang) = AppConfig::locale() {
             lang
         } else {
-            rust_i18n::locale()
+            rust_i18n::locale().to_string()
         };
         Self {
             locale,

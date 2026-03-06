@@ -313,7 +313,7 @@ impl Default for WalletContent {
 
 impl WalletContent {
     /// Get title based on current navigation state.
-    pub fn title(&self) -> String {
+    pub fn title(&self) -> impl Into<String> {
         if self.account_content.qr_scan_showing() {
             t!("scan_qr")
         } else if self.account_content.list_content.is_some() {
@@ -595,26 +595,26 @@ fn sync_progress_ui(ui: &mut egui::Ui, wallet: &Wallet) {
                 let info_progress = wallet.info_sync_progress();
 
                 if wallet.files_moving() {
-                    t!("moving_files")
+                    t!("moving_files").into()
                 } else if wallet.is_closing() {
-                    t!("wallets.wallet_closing")
+                    t!("wallets.wallet_closing").into()
                 } else if int_node && !int_ready {
-                    t!("wallets.node_loading", "settings" => GEAR_FINE)
+                    t!("wallets.node_loading", "settings" => GEAR_FINE).into()
                 } else if wallet.is_repairing() {
                     let repair_progress = wallet.repairing_progress();
                     if repair_progress == 0 {
-                        t!("wallets.wallet_checking")
+                        t!("wallets.wallet_checking").into()
                     } else {
                         format!("{}: {}%", t!("wallets.wallet_checking"), repair_progress)
                     }
                 } else if info_progress != 100 {
                     if info_progress == 0 {
-                        t!("wallets.wallet_loading")
+                        t!("wallets.wallet_loading").into()
                     } else {
                         format!("{}: {}%", t!("wallets.wallet_loading"), info_progress)
                     }
                 } else {
-                    t!("wallets.tx_loading")
+                    t!("wallets.tx_loading").into()
                 }
             };
             ui.label(RichText::new(text).size(16.0).color(Colors::inactive_text()));

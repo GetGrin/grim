@@ -456,7 +456,7 @@ impl Node {
     }
 
     /// Get synchronization status i18n text.
-    pub fn get_sync_status_text() -> String {
+    pub fn get_sync_status_text() -> impl Into<String> {
         if Node::data_dir_changing() {
             return t!("moving_files");
         }

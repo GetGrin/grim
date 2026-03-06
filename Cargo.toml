@@ -49,7 +49,7 @@ grin_wallet_controller = { path = "wallet/controller" }
 egui = { version = "0.33.3", default-features = false }
 egui_extras = { version = "0.33.3", features = ["image", "svg"] }
 egui-async = "0.3.4"
-rust-i18n = "2.3.1"
+rust-i18n = "3.1.5"
 
 ## other
 anyhow = "1.0.97"

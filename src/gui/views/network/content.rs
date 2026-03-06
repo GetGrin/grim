@@ -140,7 +140,7 @@ impl NetworkContent {
                                     disabled_node_ui(ui);
                                 } else if Node::get_stats().is_none() || Node::is_restarting() ||
                                     Node::is_stopping() {
-                                    NetworkContent::loading_ui(ui, None);
+                                    NetworkContent::loading_ui(ui, None::<String>);
                                 } else {
                                     self.node_tab_content.tab_ui(ui, cb);
                                 }
@@ -278,14 +278,14 @@ impl NetworkContent {
 
         // Setup values for title panel.
         let title_text = self.node_tab_content.get_type().title();
-        let subtitle_text = Node::get_sync_status_text();
+        let subtitle_text = Node::get_sync_status_text().into();
         let not_syncing = Node::not_syncing() && !Node::data_dir_changing();
         let title_content = if show_settings {
-            TitleContentType::Title(t!("settings"))
+            TitleContentType::Title(t!("settings").into())
         } else if !show_connections {
             TitleContentType::WithSubTitle(title_text, subtitle_text, !not_syncing)
         } else {
-            TitleContentType::Title(t!("network.connections"))
+            TitleContentType::Title(t!("network.connections").into())
         };
 
         // Draw title panel.
@@ -313,7 +313,7 @@ impl NetworkContent {
     }
 
     /// Content to draw on loading.
-    pub fn loading_ui(ui: &mut egui::Ui, text: Option<String>) {
+    pub fn loading_ui(ui: &mut egui::Ui, text: Option<impl Into<String>>) {
         match text {
             None => {
                 ui.centered_and_justified(|ui| {
