@@ -36,6 +36,9 @@ max_short: MAX
 files_location: Files location
 moving_files: Moving files
 wrong_path_error: Wrong path specified
+check_updates: Check for updates at startup
+update_available: Update is available!
+changelog: 'Changelog:'
 wallets:
   await_conf_amount: Awaiting confirmation
   await_fin_amount: Awaiting finalization

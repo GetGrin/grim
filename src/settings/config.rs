@@ -15,11 +15,27 @@
 use grin_core::global;
 use grin_core::global::ChainTypes;
 use serde_derive::{Deserialize, Serialize};
-use crate::gui::views::Content;
 
+use crate::gui::views::Content;
+use crate::http::ReleaseInfo;
 use crate::node::NodeConfig;
-use crate::Settings;
 use crate::wallet::ConnectionsConfig;
+use crate::Settings;
+
+/// Application update information.
+#[derive(Serialize, Deserialize, Clone)]
+pub struct AppUpdate {
+    /// Version of release.
+    pub version: String,
+    /// Size of release in megabytes.
+    pub size: Option<String>,
+    /// Date of release.
+    pub date: String,
+    /// Changes in the release.
+    pub changelog: String,
+    /// Link to download the release.
+    pub url: String,
+}
 
 /// Application configuration, stored at toml file.
 #[derive(Serialize, Deserialize)]
@@ -61,6 +77,11 @@ pub struct AppConfig {
     http_proxy_url: Option<String>,
     /// SOCKS5 proxy URL.
     socks_proxy_url: Option<String>,
+
+    /// Flag to check updates on startup.
+    check_updates: Option<bool>,
+    /// Application update information.
+    app_update: Option<AppUpdate>,
 }
 
 impl Default for AppConfig {
@@ -82,6 +103,8 @@ impl Default for AppConfig {
             use_socks_proxy: None,
             http_proxy_url: None,
             socks_proxy_url: None,
+            check_updates: Some(true),
+            app_update: None,
         }
     }
 }
@@ -329,4 +352,51 @@ impl AppConfig {
         w_config.save();
     }
 
+    /// Check updates on startup.
+    pub fn check_updates() -> bool {
+        let r_config = Settings::app_config_to_read();
+        r_config.check_updates.unwrap_or(true)
+    }
+
+    /// Disable or enable updates checking.
+    pub fn toggle_check_updates() {
+        let check = Self::check_updates();
+        // Clear update info on disable.
+        if !check {
+            Self::save_update(None);
+        }
+        let mut w_config = Settings::app_config_to_update();
+        w_config.check_updates = Some(!check);
+        w_config.save();
+    }
+
+    /// Get last update information, that includes: version, date and description.
+    pub fn app_update() -> Option<AppUpdate> {
+        let r_config = Settings::app_config_to_read();
+        r_config.app_update.clone()
+    }
+
+    /// Save update information.
+    pub fn save_update(release: Option<&ReleaseInfo>) {
+        let mut w_config = Settings::app_config_to_update();
+        match release {
+            None => {
+                w_config.app_update = None;
+            }
+            Some(release) => {
+                let url = release.url();
+                if let Some(url) = url {
+                    let app_update = AppUpdate {
+                        version: release.version(),
+                        size: release.size(),
+                        date: release.date(),
+                        changelog: release.body.clone(),
+                        url,
+                    };
+                    w_config.app_update = Some(app_update);
+                }
+            }
+        }
+        w_config.save();
+    }
 }

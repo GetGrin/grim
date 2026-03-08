@@ -14,15 +14,15 @@
 
 use std::time::Duration;
 use egui::scroll_area::ScrollBarVisibility;
-use egui::{Align, CornerRadius, Id, Layout, Margin, RichText, ScrollArea, StrokeKind};
+use egui::{Align, CornerRadius, Id, Layout, Margin, OpenUrl, RichText, ScrollArea, StrokeKind};
 use egui::os::OperatingSystem;
-
-use crate::gui::icons::{ARROW_LEFT, CARET_RIGHT, COMPUTER_TOWER, FOLDER_OPEN, FOLDER_PLUS, GEAR, GEAR_FINE, GLOBE, GLOBE_SIMPLE, LOCK_KEY, PLUS, SIDEBAR_SIMPLE, SUITCASE};
+use egui_async::Bind;
+use crate::gui::icons::{ARROW_LEFT, BOOKMARKS, CALENDAR_CHECK, CARET_RIGHT, CLOUD_ARROW_DOWN, COMPUTER_TOWER, FOLDER_OPEN, FOLDER_PLUS, GEAR, GEAR_FINE, GLOBE, GLOBE_SIMPLE, LOCK_KEY, NOTEPAD, PLUS, SIDEBAR_SIMPLE, SUITCASE};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::settings::SettingsContent;
 use crate::gui::views::types::{ContentContainer, LinePosition, ModalPosition, TitleContentType, TitleType};
 use crate::gui::views::wallets::creation::WalletCreationContent;
-use crate::gui::views::wallets::modals::{AddWalletModal, OpenWalletModal, WalletSettingsModal, WalletListModal};
+use crate::gui::views::wallets::modals::{AddWalletModal, OpenWalletModal, WalletSettingsModal, WalletListModal, ChangelogContent};
 use crate::gui::views::wallets::wallet::types::{wallet_status_text, WalletContentContainer};
 use crate::gui::views::wallets::WalletContent;
 use crate::gui::views::{Content, Modal, TitlePanel, View};
@@ -31,6 +31,8 @@ use crate::wallet::types::{ConnectionMethod, WalletTask};
 use crate::wallet::{Wallet, WalletList};
 use crate::AppConfig;
 use crate::gui::views::wallets::wallet::RecoverySettings;
+use crate::http::{retrieve_release, ReleaseInfo};
+use crate::settings::AppUpdate;
 
 /// Wallets content.
 pub struct WalletsContent {
@@ -53,6 +55,13 @@ pub struct WalletsContent {
 
     /// Settings content.
     settings_content: Option<SettingsContent>,
+
+    /// Result of update check
+    check_update: Bind<ReleaseInfo, String>,
+    /// Application update information.
+    update_info: (bool, Option<AppUpdate>),
+    /// Update changelog [`Modal`] content.
+    changelog_content: Option<ChangelogContent>
 }
 
 /// Identifier for [`Modal`] to add the wallet.
@@ -75,6 +84,9 @@ impl Default for WalletsContent {
             wallet_content: WalletContent::default(),
             creation_content: None,
             settings_content: None,
+            check_update: Bind::new(false),
+            update_info: (false, None),
+            changelog_content: None,
         }
     }
 }
@@ -86,7 +98,8 @@ impl ContentContainer for WalletsContent {
             OPEN_WALLET_MODAL,
             WALLET_SETTINGS_MODAL,
             SELECT_WALLET_MODAL,
-            Self::DELETE_CONFIRMATION_MODAL
+            Self::DELETE_CONFIRMATION_MODAL,
+            ChangelogContent::MODAL_ID
         ]
     }
 
@@ -135,6 +148,11 @@ impl ContentContainer for WalletsContent {
             Self::DELETE_CONFIRMATION_MODAL => {
                 if let Some(w) = self.wallets.selected().as_ref() {
                     RecoverySettings::deletion_modal_ui(ui, w);
+                }
+            }
+            ChangelogContent::MODAL_ID => {
+                if let Some(c) = self.changelog_content.as_mut() {
+                    c.ui(ui);
                 }
             }
             _ => {}
@@ -514,6 +532,31 @@ impl WalletsContent {
                     View::app_logo_name_version(ui);
                     ui.add_space(15.0);
 
+                    // Show result of update check.
+                    if AppConfig::check_updates() {
+                        if let Some(res) = self.check_update.read_or_request(|| async {
+                            retrieve_release().await
+                        }) {
+                            let checked = self.update_info.0;
+                            if !checked {
+                                self.update_info.0 = true;
+                                match res {
+                                    Ok(info) => {
+                                        if info.is_update() {
+                                            AppConfig::save_update(Some(info));
+                                        } else {
+                                            AppConfig::save_update(None);
+                                        }
+                                        self.update_info.1 = AppConfig::app_update();
+                                    }
+                                    Err(_) => AppConfig::save_update(None),
+                                }
+                            }
+                        }
+                        // Show update information.
+                        self.update_info_ui(ui);
+                    }
+
                     let list = self.wallets.list().clone();
                     for w in list.iter() {
                         let id = w.get_config().id;
@@ -633,9 +676,74 @@ impl WalletsContent {
         });
     }
 
+    /// Draw update information content.
+    fn update_info_ui(&mut self, ui: &mut egui::Ui) {
+        if self.update_info.1.is_none() {
+            return;
+        }
+        let update = self.update_info.1.as_ref().unwrap();
+        ui.add_space(-4.0);
+        let mut rect = ui.available_rect_before_wrap();
+        rect.set_height(78.0);
+        let r = View::item_rounding(0, 1, false);
+        ui.painter().rect(rect, r, Colors::fill(), View::item_stroke(), StrokeKind::Outside);
+        ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
+            // Show button to download the update.
+            let mut link_clicked = false;
+            View::item_button(ui, View::item_rounding(0, 1, true), CLOUD_ARROW_DOWN, None, || {
+                link_clicked = true;
+            });
+            if link_clicked {
+                ui.ctx().open_url(OpenUrl {
+                    url: update.url.clone(),
+                    new_tab: true,
+                });
+            }
+            // Show button to see update information.
+            View::item_button(ui, CornerRadius::default(), NOTEPAD, None, || {
+                self.changelog_content = Some(ChangelogContent::new(update.changelog.clone()));
+                let title = format!("Grim {}", update.version);
+                Modal::new(ChangelogContent::MODAL_ID)
+                    .position(ModalPosition::Center)
+                    .title(title)
+                    .show();
+            });
+
+            let layout_size = ui.available_size();
+            ui.allocate_ui_with_layout(layout_size, Layout::left_to_right(Align::Center), |ui| {
+                ui.add_space(6.0);
+                ui.vertical(|ui| {
+                    ui.add_space(3.0);
+                    ui.with_layout(Layout::left_to_right(Align::Min), |ui| {
+                        ui.add_space(1.0);
+                        let update_text = "Update is available!";
+                        View::ellipsize_text(ui, update_text, 18.0, Colors::green());
+                    });
+
+                    // Show version info.
+                    let ver_text = if let Some(size) = update.size.as_ref() {
+                        format!("{} {} ({} MB)", BOOKMARKS, update.version, size)
+                    } else {
+                        format!("{} {} > {}", BOOKMARKS, crate::VERSION, update.version)
+                    };
+                    View::ellipsize_text(ui, ver_text, 15.0, Colors::text(false));
+                    ui.add_space(1.0);
+
+                    // Show update date.
+                    let date_text = format!("{} {}", CALENDAR_CHECK, update.date);
+                    View::ellipsize_text(ui, date_text, 15.0, Colors::gray());
+                    ui.add_space(3.0);
+                });
+            });
+        });
+        ui.add_space(12.0);
+        View::horizontal_line(ui, Colors::stroke());
+        ui.add_space(12.0);
+    }
+
     /// Show [`Modal`] to select and open wallet.
-    fn show_opening_modal(&mut self, wallet: &Wallet, data: Option<String>, cb: &dyn PlatformCallbacks) {
-        self.select_wallet(wallet, data, cb);
+    fn show_opening_modal(&mut self, w: &Wallet, data: Option<String>, cb: &dyn PlatformCallbacks) {
+        self.select_wallet(w, data, cb);
         self.open_wallet_content = OpenWalletModal::new();
         Modal::new(OPEN_WALLET_MODAL)
             .position(ModalPosition::CenterTop)
@@ -644,12 +752,12 @@ impl WalletsContent {
     }
 
     /// Select wallet to make some actions on it.
-    fn select_wallet(&mut self, wallet: &Wallet, data: Option<String>, cb: &dyn PlatformCallbacks) {
+    fn select_wallet(&mut self, w: &Wallet, data: Option<String>, cb: &dyn PlatformCallbacks) {
         self.wallet_content.account_content.close_qr_scan(cb);
         if let Some(data) = data {
-            wallet.task(WalletTask::OpenMessage(data));
+            w.task(WalletTask::OpenMessage(data));
         }
-        self.wallets.select(Some(wallet.get_config().id));
+        self.wallets.select(Some(w.get_config().id));
     }
 }
 

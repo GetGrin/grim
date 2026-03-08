@@ -20,7 +20,7 @@ use ed25519_dalek::hazmat::ExpandedSecretKey;
 use fs_mistrust::Mistrust;
 use futures::task::SpawnExt;
 use grin_util::secp::SecretKey;
-use http_body_util::BodyExt;
+use http_body_util::{BodyExt, Full};
 use lazy_static::lazy_static;
 use parking_lot::RwLock;
 use sha2::Sha512;
@@ -30,6 +30,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
 use std::{fs, thread};
+use bytes::Bytes;
 use log::error;
 use safelog::DisplayRedacted;
 use tls_api::{TlsConnector as TlsConnectorTrait, TlsConnectorBuilder};
@@ -131,10 +132,10 @@ impl Tor {
     /// Send post request using Tor.
     pub async fn post(body: String, url: String) -> Option<String> {
         if let Some(proxy) = TorConfig::get_proxy() {
-            let req = hyper::Request::builder()
+            let req: hyper::Request<Full<Bytes>> = hyper::Request::builder()
                 .method(hyper::Method::POST)
                 .uri(url)
-                .body(http_body_util::Full::from(body))
+                .body(Full::from(body))
                 .unwrap();
             let res = match proxy {
                 TorProxy::SOCKS5(url) => {

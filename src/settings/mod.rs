@@ -16,4 +16,4 @@ mod settings;
 pub use settings::Settings;
 
 mod config;
-pub use config::AppConfig;
+pub use config::*;

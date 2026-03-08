@@ -36,6 +36,9 @@ max_short: MAKS
 files_location: Dosya konumu
 moving_files: Dosyalari Tasima
 wrong_path_error: Yanlis yol belirtildi
+check_updates: Başlangiçta güncellemeleri kontrol edin
+update_available: Güncelleme mevcut!
+changelog: 'Değişiklik Günlüğü:'
 wallets:
   await_conf_amount: Onay bekleniyor
   await_fin_amount: Tamamlanma bekleniyor

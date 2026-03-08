@@ -36,6 +36,9 @@ max_short: MAX
 files_location: Emplacement du fichier
 moving_files: Déplacer des fichiers
 wrong_path_error: Chemin incorrect spécifié
+check_updates: Vérifiez les mises à jour au démarrage
+update_available: Mise à jour disponible!
+changelog: 'Journal des modifications:'
 wallets:
   await_conf_amount: En attente de confirmation
   await_fin_amount: En attente de finalisation

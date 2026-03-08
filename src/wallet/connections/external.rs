@@ -12,8 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use bytes::Bytes;
 use grin_core::global::ChainTypes;
 use grin_util::to_base64;
+use http_body_util::Full;
 use serde_derive::{Deserialize, Serialize};
 
 use crate::http::HttpClient;
@@ -141,7 +143,7 @@ fn check_ext_conn(conn: &ExternalConnection, ui_ctx: &egui::Context) {
                         req_setup = req_setup
                             .header(hyper::header::AUTHORIZATION, basic_auth.clone());
                     }
-                    let req = req_setup.body(http_body_util::Full::from(
+                    let req: hyper::Request<Full<Bytes>> = req_setup.body(Full::from(
                         r#"{"id":1,"jsonrpc":"2.0","method":"get_version","params":{} }"#)
                     ).unwrap();
                     // Send request.

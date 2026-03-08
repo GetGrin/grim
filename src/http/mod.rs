@@ -14,3 +14,6 @@
 
 mod client;
 pub use client::*;
+
+mod release;
+pub use release::*;

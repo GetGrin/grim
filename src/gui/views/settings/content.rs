@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use crate::AppConfig;
 use crate::gui::icons::GLOBE_SIMPLE;
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::settings::{InterfaceSettingsContent, NetworkSettingsContent};
@@ -41,6 +42,13 @@ impl Default for SettingsContent {
 impl SettingsContent {
     /// Draw application settings content.
     pub fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
+        ui.add_space(5.0);
+        View::checkbox(ui, AppConfig::check_updates(), t!("check_updates"), || {
+            AppConfig::toggle_check_updates();
+        });
+        ui.add_space(6.0);
+        View::horizontal_line(ui, Colors::stroke());
+
         // Show interface settings.
         self.interface_settings.ui(ui, cb);
 

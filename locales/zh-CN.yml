@@ -36,6 +36,9 @@ max_short: 最大數量
 files_location: 檔案位置
 moving_files: 檔案移動
 wrong_path_error: 指定錯誤路徑
+check_updates: 啟動時請查看更新
+update_available: 最新消息已发布！
+changelog: '更新日誌:'
 wallets:
   await_conf_amount: 等待确认中
   await_fin_amount: 等待确定中

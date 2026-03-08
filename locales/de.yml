@@ -36,6 +36,9 @@ max_short: MAX
 files_location: Dateistandort
 moving_files: Dateien verschieben
 wrong_path_error: Falscher Weg angegeben
+check_updates: Suchen Sie beim Start nach Updates
+update_available: Update ist verfügbar!
+changelog: 'Wechselbuch:'
 wallets:
   await_conf_amount: Erwarte Bestätigung
   await_fin_amount: Warten auf die Fertigstellung

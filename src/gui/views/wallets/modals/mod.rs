@@ -23,3 +23,6 @@ pub use open::*;
 
 mod add;
 pub use add::*;
+
+mod changelog;
+pub use changelog::*;
