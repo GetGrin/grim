@@ -456,28 +456,28 @@ impl Node {
     }
 
     /// Get synchronization status i18n text.
-    pub fn get_sync_status_text() -> impl Into<String> {
+    pub fn get_sync_status_text() -> String {
         if Node::data_dir_changing() {
-            return t!("moving_files");
+            return t!("moving_files").into();
         }
 
         if Node::is_stopping() {
-            return t!("sync_status.shutdown");
+            return t!("sync_status.shutdown").into();
         };
         if Node::is_starting() {
-            return t!("sync_status.initial");
+            return t!("sync_status.initial").into();
         };
         if Node::is_restarting() {
-            return t!("sync_status.node_restarting");
+            return t!("sync_status.node_restarting").into();
         }
 
         let sync_status = Self::get_sync_status();
 
         if sync_status.is_none() {
-            return t!("sync_status.node_down");
+            return t!("sync_status.node_down").into();
         }
 
-        match sync_status.unwrap() {
+        let sync_status = match sync_status.unwrap() {
             SyncStatus::Initial => t!("sync_status.initial"),
             SyncStatus::NoSync => t!("sync_status.no_sync"),
             SyncStatus::AwaitingPeers(_) => t!("sync_status.awaiting_peers"),
@@ -573,7 +573,8 @@ impl Node {
                 }
             }
             SyncStatus::Shutdown => t!("sync_status.shutdown"),
-        }
+        };
+        sync_status.into()
     }
 }
 
@@ -696,14 +697,14 @@ pub fn start_stratum_mining_server(server: &Server, config: StratumServerConfig)
     stop_state.reset();
     let server_state = stop_state.clone();
     thread::spawn(move || {
-            stratum_server.run_loop(proof_size, sync_state, stop_state);
-            server_state.reset();
-            // Reset stratum stats.
-            {
-                let mut w_stratum_stats = NODE_STATE.stratum_stats.write();
-                *w_stratum_stats = StratumStats::default();
-            }
-        });
+        stratum_server.run_loop(proof_size, sync_state, stop_state);
+        server_state.reset();
+        // Reset stratum stats.
+        {
+            let mut w_stratum_stats = NODE_STATE.stratum_stats.write();
+            *w_stratum_stats = StratumStats::default();
+        }
+    });
 }
 
 #[allow(dead_code)]
