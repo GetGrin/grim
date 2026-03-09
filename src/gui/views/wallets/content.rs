@@ -516,6 +516,7 @@ impl WalletsContent {
             }
         }, ui);
         if show_settings {
+            self.wallet_content.back(cb);
             self.settings_content = Some(SettingsContent::default());
         }
     }
