@@ -160,9 +160,9 @@ impl ContentContainer for WalletsContent {
     }
 
     fn container_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
-        let is_android = OperatingSystem::from_target_os() == OperatingSystem::Android;
-        let account_list_showing = self.wallet_content.account_content.list_content.is_some();
         // Small repaint delay is needed for Android back navigation and account list opening.
+        let is_android = OperatingSystem::from_target_os() == OperatingSystem::Android;
+        let account_list_showing = self.wallet_content.account_content.show_list;
         ui.ctx().request_repaint_after(Duration::from_millis(if account_list_showing {
             10
         } else if is_android {
@@ -753,7 +753,7 @@ impl WalletsContent {
 
     /// Select wallet to make some actions on it.
     fn select_wallet(&mut self, w: &Wallet, data: Option<String>, cb: &dyn PlatformCallbacks) {
-        self.wallet_content.account_content.close_qr_scan(cb);
+        self.wallet_content.back(cb);
         if let Some(data) = data {
             w.task(WalletTask::OpenMessage(data));
         }

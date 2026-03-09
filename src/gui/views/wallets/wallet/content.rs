@@ -19,7 +19,7 @@ use grin_chain::SyncStatus;
 use crate::gui::icons::{ARROWS_CLOCKWISE, FILE_ARROW_DOWN, FILE_ARROW_UP, FILE_TEXT, GEAR_FINE, POWER, STACK};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::types::{LinePosition, ModalPosition};
-use crate::gui::views::wallets::wallet::account::AccountContent;
+use crate::gui::views::wallets::wallet::account::WalletAccountContent;
 use crate::gui::views::wallets::wallet::message::MessageInputContent;
 use crate::gui::views::wallets::wallet::request::{InvoiceRequestContent, SendRequestContent};
 use crate::gui::views::wallets::wallet::transport::WalletTransportContent;
@@ -42,7 +42,7 @@ pub struct WalletContent {
     pub settings_content: Option<WalletSettingsContent>,
 
     /// Account panel content.
-    pub account_content: AccountContent,
+    pub account_content: WalletAccountContent,
     /// Transport panel content.
     pub transport_content: WalletTransportContent,
 
@@ -150,9 +150,13 @@ impl WalletContentContainer for WalletContent {
                 }
             });
 
-        // Close scanner when account panel got hidden.
-        if !show_account && self.account_content.qr_scan_showing() {
-            self.account_content.close_qr_scan(cb);
+        // Close scanner or account list when account panel got hidden.
+        if !show_account {
+            if self.account_content.qr_scan_showing() {
+                self.account_content.close_qr_scan(cb);
+            } else {
+                self.account_content.show_list = false;
+            }
         }
 
         // Flag to check if account panel is opened.
@@ -302,7 +306,7 @@ impl Default for WalletContent {
         Self {
             txs_content: Some(WalletTransactionsContent::new(None)),
             settings_content: None,
-            account_content: AccountContent::default(),
+            account_content: WalletAccountContent::default(),
             transport_content: WalletTransportContent::default(),
             invoice_content: None,
             send_content: None,
@@ -316,7 +320,7 @@ impl WalletContent {
     pub fn title(&self) -> impl Into<String> {
         if self.account_content.qr_scan_showing() {
             t!("scan_qr")
-        } else if self.account_content.list_content.is_some() {
+        } else if self.account_content.show_list {
             t!("wallets.accounts")
         } else if self.transport_content.settings_content.is_some() {
             t!("wallets.transport")
