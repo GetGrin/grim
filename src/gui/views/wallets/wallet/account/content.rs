@@ -23,6 +23,7 @@ use crate::gui::views::wallets::wallet::account::create::CreateAccountContent;
 use crate::gui::views::wallets::wallet::types::{WalletContentContainer, GRIN};
 use crate::gui::views::{CameraContent, CameraScanContent, Content, Modal, View};
 use crate::gui::Colors;
+use crate::gui::views::wallets::wallet::request::SendRequestContent;
 use crate::wallet::{Wallet, WalletConfig};
 use crate::wallet::types::{WalletAccount, WalletTask};
 
@@ -37,15 +38,20 @@ pub struct WalletAccountContent {
     qr_scan_content: Option<CameraContent>,
     /// QR code scan result
     qr_scan_result: Option<QrScanResult>,
+    /// Send request creation [`Modal`] content.
+    send_content: Option<SendRequestContent>,
 }
 
 /// Account creation [`Modal`] identifier.
 const CREATE_MODAL_ID: &'static str = "create_account_modal";
+/// Identifier for sending request creation [`Modal`].
+const SEND_MODAL_ID: &'static str = "account_send_request_modal";
 
 impl WalletContentContainer for WalletAccountContent {
     fn modal_ids(&self) -> Vec<&'static str> {
         vec![
-            CREATE_MODAL_ID
+            CREATE_MODAL_ID,
+            SEND_MODAL_ID
         ]
     }
 
@@ -56,6 +62,11 @@ impl WalletContentContainer for WalletAccountContent {
                 cb: &dyn PlatformCallbacks) {
         match modal.id {
             CREATE_MODAL_ID => self.create_account_content.ui(ui, wallet, modal, cb),
+            SEND_MODAL_ID => {
+                if let Some(c) = self.send_content.as_mut() {
+                    c.modal_ui(ui, wallet, modal, cb);
+                }
+            }
             _ => {}
         }
     }
@@ -83,6 +94,7 @@ impl Default for WalletAccountContent {
             create_account_content: CreateAccountContent::default(),
             qr_scan_content: None,
             qr_scan_result: None,
+            send_content: None,
         }
     }
 }
@@ -297,8 +309,17 @@ impl WalletAccountContent {
                     cb.stop_camera();
                     self.qr_scan_content = None;
                     match result {
-                        QrScanResult::Address(_) => {
-                            //TODO: send with address
+                        QrScanResult::Address(a) => {
+                            if let Some(data) = wallet.get_data() {
+                                //if data.info.amount_currently_spendable > 0 {
+                                    let address = Some(a.to_string());
+                                    self.send_content = Some(SendRequestContent::new(address));
+                                    Modal::new(SEND_MODAL_ID)
+                                        .position(ModalPosition::CenterTop)
+                                        .title(t!("wallets.send"))
+                                        .show();
+                                //}
+                            }
                         }
                         QrScanResult::Slatepack(m) => {
                             wallet.task(WalletTask::OpenMessage(m));
