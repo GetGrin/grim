@@ -386,8 +386,7 @@ impl WalletContent {
                         self.settings_content = None;
                     });
                 });
-                let active = if wallet.synced_from_node() &&
-                    has_wallet_data { Some(false) } else { None };
+                let active = if has_wallet_data { Some(false) } else { None };
                 columns[1].vertical_centered_justified(|ui| {
                     if wallet.invoice_creating() {
                         ui.add_space(4.0);

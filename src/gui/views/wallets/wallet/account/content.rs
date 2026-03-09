@@ -156,13 +156,10 @@ impl WalletAccountContent {
 
         ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
             // Draw button to show QR code scanner.
-            let wallet_synced = wallet.synced_from_node();
-            if wallet_synced {
-                View::item_button(ui, View::item_rounding(0, 2, true), SCAN, None, || {
-                    self.qr_scan_content = Some(CameraContent::default());
-                    cb.start_camera();
-                });
-            }
+            View::item_button(ui, View::item_rounding(0, 2, true), SCAN, None, || {
+                self.qr_scan_content = Some(CameraContent::default());
+                cb.start_camera();
+            });
 
             // Draw button to show list of accounts.
             let accounts = wallet.accounts();
@@ -171,11 +168,7 @@ impl WalletAccountContent {
             } else {
                 USER_PLUS
             };
-            let rounding = if wallet_synced {
-                View::item_rounding(1, 3, true)
-            } else {
-                View::item_rounding(0, 2, true)
-            };
+            let rounding = View::item_rounding(1, 3, true);
             View::item_button(ui, rounding, accounts_icon, None, || {
                 if accounts.len() == 1 {
                     self.create_account_content = CreateAccountContent::default();
