@@ -44,7 +44,6 @@ const BLUE_DARK: Color32 =
 const FILL: Color32 = Color32::from_gray(244);
 const FILL_DARK: Color32 = Color32::from_gray(26);
 
-const FILL_DEEP: Color32 = Color32::from_gray(238);
 const FILL_DEEP_DARK: Color32 = Color32::from_gray(32);
 
 const FILL_LITE: Color32 = Color32::from_gray(249);
@@ -85,6 +84,7 @@ fn use_dark() -> bool {
 }
 
 impl Colors {
+    pub const FILL_DEEP: Color32 = Color32::from_gray(238);
     pub const TRANSPARENT: Color32 = Color32::from_rgba_premultiplied(0, 0, 0, 0);
     pub const STROKE: Color32 = Color32::from_gray(200);
 
@@ -172,7 +172,7 @@ impl Colors {
         if use_dark() {
             FILL_DEEP_DARK
         } else {
-            FILL_DEEP
+            Self::FILL_DEEP
         }
     }
 

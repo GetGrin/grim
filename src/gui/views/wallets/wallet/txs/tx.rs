@@ -19,6 +19,7 @@ use grin_util::ToHex;
 use grin_wallet_libwallet::TxLogEntryType;
 use std::fs;
 
+use crate::AppConfig;
 use crate::gui::icons::{CIRCLE_HALF, COPY, CUBE, FILE_ARCHIVE, FILE_TEXT, HASH_STRAIGHT, PROHIBIT, QR_CODE, SEAL_CHECK};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::wallets::wallet::proof::PaymentProofContent;
@@ -54,7 +55,11 @@ impl WalletTransactionContent {
     }
 
     /// Draw [`Modal`] content.
-    pub fn ui(&mut self, ui: &mut egui::Ui, wallet: &Wallet, cb: &dyn PlatformCallbacks) {
+    pub fn ui(&mut self,
+              ui: &mut egui::Ui,
+              modal: &Modal,
+              wallet: &Wallet,
+              cb: &dyn PlatformCallbacks) {
         // Check values and setup transaction data.
         let wallet_data = wallet.get_data();
         if wallet_data.is_none() {
@@ -73,6 +78,12 @@ impl WalletTransactionContent {
         let tx = txs.get(0).unwrap();
 
         if let Some(content) = self.qr_code_content.as_mut() {
+            let dark_theme = AppConfig::dark_theme().unwrap_or(false);
+            // Set light theme for better scanning.
+            AppConfig::set_dark_theme(false);
+            crate::setup_visuals(ui.ctx());
+            modal.set_background_color(Colors::FILL_DEEP);
+
             ui.add_space(6.0);
             content.ui(ui, cb);
 
@@ -93,7 +104,11 @@ impl WalletTransactionContent {
                     });
                 });
             });
+            // Set color theme back.
+            AppConfig::set_dark_theme(dark_theme);
+            crate::setup_visuals(ui.ctx());
         } else {
+            modal.set_background_color(Colors::fill());
             // Show transaction information.
             self.info_ui(ui, tx, wallet, cb);
 

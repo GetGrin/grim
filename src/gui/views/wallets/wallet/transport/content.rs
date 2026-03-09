@@ -14,6 +14,7 @@
 
 use egui::{Align, CornerRadius, Layout, RichText, StrokeKind};
 
+use crate::AppConfig;
 use crate::gui::icons::{CIRCLE_HALF, DOTS_THREE_CIRCLE, PLUGS, PLUGS_CONNECTED, POWER, QR_CODE, SHIELD_CHECKERED, SHIELD_SLASH, WARNING_CIRCLE, WRENCH};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::wallets::wallet::transport::settings::WalletTransportSettingsContent;
@@ -40,6 +41,10 @@ impl WalletContentContainer for WalletTransportContent {
 
     fn container_ui(&mut self, ui: &mut egui::Ui, wallet: &Wallet, cb: &dyn PlatformCallbacks) {
         if let Some(content) = self.qr_address_content.as_mut() {
+            let dark_theme = AppConfig::dark_theme().unwrap_or(false);
+            // Set light theme for better scanning.
+            AppConfig::set_dark_theme(false);
+            crate::setup_visuals(ui.ctx());
             // Draw QR code content.
             ui.add_space(6.0);
             content.ui(ui, cb);
@@ -49,6 +54,9 @@ impl WalletContentContainer for WalletTransportContent {
                 });
             });
             ui.add_space(6.0);
+            // Set color theme back.
+            AppConfig::set_dark_theme(dark_theme);
+            crate::setup_visuals(ui.ctx());
         } else if let Some(content) = self.settings_content.as_mut() {
             let mut closed = false;
             content.ui(ui, wallet, cb, || {

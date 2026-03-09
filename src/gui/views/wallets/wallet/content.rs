@@ -208,7 +208,11 @@ impl WalletContentContainer for WalletContent {
                         bottom: 1.0 as i8,
                     },
                     fill: if top_panel_expanded {
-                        Colors::fill_lite()
+                        if self.transport_content.qr_address_content.is_some() {
+                            Colors::FILL_DEEP
+                        } else {
+                            Colors::fill_lite()
+                        }
                     } else {
                         Colors::TRANSPARENT
                     },

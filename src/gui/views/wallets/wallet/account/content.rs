@@ -311,14 +311,14 @@ impl WalletAccountContent {
                     match result {
                         QrScanResult::Address(a) => {
                             if let Some(data) = wallet.get_data() {
-                                //if data.info.amount_currently_spendable > 0 {
+                                if data.info.amount_currently_spendable > 0 {
                                     let address = Some(a.to_string());
                                     self.send_content = Some(SendRequestContent::new(address));
                                     Modal::new(SEND_MODAL_ID)
                                         .position(ModalPosition::CenterTop)
                                         .title(t!("wallets.send"))
                                         .show();
-                                //}
+                                }
                             }
                         }
                         QrScanResult::Slatepack(m) => {

@@ -52,7 +52,7 @@ impl WalletContentContainer for WalletTransactionsContent {
         match m.id {
             TX_INFO_MODAL => {
                 if let Some(content) = self.tx_info_content.as_mut() {
-                    content.ui(ui, w, cb);
+                    content.ui(ui, m, w, cb);
                 }
             }
             CANCEL_TX_CONFIRMATION_MODAL => {

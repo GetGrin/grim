@@ -14,7 +14,7 @@
 
 use egui::epaint::{RectShape, Shadow};
 use egui::os::OperatingSystem;
-use egui::{Align2, CornerRadius, RichText, Stroke, StrokeKind, UiBuilder, Vec2};
+use egui::{Align2, Color32, CornerRadius, RichText, Stroke, StrokeKind, UiBuilder, Vec2};
 use lazy_static::lazy_static;
 use parking_lot::RwLock;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -43,6 +43,8 @@ pub struct Modal {
     title: Option<String>,
     /// Flag to check first content render.
     first_draw: Arc<AtomicBool>,
+    /// Background color.
+    fill: Color32,
 }
 
 impl Modal {
@@ -61,6 +63,7 @@ impl Modal {
             closeable: Arc::new(AtomicBool::new(true)),
             title: None,
             first_draw: Arc::new(AtomicBool::new(true)),
+            fill: Colors::fill(),
         }
     }
 
@@ -295,6 +298,12 @@ impl Modal {
         (align, offset)
     }
 
+    /// Set custom background color.
+    pub fn set_background_color(&self, color: Color32) {
+        let mut w_state = MODAL_STATE.write();
+        w_state.modal.as_mut().unwrap().fill = color;
+    }
+
     /// Draw provided content.
     fn content_ui(&self,
                   ui: &mut egui::Ui,
@@ -312,7 +321,7 @@ impl Modal {
                 sw: 8.0 as u8,
                 se: 8.0 as u8,
             }
-        }, Colors::fill(), Stroke::NONE, StrokeKind::Outside);
+        }, self.fill, Stroke::NONE, StrokeKind::Outside);
         let bg_idx = ui.painter().add(bg_shape.clone());
 
         rect.min += egui::emath::vec2(6.0, 0.0);
