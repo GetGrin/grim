@@ -12,21 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::sync::Arc;
-use parking_lot::RwLock;
-use std::thread;
 use egui::load::SizedTexture;
 use egui::{Pos2, Rect, RichText, TextureOptions, UiBuilder, Widget};
-use image::{DynamicImage, EncodableLayout};
+use grin_keychain::mnemonic::WORDS;
 use grin_util::ZeroingString;
 use grin_wallet_libwallet::SlatepackAddress;
-use grin_keychain::mnemonic::WORDS;
+use image::{DynamicImage, EncodableLayout};
+use parking_lot::RwLock;
+use std::sync::Arc;
+use std::thread;
 
-use crate::gui::Colors;
 use crate::gui::icons::CAMERA_ROTATE;
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::types::{QrScanResult, QrScanState};
 use crate::gui::views::View;
+use crate::gui::Colors;
 use crate::wallet::types::PhraseSize;
 use crate::wallet::WalletUtils;
 
@@ -51,16 +51,13 @@ impl CameraContent {
     /// Draw camera content.
     pub fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
         let rect = if let Some(img_data) = cb.camera_image() {
-            if let Ok(img) =
-                image::load_from_memory(&*img_data.0) {
+            if let Ok(img) = image::load_from_memory(&*img_data.0) {
                 // Process image to find QR code.
                 self.scan_qr(&img);
 
                 // Draw image.
                 let img_rect = self.image_ui(ui, img, img_data.1);
 
-                // Show UR scan progress.
-                self.ur_progress_ui(ui);
                 img_rect
             } else {
                 self.loading_ui(ui)
@@ -68,6 +65,9 @@ impl CameraContent {
         } else {
             self.loading_ui(ui)
         };
+
+        // Show UR scan progress.
+        self.ur_progress_ui(ui, &rect);
 
         // Show button to switch cameras.
         if cb.can_switch_camera() {
@@ -84,6 +84,7 @@ impl CameraContent {
                 });
             });
         }
+        ui.add_space(12.0);
         ui.ctx().request_repaint();
     }
 
@@ -125,7 +126,11 @@ impl CameraContent {
         egui::Image::from_texture(sized_img)
             // Setup to crop image at square.
             .uv(Rect::from([
-                Pos2::new(1.0 - (img_size.y / img_size.x), 0.0),
+                if img_size.y > img_size.x {
+                    Pos2::new(0.0, 1.0 - (img_size.x / img_size.y))
+                } else {
+                    Pos2::new(1.0 - (img_size.y / img_size.x), 0.0)
+                },
                 Pos2::new(1.0, 1.0)
             ]))
             .max_height(ui.available_width())
@@ -135,15 +140,17 @@ impl CameraContent {
     }
 
     /// Draw animated QR code scanning progress.
-    fn ur_progress_ui(&self, ui: &mut egui::Ui) {
+    fn ur_progress_ui(&self, ui: &mut egui::Ui, rect: &Rect) {
         let show_ur_progress = {
             self.ur_data.as_ref().read().is_some()
         };
         if show_ur_progress {
-            ui.centered_and_justified(|ui| {
-                ui.label(RichText::new(format!("{}%", self.ur_progress()))
-                    .size(17.0)
-                    .color(Colors::green()));
+            ui.scope_builder(UiBuilder::new().max_rect(rect.clone()), |ui| {
+                ui.centered_and_justified(|ui| {
+                    ui.label(RichText::new(format!("{}%", self.ur_progress()))
+                        .size(32.0)
+                        .color(Colors::gold_dark()));
+                });
             });
         }
     }
@@ -201,8 +208,7 @@ impl CameraContent {
         let on_scan = async move {
             // Prepare image data.
             let img = image_data.to_luma8();
-            let mut img: rqrr::PreparedImage<image::GrayImage>
-                = rqrr::PreparedImage::prepare(img);
+            let mut img: rqrr::PreparedImage<image::GrayImage> = rqrr::PreparedImage::prepare(img);
             // Scan and save results.
             let grids = img.detect_grids();
             if let Some(g) = grids.get(0) {

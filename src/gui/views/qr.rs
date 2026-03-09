@@ -304,7 +304,7 @@ impl QrCodeContent {
         let qr_state = self.qr_image_state.clone();
         let text = self.text.clone();
         thread::spawn(move || {
-            let mut encoder = ur::Encoder::bytes(text.as_bytes(), 100).unwrap();
+            let mut encoder = ur::Encoder::bytes(text.as_bytes(), 64).unwrap();
             let mut data = Vec::with_capacity(encoder.fragment_count());
             for _ in 0..encoder.fragment_count() {
                 let ur = encoder.next_part().unwrap();
