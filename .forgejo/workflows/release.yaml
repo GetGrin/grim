@@ -331,11 +331,11 @@ jobs:
       - name: Archive Universal
         working-directory: macos
         run: |
-          zip -r grim-${{ needs.version.outputs.v }}-macos.zip Grim.app
-          mv grim-${{ needs.version.outputs.v }}-macos.zip ../release
+          zip -r grim-${{ needs.version.outputs.v }}-macos-universal.zip Grim.app
+          mv grim-${{ needs.version.outputs.v }}-macos-universal.zip ../release
       - name: Checksum Release Universal
         working-directory: release
-        run: sha256sum grim-${{ needs.version.outputs.v }}-macos.zip > grim-${{ needs.version.outputs.v }}-macos-sha256sum.txt
+        run: sha256sum grim-${{ needs.version.outputs.v }}-macos-universal.zip > grim-${{ needs.version.outputs.v }}-macos-universal-sha256sum.txt
       - name: Upload artifacts
         run: |
           tar -czf macos.tar.gz release
@@ -432,6 +432,6 @@ jobs:
             release/grim-${{ needs.version.outputs.v }}-android-x86_64.apk
             release/grim-${{ needs.version.outputs.v }}-linux-arm.AppImage
             release/grim-${{ needs.version.outputs.v }}-linux-x86_64.AppImage
-            release/grim-${{ needs.version.outputs.v }}-macos.zip
+            release/grim-${{ needs.version.outputs.v }}-macos-universal.zip
             release/grim-${{ needs.version.outputs.v }}-win-x86_64.msi
             release/grim-${{ needs.version.outputs.v }}-win-x86_64.zip
