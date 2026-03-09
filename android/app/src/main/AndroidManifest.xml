@@ -57,14 +57,6 @@
                 <data android:pathPattern=".*\\.slatepack" />
             </intent-filter>
 
-            <intent-filter android:scheme="http" tools:ignore="AppLinkUrlError">
-                <action android:name="android.intent.action.SEND" />
-                <action android:name="android.intent.action.VIEW" />
-
-                <category android:name="android.intent.category.DEFAULT" />
-                <data android:mimeType="application/*" />
-            </intent-filter>
-
             <meta-data android:name="android.app.lib_name" android:value="grim" />
         </activity>
 
