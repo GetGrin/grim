@@ -27,7 +27,7 @@ jobs:
           [[ ${{ forgejo.ref_type }} == 'tag' ]] && app_ver=${{ forgejo.ref_name }} || app_ver=v${ver}
           echo "v=${app_ver}" >> "$FORGEJO_OUTPUT"
           echo $app_ver
-          [[ ${{ forgejo.ref_type }} == 'tag' ]] && pre=false || pre=true
+          [[ ${{ forgejo.ref_type }} == 'tag' ]] && pre='false' || pre='true'
           echo "pre=${pre}" >> "$FORGEJO_OUTPUT"
           echo "pre-release: ${pre}"
       - name: Check existing release
@@ -396,7 +396,7 @@ jobs:
           token: ${{ secrets.RELEASE_TOKEN }}
           tag: ${{ needs.version.outputs.v }}
           override: true
-          prerelease: ${{ needs.version.outputs.pre }}
+          prerelease: ${{ needs.version.outputs.pre == 'true' }}
           release-dir: release
           release-notes: "Full Changelog: [${{ needs.version.outputs.last_tag }}...${{ needs.version.outputs.v }}](https://code.gri.mw/${{ forgejo.repository }}/compare/${{ needs.version.outputs.last_tag }}...${{ needs.version.outputs.v }})"
       - name: Telegram Notify Channel
