@@ -70,6 +70,9 @@ else
   exit 1
 fi
 
+# Update MacOS version.
+sed -i '' -e 's/'"$GIT_TAG_LATEST"'/'"$VERSION_NEXT"'/' macos/Grim.app/Contents/Info.plist
+
 # Update version for Windows installer.
 sed -i '' -e 's/" Version="[^\"]*"/" Version="'"$VERSION_NEXT"'"/g' wix/main.wxs
 sed -i '' -e 's/<Package Id="[^\"]*"/<Package Id="'"$(uuidgen)"'"/g' wix/main.wxs
@@ -88,12 +91,12 @@ cargo update -p grim
 
 # Commit the changes
 git add .
-git commit -m "release: v$VERSION_NEXT"
+git commit -m "build: version $VERSION_NEXT"
 
 # ==================================
 # Create git tag for new version
 # ==================================
 
 # Create a tag and push to master branch
-git tag "v$VERSION_NEXT" master
+#git tag "v$VERSION_NEXT" master
 #git push origin master --follow-tags
