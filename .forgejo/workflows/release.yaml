@@ -13,6 +13,7 @@ jobs:
     runs-on: ubuntu
     outputs:
       v: ${{ steps.version.outputs.v }}
+      pre: ${{ steps.version.outputs.pre }}
       exists: ${{ steps.check.outputs.exists }}
       last_tag: ${{ steps.check_prev.outputs.last_tag }}
     steps:
