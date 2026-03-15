@@ -331,6 +331,17 @@ public class MainActivity extends GameActivity {
                 onTextInput("9");
                 return false;
             }
+        } else if (event.getAction() == KeyEvent.ACTION_MULTIPLE && event.getKeyCode() == KeyEvent.KEYCODE_UNKNOWN) {
+            if (!event.getCharacters().isEmpty()) {
+                onTextInput(event.getCharacters());
+                return false;
+            }
+        // Pass any other input values into native code.
+        } else if (event.getAction() == KeyEvent.ACTION_UP &&
+                event.getKeyCode() != KeyEvent.KEYCODE_ENTER &&
+                event.getKeyCode() != KeyEvent.KEYCODE_BACK) {
+            onTextInput(String.valueOf((char)event.getUnicodeChar()));
+            return false;
         }
         return super.dispatchKeyEvent(event);
     }
