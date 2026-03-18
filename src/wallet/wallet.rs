@@ -1596,11 +1596,10 @@ async fn handle_task(w: &Wallet, t: WalletTask) {
                     }
                     Err(e) => {
                         error!("send tor finalize error: {:?}", e);
-                        sync_wallet_data(&w, false);
                         if let Some(tx) = w.retrieve_tx_by_id(s.id) {
                             let _ = w.cancel(&tx);
+                            sync_wallet_data(&w, false);
                         }
-                        w.on_tx_error(id, Some(e));
                     }
                 }
             }
@@ -1711,9 +1710,8 @@ async fn handle_task(w: &Wallet, t: WalletTask) {
             w.send_creating.store(true, Ordering::Relaxed);
             if let Ok(s) = w.send(*a, r.clone()) {
                 sync_wallet_data(&w, false);
-                if r.is_some() && Tor::is_service_running(&w.identifier()) {
+                if let Some(addr) = r {
                     w.send_creating.store(false, Ordering::Relaxed);
-                    let addr = r.as_ref().unwrap();
                     send_tor(&s, addr).await;
                     return;
                 } else {

@@ -126,7 +126,8 @@ impl TorConfig {
             } else {
                 TorConfig::webtunnel_path()
             },
-            TorBridge::DEFAULT_WEBTUNNEL_CONN_LINE.to_string()
+            serde_json::to_string(&TorBridge::DEFAULT_WEBTUNNEL_CONN_LINES)
+                .unwrap_or(TorBridge::DEFAULT_WEBTUNNEL_CONN_LINE.to_string())
         )
     }
 

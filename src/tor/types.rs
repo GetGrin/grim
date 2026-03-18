@@ -59,6 +59,25 @@ impl TorBridge {
 
     /// Default webtunnel protocol connection line.
     pub const DEFAULT_WEBTUNNEL_CONN_LINE: &'static str = "webtunnel [2001:db8:beb:5884:ffcc:bfe3:2858:b06b]:443 1E242C749707B4A68A269F0D31311CE36CDFEC28 url=https://wt.gri.mw/74Fm0lKUWWMMjZpKf6iSC0UH";
+    pub const ADDITIONAL_WEBTUNNEL_CONN_LINE_1: &'static str = "webtunnel [2001:db8:f1c4:ca39:40a2:2e3f:f66b:2308]:443 93557BF013203581B6B7C3BF016425F1758F7CD6 url=https://diffusesystems.net/UvVD4kzlcS8HLlpxDdRWXidiDTDt0EiZ ver=0.0.3";
+    pub const ADDITIONAL_WEBTUNNEL_CONN_LINE_2: &'static str = "webtunnel [2001:db8:eedb:cae7:a345:4f72:f9cc:5de0]:443 B3C81E7A0CA474270DAA4A2C8633E1CA8935C37D url=https://wordpress.far-east-investment.ru/sORes7268CEUSRD7hAWvJU5A ver=0.0.3";
+    pub const ADDITIONAL_WEBTUNNEL_CONN_LINE_3: &'static str = "webtunnel [2001:db8:945c:e0b9:7e4c:c974:ff00:d4c5]:443 91937F3EFB3BE5169788AC7C8BF07460B7E306DB url=https://kabel.entreri.de/YXbp1dNrJeOF8giAFFYWxvmf ver=0.0.3";
+    pub const ADDITIONAL_WEBTUNNEL_CONN_LINE_4: &'static str = "webtunnel [2001:db8:4767:7aa2:df21:1b2b:d7f9:caee]:443 CD193CF0D0C29551928C01FCB28D1200D9F27CFA url=https://occurrence.pics/68SzSlQCRgnfSo32eLyjC1V3 ver=0.0.3";
+    pub const ADDITIONAL_WEBTUNNEL_CONN_LINE_5: &'static str = "webtunnel [2001:db8:4c9a:ffe8:70f8:d5af:a8f1:cf56]:443 DA1ECF055635C1A6ED7F5B5F36296A5E3015CE57 url=https://1axfa6xb.xoomlia.com/6qtxxkjw/ ver=0.0.3";
+    pub const ADDITIONAL_WEBTUNNEL_CONN_LINE_6: &'static str = "webtunnel [2001:db8:a12b:ff8:8a1a:a05b:5f21:2ccc]:443 F2A9C5AEE0A420EB9D55F9497B3C0FA243A2A770 url=https://bridge.lovecloud.me/wss-wc3p0euqrlne98t9 ver=0.0.3";
+    pub const ADDITIONAL_WEBTUNNEL_CONN_LINE_7: &'static str = "webtunnel [2001:db8:8ed6:e6c9:5fc9:9f20:a373:2374]:443 1636A2EFFBAA4B162F5FF461A1663EB55C41AE11 url=https://hanoi.delivery/roQFPLtlspWT6yIKeXD6lEci ver=0.0.3";
+
+    pub const DEFAULT_WEBTUNNEL_CONN_LINES: [&'static str; 8] = [
+        TorBridge::DEFAULT_WEBTUNNEL_CONN_LINE,
+        TorBridge::ADDITIONAL_WEBTUNNEL_CONN_LINE_1,
+        TorBridge::ADDITIONAL_WEBTUNNEL_CONN_LINE_2,
+        TorBridge::ADDITIONAL_WEBTUNNEL_CONN_LINE_3,
+        TorBridge::ADDITIONAL_WEBTUNNEL_CONN_LINE_4,
+        TorBridge::ADDITIONAL_WEBTUNNEL_CONN_LINE_5,
+        TorBridge::ADDITIONAL_WEBTUNNEL_CONN_LINE_6,
+        TorBridge::ADDITIONAL_WEBTUNNEL_CONN_LINE_7,
+    ];
+
     /// Default Obfs4 protocol connection line.
     pub const DEFAULT_OBFS4_CONN_LINE: &'static str = "obfs4 45.76.43.226:3479 7AAFDC594147E72635DD64DB47A8CD8781F463F6 cert=bJ720bjXkmFGGAD77BsCMopkDzQ/cXDj0QntOmsBYw7Fqohq7Y7yZMV7FlECQNB1tyq1AA iat-mode=0";
     /// Default Snowflake protocol connection line.

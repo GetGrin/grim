@@ -398,9 +398,12 @@ impl WalletTransaction {
     /// Check if possible to repeat transaction action.
     pub fn can_repeat_action(&self) -> bool {
         if let Some(a) = &self.action {
-            return self.action_error.is_some() && a != &WalletTransactionAction::Cancelling
+            self.action_error.is_some() && a != &WalletTransactionAction::Cancelling
+        } else {
+            // Can resend over Tor.
+            !self.data.confirmed && !self.sending_tor() && !self.broadcasting() &&
+                self.receiver.is_some()
         }
-        false
     }
 
     /// Check if transaction is broadcasting after finalization.

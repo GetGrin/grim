@@ -63,7 +63,7 @@ impl WalletTransportSettingsContent {
         ui.vertical_centered_justified(|ui| {
             View::button(ui, t!("close"), Colors::white_or_black(false), || {
                 if self.tor_settings_content.settings_changed {
-                    Tor::restart_services();
+                    Tor::restart();
                 }
                 on_close();
             });

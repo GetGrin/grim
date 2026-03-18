@@ -18,7 +18,6 @@ use arti_client::{TorClient, TorClientConfig};
 use curve25519_dalek::digest::Digest;
 use ed25519_dalek::hazmat::ExpandedSecretKey;
 use fs_mistrust::Mistrust;
-use futures::task::SpawnExt;
 use grin_util::secp::SecretKey;
 use http_body_util::{BodyExt, Full};
 use lazy_static::lazy_static;
@@ -30,6 +29,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
 use std::{fs, thread};
+use std::sync::atomic::{AtomicBool, Ordering};
 use bytes::Bytes;
 use log::error;
 use safelog::DisplayRedacted;
@@ -46,6 +46,7 @@ use tor_hsservice::{
 };
 use tor_keymgr::{ArtiNativeKeystore, KeyMgrBuilder, KeystoreSelector};
 use tor_llcrypto::pk::ed25519::ExpandedKeypair;
+use tor_rtcompat::SpawnExt;
 use tor_rtcompat::tokio::TokioNativeTlsRuntime;
 
 use crate::http::HttpClient;
@@ -53,24 +54,25 @@ use crate::tor::http::ArtiHttpConnector;
 use crate::tor::{TorBridge, TorConfig, TorProxy};
 
 lazy_static! {
-    /// Static thread-aware state of [`Node`] to be updated from separate thread.
-    static ref TOR_SERVER_STATE: Arc<Tor> = Arc::new(Tor::default());
+    /// Static thread-aware state of Tor to be updated from separate thread.
+    static ref TOR_STATE: Arc<Tor> = Arc::new(Tor::default());
 }
 
-/// Tor server to use as SOCKS proxy for requests and to launch Onion services.
+/// Tor client to use as SOCKS proxy for requests and to launch Onion services.
 pub struct Tor {
     /// Tor client and config.
-    client_config: Arc<RwLock<(TorClient<TokioNativeTlsRuntime>, TorClientConfig)>>,
-    /// Client to check services availability.
-    check_client: Arc<RwLock<
-        Option<hyper_tor::Client<ArtiHttpConnector<TokioNativeTlsRuntime, TlsConnector>>>
-    >>,
+    client_config: Arc<RwLock<Option<(TorClient<TokioNativeTlsRuntime>, TorClientConfig)>>>,
+    /// Flag to check if client is launching.
+    client_launching: Arc<AtomicBool>,
+
     /// Mapping of running Onion services identifiers to proxy.
     run: Arc<RwLock<
         BTreeMap<String, (u16, SecretKey, Arc<RunningOnionService>, Arc<OnionServiceReverseProxy>)>
     >>,
-    /// Starting Onion services identifiers.
-    start: Arc<RwLock<BTreeSet<String>>>,
+    /// Mapping of starting Onion services identifiers.
+    start: Arc<RwLock<
+        BTreeMap<String, (u16, SecretKey)>
+    >>,
     /// Failed Onion services identifiers.
     fail: Arc<RwLock<BTreeSet<String>>>,
     /// Checking Onion services identifiers.
@@ -86,18 +88,11 @@ impl Default for Tor {
                 fs::write(TorConfig::webtunnel_path(), webtunnel).unwrap_or_default();
             }
         }
-        // Create Tor client.
-        let runtime = TokioNativeTlsRuntime::create().unwrap();
-        let config = Self::build_config(true);
-        let client = TorClient::with_runtime(runtime)
-            .config(config.clone())
-            .create_unbootstrapped()
-            .unwrap();
         Self {
-            client_config: Arc::new(RwLock::new((client, config))),
-            check_client: Arc::new(RwLock::new(None)),
+            client_config: Arc::new(RwLock::new(None)),
+            client_launching: Arc::new(AtomicBool::new(false)),
             run: Arc::new(RwLock::new(BTreeMap::new())),
-            start: Arc::new(RwLock::new(BTreeSet::new())),
+            start: Arc::new(RwLock::new(BTreeMap::new())),
             fail: Arc::new(RwLock::new(BTreeSet::new())),
             check: Arc::new(RwLock::new(BTreeSet::new())),
         }
@@ -106,27 +101,113 @@ impl Default for Tor {
 
 impl Tor {
     /// Create Tor client configuration.
-    fn build_config(clean: bool) -> TorClientConfig {
-        // Cleanup keys, state and cache.
-        if clean {
-            fs::remove_dir_all(TorConfig::keystore_path()).unwrap_or_default();
-            fs::remove_dir_all(TorConfig::state_path()).unwrap_or_default();
-            fs::remove_dir_all(TorConfig::cache_path()).unwrap_or_default();
-        }
-        // Create Tor client config.
+    fn build_config(bridges: Option<Vec<TorBridge>>) -> TorClientConfig {
         let mut builder = TorClientConfigBuilder::from_directories(
             TorConfig::state_path(),
             TorConfig::cache_path(),
         );
-        builder.address_filter().allow_onion_addrs(true);
-        // Setup bridges.
-        let bridge = TorConfig::get_bridge();
-        if let Some(b) = bridge {
-            Self::build_bridge(&mut builder, b);
+        // Build bridges.
+        if let Some(brs) = bridges {
+            for b in brs {
+                Self::build_bridge(&mut builder, b);
+            }
         }
+        builder.address_filter().allow_onion_addrs(true);
         // Create config.
         let config = builder.build().unwrap();
         config
+    }
+
+    /// Build bootstrapped client from provided config.
+    fn build_client_bootstrap(config: TorClientConfig) -> Option<TorClient<TokioNativeTlsRuntime>> {
+        let runtime = TokioNativeTlsRuntime::create().unwrap();
+        let client_res = TorClient::with_runtime(runtime)
+            .config(config.clone())
+            .create_unbootstrapped();
+        if client_res.is_err() {
+            return None;
+        }
+        let client = client_res.unwrap();
+        let bootstrapping = Arc::new(AtomicBool::new(true));
+        let bootstrap_success = Arc::new(AtomicBool::new(false));
+        let bootstrapping_t = bootstrapping.clone();
+        let bootstrap_success_t = bootstrap_success.clone();
+        let c = client.clone();
+        client.runtime().spawn(async move {
+            let task = c.bootstrap();
+            // Bootstrap client with 60s timeout.
+            if tokio::time::timeout(Duration::from_millis(60000), task).await.is_ok() {
+                bootstrap_success_t.store(true, Ordering::Relaxed);
+            }
+            bootstrapping_t.store(false, Ordering::Relaxed);
+        }).unwrap();
+        // Wait client to finish bootstrap.
+        while bootstrapping.load(Ordering::Relaxed) {
+            thread::sleep(Duration::from_millis(1000));
+        }
+        if bootstrap_success.load(Ordering::Relaxed) {
+            Some(client)
+        } else {
+            None
+        }
+    }
+
+    /// Launch Tor client.
+    fn launch() {
+        // Wait client to finish launch and exit on success.
+        while TOR_STATE.client_launching.load(Ordering::Relaxed) {
+            thread::sleep(Duration::from_millis(1000));
+        }
+        {
+            if TOR_STATE.client_config.read().is_some() {
+                return;
+            }
+        }
+        TOR_STATE.client_launching.store(true, Ordering::Relaxed);
+        // Setup config.
+        let config = if let Some(b) = TorConfig::get_bridge() {
+            let lines_parse = serde_json::from_str::<Vec<String>>(&b.connection_line());
+            let bridges = if let Ok(lines) = lines_parse {
+                lines.iter()
+                    .map(|l| TorBridge::Webtunnel(b.binary_path(), l.clone()))
+                    .collect()
+            } else {
+                b.connection_line().lines()
+                    .map(|l| TorBridge::Webtunnel(b.binary_path(), l.to_string()))
+                    .collect()
+            };
+            Self::build_config(Some(bridges))
+        } else {
+            Self::build_config(None)
+        };
+        // Launch client.
+        let client = Self::build_client_bootstrap(config.clone());
+        if let Some(c) = client {
+            TOR_STATE.client_config.write().replace((c, config));
+            thread::sleep(Duration::from_millis(5000));
+            TOR_STATE.client_launching.store(false, Ordering::Relaxed);
+        } else {
+            // Launch client with default Webtunnel bridges if failed.
+            let add_bridges = TorBridge::DEFAULT_WEBTUNNEL_CONN_LINES.iter()
+                .map(|b| TorBridge::Webtunnel(TorConfig::webtunnel_path(), b.to_string()))
+                .collect::<Vec<_>>();
+            let config = Self::build_config(Some(add_bridges));
+            let client = Self::build_client_bootstrap(config.clone());
+            if let Some(c) = client {
+                TOR_STATE.client_config.write().replace((c, config));
+                thread::sleep(Duration::from_millis(5000));
+                TOR_STATE.client_launching.store(false, Ordering::Relaxed);
+            } else if TorConfig::get_bridge().is_some() {
+                // Launch without bridges if all attempts failed.
+                let config = Self::build_config(None);
+                let client = Self::build_client_bootstrap(config.clone());
+                if let Some(c) = client {
+                    TOR_STATE.client_config.write().replace((c, config));
+                    thread::sleep(Duration::from_millis(5000));
+                }
+            }
+        }
+        TOR_STATE.client_launching.store(false, Ordering::Relaxed);
     }
 
     /// Send post request using Tor.
@@ -172,13 +253,18 @@ impl Tor {
         } else {
             if let Some(b) = TorConfig::get_bridge() {
                 if !fs::exists(b.binary_path()).unwrap() {
+                    error!("Tor: bridge binary not exists");
                     return None;
                 }
             }
-            // Bootstrap client.
-            let (client, _) = Self::client_config();
-            client.bootstrap().await.unwrap_or_default();
+            // Launch client if needed.
+            Self::launch();
+            if Self::client_config().is_none() {
+                error!("Tor: can not launch Tor client");
+                return None;
+            }
             // Create http tor-powered client to post data.
+            let client = Self::client_config().unwrap().0.isolated_client();
             let tls_conn = TlsConnector::builder().unwrap().build().unwrap();
             let conn = ArtiHttpConnector::new(client, tls_conn);
             let http = hyper_tor::Client::builder().build::<_, hyper_tor::Body>(conn);
@@ -205,52 +291,82 @@ impl Tor {
         }
     }
 
-    fn client_config() -> (TorClient<TokioNativeTlsRuntime>, TorClientConfig) {
-        let r_client_config = TOR_SERVER_STATE.client_config.read();
+    fn client_config() -> Option<(TorClient<TokioNativeTlsRuntime>, TorClientConfig)> {
+        let r_client_config = TOR_STATE.client_config.read();
         r_client_config.clone()
     }
 
     /// Check if Onion service is starting.
     pub fn is_service_starting(id: &String) -> bool {
-        let r_services = TOR_SERVER_STATE.start.read();
-        r_services.contains(id)
+        let r_services = TOR_STATE.start.read();
+        r_services.contains_key(id)
     }
 
     /// Check if Onion service is running.
     pub fn is_service_running(id: &String) -> bool {
-        let r_services = TOR_SERVER_STATE.run.read();
+        let r_services = TOR_STATE.run.read();
         r_services.contains_key(id)
     }
 
     /// Check if Onion service failed on start.
     pub fn is_service_failed(id: &String) -> bool {
-        let r_services = TOR_SERVER_STATE.fail.read();
+        let r_services = TOR_STATE.fail.read();
         r_services.contains(id)
     }
 
     /// Check if Onion service is checking.
     pub fn is_service_checking(id: &String) -> bool {
-        let r_services = TOR_SERVER_STATE.check.read();
+        let r_services = TOR_STATE.check.read();
         r_services.contains(id)
     }
 
+    /// Restart Tor client at separate thread.
+    pub fn restart() {
+        thread::spawn(|| {
+            // Exit if client was not launched.
+            if Self::client_config().is_none() {
+                return;
+            }
+            Self::restart_services();
+        });
+    }
+
     /// Restart running Onion services.
-    pub fn restart_services() {
-        // Stop all services saving port key for relaunch.
+    fn restart_services() {
+        // Stop all services saving keys to relaunch.
         let service_ids = {
-            let r_services = TOR_SERVER_STATE.run.read().clone();
+            let r_services = TOR_STATE.run.read().clone();
             r_services.keys().map(|s| s.to_string()).collect::<Vec<String>>()
         };
-        let mut services: BTreeMap<String, (u16, SecretKey)> = BTreeMap::new();
+        let mut services: BTreeMap<String, (u16, SecretKey)> = TOR_STATE.start.read().clone();
         for id in service_ids.clone() {
             if let Some(res) = Self::stop_service(&id) {
                 services.insert(id, res);
             }
         }
-        // Reconfigure client.
-        let config = Self::build_config(false);
-        let r_client = TOR_SERVER_STATE.client_config.read();
-        r_client.0.reconfigure(&config, tor_config::Reconfigure::WarnOnFailures).unwrap();
+        // Put stopped services to start.
+        {
+            let mut w_services = TOR_STATE.start.write();
+            *w_services = services.clone();
+        }
+        // Cleanup keys, state and cache.
+        fs::remove_dir_all(TorConfig::keystore_path()).unwrap_or_default();
+        fs::remove_dir_all(TorConfig::state_path()).unwrap_or_default();
+        fs::remove_dir_all(TorConfig::cache_path()).unwrap_or_default();
+        {
+            let mut w_client = TOR_STATE.client_config.write();
+            *w_client = None;
+        }
+        // Relaunch client.
+        Self::launch();
+        // Save failed services if client was not created.
+        if Self::client_config().is_none() {
+            for id in service_ids {
+                let mut w_services = TOR_STATE.fail.write();
+                w_services.insert(id);
+            }
+            return;
+        }
         // Start services.
         for id in services.keys() {
             let (port, key) = services.get(id).unwrap();
@@ -260,43 +376,62 @@ impl Tor {
 
     /// Stop running Onion service returning port and key.
     pub fn stop_service(id: &String) -> Option<(u16, SecretKey)> {
+        let mut port_key = None;
         {
-            // Remove service from starting.
-            let mut w_services = TOR_SERVER_STATE.start.write();
+            // Remove service from checking.
+            let mut w_services = TOR_STATE.check.write();
             w_services.remove(id);
         }
-        let mut w_services = TOR_SERVER_STATE.run.write();
-        if let Some((port, key, svc, proxy)) = w_services.remove(id) {
-            proxy.shutdown();
-            drop(proxy);
-            drop(svc);
-            return Some((port, key));
+        // Remove service from starting.
+        {
+            let mut w_services = TOR_STATE.start.write();
+            if let Some((port, key)) = w_services.remove(id) {
+                port_key = Some((port, key));
+            }
         }
-        None
+        // Remove service from running.
+        {
+            let mut w_services = TOR_STATE.run.write();
+            if let Some((port, key, svc, proxy)) = w_services.remove(id) {
+                proxy.shutdown();
+                drop(proxy);
+                drop(svc);
+                port_key = Some((port, key));
+            }
+        }
+        // Remove client when no running services left.
+        if TOR_STATE.start.read().is_empty() && TOR_STATE.run.read().is_empty() {
+            let mut w_client = TOR_STATE.client_config.write();
+            *w_client = None;
+            // Clear state.
+            fs::remove_dir_all(TorConfig::state_path()).unwrap_or_default();}
+
+        port_key
     }
 
     /// Start Onion service from listening local port and [`SecretKey`].
     pub fn start_service(port: u16, key: SecretKey, id: &String) {
         // Check if service is already running.
-        if Self::is_service_running(id) || Self::is_service_starting(id) {
+        if Self::is_service_running(id) {
             return;
-        } else {
-            // Save starting service.
-            let mut w_services = TOR_SERVER_STATE.start.write();
-            w_services.insert(id.clone());
-            // Remove service from failed.
-            let mut w_services = TOR_SERVER_STATE.fail.write();
-            w_services.remove(id);
         }
-
         let service_id = id.clone();
         thread::spawn(move || {
+            {
+                // Save starting service.
+                let mut w_services = TOR_STATE.start.write();
+                w_services.insert(service_id.clone(), (port, key.clone()));
+                // Remove service from failed.
+                let mut w_services = TOR_STATE.fail.write();
+                w_services.remove(&service_id);
+            }
+
             let on_error = |service_id: String| {
                 // Remove service from starting.
-                let mut w_services = TOR_SERVER_STATE.start.write();
+                let mut w_services = TOR_STATE.start.write();
                 w_services.remove(&service_id);
                 // Save failed service.
-                let mut w_services = TOR_SERVER_STATE.fail.write();
+                let mut w_services = TOR_STATE.fail.write();
                 w_services.insert(service_id);
             };
 
@@ -319,7 +454,14 @@ impl Tor {
                 }
             }
 
-            let (client, config) = Self::client_config();
+            // Launch client if not exists.
+            Self::launch();
+            let client_config = Self::client_config();
+            if client_config.is_none() {
+                on_error(service_id);
+                return;
+            }
+            let (client, config) = client_config.unwrap();
             client
                 .runtime()
                 .spawn(async move {
@@ -329,40 +471,34 @@ impl Tor {
                         on_error(service_id);
                         return;
                     }
-                    let (c, _) = Self::client_config();
-                    // Bootstrap client.
-                    if c.bootstrap_status().as_frac() == 0.0 {
-                        if let Err(_) = c.bootstrap().await {
-                            on_error(service_id);
-                            return;
-                        }
-                        // Launch first time after delay.
-                        thread::sleep(Duration::from_millis(10000));
-                    }
                     // Launch Onion service.
                     let service_config = OnionServiceConfigBuilder::default()
                         .nickname(hs.clone())
                         .build()
                         .unwrap();
+                    let client_config = Self::client_config();
+                    if client_config.is_none() {
+                        on_error(service_id.clone());
+                    }
+                    let c = client_config.unwrap().0.isolated_client();
                     if let Ok(res) = c.launch_onion_service(service_config) {
                         if let Some((service, request)) = res {
-                            let onion_addr = service.onion_address();
                             // Launch service proxy.
                             let addr = SocketAddr::new(IpAddr::from(Ipv4Addr::LOCALHOST), port);
-                            let proxy = tokio::spawn(Self::run_service_proxy(
-                                addr,
-                                request,
-                                hs.clone(),
-                            )).await.unwrap();
+                            let run = Self::run_service_proxy(c, addr, request, hs.clone());
+                            let proxy = tokio::spawn(run).await.unwrap();
+                            let onion_addr = service.onion_address();
                             // Save running service.
-                            let mut w_services = TOR_SERVER_STATE.run.write();
-                            let id = service_id.clone();
-                            w_services.insert(id, (port, key.clone(), service, proxy));
+                            {
+                                let mut w_services = TOR_STATE.run.write();
+                                let id = service_id.clone();
+                                w_services.insert(id, (port, key.clone(), service, proxy));
+                            }
                             // Check service availability.
                             let addr = onion_addr.unwrap().display_unredacted().to_string();
                             let url = format!("http://{}/", addr);
                             if !Self::is_service_checking(&service_id) {
-                                Self::check_service(service_id, url, port, key)
+                                Self::check_service(service_id, url)
                             }
                             return;
                         }
@@ -373,93 +509,86 @@ impl Tor {
         });
     }
 
+    /// Check is service is running on check.
+    fn check_running(service_id: &String) -> bool {
+        let running = Tor::is_service_running(service_id) && Self::client_config().is_some();
+        if !running {
+            // Remove service from checking.
+            let mut w_services = TOR_STATE.check.write();
+            w_services.remove(service_id);
+        }
+        running
+    }
+
     /// Check service availability.
-    fn check_service(service_id: String,
-                     url: String,
-                     port: u16,
-                     key: SecretKey) {
+    fn check_service(service_id: String, url: String) {
         {
-            let mut w_services = TOR_SERVER_STATE.check.write();
+            let mut w_services = TOR_STATE.check.write();
             w_services.insert(service_id.clone());
         }
-        let (client, _) = Self::client_config();
         thread::spawn(move || {
-            // Wait 5 sec before check.
-            thread::sleep(Duration::from_millis(5000));
-            // Request client setup.
-            if TOR_SERVER_STATE.check_client.read().is_none() {
-                let (client_check, _) = Self::client_config();
-                let tls_conn = TlsConnector::builder().unwrap().build().unwrap();
-                let conn = ArtiHttpConnector::new(client_check, tls_conn);
-                let http = hyper_tor::Client::builder().build::<_, hyper_tor::Body>(conn);
-                let mut w_client = TOR_SERVER_STATE.check_client.write();
-                *w_client = Some(http);
-            }
-            let r_client = TOR_SERVER_STATE.check_client.read();
-            let http = r_client.clone().unwrap();
-            let runtime = client.runtime();
-            runtime
-                .spawn(async move {
+            tokio::runtime::Builder::new_multi_thread()
+                .enable_all()
+                .build()
+                .unwrap()
+                .block_on(async {
                     const MAX_ERRORS: i32 = 16;
                     let mut errors_count = 0;
+                    // Wait 5 seconds.
+                    thread::sleep(Duration::from_millis(5000));
                     loop {
-                        // Check if service is running.
-                        fn is_running(service_id: &String) -> bool {
-                            let running = Tor::is_service_running(service_id);
-                            if !running {
-                                // Remove service from checking.
-                                let mut w_services =
-                                    TOR_SERVER_STATE.check.write();
-                                w_services.remove(service_id);
-                            }
-                            running
-                        }
-                        if !is_running(&service_id) {
+                        if !Self::check_running(&service_id) {
                             break;
                         }
                         let duration = {
+                            // Send request.
+                            let tls_conn = TlsConnector::builder().unwrap().build().unwrap();
+                            let client_config = Self::client_config();
+                            if client_config.is_none() {
+                                return;
+                            }
+                            let client = client_config.unwrap().0.isolated_client();
+                            let conn = ArtiHttpConnector::new(client, tls_conn);
+                            let http = hyper_tor::Client::builder()
+                                .build::<_, hyper_tor::Body>(conn);
+                            let uri = hyper_tor::Uri::from_str(url.clone().as_str()).unwrap();
+                            let check = http.get(uri.clone());
+                            // Setup error callback.
                             let mut on_error = |service_id: &String| -> bool {
-                                if !is_running(service_id) {
+                                if !Self::check_running(service_id) {
                                     return true;
                                 }
                                 // Restart service after maximum amount of errors.
                                 errors_count += 1;
-                                if errors_count == MAX_ERRORS {
-                                    // Remove service from checking.
-                                    let mut w_services =
-                                        TOR_SERVER_STATE.check.write();
-                                    w_services.remove(service_id);
-                                    // Remove service from starting.
-                                    let mut w_services = TOR_SERVER_STATE.start.write();
-                                    w_services.remove(service_id);
-                                    // Restart service.
-                                    let key = key.clone();
-                                    let id = service_id.clone();
-                                    thread::spawn(move || {
-                                        Self::stop_service(&id);
-                                        Self::start_service(port, key, &id);
-                                    });
-                                    return true;
+                                let max_errors = errors_count >= MAX_ERRORS;
+                                if max_errors {
+                                    {
+                                        // Remove service from checking.
+                                        let mut w_services = TOR_STATE.check.write();
+                                        w_services.remove(service_id);
+                                        // Remove service from starting.
+                                        let mut w_services = TOR_STATE.start.write();
+                                        w_services.remove(service_id);
+                                    }
+                                    // Restart services.
+                                    Self::restart();
                                 }
-                                false
+                                max_errors
                             };
-                            // Send request.
-                            let uri = hyper_tor::Uri::from_str(url.clone().as_str()).unwrap();
-                            let check = http.get(uri);
-                            // Check with timeout of 20s.
-                            match tokio::time::timeout(Duration::from_millis(20000), check).await {
+                            // Check with timeout of 30s.
+                            match tokio::time::timeout(Duration::from_millis(30000), check).await {
                                 Ok(resp) => {
                                     match resp {
                                         Ok(_) => {
-                                            if !is_running(&service_id) {
+                                            if !Self::check_running(&service_id) {
                                                 break;
                                             }
                                             // Remove service from starting.
-                                            let mut w_services = TOR_SERVER_STATE.start.write();
+                                            let mut w_services = TOR_STATE.start.write();
                                             w_services.remove(&service_id);
                                             errors_count = 0;
-                                            // Check again after 20s.
-                                            Duration::from_millis(20000)
+                                            // Check again after 60s.
+                                            Duration::from_millis(60000)
                                         }
                                         Err(e) => {
                                             if on_error(&service_id) {
@@ -486,13 +615,13 @@ impl Tor {
                         // Wait to check service again.
                         thread::sleep(duration);
                     }
-                })
-                .unwrap();
+                });
         });
     }
 
     /// Launch Onion service proxy.
     async fn run_service_proxy<S>(
+        client: TorClient<TokioNativeTlsRuntime>,
         addr: SocketAddr,
         request: S,
         nickname: HsNickname,
@@ -500,7 +629,6 @@ impl Tor {
         S: futures::Stream<Item = tor_hsservice::RendRequest> + Unpin + Send + 'static,
     {
         let id = nickname.to_string();
-        let (client, _) = Self::client_config();
         let runtime = client.runtime().clone();
 
         // Setup proxy to forward request from Tor address to local address.
@@ -513,7 +641,7 @@ impl Tor {
         let proxy = OnionServiceReverseProxy::new(proxy_cfg_builder.build().unwrap());
 
         // Remove service from failed.
-        let mut w_services = TOR_SERVER_STATE.fail.write();
+        let mut w_services = TOR_STATE.fail.write();
         w_services.remove(&id);
 
         // Start proxy for launched service.
@@ -524,16 +652,16 @@ impl Tor {
                 match p.handle_requests(runtime, nickname.clone(), request).await {
                     Ok(()) => {
                         // Remove service from running.
-                        let mut w_services = TOR_SERVER_STATE.run.write();
+                        let mut w_services = TOR_STATE.run.write();
                         w_services.remove(&id);
                     }
                     Err(_) => {
                         if Self::is_service_running(&id) {
                             // Remove service from running.
-                            let mut w_services = TOR_SERVER_STATE.run.write();
+                            let mut w_services = TOR_STATE.run.write();
                             w_services.remove(&id);
                             // Save failed service.
-                            let mut w_services = TOR_SERVER_STATE.fail.write();
+                            let mut w_services = TOR_STATE.fail.write();
                             w_services.insert(id);
                         }
                     }

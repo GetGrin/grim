@@ -485,22 +485,23 @@ impl WalletTransactionsContent {
         View::item_button(ui, rounding, icon, color, || {
             if repost {
                 wallet.task(WalletTask::Post(tx.data.id));
-            } else {
-                match tx.action.as_ref().unwrap() {
-                    WalletTransactionAction::Cancelling => {
-                        wallet.task(WalletTask::Cancel(tx.data.clone()));
-                    }
+            } else if let Some(action) = tx.action.as_ref() {
+                match action {
                     WalletTransactionAction::Finalizing => {
                         wallet.task(WalletTask::Finalize(tx.data.id));
                     }
                     WalletTransactionAction::Posting => {
                         wallet.task(WalletTask::Post(tx.data.id));
                     }
-                    WalletTransactionAction::SendingTor => {
+                    _ => {
                         if let Some(a) = &tx.receiver {
                             wallet.task(WalletTask::SendTor(tx.data.id, a.clone()));
                         }
                     }
+                }
+            } else {
+                if let Some(a) = &tx.receiver {
+                    wallet.task(WalletTask::SendTor(tx.data.id, a.clone()));
                 }
             }
         });

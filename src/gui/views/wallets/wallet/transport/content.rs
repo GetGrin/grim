@@ -90,7 +90,7 @@ impl WalletTransportContent {
     pub fn back(&mut self) {
         if let Some(content) = self.settings_content.as_ref() {
             if content.tor_settings_content.settings_changed {
-                Tor::restart_services();
+                Tor::restart();
             }
             self.settings_content = None;
         } else if self.qr_address_content.is_some() {
@@ -143,7 +143,7 @@ impl WalletTransportContent {
                 if wallet.foreign_api_port().is_some() && wallet.secret_key().is_some() {
                     let port = wallet.foreign_api_port().unwrap();
                     let key = wallet.secret_key().unwrap();
-                    if  !Tor::is_service_starting(service_id) {
+                    if !Tor::is_service_starting(service_id) {
                         if !Tor::is_service_running(service_id) {
                             let r = CornerRadius::default();
                             View::item_button(ui, r, POWER, Some(Colors::green()), || {

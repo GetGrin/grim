@@ -12,12 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::fs;
-use egui::{Align, Id, Layout, RichText, StrokeKind};
 use egui::os::OperatingSystem;
+use egui::scroll_area::ScrollBarVisibility;
+use egui::{Align, Id, Layout, RichText, ScrollArea, StrokeKind};
+use std::fs;
 use url::Url;
 
-use crate::gui::icons::{CLOUD_CHECK, NOTCHES, PENCIL, SCAN, TERMINAL};
+use crate::gui::icons::{CLIPBOARD_TEXT, CLOUD_CHECK, NOTCHES, PENCIL, SCAN, TERMINAL};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::types::{ContentContainer, ModalPosition};
 use crate::gui::views::{CameraScanContent, FilePickContent, FilePickContentType, Modal, TextEdit, View};
@@ -178,7 +179,6 @@ impl ContentContainer for TorSettingsContent {
 
             // Draw checkbox to enable/disable bridges.
             View::checkbox(ui, bridge.is_some(), t!("transport.bridges"), || {
-                // Save value.
                 let value = if bridge.is_some() {
                     None
                 } else {
@@ -431,7 +431,7 @@ impl TorSettingsContent {
                 .color(Colors::gray()));
             ui.add_space(8.0);
 
-            // Draw p2p port text edit.
+            // Draw bridge text edit.
             let mut edit = TextEdit::new(Id::from(BRIDGE_BIN_EDIT_MODAL)).paste();
             edit.ui(ui, &mut self.bridge_bin_path_edit, cb);
             if edit.enter_pressed {
@@ -489,7 +489,7 @@ impl TorSettingsContent {
                 // Show connection line edit modal.
                 let title = bridge.protocol_name();
                 Modal::new(BRIDGE_CONN_LINE_EDIT_MODAL)
-                    .position(ModalPosition::CenterTop)
+                    .position(ModalPosition::Center)
                     .title(title)
                     .show();
             });
@@ -541,12 +541,56 @@ impl TorSettingsContent {
             ui.add_space(8.0);
 
             // Draw connection line text edit.
-            let mut edit = TextEdit::new(Id::from(BRIDGE_CONN_LINE_EDIT_MODAL)).paste();
-            edit.ui(ui, &mut self.bridge_conn_line_edit, cb);
-            if edit.enter_pressed {
-                on_save(self);
-            }
-            ui.add_space(12.0);
+            ui.vertical_centered(|ui| {
+                let scroll_id = Id::from(BRIDGE_CONN_LINE_EDIT_MODAL);
+                View::horizontal_line(ui, Colors::item_stroke());
+                ui.add_space(3.0);
+                ScrollArea::both()
+                    .id_salt(scroll_id)
+                    .scroll_bar_visibility(ScrollBarVisibility::AlwaysHidden)
+                    .max_height(128.0)
+                    .auto_shrink([false; 2])
+                    .show(ui, |ui| {
+                        ui.add_space(7.0);
+                        let input_id = scroll_id.with("_input");
+                        egui::TextEdit::multiline(&mut self.bridge_conn_line_edit)
+                            .id(input_id)
+                            .font(egui::TextStyle::Body)
+                            .desired_rows(5)
+                            .interactive(true)
+                            .desired_width(f32::INFINITY)
+                            .show(ui);
+                        ui.add_space(6.0);
+                    });
+            });
+
+            ui.add_space(2.0);
+            View::horizontal_line(ui, Colors::item_stroke());
+            ui.add_space(8.0);
+
+            // Setup spacing between buttons.
+            ui.spacing_mut().item_spacing = egui::Vec2::new(8.0, 0.0);
+
+            ui.columns(2, |columns| {
+                columns[0].vertical_centered_justified(|ui| {
+                    // Draw paste button.
+                    let paste_text = format!("{} {}", CLIPBOARD_TEXT, t!("paste"));
+                    View::button(ui, paste_text, Colors::white_or_black(false), || {
+                        self.bridge_conn_line_edit = cb.get_string_from_buffer();
+                    });
+                });
+                columns[1].vertical_centered_justified(|ui| {
+                    // Draw button to scan bridge QR code.
+                    let scan_text = format!("{} {}", SCAN, t!("scan"));
+                    View::button(ui, scan_text, Colors::white_or_black(false), || {
+                        self.show_qr_scan_bridge_modal(cb);
+                    });
+                });
+            });
+
+            ui.add_space(8.0);
+            View::horizontal_line(ui, Colors::item_stroke());
+            ui.add_space(8.0);
 
             // Show modal buttons.
             ui.scope(|ui| {
