@@ -41,7 +41,7 @@ jobs:
           echo "exists=${exists}" >> "$FORGEJO_OUTPUT"
           echo ${exists}
           mkdir release
-      - uses: ardocrat/forgejo-release@grim
+      - uses: actions/forgejo-release@v2.11.3
         if: ${{ forgejo.ref_type == 'tag' && steps.check.outputs.exists == 'true' }}
         with:
           direction: download
@@ -52,7 +52,7 @@ jobs:
         if: ${{ forgejo.ref_type == 'tag' && steps.check.outputs.exists == 'true' }}
         working-directory: release
         run: for f in *; do mv "$f" "$(echo "$f" | sed s/-dev-/-/)"; done
-      - uses: ardocrat/forgejo-release@grim
+      - uses: actions/forgejo-release@v2.11.3
         if: ${{ forgejo.ref_type == 'tag' && steps.check.outputs.exists == 'true' }}
         with:
           direction: upload
@@ -370,7 +370,7 @@ jobs:
 
   release:
     if: ${{ forgejo.ref_type == 'branch' || needs.version.outputs.exists == 'false' }}
-    runs-on: debian-release
+    runs-on: ubuntu
     needs: [version, android_release, linux, linux_x86, macos, windows]
     steps:
       - name: Download All Artifacts
@@ -391,7 +391,7 @@ jobs:
           tar -xzf windows.tar.gz
           rm windows.tar.gz
       - name: Upload release to Forgejo
-        uses: ardocrat/forgejo-release@grim
+        uses: actions/forgejo-release@v2.11.3
         with:
           direction: upload
           token: ${{ secrets.RELEASE_TOKEN }}
@@ -418,6 +418,22 @@ jobs:
           chat_id: ${{ secrets.TELEGRAM_GROUP_ID }}
           status: ${{ job.status }}
           notify_fields: "actor,repository,workflow,branch,commit"
+
+  release-telegram:
+    runs-on: debian-release
+    needs: [version, release]
+    steps:
+      - name: Download All Artifacts
+        run: |
+          mkdir release
+          cd release
+          wget ${{ secrets.REPO_HOST }}/${{ forgejo.repository }}/releases/download/${{ needs.version.outputs.v }}/grim-${{ needs.version.outputs.v }}-android.apk
+          wget ${{ secrets.REPO_HOST }}/${{ forgejo.repository }}/releases/download/${{ needs.version.outputs.v }}/grim-${{ needs.version.outputs.v }}-android-x86_64.apk
+          wget ${{ secrets.REPO_HOST }}/${{ forgejo.repository }}/releases/download/${{ needs.version.outputs.v }}/grim-${{ needs.version.outputs.v }}-linux-arm.AppImage
+          wget ${{ secrets.REPO_HOST }}/${{ forgejo.repository }}/releases/download/${{ needs.version.outputs.v }}/grim-${{ needs.version.outputs.v }}-linux-x86_64.AppImage
+          wget ${{ secrets.REPO_HOST }}/${{ forgejo.repository }}/releases/download/${{ needs.version.outputs.v }}/grim-${{ needs.version.outputs.v }}-macos-universal.zip
+          wget ${{ secrets.REPO_HOST }}/${{ forgejo.repository }}/releases/download/${{ needs.version.outputs.v }}/grim-${{ needs.version.outputs.v }}-win-x86_64.msi
+          wget ${{ secrets.REPO_HOST }}/${{ forgejo.repository }}/releases/download/${{ needs.version.outputs.v }}/grim-${{ needs.version.outputs.v }}-win-x86_64.zip
       - name: Upload files to Telegram
         uses: actions/telegram-send-file@main
         with:
