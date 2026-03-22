@@ -1623,8 +1623,7 @@ async fn handle_task(w: &Wallet, t: WalletTask) {
                     }
                     Err(e) => {
                         error!("send tor finalize error: {:?}", e);
-                        let _ = w.cancel(tx.id);
-                        sync_wallet_data(&w, false);
+                        w.task(WalletTask::Cancel(tx.id));
                     }
                 }
             }
@@ -1671,11 +1670,13 @@ async fn handle_task(w: &Wallet, t: WalletTask) {
                         if s.state != SlateState::Standard1 {
                             if let Ok(_) = w.pay(&s) {
                                 sync_wallet_data(&w, false);
+                                let tx = w.retrieve_tx_by_id(None, Some(s.id));
                                 w.on_task_result(tx, &t);
                             }
                         } else {
                             if let Ok(_) = w.receive(&s, dest) {
                                 sync_wallet_data(&w, false);
+                                let tx = w.retrieve_tx_by_id(None, Some(s.id));
                                 w.on_task_result(tx, &t);
                             }
                         }
@@ -1695,9 +1696,8 @@ async fn handle_task(w: &Wallet, t: WalletTask) {
                                     }
                                 }
                                 Err(e) => {
-                                    let _ = w.cancel(tx.id);
                                     error!("message tx finalize error: {:?}", e);
-                                    w.on_tx_error(tx.id, Some(e));
+                                    w.task(WalletTask::Cancel(tx.id));
                                 }
                             }
                         }
@@ -1777,13 +1777,13 @@ async fn handle_task(w: &Wallet, t: WalletTask) {
                         }
                     }
                     Err(e) => {
-                        let _ = w.cancel(*id);
                         error!("tx finalize error: {:?}", e);
-                        w.on_tx_error(*id, Some(e));
+                        w.task(WalletTask::Cancel(*id));
                     }
                 }
             } else {
-                w.on_tx_error(*id, Some(Error::GenericError("tx slate not found".to_string())));
+                error!("tx finalize: slate not found");
+                w.task(WalletTask::Cancel(*id));
             }
         }
         WalletTask::Post(id) => {
@@ -1816,7 +1816,8 @@ async fn handle_task(w: &Wallet, t: WalletTask) {
                     }
                 }
             } else {
-                w.on_tx_error(*id, Some(Error::GenericError("tx slate not found".to_string())));
+                error!("tx post: slate not found");
+                w.task(WalletTask::Cancel(*id));
             }
         }
         WalletTask::Cancel(id) => {
