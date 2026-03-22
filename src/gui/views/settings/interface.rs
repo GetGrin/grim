@@ -12,12 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::scroll_area::ScrollBarVisibility;
-use egui::{Align, Layout, RichText, ScrollArea, StrokeKind};
+use eframe::epaint::RectShape;
+use egui::{Align, CursorIcon, Layout, RichText, Sense, StrokeKind, UiBuilder};
 
-use crate::gui::icons::{CHECK, PENCIL, TRANSLATE};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::types::{ContentContainer, ModalPosition};
+use crate::gui::views::types::ContentContainer;
 use crate::gui::views::{Modal, View};
 use crate::gui::Colors;
 use crate::AppConfig;
@@ -28,22 +27,10 @@ pub struct InterfaceSettingsContent {
     locale: String,
 }
 
-/// Identifier for language selection [`Modal`].
-const LANGUAGE_SELECTION_MODAL: &'static str = "language_selection_modal";
-
 impl ContentContainer for InterfaceSettingsContent {
-    fn modal_ids(&self) -> Vec<&'static str> {
-        vec![
-            LANGUAGE_SELECTION_MODAL
-        ]
-    }
+    fn modal_ids(&self) -> Vec<&'static str> { vec![] }
 
-    fn modal_ui(&mut self, ui: &mut egui::Ui, modal: &Modal, _: &dyn PlatformCallbacks) {
-        match modal.id {
-            LANGUAGE_SELECTION_MODAL => self.language_selection_ui(ui),
-            _ => {}
-        }
-    }
+    fn modal_ui(&mut self, _: &mut egui::Ui, _: &Modal, _: &dyn PlatformCallbacks) {}
 
     fn container_ui(&mut self, ui: &mut egui::Ui, _: &dyn PlatformCallbacks) {
         ui.add_space(5.0);
@@ -72,7 +59,10 @@ impl ContentContainer for InterfaceSettingsContent {
         }
 
         // Draw language selection.
-        self.language_item_ui(self.locale.clone().as_str(), ui, true, 0, 1);
+        let locales = rust_i18n::available_locales!();
+        for (index, locale) in locales.iter().enumerate() {
+            self.language_item_ui(locale, ui, index, locales.len());
+        }
         ui.add_space(4.0);
     }
 }
@@ -91,96 +81,29 @@ impl Default for InterfaceSettingsContent {
 }
 
 impl InterfaceSettingsContent {
-    /// Draw language selection content.
-    fn language_selection_ui(&mut self, ui: &mut egui::Ui) {
-        ui.add_space(4.0);
-        ScrollArea::vertical()
-            .max_height(373.0)
-            .id_salt("select_language_scroll")
-            .scroll_bar_visibility(ScrollBarVisibility::AlwaysHidden)
-            .auto_shrink([true; 2])
-            .show(ui, |ui| {
-                ui.add_space(2.0);
-                ui.vertical_centered(|ui| {
-                    let locales = rust_i18n::available_locales!();
-                    for (index, locale) in locales.iter().enumerate() {
-                        self.language_item_ui(locale, ui, false, index, locales.len());
-                    }
-                });
-            });
-
-        ui.add_space(6.0);
-        View::horizontal_line(ui, Colors::item_stroke());
-        ui.add_space(6.0);
-
-        // Show button to close modal.
-        ui.vertical_centered_justified(|ui| {
-            View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
-                Modal::close();
-            });
-        });
-        ui.add_space(6.0);
-    }
-
     /// Draw language selection item content.
-    fn language_item_ui(&mut self, locale: &str, ui: &mut egui::Ui, edit: bool, index: usize, len: usize) {
-        // Setup layout size.
-        let mut rect = ui.available_rect_before_wrap();
-        if edit {
-            rect.set_height(56.0);
-        } else {
-            rect.set_height(50.0);
-        }
-
+    fn language_item_ui(&mut self, locale: &str, ui: &mut egui::Ui, index: usize, len: usize) {
+        let is_current = self.locale == locale;
         // Draw round background.
-        let bg_rect = rect.clone();
-        let item_rounding = View::item_rounding(index, len, false);
-        ui.painter().rect(bg_rect,
-                          item_rounding,
-                          Colors::fill(),
-                          View::item_stroke(),
-                          StrokeKind::Outside);
+        let mut rect = ui.available_rect_before_wrap();
+        rect.set_height(50.0);
+        let r = View::item_rounding(index, len, false);
+        let bg = if is_current {
+            Colors::fill()
+        } else {
+            Colors::fill_lite()
+        };
+        let mut bg_shape = RectShape::new(rect, r, bg, View::item_stroke(), StrokeKind::Outside);
+        let bg_idx = ui.painter().add(bg_shape.clone());
 
-        ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
-            if edit {
-                View::item_button(ui, View::item_rounding(index, len, true), PENCIL, None, || {
-                    // Show language selection modal.
-                    Modal::new(LANGUAGE_SELECTION_MODAL)
-                        .position(ModalPosition::Center)
-                        .title(t!("language"))
-                        .show();
-                });
-                let layout_size = ui.available_size();
-                ui.allocate_ui_with_layout(layout_size, Layout::left_to_right(Align::Center), |ui| {
-                    ui.add_space(12.0);
-                    ui.vertical(|ui| {
-                        ui.add_space(4.0);
-                        View::ellipsize_text(ui,
-                                             t!("lang_name", locale = locale),
-                                             18.0,
-                                             Colors::title(false));
-                        ui.add_space(1.0);
-                        let value = format!("{} {}",
-                                            TRANSLATE,
-                                            t!("language"));
-                        ui.label(RichText::new(value).size(15.0).color(Colors::gray()));
-                        ui.add_space(3.0);
-                    });
-                });
-            } else {
-                // Draw button to select language.
-                let is_current = self.locale == locale;
-                if !is_current {
-                    View::item_button(ui, View::item_rounding(index, len, true), CHECK, None, || {
-                        rust_i18n::set_locale(locale);
-                        AppConfig::save_locale(locale);
-                        self.locale = locale.to_string();
-                        Modal::close();
-                    });
-                } else {
+        let res = ui.scope_builder(
+            UiBuilder::new()
+                .sense(Sense::click())
+                .layout(Layout::right_to_left(Align::Center))
+                .max_rect(rect), |ui| {
+                if is_current {
                     View::selected_item_check(ui);
                 }
-
                 let layout_size = ui.available_size();
                 ui.allocate_ui_with_layout(layout_size, Layout::left_to_right(Align::Center), |ui| {
                     ui.add_space(12.0);
@@ -195,10 +118,23 @@ impl InterfaceSettingsContent {
                         ui.label(RichText::new(t!("lang_name", locale = locale))
                             .size(17.0)
                             .color(color));
-                        ui.add_space(3.0);
+                        ui.add_space(14.0);
                     });
                 });
             }
-        });
+        ).response;
+        let clicked = res.clicked() || res.long_touched();
+        // Setup background and cursor.
+        if res.hovered() && !is_current {
+            res.on_hover_cursor(CursorIcon::PointingHand);
+            bg_shape.fill = Colors::fill();
+        }
+        ui.painter().set(bg_idx, bg_shape);
+        // Handle clicks on layout.
+        if clicked && !is_current {
+            rust_i18n::set_locale(locale);
+            AppConfig::save_locale(locale);
+            self.locale = locale.to_string();
+        }
     }
 }

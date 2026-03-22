@@ -786,7 +786,7 @@ fn peer_item_ui(ui: &mut egui::Ui,
     let item_rounding = View::item_rounding(index, len, false);
     ui.painter().rect(rect,
                       item_rounding,
-                      Colors::white_or_black(false),
+                      Colors::fill(),
                       View::item_stroke(),
                       StrokeKind::Outside);
 

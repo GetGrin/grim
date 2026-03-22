@@ -404,8 +404,8 @@ impl Tor {
             let mut w_client = TOR_STATE.client_config.write();
             *w_client = None;
             // Clear state.
-            fs::remove_dir_all(TorConfig::state_path()).unwrap_or_default();}
-
+            fs::remove_dir_all(TorConfig::state_path()).unwrap_or_default();
+        }
         port_key
     }
 

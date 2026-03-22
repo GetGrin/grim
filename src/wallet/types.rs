@@ -150,7 +150,7 @@ pub struct WalletData {
     pub info: WalletInfo,
 
     /// Transactions data.
-    pub txs: Option<Vec<WalletTransaction>>,
+    pub txs: Option<Vec<WalletTx>>,
     /// Number of txs to show on select from database.
     pub txs_limit: u32,
 }
@@ -160,53 +160,34 @@ impl WalletData {
     pub const TXS_LIMIT: u32 = 30;
 
     /// Update transaction action status.
-    pub fn on_tx_action(&mut self, id: String, action: Option<WalletTransactionAction>) {
+    pub fn on_tx_action(&mut self, id: u32, action: Option<WalletTxAction>) {
         if self.txs.is_none() {
             return;
         }
         for tx in self.txs.as_mut().unwrap() {
-            if let Some(slate_id) = tx.data.tx_slate_id {
-                if slate_id.to_string() == id {
-                    tx.action = action;
-                    tx.action_error = None;
-                    break;
-                }
+            if id == tx.data.id {
+                tx.action = action;
+                tx.action_error = None;
+                break;
             }
         }
     }
 
     /// Update transaction action error status.
-    pub fn on_tx_error(&mut self, id: String, err: Option<Error>) {
+    pub fn on_tx_error(&mut self, id: u32, err: Option<Error>) {
         if self.txs.is_none() {
             return;
         }
         for tx in self.txs.as_mut().unwrap() {
-            if let Some(slate_id) = tx.data.tx_slate_id {
-                if slate_id.to_string() == id {
-                    tx.action_error = err;
-                    break;
-                }
+            if id == tx.data.id {
+                tx.action_error = err;
+                break;
             }
         }
-    }
-
-    /// Get transaction by slate identifier.
-    pub fn tx_by_slate_id(&self, id: String) -> Option<WalletTransaction> {
-        if self.txs.is_none() {
-            return None;
-        }
-        for tx in self.txs.as_ref().unwrap() {
-            if let Some(slate_id) = tx.data.tx_slate_id {
-                if slate_id.to_string() == id {
-                    return Some(tx.clone());
-                }
-            }
-        }
-        None
     }
 
     /// Get transaction by identifier.
-    pub fn tx_by_id(&self, id: u32) -> Option<WalletTransaction> {
+    pub fn tx_by_id(&self, id: u32) -> Option<WalletTx> {
         if self.txs.is_none() {
             return None;
         }
@@ -221,13 +202,13 @@ impl WalletData {
 
 /// Wallet transaction action.
 #[derive(Clone, PartialEq)]
-pub enum WalletTransactionAction {
-    Cancelling, Finalizing, Posting, SendingTor
+pub enum WalletTxAction {
+    Cancelling, Finalizing, Posting, SendingTor, Deleting
 }
 
 /// Wallet transaction data.
 #[derive(Clone)]
-pub struct WalletTransaction {
+pub struct WalletTx {
     /// Information from database.
     pub data: TxLogEntry,
     /// State of transaction Slate.
@@ -247,19 +228,19 @@ pub struct WalletTransaction {
     pub broadcasting_height: Option<u64>,
 
     /// Action on transaction.
-    pub action: Option<WalletTransactionAction>,
+    pub action: Option<WalletTxAction>,
     /// Action result error.
     pub action_error: Option<Error>
 }
 
-impl WalletTransaction {
+impl WalletTx {
     /// Create new wallet transaction.
     pub fn new(tx: TxLogEntry,
                proof: Option<PaymentProof>,
                wallet: &Wallet,
                height: Option<u64>,
                broadcasting_height: Option<u64>,
-               action: Option<WalletTransactionAction>,
+               action: Option<WalletTxAction>,
                action_error: Option<Error>) -> Self {
         let amount = if tx.amount_debited > tx.amount_credited {
             tx.amount_debited - tx.amount_credited
@@ -352,7 +333,7 @@ impl WalletTransaction {
     /// Check if transaction is sending over Tor.
     pub fn sending_tor(&self) -> bool {
         if let Some(a) = self.action.as_ref() {
-            return a == &WalletTransactionAction::SendingTor;
+            return a == &WalletTxAction::SendingTor;
         }
         false
     }
@@ -360,7 +341,7 @@ impl WalletTransaction {
     /// Check if transaction is cancelling.
     pub fn cancelling(&self) -> bool {
         if let Some(a) = self.action.as_ref() {
-            return a == &WalletTransactionAction::Cancelling;
+            return a == &WalletTxAction::Cancelling;
         }
         false
     }
@@ -368,7 +349,7 @@ impl WalletTransaction {
     /// Check if transaction is posting.
     pub fn posting(&self) -> bool {
         if let Some(a) = self.action.as_ref() {
-            return a == &WalletTransactionAction::Posting;
+            return a == &WalletTxAction::Posting;
         }
         false
     }
@@ -390,7 +371,7 @@ impl WalletTransaction {
     /// Check if transaction is finalizing.
     pub fn finalizing(&self) -> bool {
         if let Some(a) = self.action.as_ref() {
-            return a == &WalletTransactionAction::Finalizing;
+            return a == &WalletTxAction::Finalizing;
         }
         false
     }
@@ -398,7 +379,7 @@ impl WalletTransaction {
     /// Check if possible to repeat transaction action.
     pub fn can_repeat_action(&self) -> bool {
         if let Some(a) = &self.action {
-            self.action_error.is_some() && a != &WalletTransactionAction::Cancelling
+            self.action_error.is_some() && a != &WalletTxAction::Cancelling
         } else {
             // Can resend over Tor.
             !self.data.confirmed && !self.sending_tor() && !self.broadcasting() &&
@@ -426,6 +407,14 @@ impl WalletTransaction {
         }
         false
     }
+
+    /// Check if transaction is deleting.
+    pub fn deleting(&self) -> bool {
+        if let Some(a) = self.action.as_ref() {
+            return a == &WalletTxAction::Deleting;
+        }
+        false
+    }
 }
 
 /// Task for the wallet.
@@ -446,19 +435,22 @@ pub enum WalletTask {
     /// * receiver
     Send(u64, Option<SlatepackAddress>),
     /// Send request over Tor.
-    /// * local tx id
+    /// * tx
     /// * receiver
-    SendTor(u32, SlatepackAddress),
+    SendTor(TxLogEntry, SlatepackAddress),
     /// Invoice creation.
     /// * amount
     Receive(u64),
     /// Transaction finalization.
-    /// * local tx id
+    /// * tx id
     Finalize(u32),
     /// Post transaction to blockchain.
-    /// * local tx id
+    /// * tx id
     Post(u32),
     /// Cancel transaction.
-    /// * tx
-    Cancel(TxLogEntry),
+    /// * tx id
+    Cancel(u32),
+    /// Delete transaction.
+    /// * tx id
+    Delete(u32)
 }

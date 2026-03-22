@@ -186,6 +186,8 @@ impl View {
             // Setup padding for title buttons.
             if !View::is_desktop() {
                 ui.style_mut().spacing.button_padding = egui::vec2(20.0, 8.0);
+            } else {
+                ui.style_mut().spacing.button_padding = egui::vec2(16.0, 8.0);
             }
             // Disable strokes.
             ui.style_mut().visuals.widgets.inactive.bg_stroke = Stroke::NONE;
@@ -358,7 +360,7 @@ impl View {
         ui.scope(|ui| {
             // Setup padding for item buttons.
             let padding = if Self::is_desktop() {
-                14.0
+                15.0
             } else {
                 18.0
             };

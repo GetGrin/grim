@@ -23,7 +23,7 @@ use serde_derive::{Deserialize, Serialize};
 
 use crate::{AppConfig, Settings};
 use crate::wallet::ConnectionsConfig;
-use crate::wallet::types::{ConnectionMethod, WalletTransaction};
+use crate::wallet::types::{ConnectionMethod, WalletTx};
 
 /// Wallet configuration.
 #[derive(Serialize, Deserialize, Clone)]
@@ -228,7 +228,7 @@ impl WalletConfig {
     }
 
     /// Get Slatepack file path for transaction.
-    pub fn get_tx_slate_path(&self, tx: &WalletTransaction) -> PathBuf {
+    pub fn get_tx_slate_path(&self, tx: &WalletTx) -> PathBuf {
         let mut path = PathBuf::from(self.get_base_data_path());
         path.push(SLATEPACKS_DIR_NAME);
         if !path.exists() {

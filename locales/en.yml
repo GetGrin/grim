@@ -142,6 +142,7 @@ wallets:
   payment_proof_desc: 'Enter received payment proof to verify transaction:'
   payment_proof_valid: 'Entered payment proof is valid:'
   payment_proof_error: 'Entered payment proof is not valid:'
+  tx_delete_confirmation: Are you sure you want to delete the transaction from history?
 transport:
   desc: 'Use transport to receive or send messages synchronously:'
   tor_network: Tor network

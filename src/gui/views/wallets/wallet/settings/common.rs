@@ -13,10 +13,10 @@
 // limitations under the License.
 
 use eframe::emath::Align;
-use eframe::epaint::StrokeKind;
-use egui::{Id, Layout, RichText};
+use eframe::epaint::{RectShape, StrokeKind};
+use egui::{CursorIcon, Id, Layout, RichText, Sense, UiBuilder};
 
-use crate::gui::icons::{CLOCK_COUNTDOWN, FOLDERS, FOLDER_USER, PASSWORD, PENCIL};
+use crate::gui::icons::{CLOCK_COUNTDOWN, FOLDERS, FOLDER_USER, PASSWORD};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::types::ModalPosition;
 use crate::gui::views::wallets::wallet::types::WalletContentContainer;
@@ -79,7 +79,11 @@ impl WalletContentContainer for CommonSettings {
     }
 
     fn container_ui(&mut self, ui: &mut egui::Ui, wallet: &Wallet, cb: &dyn PlatformCallbacks) {
-        ui.add_space(8.0);
+        if View::is_desktop() {
+            ui.add_space(1.0);
+        } else {
+            ui.add_space(8.0);
+        }
         ui.vertical_centered(|ui| {
             let config = wallet.get_config();
             // Show wallet name.
@@ -106,7 +110,7 @@ impl WalletContentContainer for CommonSettings {
 
             ui.add_space(8.0);
 
-            // Setup ability to post wallet transactions with Dandelion.
+            // Ability to post wallet transactions with Dandelion.
             View::checkbox(ui, wallet.can_use_dandelion(), t!("wallets.use_dandelion"), || {
                 wallet.update_use_dandelion(!wallet.can_use_dandelion());
             });
@@ -137,60 +141,68 @@ impl Default for CommonSettings {
 impl CommonSettings {
     /// Draw content to change wallet name and password.
     fn name_ui(&mut self, ui: &mut egui::Ui, name: String) {
-        // Setup layout size.
+        // Draw round background.
         let mut rect = ui.available_rect_before_wrap();
         rect.set_height(56.0);
-
-        // Draw round background.
-        let bg_rect = rect.clone();
-        let item_rounding = if View::is_desktop() {
+        let r = if View::is_desktop() {
             View::item_rounding(0, 2, false)
         } else {
             View::item_rounding(0, 1, false)
         };
-        ui.painter().rect(bg_rect,
-                          item_rounding,
-                          Colors::fill(),
-                          View::item_stroke(),
-                          StrokeKind::Outside);
+        let bg = Colors::fill_lite();
+        let mut bg_shape = RectShape::new(rect, r, bg, View::item_stroke(), StrokeKind::Outside);
+        let bg_idx = ui.painter().add(bg_shape.clone());
 
-        ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
-            let r = if View::is_desktop() {
-                View::item_rounding(0, 2, true)
-            } else {
-                View::item_rounding(0, 1, true)
-            };
-            View::item_button(ui, r, PASSWORD, None, || {
-                self.old_pass_edit = "".to_string();
-                self.new_pass_edit = "".to_string();
-                self.wrong_pass = false;
-                // Show wallet password modal.
-                Modal::new(PASS_EDIT_MODAL)
-                    .position(ModalPosition::CenterTop)
-                    .title(t!("wallets.wallet"))
-                    .show();
-            });
-            View::item_button(ui, View::item_rounding(1, 3, true), PENCIL, None, || {
-                self.name_edit = name.clone();
-                // Show wallet name modal.
-                Modal::new(NAME_EDIT_MODAL)
-                    .position(ModalPosition::CenterTop)
-                    .title(t!("wallets.wallet"))
-                    .show();
-            });
-            let layout_size = ui.available_size();
-            ui.allocate_ui_with_layout(layout_size, Layout::left_to_right(Align::Center), |ui| {
-                ui.add_space(12.0);
-                ui.vertical(|ui| {
-                    ui.add_space(4.0);
-                    View::ellipsize_text(ui, name, 18.0, Colors::title(false));
-                    ui.add_space(1.0);
-                    let desc = format!("{} {}", FOLDER_USER, t!("wallets.name").replace(":", ""));
-                    ui.label(RichText::new(desc).size(15.0).color(Colors::gray()));
-                    ui.add_space(8.0);
+        let res = ui.scope_builder(
+            UiBuilder::new()
+                .sense(Sense::click())
+                .layout(Layout::right_to_left(Align::Center))
+                .max_rect(rect), |ui| {
+                let r = if View::is_desktop() {
+                    View::item_rounding(0, 2, true)
+                } else {
+                    View::item_rounding(0, 1, true)
+                };
+                View::item_button(ui, r, PASSWORD, None, || {
+                    self.old_pass_edit = "".to_string();
+                    self.new_pass_edit = "".to_string();
+                    self.wrong_pass = false;
+                    // Show wallet password modal.
+                    Modal::new(PASS_EDIT_MODAL)
+                        .position(ModalPosition::CenterTop)
+                        .title(t!("wallets.wallet"))
+                        .show();
                 });
-            });
-        });
+                let layout_size = ui.available_size();
+                ui.allocate_ui_with_layout(layout_size, Layout::left_to_right(Align::Center), |ui| {
+                    ui.add_space(12.0);
+                    ui.vertical(|ui| {
+                        ui.add_space(4.0);
+                        View::ellipsize_text(ui, name.clone(), 18.0, Colors::title(false));
+                        ui.add_space(1.0);
+                        let desc = format!("{} {}", FOLDER_USER, t!("wallets.name").replace(":", ""));
+                        ui.label(RichText::new(desc).size(15.0).color(Colors::gray()));
+                        ui.add_space(8.0);
+                    });
+                });
+            }
+        ).response;
+        let clicked = res.clicked() || res.long_touched();
+        // Setup background and cursor.
+        if res.hovered() {
+            res.on_hover_cursor(CursorIcon::PointingHand);
+            bg_shape.fill = Colors::fill();
+        }
+        ui.painter().set(bg_idx, bg_shape);
+        // Handle clicks on layout.
+        if clicked {
+            self.name_edit = name;
+            // Show wallet name modal.
+            Modal::new(NAME_EDIT_MODAL)
+                .position(ModalPosition::CenterTop)
+                .title(t!("wallets.wallet"))
+                .show();
+        }
     }
 
     /// Draw wallet name [`Modal`] content.
@@ -340,45 +352,53 @@ impl CommonSettings {
 
     /// Draw content to change wallet data directory.
     fn data_dir_ui(&mut self, ui: &mut egui::Ui, wallet: &Wallet, cb: &dyn PlatformCallbacks) {
-        // Setup layout size.
+        // Draw round background.
         let mut rect = ui.available_rect_before_wrap();
         rect.set_height(56.0);
+        let r = View::item_rounding(1, 2, false);
+        let bg = Colors::fill_lite();
+        let mut bg_shape = RectShape::new(rect, r, bg, View::item_stroke(), StrokeKind::Outside);
+        let bg_idx = ui.painter().add(bg_shape.clone());
 
-        // Draw round background.
-        let bg_rect = rect.clone();
-        let item_rounding = View::item_rounding(1, 2, false);
-        ui.painter().rect(bg_rect,
-                          item_rounding,
-                          Colors::fill(),
-                          View::item_stroke(),
-                          StrokeKind::Outside);
-
-        ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
-            self.pick_data_dir.ui(ui, cb, |path| {
-                wallet.change_data_path(path);
-            });
-            View::item_button(ui, View::item_rounding(1, 3, true), PENCIL, None, || {
-                self.data_path_edit = wallet.get_config().data_path.unwrap_or_default();
-                // Show chain data path edit modal.
-                Modal::new(DATA_PATH_MODAL)
-                    .position(ModalPosition::CenterTop)
-                    .title(t!("wallets.wallet"))
-                    .show();
-            });
-            let layout_size = ui.available_size();
-            ui.allocate_ui_with_layout(layout_size, Layout::left_to_right(Align::Center), |ui| {
-                ui.add_space(12.0);
-                ui.vertical(|ui| {
-                    ui.add_space(4.0);
-                    let path = wallet.get_config().data_path.unwrap_or_default();
-                    View::ellipsize_text(ui, path, 18.0, Colors::title(false));
-                    ui.add_space(1.0);
-                    let desc = format!("{} {}", FOLDERS, t!("files_location"));
-                    ui.label(RichText::new(desc).size(15.0).color(Colors::gray()));
-                    ui.add_space(8.0);
+        let res = ui.scope_builder(
+            UiBuilder::new()
+                .sense(Sense::click())
+                .layout(Layout::right_to_left(Align::Center))
+                .max_rect(rect), |ui| {
+                self.pick_data_dir.ui(ui, cb, |path| {
+                    wallet.change_data_path(path);
                 });
-            });
-        });
+                let layout_size = ui.available_size();
+                ui.allocate_ui_with_layout(layout_size, Layout::left_to_right(Align::Center), |ui| {
+                    ui.add_space(12.0);
+                    ui.vertical(|ui| {
+                        ui.add_space(4.0);
+                        let path = wallet.get_config().data_path.unwrap_or_default();
+                        View::ellipsize_text(ui, path, 18.0, Colors::title(false));
+                        ui.add_space(1.0);
+                        let desc = format!("{} {}", FOLDERS, t!("files_location"));
+                        ui.label(RichText::new(desc).size(15.0).color(Colors::gray()));
+                        ui.add_space(8.0);
+                    });
+                });
+            }
+        ).response;
+        let clicked = res.clicked() || res.long_touched();
+        // Setup background and cursor.
+        if res.hovered() {
+            res.on_hover_cursor(CursorIcon::PointingHand);
+            bg_shape.fill = Colors::fill();
+        }
+        ui.painter().set(bg_idx, bg_shape);
+        // Handle clicks on layout.
+        if clicked {
+            self.data_path_edit = wallet.get_config().data_path.unwrap_or_default();
+            // Show chain data path edit modal.
+            Modal::new(DATA_PATH_MODAL)
+                .position(ModalPosition::CenterTop)
+                .title(t!("wallets.wallet"))
+                .show();
+        }
     }
 
     /// Draw data path input [`Modal`] content.

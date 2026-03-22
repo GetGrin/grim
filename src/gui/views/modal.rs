@@ -44,7 +44,7 @@ pub struct Modal {
     /// Flag to check first content render.
     first_draw: Arc<AtomicBool>,
     /// Background color.
-    fill: Color32,
+    fill: Option<Color32>,
 }
 
 impl Modal {
@@ -63,7 +63,7 @@ impl Modal {
             closeable: Arc::new(AtomicBool::new(true)),
             title: None,
             first_draw: Arc::new(AtomicBool::new(true)),
-            fill: Colors::fill(),
+            fill: None,
         }
     }
 
@@ -301,7 +301,7 @@ impl Modal {
     /// Set custom background color.
     pub fn set_background_color(&self, color: Color32) {
         let mut w_state = MODAL_STATE.write();
-        w_state.modal.as_mut().unwrap().fill = color;
+        w_state.modal.as_mut().unwrap().fill = Some(color);
     }
 
     /// Draw provided content.
@@ -321,7 +321,7 @@ impl Modal {
                 sw: 8.0 as u8,
                 se: 8.0 as u8,
             }
-        }, self.fill, Stroke::NONE, StrokeKind::Outside);
+        }, self.fill.unwrap_or(Colors::fill_lite()), Stroke::NONE, StrokeKind::Outside);
         let bg_idx = ui.painter().add(bg_shape.clone());
 
         rect.min += egui::emath::vec2(6.0, 0.0);

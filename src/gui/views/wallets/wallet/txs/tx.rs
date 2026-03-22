@@ -19,15 +19,15 @@ use grin_util::ToHex;
 use grin_wallet_libwallet::TxLogEntryType;
 use std::fs;
 
-use crate::AppConfig;
-use crate::gui::icons::{CIRCLE_HALF, COPY, CUBE, FILE_ARCHIVE, FILE_TEXT, HASH_STRAIGHT, PROHIBIT, QR_CODE, SEAL_CHECK};
+use crate::gui::icons::{CIRCLE_HALF, COPY, CUBE, FILE_ARCHIVE, FILE_TEXT, FILE_X, HASH_STRAIGHT, PROHIBIT, QR_CODE, SEAL_CHECK};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::wallets::wallet::proof::PaymentProofContent;
 use crate::gui::views::wallets::wallet::txs::WalletTransactionsContent;
 use crate::gui::views::{Modal, QrCodeContent, View};
 use crate::gui::Colors;
-use crate::wallet::types::{WalletTask, WalletTransaction};
+use crate::wallet::types::{WalletTask, WalletTx};
 use crate::wallet::Wallet;
+use crate::AppConfig;
 
 /// Transaction information [`Modal`] content.
 pub struct WalletTransactionContent {
@@ -44,7 +44,7 @@ pub struct WalletTransactionContent {
 }
 
 impl WalletTransactionContent {
-    /// Create new content instance with [`Wallet`] from provided [`WalletTransaction`].
+    /// Create new content instance with [`Wallet`] from provided [`WalletTx`].
     pub fn new(tx_id: u32) -> Self {
         Self {
             tx_id,
@@ -59,7 +59,8 @@ impl WalletTransactionContent {
               ui: &mut egui::Ui,
               modal: &Modal,
               wallet: &Wallet,
-              cb: &dyn PlatformCallbacks) {
+              cb: &dyn PlatformCallbacks,
+              on_delete: impl FnOnce(u32)) {
         // Check values and setup transaction data.
         let wallet_data = wallet.get_data();
         if wallet_data.is_none() {
@@ -70,7 +71,7 @@ impl WalletTransactionContent {
         let data_txs = data.txs.clone().unwrap();
         let txs = data_txs.into_iter()
             .filter(|tx| tx.data.id == self.tx_id)
-            .collect::<Vec<WalletTransaction>>();
+            .collect::<Vec<WalletTx>>();
         if txs.is_empty() {
             Modal::close();
             return;
@@ -110,7 +111,7 @@ impl WalletTransactionContent {
         } else {
             modal.set_background_color(Colors::fill());
             // Show transaction information.
-            self.info_ui(ui, tx, wallet, cb);
+            self.info_ui(ui, tx, wallet, cb, on_delete);
 
             // Show transaction sharing content or payment proof.
             if self.proof_content.is_none() && tx.can_cancel() && !tx.finalized() {
@@ -155,7 +156,7 @@ impl WalletTransactionContent {
     fn share_ui(&mut self,
                 ui: &mut egui::Ui,
                 wallet: &Wallet,
-                tx: &WalletTransaction,
+                tx: &WalletTx,
                 cb: &dyn PlatformCallbacks) {
         if self.message.is_none() {
             let slatepack_path = wallet.get_config().get_tx_slate_path(tx);
@@ -258,22 +259,27 @@ impl WalletTransactionContent {
     /// Draw transaction information content.
     fn info_ui(&mut self,
                ui: &mut egui::Ui,
-               tx: &WalletTransaction,
+               tx: &WalletTx,
                wallet: &Wallet,
-               cb: &dyn PlatformCallbacks) {
+               cb: &dyn PlatformCallbacks,
+               on_delete: impl FnOnce(u32)) {
         ui.add_space(6.0);
-
+        // Transaction item background setup.
         let mut rect = ui.available_rect_before_wrap();
         rect.set_height(WalletTransactionsContent::TX_ITEM_HEIGHT);
-
-        // Draw tx item background.
-        let p = ui.painter();
-        let r = View::item_rounding(0, 2, false);
-        p.rect(rect, r, Colors::TRANSPARENT, View::item_stroke(), StrokeKind::Outside);
-
+        let rounding = View::item_rounding(0, 2, false);
+        let bg = Colors::TRANSPARENT;
         // Show transaction amount status and time.
         let data = wallet.get_data().unwrap();
-        WalletTransactionsContent::tx_item_ui(ui, tx, rect, &data, |ui| {
+        let on_click = (false, || {});
+        WalletTransactionsContent::tx_item_ui(ui, tx, rect, bg, rounding, &data, on_click, |ui| {
+            // Show button to delete transaction from database.
+            if tx.data.confirmed || tx.cancelled() {
+                let r = View::item_rounding(0, 2, true);
+                View::item_button(ui, r, FILE_X, Some(Colors::inactive_text()), || {
+                    on_delete(tx.data.id);
+                });
+            }
             // Show block height or buttons.
             if let Some(h) = tx.height {
                 if h != 0 {
@@ -288,27 +294,24 @@ impl WalletTransactionContent {
                 }
                 return;
             }
-
             if wallet.synced_from_node() && !tx.cancelled() && !tx.cancelling() && !tx.posting() {
-                let rebroadcast = tx.broadcasting_timed_out(&wallet);
-
+                let repeat = tx.broadcasting_timed_out(&wallet);
                 // Draw button to cancel transaction.
-                if tx.can_cancel() || rebroadcast {
+                if tx.can_cancel() || repeat {
                     let r = View::item_rounding(0, 2, true);
                     View::item_button(ui, r, PROHIBIT, Some(Colors::red()), || {
-                        wallet.task(WalletTask::Cancel(tx.data.clone()));
+                        wallet.task(WalletTask::Cancel(tx.data.id));
                         Modal::close();
                     });
                 }
-
                 // Draw button to repeat transaction action.
-                if tx.can_repeat_action() || rebroadcast {
+                if tx.can_repeat_action() || repeat {
                     let r = if tx.can_finalize() || tx.can_cancel() {
                         CornerRadius::default()
                     } else {
                         View::item_rounding(0, 2, true)
                     };
-                    WalletTransactionsContent::tx_repeat_button_ui(ui, r, tx, wallet, rebroadcast);
+                    WalletTransactionsContent::tx_repeat_button_ui(ui, r, tx, wallet, repeat);
                 }
             }
         });

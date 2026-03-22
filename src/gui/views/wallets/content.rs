@@ -12,27 +12,29 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::time::Duration;
-use egui::scroll_area::ScrollBarVisibility;
-use egui::{Align, CornerRadius, Id, Layout, Margin, OpenUrl, RichText, ScrollArea, StrokeKind};
 use egui::os::OperatingSystem;
+use egui::scroll_area::ScrollBarVisibility;
+use egui::{Align, CornerRadius, CursorIcon, Id, Layout, Margin, OpenUrl, RichText, ScrollArea, Sense, StrokeKind, UiBuilder};
 use egui_async::Bind;
-use crate::gui::icons::{ARROW_LEFT, BOOKMARKS, CALENDAR_CHECK, CARET_RIGHT, CLOUD_ARROW_DOWN, COMPUTER_TOWER, FOLDER_OPEN, FOLDER_PLUS, GEAR, GEAR_FINE, GLOBE, GLOBE_SIMPLE, LOCK_KEY, NOTEPAD, PLUS, SIDEBAR_SIMPLE, SUITCASE};
+use std::time::Duration;
+use eframe::epaint::RectShape;
+
+use crate::gui::icons::{ARROW_LEFT, BOOKMARKS, CALENDAR_CHECK, CLOUD_ARROW_DOWN, COMPUTER_TOWER, FOLDER_PLUS, GEAR, GEAR_FINE, GLOBE, GLOBE_SIMPLE, LOCK_KEY, NOTEPAD, PLUS, SIDEBAR_SIMPLE, SUITCASE};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::settings::SettingsContent;
 use crate::gui::views::types::{ContentContainer, LinePosition, ModalPosition, TitleContentType, TitleType};
 use crate::gui::views::wallets::creation::WalletCreationContent;
-use crate::gui::views::wallets::modals::{AddWalletModal, OpenWalletModal, WalletSettingsModal, WalletListModal, ChangelogContent};
+use crate::gui::views::wallets::modals::{AddWalletModal, ChangelogContent, OpenWalletModal, WalletListModal, WalletSettingsModal};
 use crate::gui::views::wallets::wallet::types::{wallet_status_text, WalletContentContainer};
+use crate::gui::views::wallets::wallet::RecoverySettings;
 use crate::gui::views::wallets::WalletContent;
 use crate::gui::views::{Content, Modal, TitlePanel, View};
 use crate::gui::Colors;
+use crate::http::{retrieve_release, ReleaseInfo};
+use crate::settings::AppUpdate;
 use crate::wallet::types::{ConnectionMethod, WalletTask};
 use crate::wallet::{Wallet, WalletList};
 use crate::AppConfig;
-use crate::gui::views::wallets::wallet::RecoverySettings;
-use crate::http::{retrieve_release, ReleaseInfo};
-use crate::settings::AppUpdate;
 
 /// Wallets content.
 pub struct WalletsContent {
@@ -444,7 +446,12 @@ impl WalletsContent {
             || (dual_panel && !show_list)) && !creating_wallet && !showing_settings {
             let title = self.wallet_content.title().into();
             let subtitle = self.wallets.selected().unwrap().get_config().name;
-            TitleType::Single(TitleContentType::WithSubTitle(title, subtitle, false))
+            let wallet_title_content = if self.wallet_content.settings_content.is_some() {
+                TitleContentType::Title(title)
+            } else {
+                TitleContentType::WithSubTitle(title, subtitle, false)
+            };
+            TitleType::Single(wallet_title_content)
         } else {
             let title_text = if showing_settings {
                 t!("settings")
@@ -458,7 +465,11 @@ impl WalletsContent {
             if dual_title {
                 let title = self.wallet_content.title().into();
                 let subtitle = self.wallets.selected().unwrap().get_config().name;
-                let wallet_title_content = TitleContentType::WithSubTitle(title, subtitle, false);
+                let wallet_title_content = if self.wallet_content.settings_content.is_some() {
+                    TitleContentType::Title(title)
+                } else {
+                    TitleContentType::WithSubTitle(title, subtitle, false)
+                };
                 TitleType::Dual(TitleContentType::Title(title_text), wallet_title_content)
             } else {
                 TitleType::Single(TitleContentType::Title(title_text))
@@ -579,8 +590,12 @@ impl WalletsContent {
                         } else {
                             false
                         };
+                        // Unselect wallet when opening or settings modal was closed.
+                        if current && !w.is_open() && Modal::opened().is_none() {
+                            self.wallets.select(None);
+                        }
                         self.wallet_item_ui(ui, w, current, cb);
-                        ui.add_space(5.0);
+                        ui.add_space(6.0);
                     }
                 });
             });
@@ -593,88 +608,99 @@ impl WalletsContent {
                       current: bool,
                       cb: &dyn PlatformCallbacks) {
         let config = wallet.get_config();
+        let can_open = !wallet.is_open() && !wallet.files_moving();
 
         // Draw round background.
         let mut rect = ui.available_rect_before_wrap();
         rect.set_height(78.0);
-        let rounding = View::item_rounding(0, 1, false);
+        let r = View::item_rounding(0, 1, false);
         let bg = if current {
             Colors::fill_deep()
         } else {
             Colors::fill()
         };
-        ui.painter().rect(rect, rounding, bg, View::item_stroke(), StrokeKind::Outside);
+        let mut bg_shape = RectShape::new(rect, r, bg, View::item_stroke(), StrokeKind::Outside);
+        let bg_idx = ui.painter().add(bg_shape.clone());
 
-        ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
-            if !wallet.is_open() && !wallet.files_moving() {
-                // Show button to open closed wallet.
-                View::item_button(ui, View::item_rounding(0, 1, true), FOLDER_OPEN, None, || {
-                    self.show_opening_modal(wallet, None, cb);
-                });
-                if !wallet.is_repairing() {
-                    View::item_button(ui, CornerRadius::default(), GEAR_FINE, None, || {
-                        self.select_wallet(wallet, None, cb);
-                        let conn = wallet.get_current_connection();
-                        self.wallet_settings_content = WalletSettingsModal::new(conn);
-                        // Show connection selection modal.
-                        Modal::new(WALLET_SETTINGS_MODAL)
-                            .position(ModalPosition::CenterTop)
-                            .title(t!("wallets.settings"))
-                            .show();
-                    });
-                }
-            } else {
-                if !current {
-                    // Show button to select opened wallet.
-                    View::item_button(ui, View::item_rounding(0, 1, true), CARET_RIGHT, None, || {
-                        self.select_wallet(wallet, None, cb);
-                    });
-                }
-                // Show button to close opened wallet.
-                if !wallet.is_closing()  {
-                    View::item_button(ui, if !current {
-                        CornerRadius::default()
-                    } else {
-                        View::item_rounding(0, 1, true)
-                    }, LOCK_KEY, None, || {
+        let res = ui.scope_builder(
+            UiBuilder::new()
+                .sense(Sense::click())
+                .layout(Layout::right_to_left(Align::Center))
+                .max_rect(rect), |ui| {
+                if can_open {
+                    if !wallet.is_repairing() {
+                        View::item_button(ui, View::item_rounding(0, 1, true), GEAR_FINE, None, || {
+                            self.select_wallet(wallet, None, cb);
+                            let conn = wallet.get_current_connection();
+                            self.wallet_settings_content = WalletSettingsModal::new(conn);
+                            // Show connection selection modal.
+                            Modal::new(WALLET_SETTINGS_MODAL)
+                                .position(ModalPosition::CenterTop)
+                                .title(t!("wallets.settings"))
+                                .show();
+                        });
+                    }
+                } else if !wallet.is_closing()  {
+                    // Show button to close opened wallet.
+                    View::item_button(ui, View::item_rounding(0, 1, true), LOCK_KEY, None, || {
                         wallet.close();
                     });
                 }
-            }
 
-            let layout_size = ui.available_size();
-            ui.allocate_ui_with_layout(layout_size, Layout::left_to_right(Align::Center), |ui| {
-                ui.add_space(6.0);
-                ui.vertical(|ui| {
-                    ui.add_space(3.0);
-                    // Show wallet name text.
-                    let name_color = if current {
-                        Colors::white_or_black(true)
-                    } else {
-                        Colors::title(false)
-                    };
-                    ui.with_layout(Layout::left_to_right(Align::Min), |ui| {
+                let layout_size = ui.available_size();
+                ui.allocate_ui_with_layout(layout_size, Layout::left_to_right(Align::Center), |ui| {
+                    ui.add_space(6.0);
+                    ui.vertical(|ui| {
+                        ui.add_space(3.0);
+                        // Show wallet name text.
+                        let name_color = if current {
+                            Colors::white_or_black(true)
+                        } else {
+                            Colors::title(false)
+                        };
+                        ui.with_layout(Layout::left_to_right(Align::Min), |ui| {
                             ui.add_space(1.0);
                             View::ellipsize_text(ui, config.name, 18.0, name_color);
+                        });
+
+                        // Show wallet status text.
+                        let status_text = wallet_status_text(wallet);
+                        View::ellipsize_text(ui, status_text, 15.0, Colors::text(false));
+                        ui.add_space(1.0);
+
+                        // Show wallet connection text.
+                        let connection = wallet.get_current_connection();
+                        let conn_text = match connection {
+                            ConnectionMethod::Integrated => {
+                                format!("{} {}", COMPUTER_TOWER, t!("network.node"))
+                            }
+                            ConnectionMethod::External(_, url) => {
+                                format!("{} {}", GLOBE_SIMPLE, url)
+                            }
+                        };
+                        View::ellipsize_text(ui, conn_text, 15.0, Colors::gray());
+                        ui.add_space(3.0);
                     });
-
-                    // Show wallet status text.
-                    View::ellipsize_text(ui, wallet_status_text(wallet), 15.0, Colors::text(false));
-                    ui.add_space(1.0);
-
-                    // Show wallet connection text.
-                    let connection = wallet.get_current_connection();
-                    let conn_text = match connection {
-                        ConnectionMethod::Integrated => {
-                            format!("{} {}", COMPUTER_TOWER, t!("network.node"))
-                        }
-                        ConnectionMethod::External(_, url) => format!("{} {}", GLOBE_SIMPLE, url)
-                    };
-                    View::ellipsize_text(ui, conn_text, 15.0, Colors::gray());
-                    ui.add_space(3.0);
                 });
-            });
-        });
+            }
+        ).response;
+        let clicked = res.clicked() || res.long_touched();
+        // Setup background and cursor.
+        if res.hovered() && (can_open || !current) {
+            res.on_hover_cursor(CursorIcon::PointingHand);
+            bg_shape.fill = Colors::fill_deep();
+        }
+        ui.painter().set(bg_idx, bg_shape);
+        // Handle clicks on layout.
+        if clicked {
+            if can_open {
+                // Show modal to open the wallet.
+                self.show_opening_modal(wallet, None, cb);
+            } else if !current {
+                // Select opened wallet.
+                self.select_wallet(wallet, None, cb);
+            }
+        }
     }
 
     /// Draw update information content.

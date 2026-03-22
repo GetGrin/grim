@@ -142,6 +142,7 @@ wallets:
   payment_proof_desc: 'Islemi doğrulamak için alinan ödeme kanitini girin:'
   payment_proof_valid: 'Girilen ödeme kaniti geçerlidir:'
   payment_proof_error: 'Girilen ödeme kaniti geçerli değildir:'
+  tx_delete_confirmation: Islemi geçmişten silmek istediğinizden emin misiniz?
 transport:
   desc: 'Adresten senkronize GONDER veya AL:'
   tor_network: Tor network

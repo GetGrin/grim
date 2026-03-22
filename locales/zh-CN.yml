@@ -142,6 +142,7 @@ wallets:
   payment_proof_desc: '輸入已收款證明以驗證交易:'
   payment_proof_valid: '輸入的付款證明有效:'
   payment_proof_error: '輸入的付款證明無效:'
+  tx_delete_confirmation: 你確定要從歷史紀錄中刪除這筆交易嗎？
 transport:
   desc: '使用传输同步接收或发送消息:'
   tor_network: Tor 网络

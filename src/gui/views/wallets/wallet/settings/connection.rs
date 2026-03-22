@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::{Align, Layout, RichText, StrokeKind};
+use egui::RichText;
 
-use crate::gui::icons::{CHECK, CHECK_CIRCLE, DOTS_THREE_CIRCLE, GLOBE, GLOBE_SIMPLE, PLUS_CIRCLE, X_CIRCLE};
+use crate::gui::icons::{GLOBE, PLUS_CIRCLE};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::network::modals::ExternalConnectionModal;
 use crate::gui::views::network::ConnectionsContent;
@@ -70,15 +70,19 @@ impl ContentContainer for ConnectionSettings {
         ui.vertical_centered(|ui| {
             ui.add_space(6.0);
             // Show integrated node selection.
-            ConnectionsContent::integrated_node_item_ui(ui, |ui| {
-                let is_current_method = self.method == ConnectionMethod::Integrated;
-                if !is_current_method {
-                    View::item_button(ui, View::item_rounding(0, 1, true), CHECK, None, || {
-                        self.method = ConnectionMethod::Integrated;
-                    });
-                } else {
+            let cur_integrated = self.method == ConnectionMethod::Integrated;
+            let bg = if cur_integrated {
+                Colors::fill_deep()
+            } else {
+                Colors::fill_lite()
+            };
+            ConnectionsContent::integrated_node_item_ui(ui, bg, (!cur_integrated, || {
+                self.method = ConnectionMethod::Integrated;
+            }), |ui| {
+                if cur_integrated {
                     View::selected_item_check(ui);
                 }
+                cur_integrated
             });
 
             ui.add_space(8.0);
@@ -119,8 +123,8 @@ impl ContentContainer for ConnectionSettings {
                 }
             }
 
-            let ext_size = ext_conn_list.len();
-            if ext_size != 0 {
+            let len = ext_conn_list.len();
+            if len != 0 {
                 ui.add_space(8.0);
                 for (i, c) in ext_conn_list.iter().enumerate() {
                     ui.horizontal_wrapped(|ui| {
@@ -129,73 +133,21 @@ impl ContentContainer for ConnectionSettings {
                             ConnectionMethod::External(id, url) => id == &c.id || url == &c.url,
                             _ => false
                         };
-                        Self::ext_conn_item_ui(ui, c, is_current, i, ext_size, || {
+                        let bg = if is_current {
+                            Colors::fill()
+                        } else {
+                            Colors::fill_lite()
+                        };
+                        ConnectionsContent::ext_conn_item_ui(ui, bg, c, i, len, (!is_current, || {
                             self.method = ConnectionMethod::External(c.id, c.url.clone());
+                        }), |ui| {
+                            if is_current {
+                                View::selected_item_check(ui);
+                            }
                         });
                     });
                 }
             }
-        });
-    }
-}
-
-impl ConnectionSettings {
-    /// Draw external connection item content.
-    fn ext_conn_item_ui(ui: &mut egui::Ui,
-                        conn: &ExternalConnection,
-                        is_current: bool,
-                        index: usize,
-                        len: usize,
-                        mut on_select: impl FnMut()) {
-        // Setup layout size.
-        let mut rect = ui.available_rect_before_wrap();
-        rect.set_height(52.0);
-
-        // Draw round background.
-        let bg_rect = rect.clone();
-        let item_rounding = View::item_rounding(index, len, false);
-        ui.painter().rect(bg_rect,
-                          item_rounding,
-                          Colors::fill(),
-                          View::item_stroke(),
-                          StrokeKind::Outside);
-
-        ui.vertical(|ui| {
-            ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
-                if is_current {
-                    View::selected_item_check(ui);
-                } else {
-                    // Draw button to select connection.
-                    let button_rounding = View::item_rounding(index, len, true);
-                    View::item_button(ui, button_rounding, CHECK, None, || {
-                        on_select();
-                    });
-                }
-
-                let layout_size = ui.available_size();
-                ui.allocate_ui_with_layout(layout_size, Layout::left_to_right(Align::Center), |ui| {
-                    ui.add_space(6.0);
-                    ui.vertical(|ui| {
-                        // Draw connections URL.
-                        ui.add_space(4.0);
-                        let conn_text = format!("{} {}", GLOBE_SIMPLE, conn.url);
-                        View::ellipsize_text(ui, conn_text, 15.0, Colors::title(false));
-                        ui.add_space(1.0);
-                        // Setup connection status text.
-                        let status_text = if let Some(available) = conn.available {
-                            if available {
-                                format!("{} {}", CHECK_CIRCLE, t!("network.available"))
-                            } else {
-                                format!("{} {}", X_CIRCLE, t!("network.not_available"))
-                            }
-                        } else {
-                            format!("{} {}", DOTS_THREE_CIRCLE, t!("network.availability_check"))
-                        };
-                        ui.label(RichText::new(status_text).size(15.0).color(Colors::gray()));
-                        ui.add_space(3.0);
-                    });
-                });
-            });
         });
     }
 }

@@ -7,7 +7,7 @@ use crate::gui::icons::{BROOM, CLIPBOARD_TEXT, COPY, FILE_TEXT, SEAL_CHECK};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{FilePickContent, FilePickContentType, Modal, View};
 use crate::gui::Colors;
-use crate::wallet::types::{WalletTask, WalletTransaction};
+use crate::wallet::types::{WalletTask, WalletTx};
 use crate::wallet::Wallet;
 
 pub struct PaymentProofContent {
@@ -154,7 +154,7 @@ impl PaymentProofContent {
     /// Draw transaction payment proof content to share.
     pub fn share_ui(&mut self,
                     ui: &mut egui::Ui,
-                    tx: &WalletTransaction,
+                    tx: &WalletTx,
                     cb: &dyn PlatformCallbacks) {
         ui.add_space(6.0);
         ui.vertical_centered(|ui| {

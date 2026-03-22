@@ -12,10 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::{Align, Id, Layout, RichText, StrokeKind};
+use eframe::epaint::RectShape;
+use egui::{Align, CursorIcon, Id, Layout, RichText, Sense, StrokeKind, UiBuilder};
 use url::Url;
 
-use crate::gui::icons::{CLOUD_CHECK, CLOUD_SLASH, PENCIL};
+use crate::gui::icons::{CLOUD_CHECK, CLOUD_SLASH};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::types::{ContentContainer, ModalPosition};
 use crate::gui::views::{Modal, TextEdit, View};
@@ -202,63 +203,71 @@ impl NetworkSettingsContent {
 
     /// Draw proxy item content.
     fn proxy_item_ui(&mut self, ui: &mut egui::Ui) {
-        // Setup layout size.
+        // Draw round background.
         let mut rect = ui.available_rect_before_wrap();
         rect.set_height(56.0);
+        let r = View::item_rounding(0, 1, false);
+        let bg = Colors::fill_lite();
+        let mut bg_shape = RectShape::new(rect, r, bg, View::item_stroke(), StrokeKind::Outside);
+        let bg_idx = ui.painter().add(bg_shape.clone());
 
-        // Draw round background.
-        let bg_rect = rect.clone();
-        let item_rounding = View::item_rounding(0, 1, false);
-        ui.painter().rect(bg_rect,
-                          item_rounding,
-                          Colors::fill(),
-                          View::item_stroke(),
-                          StrokeKind::Outside);
+        let res = ui.scope_builder(
+            UiBuilder::new()
+                .sense(Sense::click())
+                .layout(Layout::right_to_left(Align::Center))
+                .max_rect(rect), |ui| {
+                let layout_size = ui.available_size();
+                ui.allocate_ui_with_layout(layout_size, Layout::left_to_right(Align::Center), |ui| {
+                    ui.add_space(12.0);
+                    ui.vertical(|ui| {
+                        ui.add_space(4.0);
+                        let use_socks = AppConfig::use_socks_proxy();
+                        let proxy_url = if use_socks {
+                            AppConfig::socks_proxy_url()
+                        } else {
+                            AppConfig::http_proxy_url()
+                        };
+                        let (url, color, icon, text) = if let Some(url) = proxy_url {
+                            (url, Colors::title(false), CLOUD_CHECK, t!("network_settings.enabled"))
+                        } else {
+                            (
+                                t!("enter_url").into(),
+                                Colors::inactive_text(),
+                                CLOUD_SLASH,
+                                t!("network_settings.disabled")
+                            )
+                        };
+                        View::ellipsize_text(ui, url, 18.0, color);
+                        ui.add_space(1.0);
 
-        ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
-            View::item_button(ui, View::item_rounding(0, 1, true), PENCIL, None, || {
-                let url = if AppConfig::use_socks_proxy() {
-                    AppConfig::socks_proxy_url().unwrap_or("".to_string())
-                } else {
-                    AppConfig::http_proxy_url().unwrap_or("".to_string())
-                };
-                self.proxy_url_edit = url;
-                // Show proxy URL edit modal.
-                Modal::new(PROXY_URL_EDIT_MODAL)
-                    .position(ModalPosition::CenterTop)
-                    .title(t!("app_settings.proxy"))
-                    .show();
-            });
-            let layout_size = ui.available_size();
-            ui.allocate_ui_with_layout(layout_size, Layout::left_to_right(Align::Center), |ui| {
-                ui.add_space(12.0);
-                ui.vertical(|ui| {
-                    ui.add_space(4.0);
-                    let use_socks = AppConfig::use_socks_proxy();
-                    let proxy_url = if use_socks {
-                        AppConfig::socks_proxy_url()
-                    } else {
-                        AppConfig::http_proxy_url()
-                    };
-                    let (url, color, icon, text) = if let Some(url) = proxy_url {
-                        (url, Colors::title(false), CLOUD_CHECK, t!("network_settings.enabled"))
-                    } else {
-                        (
-                            t!("enter_url").into(),
-                            Colors::inactive_text(),
-                            CLOUD_SLASH,
-                            t!("network_settings.disabled")
-                        )
-                    };
-                    View::ellipsize_text(ui, url, 18.0, color);
-                    ui.add_space(1.0);
-
-                    let value = format!("{} {}", icon, text);
-                    ui.label(RichText::new(value).size(15.0).color(Colors::gray()));
-                    ui.add_space(3.0);
+                        let value = format!("{} {}", icon, text);
+                        ui.label(RichText::new(value).size(15.0).color(Colors::gray()));
+                        ui.add_space(3.0);
+                    });
                 });
-            });
-        });
+            }
+        ).response;
+        let clicked = res.clicked() || res.long_touched();
+        // Setup background and cursor.
+        if res.hovered() {
+            res.on_hover_cursor(CursorIcon::PointingHand);
+            bg_shape.fill = Colors::fill();
+        }
+        ui.painter().set(bg_idx, bg_shape);
+        // Handle clicks on layout.
+        if clicked {
+            let url = if AppConfig::use_socks_proxy() {
+                AppConfig::socks_proxy_url().unwrap_or("".to_string())
+            } else {
+                AppConfig::http_proxy_url().unwrap_or("".to_string())
+            };
+            self.proxy_url_edit = url;
+            // Show proxy URL edit modal.
+            Modal::new(PROXY_URL_EDIT_MODAL)
+                .position(ModalPosition::CenterTop)
+                .title(t!("app_settings.proxy"))
+                .show();
+        }
     }
 
     /// Draw proxy type selection.

@@ -142,6 +142,7 @@ wallets:
   payment_proof_desc: 'Saisissez la preuve de paiement reçue pour vérifier la transaction:'
   payment_proof_valid: 'La preuve de paiement saisie est valide:'
   payment_proof_error: "La preuve de paiement saisie n'est pas valide:"
+  tx_delete_confirmation: Êtes-vous sûr de vouloir supprimer la transaction de l'historique?
 transport:
   desc: 'Utilisez le transport pour recevoir ou envoyer des messages de manière synchronisée:'
   tor_network: Réseau Tor

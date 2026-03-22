@@ -13,8 +13,8 @@
 // limitations under the License.
 
 use eframe::emath::Align;
-use eframe::epaint::StrokeKind;
-use egui::{Id, Layout, RichText};
+use eframe::epaint::{RectShape, StrokeKind};
+use egui::{CursorIcon, Id, Layout, RichText, Sense, UiBuilder};
 use grin_core::global::ChainTypes;
 
 use crate::gui::icons::{CLOCK_CLOCKWISE, COMPUTER_TOWER, FOLDERS, PENCIL, PLUG, POWER, SHIELD, SHIELD_SLASH};
@@ -173,7 +173,7 @@ impl ContentContainer for NodeSetup {
         // Show data location selection for Desktop when it already started or turned off.
         if !Node::is_restarting() && !Node::is_stopping() && !Node::is_starting() &&
             View::is_desktop() {
-            self.pick_data_dir_ui(ui, cb);
+            self.data_dir_ui(ui, cb);
             ui.add_space(6.0);
         }
 
@@ -236,46 +236,56 @@ impl ContentContainer for NodeSetup {
 
 impl NodeSetup {
     /// Draw content to change chain data directory.
-    fn pick_data_dir_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
-        // Setup layout size.
+    fn data_dir_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
+        // Draw round background.
         let mut rect = ui.available_rect_before_wrap();
         rect.set_height(56.0);
+        let r = View::item_rounding(0, 1, false);
+        let bg = Colors::fill_lite();
+        let mut bg_shape = RectShape::new(rect, r, bg, View::item_stroke(), StrokeKind::Outside);
+        let bg_idx = ui.painter().add(bg_shape.clone());
 
-        // Draw round background.
-        let bg_rect = rect.clone();
-        let item_rounding = View::item_rounding(0, 1, false);
-        ui.painter().rect(bg_rect,
-                          item_rounding,
-                          Colors::fill(),
-                          View::item_stroke(),
-                          StrokeKind::Outside);
-
-        ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
-            self.pick_data_dir.ui(ui, cb, |path| {
-                Node::change_data_dir(path);
-            });
-            View::item_button(ui, View::item_rounding(1, 3, true), PENCIL, None, || {
-                self.data_path_edit = NodeConfig::get_chain_data_path();
-                // Show chain data path edit modal.
-                Modal::new(DATA_PATH_MODAL)
-                    .position(ModalPosition::CenterTop)
-                    .title(t!("network.node"))
-                    .show();
-            });
-            let layout_size = ui.available_size();
-            ui.allocate_ui_with_layout(layout_size, Layout::left_to_right(Align::Center), |ui| {
-                ui.add_space(12.0);
-                ui.vertical(|ui| {
-                    ui.add_space(4.0);
-                    let path = NodeConfig::get_chain_data_path();
-                    View::ellipsize_text(ui, path, 18.0, Colors::title(false));
-                    ui.add_space(1.0);
-                    let desc = format!("{} {}", FOLDERS, t!("files_location"));
-                    ui.label(RichText::new(desc).size(15.0).color(Colors::gray()));
-                    ui.add_space(8.0);
+        let res = ui.scope_builder(
+            UiBuilder::new()
+                .sense(Sense::click())
+                .layout(Layout::right_to_left(Align::Center))
+                .max_rect(rect), |ui| {
+                ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
+                    self.pick_data_dir.ui(ui, cb, |path| {
+                        Node::change_data_dir(path);
+                    });
+                    let layout_size = ui.available_size();
+                    ui.allocate_ui_with_layout(layout_size, Layout::left_to_right(Align::Center), |ui| {
+                        ui.add_space(12.0);
+                        ui.vertical(|ui| {
+                            ui.add_space(4.0);
+                            let path = NodeConfig::get_chain_data_path();
+                            View::ellipsize_text(ui, path, 18.0, Colors::title(false));
+                            ui.add_space(1.0);
+                            let desc = format!("{} {}", FOLDERS, t!("files_location"));
+                            ui.label(RichText::new(desc).size(15.0).color(Colors::gray()));
+                            ui.add_space(8.0);
+                        });
+                    });
                 });
-            });
-        });
+            }
+        ).response;
+        let clicked = res.clicked() || res.long_touched();
+        // Setup background and cursor.
+        if res.hovered() {
+            res.on_hover_cursor(CursorIcon::PointingHand);
+            bg_shape.fill = Colors::fill();
+        }
+        ui.painter().set(bg_idx, bg_shape);
+        // Handle clicks on layout.
+        if clicked {
+            self.data_path_edit = NodeConfig::get_chain_data_path();
+            // Show chain data path edit modal.
+            Modal::new(DATA_PATH_MODAL)
+                .position(ModalPosition::CenterTop)
+                .title(t!("network.node"))
+                .show();
+        }
     }
 
     /// Draw data path input [`Modal`] content.

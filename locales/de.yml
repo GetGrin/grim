@@ -142,6 +142,7 @@ wallets:
   payment_proof_desc: 'Geben Sie den erhaltenen Zahlungsnachweis ein, um die Transaktion zu verifizieren:'
   payment_proof_valid: 'Der eingegebene Zahlungsnachweis ist gültig:'
   payment_proof_error: 'Der eingetragene Zahlungsnachweis ist nicht gültig:'
+  tx_delete_confirmation: Bist du sicher, dass du die Transaktion aus dem Verlauf löschen möchtest?
 transport:
   desc: 'Transport verwenden, um Nachrichten synchron zu empfangen oder zu senden:'
   tor_network: Tor Netzwek

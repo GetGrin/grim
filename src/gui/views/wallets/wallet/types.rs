@@ -44,7 +44,7 @@ pub trait WalletContentContainer {
 
 /// Get wallet status text.
 pub fn wallet_status_text(wallet: &Wallet) -> String {
-    if wallet.sync_error() {
+    if wallet.sync_error() && wallet.is_open() {
         format!("{} {}", WARNING_CIRCLE, t!("error"))
     } else if wallet.is_closing() {
         format!("{} {}", SPINNER, t!("wallets.closing"))

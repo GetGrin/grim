@@ -256,7 +256,7 @@ impl WalletContentContainer for WalletContent {
             .show_inside(ui, |ui| {
                 let rect = ui.available_rect_before_wrap();
                 let show_settings = self.settings_content.is_some();
-                let show_txs = self.txs_content.is_some();
+                let show_txs = self.txs_content.is_some() && !top_panel_expanded;
                 let show_sync = (!show_settings || block_nav) &&
                     sync_ui(ui, &wallet);
                 if !show_sync {
@@ -457,7 +457,7 @@ impl WalletContent {
             None => {
                 // Show transaction modal on wallet task result.
                 if let Some(id) = id {
-                    let tx = wallet.get_data().unwrap().tx_by_slate_id(id);
+                    let tx = wallet.get_data().unwrap().tx_by_id(id);
                     if tx.is_some() {
                         self.txs_content = Some(WalletTransactionsContent::new(tx));
                         self.settings_content = None;

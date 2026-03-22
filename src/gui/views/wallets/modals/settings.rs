@@ -15,7 +15,7 @@
 use egui::scroll_area::ScrollBarVisibility;
 use egui::{RichText, ScrollArea};
 
-use crate::gui::icons::{CHECK, PLUS_CIRCLE, TRASH};
+use crate::gui::icons::{PLUS_CIRCLE, TRASH};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::network::modals::ExternalConnectionModal;
 use crate::gui::views::network::ConnectionsContent;
@@ -79,18 +79,20 @@ impl WalletSettingsModal {
                 ui.add_space(2.0);
 
                 // Show integrated node selection.
-                ConnectionsContent::integrated_node_item_ui(ui, |ui| {
-                    match self.conn {
-                        ConnectionMethod::Integrated => {
-                            View::selected_item_check(ui);
-                        }
-                        _ => {
-                            View::item_button(ui, View::item_rounding(0, 1, true), CHECK, None, || {
-                                on_select(ConnectionMethod::Integrated);
-                                Modal::close();
-                            });
-                        }
+                let cur_integrated = self.conn == ConnectionMethod::Integrated;
+                let bg = if cur_integrated {
+                    Colors::fill()
+                } else {
+                    Colors::fill_lite()
+                };
+                ConnectionsContent::integrated_node_item_ui(ui, bg, (!cur_integrated, || {
+                    on_select(ConnectionMethod::Integrated);
+                    Modal::close();
+                }), |ui| {
+                    if cur_integrated {
+                        View::selected_item_check(ui);
                     }
+                    cur_integrated
                 });
 
                 ui.add_space(8.0);
@@ -109,29 +111,31 @@ impl WalletSettingsModal {
 
                 if !ext_conn_list.is_empty() {
                     ui.add_space(8.0);
-                    for (index, conn) in ext_conn_list.iter().enumerate() {
-                        ui.horizontal_wrapped(|ui| {
-                            let len = ext_conn_list.len();
-                            ConnectionsContent::ext_conn_item_ui(ui, conn, index, len, |ui| {
-                                let current_ext_conn = match self.conn {
-                                    ConnectionMethod::Integrated => false,
-                                    ConnectionMethod::External(id, _) => id == conn.id
-                                };
-                                if current_ext_conn {
-                                    View::selected_item_check(ui);
-                                } else {
-                                    let button_rounding = View::item_rounding(index, len, true);
-                                    View::item_button(ui, button_rounding, CHECK, None, || {
-                                        on_select(
-                                            ConnectionMethod::External(conn.id, conn.url.clone())
-                                        );
-                                        Modal::close();
-                                    });
-                                }
-                            });
-                        });
-                    }
                 }
+                for (i, c) in ext_conn_list.iter().enumerate() {
+                    ui.horizontal_wrapped(|ui| {
+                        let len = ext_conn_list.len();
+                        let is_current = match self.conn {
+                            ConnectionMethod::External(id, _) => id == c.id,
+                            _ => false
+                        };
+                        let bg = if is_current {
+                            Colors::fill()
+                        } else {
+                            Colors::fill_lite()
+                        };
+                        ConnectionsContent::ext_conn_item_ui(ui, bg, c, i, len, (!is_current, || {
+                            on_select(
+                                ConnectionMethod::External(c.id, c.url.clone())
+                            );
+                            Modal::close();
+                        }), |ui| {
+                            if is_current {
+                                View::selected_item_check(ui);
+                            }
+                        });
+                    });
+                    }
                 ui.add_space(4.0);
             });
 

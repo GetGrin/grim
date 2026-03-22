@@ -16,7 +16,7 @@ use crate::node::{Node, NodeConfig};
 use crate::tor::Tor;
 use crate::wallet::seed::WalletSeed;
 use crate::wallet::store::TxHeightStore;
-use crate::wallet::types::{ConnectionMethod, PhraseMode, WalletAccount, WalletData, WalletInstance, WalletTask, WalletTransaction, WalletTransactionAction};
+use crate::wallet::types::{ConnectionMethod, PhraseMode, WalletAccount, WalletData, WalletInstance, WalletTask, WalletTx, WalletTxAction};
 use crate::wallet::{ConnectionsConfig, Mnemonic, WalletConfig};
 use crate::AppConfig;
 
@@ -48,7 +48,7 @@ use std::sync::mpsc::Sender;
 use std::sync::{mpsc, Arc};
 use std::thread::Thread;
 use std::time::Duration;
-use std::{fs, thread};
+use std::{fs, path, thread};
 use chrono::Utc;
 use log::error;
 use num_bigint::BigInt;
@@ -131,7 +131,7 @@ pub struct Wallet {
     /// Tasks sender.
     tasks_sender: Arc<RwLock<Option<Sender<WalletTask>>>>,
     /// Task result with optional transaction identifier.
-    task_result: Arc<RwLock<Option<(Option<String>, WalletTask)>>>,
+    task_result: Arc<RwLock<Option<(Option<u32>, WalletTask)>>>,
 }
 
 impl Wallet {
@@ -379,13 +379,8 @@ impl Wallet {
             }
         }
 
-        // Set Slatepack address and secret key.
-        if let Ok((key, addr)) = self.get_secret_key_addr() {
-            let mut w_key = self.secret_key.write();
-            *w_key = Some(key);
-            let mut w_address = self.slatepack_address.write();
-            *w_address = Some(addr.to_string());
-        }
+        // Update Slatepack address and secret key.
+        self.update_secret_key_addr()?;
 
         Ok(())
     }
@@ -403,7 +398,7 @@ impl Wallet {
     }
 
     /// Retrieve wallet [`SecretKey`] and Slatepack address for transport.
-    fn get_secret_key_addr(&self) -> Result<(SecretKey, SlatepackAddress), Error> {
+    fn update_secret_key_addr(&self) -> Result<(), Error> {
         let r_inst = self.instance.as_ref().read();
         let instance = r_inst.clone().unwrap();
         let mut w_lock = instance.lock();
@@ -414,7 +409,11 @@ impl Wallet {
         let sec_key = address::address_from_derivation_path(&k, &parent_key_id, 0)
             .map_err(|e| Error::TorConfig(format!("{:?}", e)))?;
         let addr = SlatepackAddress::try_from(&sec_key)?;
-        Ok((sec_key, addr))
+        let mut w_key = self.secret_key.write();
+        *w_key = Some(sec_key);
+        let mut w_address = self.slatepack_address.write();
+        *w_address = Some(addr.to_string());
+        Ok(())
     }
 
     /// Get unique opened wallet identifier, including current account.
@@ -628,12 +627,11 @@ impl Wallet {
     }
 
     /// Select transaction by slate id.
-    fn retrieve_tx_by_id(&self, id: Uuid) -> Option<TxLogEntry> {
+    fn retrieve_tx_by_id(&self, id: Option<u32>, slate_id: Option<Uuid>) -> Option<TxLogEntry> {
         let r_inst = self.instance.as_ref().read();
         let inst = r_inst.clone().unwrap();
         let mask = self.keychain_mask();
-        let tx_id = Some(id);
-        if let Ok((_, txs)) = retrieve_txs(inst, mask.as_ref(), &None, false, None, tx_id, None) {
+        if let Ok((_, txs)) = retrieve_txs(inst, mask.as_ref(), &None, false, id, slate_id, None) {
             if !txs.is_empty() {
                 return Some(txs.get(0).unwrap().clone())
             }
@@ -740,13 +738,8 @@ impl Wallet {
             Ok(())
         })?;
 
-        // Setup secret key and Slatepack address.
-        if let Ok((key, addr)) = self.get_secret_key_addr() {
-            let mut w_key = self.secret_key.write();
-            *w_key = Some(key);
-            let mut w_address = self.slatepack_address.write();
-            *w_address = Some(addr.to_string());
-        }
+        // Update Slatepack address and secret key.
+        self.update_secret_key_addr()?;
 
         // Save account label into config.
         let mut w_config = self.config.write();
@@ -893,7 +886,7 @@ impl Wallet {
     /// Check if Slatepack file exists.
     pub fn slatepack_exists(&self, slate: &Slate) -> bool {
         let slatepack_path = self.get_config().get_slate_path(slate);
-        fs::exists(slatepack_path).unwrap()
+        fs::exists(slatepack_path).unwrap_or(false)
     }
 
     /// Calculate transaction fee for provided amount.
@@ -969,12 +962,12 @@ impl Wallet {
     }
 
     /// Send slate to Tor address.
-    async fn send_tor(&self, slate: &Slate, addr: &SlatepackAddress) -> Result<Slate, Error> {
-        self.on_tx_action(slate.id.to_string(), Some(WalletTransactionAction::SendingTor));
+    async fn send_tor(&self, id: u32, s: &Slate, addr: &SlatepackAddress) -> Result<Slate, Error> {
+        self.on_tx_action(id, Some(WalletTxAction::SendingTor));
 
         let tor_addr = OnionV3Address::try_from(addr).unwrap().to_http_str();
         let url = format!("{}/v2/foreign", tor_addr);
-        let slate_send = VersionedSlate::into_version(slate.clone(), SlateVersion::V4)?;
+        let slate_send = VersionedSlate::into_version(s.clone(), SlateVersion::V4)?;
         let body = json!({
 				"jsonrpc": "2.0",
 				"method": "receive_tx",
@@ -1074,8 +1067,8 @@ impl Wallet {
     }
 
     /// Finalize transaction from provided message as sender or invoice issuer.
-    fn finalize(&self, slate: &Slate) -> Result<Slate, Error> {
-        self.on_tx_action(slate.id.to_string(), Some(WalletTransactionAction::Finalizing));
+    fn finalize(&self, slate: &Slate, id: u32) -> Result<Slate, Error> {
+        self.on_tx_action(id, Some(WalletTxAction::Finalizing));
 
         let r_inst = self.instance.as_ref().read();
         let instance = r_inst.clone().unwrap();
@@ -1090,14 +1083,16 @@ impl Wallet {
         let _ = self.create_slatepack_message(&slate, None)?;
 
         // Clear tx action.
-        self.on_tx_action(slate.id.to_string(), None);
+        self.on_tx_action(id, None);
 
         Ok(slate)
     }
 
     /// Post transaction to blockchain.
-    fn post(&self, slate: &Slate) -> Result<(), Error> {
-        self.on_tx_action(slate.id.to_string(), Some(WalletTransactionAction::Posting));
+    fn post(&self, slate: &Slate, id: Option<u32>) -> Result<(), Error> {
+        if let Some(id) = id {
+            self.on_tx_action(id, Some(WalletTxAction::Posting));
+        }
 
         let r_inst = self.instance.as_ref().read();
         let instance = r_inst.clone().unwrap();
@@ -1108,19 +1103,19 @@ impl Wallet {
         })?;
 
         // Clear tx action.
-        self.on_tx_action(slate.id.to_string(), None);
-
+        if let Some(id) = id {
+            self.on_tx_action(id, None);
+        }
         Ok(())
     }
 
     /// Cancel transaction.
-    fn cancel(&self, tx: &TxLogEntry) -> Result<(), Error> {
-        let id = tx.tx_slate_id.unwrap().to_string();
-        self.on_tx_action(id.clone(), Some(WalletTransactionAction::Cancelling));
+    fn cancel(&self, id: u32) -> Result<(), Error> {
+        self.on_tx_action(id, Some(WalletTxAction::Cancelling));
 
         let r_inst = self.instance.as_ref().read();
         let instance = r_inst.clone().unwrap();
-        cancel_tx(instance, self.keychain_mask().as_ref(), &None, Some(tx.id), None)?;
+        cancel_tx(instance, self.keychain_mask().as_ref(), &None, Some(id), None)?;
 
         // Clear tx action.
         self.on_tx_action(id, None);
@@ -1129,25 +1124,30 @@ impl Wallet {
     }
 
     /// Update transaction action status.
-    fn on_tx_action(&self, id: String, action: Option<WalletTransactionAction>) {
+    fn on_tx_action(&self, id: u32, action: Option<WalletTxAction>) {
         let mut w_data = self.data.write();
         w_data.as_mut().unwrap().on_tx_action(id, action);
     }
 
     /// Update transaction action error status.
-    fn on_tx_error(&self, id: String, err: Option<Error>) {
+    fn on_tx_error(&self, id: u32, err: Option<Error>) {
         let mut w_data = self.data.write();
         w_data.as_mut().unwrap().on_tx_error(id, err);
     }
 
     /// Save task result to consume later.
-    fn on_task_result(&self, id: Option<String>, task: &WalletTask) {
+    fn on_task_result(&self, tx: Option<TxLogEntry>, task: &WalletTask) {
         let mut w_res = self.task_result.write();
+        let id = if let Some(t) = tx {
+            Some(t.id)
+        } else {
+            None
+        };
         *w_res = Some((id, task.clone()));
     }
 
     /// Consume result of successful task.
-    pub fn consume_task_result(&self) -> Option<(Option<String>, WalletTask)> {
+    pub fn consume_task_result(&self) -> Option<(Option<u32>, WalletTask)> {
         let res = {
             let r_res = self.task_result.read();
             r_res.clone()
@@ -1159,7 +1159,7 @@ impl Wallet {
     }
 
     /// Get possible transaction confirmation height.
-    fn tx_height(&self, tx: &WalletTransaction) -> Result<Option<u64>, Error> {
+    fn tx_height(&self, tx: &WalletTx) -> Result<Option<u64>, Error> {
         let mut tx_height = None;
         if tx.data.confirmed && tx.data.kernel_excess.is_some() {
             let r_inst = self.instance.as_ref().read();
@@ -1185,15 +1185,43 @@ impl Wallet {
         Ok(tx_height)
     }
 
-    /// Get transaction Slate from database.
-    fn get_tx(&self, tx_id: u32) -> Option<Slate> {
+    /// Get stored transaction Slate.
+    fn get_tx_slate(&self, tx_id: Option<u32>, slate_id: Option<&Uuid>) -> Option<Slate> {
         let r_inst = self.instance.as_ref().read();
         let instance = r_inst.clone().unwrap();
         let api = Owner::new(instance, None);
-        if let Ok(s) = api.get_stored_tx(self.keychain_mask().as_ref(), Some(tx_id), None) {
+        if let Ok(s) = api.get_stored_tx(self.keychain_mask().as_ref(), tx_id, slate_id) {
             return s;
         }
         None
+    }
+
+    /// Delete transaction from database.
+    fn delete_tx(&self, id: u32) -> Result<(), Error> {
+        self.on_tx_action(id, Some(WalletTxAction::Deleting));
+
+        let slate = self.get_tx_slate(Some(id), None);
+        let r_inst = self.instance.as_ref().read();
+        let instance = r_inst.clone().unwrap();
+        let keychain_mask = self.keychain_mask();
+        let mut wallet_lock = instance.lock();
+        let lc = wallet_lock.lc_provider()?;
+        let w = lc.wallet_inst()?;
+        let parent_key = w.parent_key_id();
+        let mut batch = w.batch(keychain_mask.as_ref())?;
+        batch.delete_tx_log_entry(id, &parent_key)?;
+        batch.commit()?;
+
+        // Delete transaction files.
+        if let Some(s) = slate {
+            let slatepack_path = self.get_config().get_slate_path(&s);
+            fs::remove_file(&slatepack_path).unwrap_or_default();
+            let path = path::Path::new(&self.get_config().get_data_path())
+                .join("saved_txs")
+                .join(format!("{}.grintx", s.id));
+            fs::remove_file(&path).unwrap_or_default();
+        }
+        Ok(())
     }
 
     /// Change wallet password.
@@ -1577,36 +1605,33 @@ fn start_sync(wallet: Wallet) -> Thread {
 
 /// Handle wallet task.
 async fn handle_task(w: &Wallet, t: WalletTask) {
-    let send_tor = async |s: &Slate, r: &SlatepackAddress| {
-        let id = s.id.to_string();
-        match w.send_tor(&s, r).await {
+    let send_tor = async |tx: TxLogEntry, s: &Slate, r: &SlatepackAddress| {
+        match w.send_tor(tx.id, &s, r).await {
             Ok(s) => {
-                match w.finalize(&s) {
+                match w.finalize(&s, tx.id) {
                     Ok(s) => {
-                        match w.post(&s) {
+                        match w.post(&s, Some(tx.id)) {
                             Ok(_) => {
                                 sync_wallet_data(&w, false);
-                                w.on_task_result(Some(id), &t);
+                                w.on_task_result(Some(tx), &t);
                             }
                             Err(e) => {
                                 error!("send tor post error: {:?}", e);
-                                w.on_tx_error(id, Some(e));
+                                w.on_tx_error(tx.id, Some(e));
                             }
                         }
                     }
                     Err(e) => {
                         error!("send tor finalize error: {:?}", e);
-                        if let Some(tx) = w.retrieve_tx_by_id(s.id) {
-                            let _ = w.cancel(&tx);
-                            sync_wallet_data(&w, false);
-                        }
+                        let _ = w.cancel(tx.id);
+                        sync_wallet_data(&w, false);
                     }
                 }
             }
             Err(e) => {
                 error!("send tor error: {:?}", e);
-                w.on_tx_error(id.clone(), Some(e));
-                w.on_task_result(Some(id), &t);
+                w.on_tx_error(tx.id, Some(e));
+                w.on_task_result(Some(tx), &t);
             }
         }
     };
@@ -1616,74 +1641,71 @@ async fn handle_task(w: &Wallet, t: WalletTask) {
                 return;
             }
             let w = w.clone();
-            let load = w.message_opening.clone();
             let msg = m.clone();
-            thread::spawn(move || {
-                load.store(true, Ordering::Relaxed);
-                if let Ok((s, dest)) = w.parse_slatepack(&msg) {
-                    let id = s.id.to_string();
-                    // Check if message already exists.
-                    let exists = {
-                        let mut exists = w.slatepack_exists(&s);
-                        if !exists && (s.state == SlateState::Invoice2 ||
-                            s.state == SlateState::Standard2) {
-                            let mut slate = s.clone();
-                            slate.state = if s.state == SlateState::Standard2 {
-                                SlateState::Standard3
-                            } else {
-                                SlateState::Invoice3
-                            };
-                            exists = w.slatepack_exists(&slate);
-                        }
-                        exists
-                    };
-                    if exists {
-                        w.on_task_result(Some(id), &t);
-                        load.store(false, Ordering::Relaxed);
-                        return;
+            w.message_opening.store(true, Ordering::Relaxed);
+            if let Ok((s, dest)) = w.parse_slatepack(&msg) {
+                let tx = w.retrieve_tx_by_id(None, Some(s.id));
+                // Check if message already exists.
+                let exists = {
+                    let mut exists = w.slatepack_exists(&s);
+                    if !exists && (s.state == SlateState::Invoice2 ||
+                        s.state == SlateState::Standard2) {
+                        let mut slate = s.clone();
+                        slate.state = if s.state == SlateState::Standard2 {
+                            SlateState::Standard3
+                        } else {
+                            SlateState::Invoice3
+                        };
+                        exists = w.slatepack_exists(&slate);
                     }
-                    // Create response or finalize.
-                    match s.state {
-                        SlateState::Standard1 | SlateState::Invoice1 => {
-                            if s.state != SlateState::Standard1 {
-                                if let Ok(_) = w.pay(&s) {
-                                    sync_wallet_data(&w, false);
-                                    w.on_task_result(Some(id), &t);
-                                }
-                            } else {
-                                if let Ok(_) = w.receive(&s, dest) {
-                                    sync_wallet_data(&w, false);
-                                    w.on_task_result(Some(id), &t);
-                                }
+                    exists
+                };
+                if exists {
+                    w.on_task_result(tx, &t);
+                    w.message_opening.store(false, Ordering::Relaxed);
+                    return;
+                }
+                // Create response or finalize.
+                match s.state {
+                    SlateState::Standard1 | SlateState::Invoice1 => {
+                        if s.state != SlateState::Standard1 {
+                            if let Ok(_) = w.pay(&s) {
+                                sync_wallet_data(&w, false);
+                                w.on_task_result(tx, &t);
+                            }
+                        } else {
+                            if let Ok(_) = w.receive(&s, dest) {
+                                sync_wallet_data(&w, false);
+                                w.on_task_result(tx, &t);
                             }
                         }
-                        SlateState::Standard2 | SlateState::Invoice2 => {
-                            match w.finalize(&s) {
+                    }
+                    SlateState::Standard2 | SlateState::Invoice2 => {
+                        if let Some(tx) = tx {
+                            match w.finalize(&s, tx.id) {
                                 Ok(s) => {
-                                    match w.post(&s) {
+                                    match w.post(&s, Some(tx.id)) {
                                         Ok(_) => {
                                             sync_wallet_data(&w, false);
                                         }
                                         Err(e) => {
                                             error!("message tx post error: {:?}", e);
-                                            w.on_tx_error(id, Some(e));
+                                            w.on_tx_error(tx.id, Some(e));
                                         }
                                     }
                                 }
                                 Err(e) => {
-                                    if let Some(tx) = w.retrieve_tx_by_id(s.id) {
-                                        let _ = w.cancel(&tx);
-                                    }
+                                    let _ = w.cancel(tx.id);
                                     error!("message tx finalize error: {:?}", e);
-                                    w.on_tx_error(id, Some(e));
+                                    w.on_tx_error(tx.id, Some(e));
                                 }
                             }
                         }
-                        _ => {}
-                    };
-                }
-                load.store(false, Ordering::Relaxed);
-            });
+                    }
+                    _ => {}
+                };
+            }
+            w.message_opening.store(false, Ordering::Relaxed);
         }
         WalletTask::CalculateFee(a, _) => {
             // Wait if there are no more fee tasks or handle next input value.
@@ -1710,95 +1732,101 @@ async fn handle_task(w: &Wallet, t: WalletTask) {
             w.send_creating.store(true, Ordering::Relaxed);
             if let Ok(s) = w.send(*a, r.clone()) {
                 sync_wallet_data(&w, false);
-                if let Some(addr) = r {
-                    w.send_creating.store(false, Ordering::Relaxed);
-                    send_tor(&s, addr).await;
-                    return;
-                } else {
-                    w.on_task_result(Some(s.id.to_string()), &t);
+                let tx = w.retrieve_tx_by_id(None, Some(s.id));
+                if let Some(tx) = tx {
+                    if let Some(addr) = r {
+                        w.send_creating.store(false, Ordering::Relaxed);
+                        send_tor(tx, &s, addr).await;
+                        return;
+                    } else {
+                        w.on_task_result(Some(tx), &t);
+                    }
                 }
             }
             w.send_creating.store(false, Ordering::Relaxed);
         }
-        WalletTask::SendTor(id, r) => {
-            if let Some(s) = w.get_tx(*id) {
-               send_tor(&s, r).await;
+        WalletTask::SendTor(tx, r) => {
+            if let Some(s) = w.get_tx_slate(Some(tx.id), None) {
+                send_tor(tx.clone(), &s, r).await;
             }
         }
         WalletTask::Receive(a) => {
             w.invoice_creating.store(true, Ordering::Relaxed);
             if let Ok(s) = w.issue_invoice(*a) {
                 sync_wallet_data(&w, false);
-                w.on_task_result(Some(s.id.to_string()), &t);
+                let tx = w.retrieve_tx_by_id(None, Some(s.id));
+                if let Some(tx) = tx {
+                    w.on_task_result(Some(tx), &t);
+                }
             }
             w.invoice_creating.store(false, Ordering::Relaxed);
         },
         WalletTask::Finalize(id) => {
-            let slate = &w.get_tx(*id).unwrap();
-            w.on_tx_error(slate.id.to_string(), None);
-            match w.finalize(slate) {
-                Ok(s) => {
-                    match w.post(&s) {
-                        Ok(_) => {
-                            sync_wallet_data(&w, false);
-                        }
-                        Err(e) => {
-                            error!("tx finalize post error: {:?}", e);
-                            w.on_tx_error(slate.id.to_string(), Some(e));
+            if let Some(s) = w.get_tx_slate(Some(*id), None) {
+                w.on_tx_error(*id, None);
+                match w.finalize(&s, *id) {
+                    Ok(s) => {
+                        match w.post(&s, Some(*id)) {
+                            Ok(_) => {
+                                sync_wallet_data(&w, false);
+                            }
+                            Err(e) => {
+                                error!("tx finalize post error: {:?}", e);
+                                w.on_tx_error(*id, Some(e));
+                            }
                         }
                     }
-                }
-                Err(e) => {
-                    if let Some(tx) = w.retrieve_tx_by_id(slate.id) {
-                        let _ = w.cancel(&tx);
+                    Err(e) => {
+                        let _ = w.cancel(*id);
+                        error!("tx finalize error: {:?}", e);
+                        w.on_tx_error(*id, Some(e));
                     }
-                    error!("tx finalize error: {:?}", e);
-                    w.on_tx_error(slate.id.to_string(), Some(e));
                 }
+            } else {
+                w.on_tx_error(*id, Some(Error::GenericError("tx slate not found".to_string())));
             }
         }
         WalletTask::Post(id) => {
-            let slate = &w.get_tx(*id).unwrap();
-            w.on_tx_error(slate.id.to_string(), None);
-
-            // Cleanup broadcasting tx height.
-            let tx_height_store = TxHeightStore::new(w.get_config().get_extra_db_path());
-            tx_height_store.delete_broadcasting_height(&slate.id.to_string());
-
-            let has_data = {
-                let r_data = w.data.read();
-                r_data.is_some()
-            };
-            if has_data {
-                let mut w_data = w.data.write();
-                for tx in w_data.as_mut().unwrap().txs.as_mut().unwrap() {
-                    if tx.data.id == *id {
-                        tx.broadcasting_height = None;
-                        break;
+            if let Some(s) = w.get_tx_slate(Some(*id), None) {
+                w.on_tx_error(*id, None);
+                // Cleanup broadcasting tx height.
+                let tx_height_store = TxHeightStore::new(w.get_config().get_extra_db_path());
+                tx_height_store.delete_broadcasting_height(&id.to_string());
+                let has_data = {
+                    let r_data = w.data.read();
+                    r_data.is_some()
+                };
+                if has_data {
+                    let mut w_data = w.data.write();
+                    for tx in w_data.as_mut().unwrap().txs.as_mut().unwrap() {
+                        if tx.data.id == *id {
+                            tx.broadcasting_height = None;
+                            break;
+                        }
                     }
                 }
-            }
-
-            match w.post(slate) {
-                Ok(_) => {
-                    sync_wallet_data(&w, false);
+                // Post transaction.
+                match w.post(&s, Some(*id)) {
+                    Ok(_) => {
+                        sync_wallet_data(&w, false);
+                    }
+                    Err(e) => {
+                        error!("tx post error: {:?}", e);
+                        w.on_tx_error(*id, Some(e));
+                    }
                 }
-                Err(e) => {
-                    error!("tx post error: {:?}", e);
-                    w.on_tx_error(slate.id.to_string(), Some(e));
-                }
+            } else {
+                w.on_tx_error(*id, Some(Error::GenericError("tx slate not found".to_string())));
             }
-
         }
-        WalletTask::Cancel(tx) => {
-            match w.cancel(tx) {
+        WalletTask::Cancel(id) => {
+            match w.cancel(*id) {
                 Ok(_) => {
                     sync_wallet_data(&w, false);
                 }
                 Err(e) => {
                     error!("tx cancel error: {:?}", e);
-                    let id = tx.tx_slate_id.unwrap().to_string();
-                    w.on_tx_error(id, Some(e));
+                    w.on_tx_error(*id, Some(e));
                 }
             }
         }
@@ -1807,6 +1835,15 @@ async fn handle_task(w: &Wallet, t: WalletTask) {
             let res = w.verify_payment_proof(p);
             w.proof_verifying.store(false, Ordering::Relaxed);
             w.on_task_result(None, &WalletTask::VerifyProof(p.clone(), Some(res)));
+        }
+        WalletTask::Delete(id) => {
+            match w.delete_tx(*id) {
+                Ok(_) => sync_wallet_data(&w, false),
+                Err(e) => {
+                    error!("tx delete error: {:?}", e);
+                    w.on_tx_error(*id, Some(e));
+                }
+            }
         }
     };
 }
@@ -1947,11 +1984,11 @@ fn update_txs(wallet: &Wallet, mut txs_limit: u32) -> Result<(), Error> {
     let tx_height_store = TxHeightStore::new(wallet.get_config().get_extra_db_path());
     let data = wallet.get_data().unwrap();
     let data_txs = data.txs.unwrap_or(vec![]);
-    let mut new_txs: Vec<WalletTransaction> = vec![];
+    let mut new_txs: Vec<WalletTx> = vec![];
     for tx in &filter_txs {
         let mut height: Option<u64> = None;
         let mut broadcasting_height: Option<u64> = None;
-        let mut action: Option<WalletTransactionAction> = None;
+        let mut action: Option<WalletTxAction> = None;
         let mut action_error: Option<Error> = None;
         let mut proof: Option<PaymentProof> = None;
         for t in &data_txs {
@@ -1964,13 +2001,13 @@ fn update_txs(wallet: &Wallet, mut txs_limit: u32) -> Result<(), Error> {
                 break;
             }
         }
-        let mut new = WalletTransaction::new(tx.clone(),
-                                             proof.clone(),
-                                             wallet,
-                                             height,
-                                             broadcasting_height,
-                                             action,
-                                             action_error);
+        let mut new = WalletTx::new(tx.clone(),
+                                    proof.clone(),
+                                    wallet,
+                                    height,
+                                    broadcasting_height,
+                                    action,
+                                    action_error);
         // Update Slate state for unconfirmed.
         let unconfirmed = !tx.confirmed && (tx.tx_type == TxLogEntryType::TxSent ||
             tx.tx_type == TxLogEntryType::TxReceived);
@@ -2014,8 +2051,9 @@ fn update_txs(wallet: &Wallet, mut txs_limit: u32) -> Result<(), Error> {
                 new.broadcasting_height = broadcasting_height;
             }
         }
-
-        new_txs.push(new);
+        if !new.deleting() {
+            new_txs.push(new);
+        }
     }
     // Update wallet txs.
     let mut w_data = wallet.data.write();
