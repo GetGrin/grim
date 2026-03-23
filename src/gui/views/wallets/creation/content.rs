@@ -232,9 +232,7 @@ impl WalletCreationContent {
                     columns[0].vertical_centered_justified(|ui| {
                         match self.mnemonic_setup.mnemonic.mode() {
                             PhraseMode::Generate => {
-                                let c_t = format!("{} {}",
-                                                  COPY,
-                                                  t!("copy").to_uppercase());
+                                let c_t = format!("{} {}", COPY, t!("copy"));
                                 View::button(ui, c_t, Colors::white_or_black(false), || {
                                     cb.copy_string_to_buffer(self.mnemonic_setup
                                         .mnemonic
@@ -242,9 +240,7 @@ impl WalletCreationContent {
                                 });
                             }
                             PhraseMode::Import => {
-                                let p_t = format!("{} {}",
-                                                  CLIPBOARD_TEXT,
-                                                  t!("paste").to_uppercase());
+                                let p_t = format!("{} {}", CLIPBOARD_TEXT, t!("paste"));
                                 View::button(ui, p_t, Colors::white_or_black(false), || {
                                     let data = ZeroingString::from(cb.get_string_from_buffer());
                                     self.mnemonic_setup.mnemonic.import(&data);
@@ -257,9 +253,7 @@ impl WalletCreationContent {
                         if next {
                             self.next_step_button_ui(ui, on_create);
                         } else {
-                            let scan_text = format!("{} {}",
-                                                    SCAN,
-                                                    t!("scan").to_uppercase());
+                            let scan_text = format!("{} {}", SCAN, t!("scan"));
                             View::button(ui, scan_text, Colors::white_or_black(false), || {
                                 self.scan_modal_content = Some(CameraScanContent::default());
                                 // Show QR code scan modal.
@@ -279,7 +273,7 @@ impl WalletCreationContent {
                 if next {
                     self.next_step_button_ui(ui, on_create);
                 } else {
-                    let paste_text = format!("{} {}", CLIPBOARD_TEXT, t!("paste").to_uppercase());
+                    let paste_text = format!("{} {}", CLIPBOARD_TEXT, t!("paste"));
                     View::button(ui, paste_text, Colors::white_or_black(false), || {
                         let data = ZeroingString::from(cb.get_string_from_buffer());
                         self.mnemonic_setup.mnemonic.import(&data);

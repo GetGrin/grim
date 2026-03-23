@@ -152,7 +152,7 @@ fn block_item_ui(ui: &mut egui::Ui, db: &DiffBlock, rounding: CornerRadius) {
                 rect.max -= vec2(8.0, 0.0);
                 ui.painter().rect(rect,
                                   rounding,
-                                  Colors::white_or_black(false),
+                                  Colors::fill(),
                                   View::item_stroke(),
                                   StrokeKind::Outside);
 

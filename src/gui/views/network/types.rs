@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use serde_derive::{Deserialize, Serialize};
 use crate::gui::platform::PlatformCallbacks;
 
 /// Integrated node tab content interface.
@@ -38,4 +39,13 @@ impl NodeTabType {
             NodeTabType::Settings => t!("network.settings").into()
         }
     }
+}
+
+/// Connection details to share.
+#[derive(Serialize, Deserialize, Clone)]
+pub struct ShareConnection {
+    #[serde(rename(serialize = "ipPort", deserialize = "ipPort"))]
+    pub url: String,
+    pub username: String,
+    pub secret: String
 }

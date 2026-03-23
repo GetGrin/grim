@@ -15,9 +15,10 @@
 use eframe::epaint::RectShape;
 use egui::{Align, Color32, CornerRadius, CursorIcon, Layout, RichText, Sense, StrokeKind, UiBuilder};
 
-use crate::gui::icons::{CHECK_CIRCLE, COMPUTER_TOWER, DOTS_THREE_CIRCLE, GLOBE_SIMPLE, PLUS_CIRCLE, POWER, TRASH, WARNING_CIRCLE, X_CIRCLE};
+use crate::gui::icons::{CHECK_CIRCLE, COMPUTER_TOWER, DOTS_THREE_CIRCLE, GLOBE_SIMPLE, PLUS_CIRCLE, POWER, QR_CODE, TRASH, WARNING_CIRCLE, X_CIRCLE};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::network::modals::ExternalConnectionModal;
+use crate::gui::views::network::modals::{ExternalConnectionModal, ShareConnectionContent};
+use crate::gui::views::network::types::ShareConnection;
 use crate::gui::views::network::NodeSetup;
 use crate::gui::views::types::{ContentContainer, ModalPosition};
 use crate::gui::views::{Modal, View};
@@ -30,23 +31,32 @@ use crate::AppConfig;
 pub struct ConnectionsContent {
     /// Flag to check connections state on first draw.
     first_draw: bool,
+
     /// External connection [`Modal`] content.
-    ext_conn_modal: ExternalConnectionModal,
+    ext_conn_modal_content: ExternalConnectionModal,
+
+    /// [`Modal`] content to share connection with QR code.
+    share_conn_modal_content: Option<ShareConnectionContent>
 }
 
 impl Default for ConnectionsContent {
     fn default() -> Self {
         Self {
             first_draw: true,
-            ext_conn_modal: ExternalConnectionModal::new(None),
+            ext_conn_modal_content: ExternalConnectionModal::new(None),
+            share_conn_modal_content: None
         }
     }
 }
 
+/// Identifier for [`Modal`] to share connection.
+const SHARE_CONN_QR_MODAL: &'static str = "share_conn_qr_modal";
+
 impl ContentContainer for ConnectionsContent {
     fn modal_ids(&self) -> Vec<&'static str> {
         vec![
-            ExternalConnectionModal::NETWORK_ID
+            ExternalConnectionModal::NETWORK_ID,
+            SHARE_CONN_QR_MODAL
         ]
     }
 
@@ -56,8 +66,13 @@ impl ContentContainer for ConnectionsContent {
                 cb: &dyn PlatformCallbacks) {
         match modal.id {
             ExternalConnectionModal::NETWORK_ID => {
-                self.ext_conn_modal.ui(ui, cb, modal, |_| {});
+                self.ext_conn_modal_content.ui(ui, cb, modal, |_| {});
             },
+            SHARE_CONN_QR_MODAL => {
+                if let Some(c) = self.share_conn_modal_content.as_mut() {
+                    c.ui(ui, modal, cb);
+                }
+            }
             _ => {}
         }
     }
@@ -84,7 +99,24 @@ impl ContentContainer for ConnectionsContent {
         // Show integrated node info content.
         Self::integrated_node_item_ui(ui, Colors::fill_lite(), (true, || {
             AppConfig::toggle_show_connections_network_panel();
-        }), |_| false);
+        }), |ui| {
+            let r = View::item_rounding(0, 1, true);
+            View::item_button(ui, r, QR_CODE, None, || {
+                if let Ok(c) = ShareConnectionContent::new(ShareConnection {
+                    url: format!("http://{}", NodeConfig::get_api_address()),
+                    username: "grin".to_string(),
+                    secret: NodeConfig::get_api_secret(true).unwrap_or("".to_string()),
+                }) {
+                    self.share_conn_modal_content = Some(c);
+                    // Show QR code to share integrated node connection.
+                    Modal::new(SHARE_CONN_QR_MODAL)
+                        .position(ModalPosition::Center)
+                        .title(t!("network.node"))
+                        .show();
+                }
+            });
+            true
+        });
 
         // Show external connections.
         ui.add_space(8.0);
@@ -105,16 +137,37 @@ impl ContentContainer for ConnectionsContent {
             ui.add_space(8.0);
             for (i, c) in ext_conn_list.iter().enumerate() {
                 ui.horizontal_wrapped(|ui| {
+                    let mut show_qr_content: Option<ShareConnectionContent> = None;
                     // Draw external connection list item.
                     let bg = Colors::fill_lite();
                     Self::ext_conn_item_ui(ui, bg, c, i, len, (true, || {
                         self.show_add_ext_conn_modal(Some(c.clone()));
                     }), |ui| {
-                        let button_rounding = View::item_rounding(i, len, true);
-                        View::item_button(ui, button_rounding, TRASH, None, || {
+                        // Draw button to delete connection.
+                        let r = View::item_rounding(i, len, true);
+                        View::item_button(ui, r, TRASH, Some(Colors::inactive_text()), || {
                             ConnectionsConfig::remove_ext_conn(c.id);
                         });
+                        // Draw button to share connection
+                        let r = CornerRadius::default();
+                        View::item_button(ui, r, QR_CODE, None, || {
+                            if let Ok(c) = ShareConnectionContent::new(ShareConnection {
+                                url: c.url.clone(),
+                                username: "grin".to_string(),
+                                secret: c.secret.clone().unwrap_or("".to_string()),
+                            }) {
+                                show_qr_content = Some(c);
+                            }
+                        });
                     });
+                    if let Some(c) = show_qr_content {
+                        self.share_conn_modal_content = Some(c);
+                        // Show QR code to share external connection.
+                        Modal::new(SHARE_CONN_QR_MODAL)
+                            .position(ModalPosition::Center)
+                            .title(t!("wallets.ext_conn").replace(":", ""))
+                            .show();
+                    }
                 });
             }
         }
@@ -277,7 +330,7 @@ impl ConnectionsContent {
 
     /// Show [`Modal`] to add external connection.
     pub fn show_add_ext_conn_modal(&mut self, conn: Option<ExternalConnection>) {
-        self.ext_conn_modal = ExternalConnectionModal::new(conn);
+        self.ext_conn_modal_content = ExternalConnectionModal::new(conn);
         // Show modal.
         Modal::new(ExternalConnectionModal::NETWORK_ID)
             .position(ModalPosition::CenterTop)

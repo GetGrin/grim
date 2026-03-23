@@ -64,7 +64,7 @@ impl ConnectionsConfig {
     pub fn add_ext_conn(conn: ExternalConnection) {
         let mut w_config = Settings::conn_config_to_update();
         if let Some(pos) = w_config.external.iter().position(|c| {
-            c.id == conn.id
+            c.id == conn.id || c.url == conn.url
         }) {
             w_config.external.remove(pos);
             w_config.external.insert(pos, conn);

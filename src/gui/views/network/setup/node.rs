@@ -17,7 +17,7 @@ use eframe::epaint::{RectShape, StrokeKind};
 use egui::{CursorIcon, Id, Layout, RichText, Sense, UiBuilder};
 use grin_core::global::ChainTypes;
 
-use crate::gui::icons::{CLOCK_CLOCKWISE, COMPUTER_TOWER, FOLDERS, PENCIL, PLUG, POWER, SHIELD, SHIELD_SLASH};
+use crate::gui::icons::{CLOCK_CLOCKWISE, COMPUTER_TOWER, FOLDERS, PLUG, POWER, SHIELD, SHIELD_SLASH};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::network::settings::NetworkSettings;
 use crate::gui::views::network::NetworkContent;

@@ -28,6 +28,8 @@ pub struct ExternalConnection {
     pub id: i64,
     /// Node URL.
     pub url: String,
+    /// Optional username.
+    pub username: Option<String>,
     /// Optional API secret key.
     pub secret: Option<String>,
 
@@ -61,6 +63,7 @@ impl ExternalConnection {
             ExternalConnection {
                 id: index as i64,
                 url: url.to_string(),
+                username: Some("grin".to_string()),
                 secret: None,
                 available: None,
             }
@@ -68,11 +71,12 @@ impl ExternalConnection {
     }
 
     /// Create new external connection.
-    pub fn new(url: String, secret: Option<String>) -> Self {
+    pub fn new(url: String, username: Option<String>, secret: Option<String>) -> Self {
         let id = chrono::Utc::now().timestamp();
         Self {
             id,
             url,
+            username,
             secret,
             available: None,
         }
@@ -128,7 +132,6 @@ fn check_ext_conn(conn: &ExternalConnection, ui_ctx: &egui::Context) {
                     return;
                 }
                 let url = url_res.unwrap();
-
                 if let Ok(_) = url.socket_addrs(|| None) {
                     let addr = format!("{}v2/foreign", url.to_string());
                     let mut req_setup = hyper::Request::builder()
@@ -136,9 +139,10 @@ fn check_ext_conn(conn: &ExternalConnection, ui_ctx: &egui::Context) {
                         .uri(addr.clone());
                     // Setup secret key auth.
                     if let Some(key) = conn.secret {
+                        let username = conn.username.unwrap_or("grin".to_string());
                         let basic_auth = format!(
                             "Basic {}",
-                            to_base64(&format!("grin:{}", key))
+                            to_base64(&format!("{}:{}", username, key))
                         );
                         req_setup = req_setup
                             .header(hyper::header::AUTHORIZATION, basic_auth.clone());

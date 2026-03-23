@@ -115,6 +115,7 @@ impl ContentContainer for ConnectionSettings {
                         ext_conn_list.push(ExternalConnection {
                             id: *id,
                             url: url.clone(),
+                            username: Some("grin".to_string()),
                             secret: None,
                             available: Some(true),
                         })

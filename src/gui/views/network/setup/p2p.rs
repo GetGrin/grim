@@ -794,7 +794,8 @@ fn peer_item_ui(ui: &mut egui::Ui,
         ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
             // Draw delete button for non-default seed peers.
             if peer_type != &PeerType::DefaultSeed {
-                View::item_button(ui, View::item_rounding(index, len, true), TRASH, None, || {
+                let r = View::item_rounding(index, len, true);
+                View::item_button(ui, r, TRASH, Some(Colors::inactive_text()), || {
                     match peer_type {
                         PeerType::CustomSeed => {
                             NodeConfig::remove_custom_seed(peer_addr);

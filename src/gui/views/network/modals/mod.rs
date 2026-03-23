@@ -14,3 +14,6 @@
 
 mod ext_conn;
 pub use ext_conn::*;
+
+mod share_conn;
+pub use share_conn::*;

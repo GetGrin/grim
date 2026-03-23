@@ -176,7 +176,7 @@ fn node_stats_ui(ui: &mut egui::Ui) {
 const PEER_ITEM_HEIGHT: f32 = 77.0;
 
 /// Draw connected peer info item.
-fn peer_item_ui(ui: &mut egui::Ui, peer: &PeerStats, rounding: CornerRadius) {
+fn peer_item_ui(ui: &mut egui::Ui, peer: &PeerStats, r: CornerRadius) {
     let mut rect = ui.available_rect_before_wrap();
     rect.set_height(PEER_ITEM_HEIGHT);
     ui.allocate_ui(rect.size(), |ui| {
@@ -184,7 +184,7 @@ fn peer_item_ui(ui: &mut egui::Ui, peer: &PeerStats, rounding: CornerRadius) {
             ui.add_space(4.0);
 
             // Draw round background.
-            ui.painter().rect(rect, rounding, Colors::fill_lite(), View::item_stroke(), StrokeKind::Outside);
+            ui.painter().rect(rect, r, Colors::fill(), View::item_stroke(), StrokeKind::Outside);
 
             // Draw IP address.
             ui.horizontal(|ui| {

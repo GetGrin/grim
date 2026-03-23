@@ -32,6 +32,10 @@ use crate::gui::Colors;
 pub struct QrCodeContent {
     /// QR code text.
     pub text: String,
+    /// Flag to show text below QR code.
+    show_text: bool,
+    /// Flag to copy text below QR code.
+    can_copy_text: bool,
 
     /// Maximum QR code size.
     max_size: f32,
@@ -56,6 +60,8 @@ impl QrCodeContent {
     pub fn new(text: String, animated: bool) -> Self {
         Self {
             text,
+            show_text: true,
+            can_copy_text: true,
             max_size: DEFAULT_QR_SIZE as f32,
             animated,
             animated_index: None,
@@ -68,6 +74,18 @@ impl QrCodeContent {
     /// Setup maximum QR code size.
     pub fn with_max_size(mut self, max_size: f32) -> Self {
         self.max_size = max_size;
+        self
+    }
+
+    /// Hide text below QR code.
+    pub fn hide_text(mut self) -> Self {
+        self.show_text = false;
+        self
+    }
+
+    /// Do not show button to copy QR code text.
+    pub fn no_copy(mut self) -> Self {
+        self.can_copy_text = false;
         self
     }
 
@@ -123,7 +141,9 @@ impl QrCodeContent {
             self.qr_image_ui(svg, ui);
 
             // Show QR code text.
-            self.text_ui(ui);
+            if self.show_text {
+                self.text_ui(ui);
+            }
 
             ui.vertical_centered(|ui| {
                 let sharing = {
@@ -202,30 +222,45 @@ impl QrCodeContent {
             self.qr_image_ui(svg, ui);
 
             // Show QR code text.
-            self.text_ui(ui);
+            if self.show_text {
+                self.text_ui(ui);
+            } else {
+                ui.add_space(8.0);
+            }
 
-            // Setup spacing between buttons.
-            ui.spacing_mut().item_spacing = egui::Vec2::new(6.0, 0.0);
+            if self.can_copy_text {
+                // Setup spacing between buttons.
+                ui.spacing_mut().item_spacing = egui::Vec2::new(6.0, 0.0);
 
-            ui.columns(2, |columns| {
-                columns[0].vertical_centered_justified(|ui| {
-                    // Draw copy button.
-                    let copy_text = format!("{} {}", COPY, t!("copy"));
-                    View::button(ui, copy_text, Colors::white_or_black(false), || {
-                        cb.copy_string_to_buffer(self.text.clone());
+                ui.columns(2, |columns| {
+                    columns[0].vertical_centered_justified(|ui| {
+                        // Draw copy button.
+                        let copy_text = format!("{} {}", COPY, t!("copy"));
+                        View::button(ui, copy_text, Colors::white_or_black(false), || {
+                            cb.copy_string_to_buffer(self.text.clone());
+                        });
+                    });
+                    columns[1].vertical_centered_justified(|ui| {
+                        self.share_static_button_ui(ui, cb);
                     });
                 });
-                columns[1].vertical_centered_justified(|ui| {
-                    let share_text = format!("{} {}", IMAGES_SQUARE, t!("share"));
-                    View::colored_text_button(ui,
-                                              share_text,
-                                              Colors::blue(),
-                                              Colors::white_or_black(false), || {
-                            self.share_static(cb);
-                        });
+            } else {
+                ui.vertical_centered(|ui| {
+                    self.share_static_button_ui(ui, cb);
                 });
-            });
+            }
         }
+    }
+
+    /// Draw button to share static QR code.
+    fn share_static_button_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
+        let share_text = format!("{} {}", IMAGES_SQUARE, t!("share"));
+        View::colored_text_button(ui,
+                                  share_text,
+                                  Colors::blue(),
+                                  Colors::white_or_black(false), || {
+                self.share_static(cb);
+            });
     }
 
     /// Share static QR code image.

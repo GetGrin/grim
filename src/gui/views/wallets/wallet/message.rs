@@ -28,10 +28,11 @@ pub struct MessageInputContent {
     message_edit: String,
     /// Flag to check if error happened at Slatepack message parsing.
     parse_error: bool,
-    /// QR code scanner content.
-    scan_qr_content: Option<CameraContent>,
     /// Button to parse picked file content.
     file_pick_button: FilePickContent,
+
+    /// QR code scanner content.
+    scan_qr_content: Option<CameraContent>,
 
     /// Payment proof input content.
     pub proof_content: Option<PaymentProofContent>,
@@ -45,10 +46,10 @@ impl Default for MessageInputContent {
         Self {
             message_edit: "".to_string(),
             parse_error: false,
-            scan_qr_content: None,
             file_pick_button: FilePickContent::new(
                 FilePickContentType::Button(t!("choose_file").into())
             ),
+            scan_qr_content: None,
             proof_content: None,
         }
     }
