@@ -35,8 +35,8 @@ pub struct ExternalConnectionModal {
     /// Flag to show URL format error.
     url_error: bool,
 
-    /// External connection username.
-    username_edit: String,
+    // /// External connection username.
+    // username_edit: String,
     /// External connection API secret.
     secret_edit: String,
 
@@ -52,18 +52,17 @@ impl ExternalConnectionModal {
 
     /// Create new instance from optional provided connection to update.
     pub fn new(conn: Option<ExternalConnection>) -> Self {
-        let (url_edit, username_edit, secret_edit, id) = if let Some(c) = conn {
-            let username = c.username.unwrap_or("grin".to_string());
+        let (url_edit, secret_edit, id) = if let Some(c) = conn {
+            // let username = c.username.unwrap_or("grin".to_string());
             let secret = c.secret.unwrap_or("".to_string());
-            (c.url, username, secret, Some(c.id))
+            (c.url, secret, Some(c.id))
         } else {
-            ("".to_string(), "grin".to_string(), "".to_string(), None)
+            ("".to_string(), "".to_string(), None)
         };
         Self {
             first_draw: true,
             url_edit,
             url_error: false,
-            username_edit,
             secret_edit,
             id,
             scan_qr_content: None
@@ -114,6 +113,7 @@ impl ExternalConnectionModal {
                     });
                 });
             });
+            ui.add_space(6.0);
             return;
         }
         // Add connection button callback.
@@ -169,16 +169,16 @@ impl ExternalConnectionModal {
                 self.url_error = false;
             }
 
-            ui.add_space(8.0);
-            ui.label(RichText::new(t!("wallets.name"))
-                .size(17.0)
-                .color(Colors::gray()));
-            ui.add_space(8.0);
-
-            // Draw node username text edit (disabled by default).
-            let username_edit_id = Id::from(modal.id).with(self.id).with("node_username");
-            let mut username_edit = TextEdit::new(username_edit_id).focus(false).disable();
-            username_edit.ui(ui, &mut self.username_edit, cb);
+            // ui.add_space(8.0);
+            // ui.label(RichText::new(t!("wallets.name"))
+            //     .size(17.0)
+            //     .color(Colors::gray()));
+            // ui.add_space(8.0);
+            //
+            // // Draw node username text edit (disabled by default).
+            // let username_edit_id = Id::from(modal.id).with(self.id).with("node_username");
+            // let mut username_edit = TextEdit::new(username_edit_id).focus(false).disable();
+            // username_edit.ui(ui, &mut self.username_edit, cb);
 
             ui.add_space(8.0);
             ui.label(RichText::new(t!("wallets.node_secret"))
@@ -188,7 +188,11 @@ impl ExternalConnectionModal {
 
             // Draw node API secret text edit.
             let secret_edit_id = Id::from(modal.id).with(self.id).with("node_secret");
-            let mut secret_edit = TextEdit::new(secret_edit_id).password().paste().focus(false);
+            let mut secret_edit = TextEdit::new(secret_edit_id)
+                .h_center()
+                .password()
+                .paste()
+                .focus(false);
             if url_edit.enter_pressed {
                 secret_edit.focus_request();
             }
