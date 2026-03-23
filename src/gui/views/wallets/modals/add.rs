@@ -61,8 +61,7 @@ impl AddWalletModal {
 
             // Show wallet name text edit.
             let mut name_input = TextEdit::new(Id::from(modal.id).with("name"))
-                .focus(Modal::first_draw());
-            
+                .focus(false);
             name_input.ui(ui, &mut self.name_edit, cb);
 
             ui.add_space(8.0);
@@ -74,13 +73,13 @@ impl AddWalletModal {
             // Show wallet password text edit.
             let mut pass_input = TextEdit::new(Id::from(modal.id).with("pass"))
                 .password()
-                .focus(false);
+                .focus(Modal::first_draw());
             if name_input.enter_pressed {
                 pass_input.focus_request();
             }
             pass_input.ui(ui, &mut self.pass_edit, cb);
             if pass_input.enter_pressed {
-                (on_next)(self);
+                on_next(self);
             }
             ui.add_space(12.0);
         });
@@ -99,7 +98,7 @@ impl AddWalletModal {
                 });
                 columns[1].vertical_centered_justified(|ui| {
                     View::button(ui, t!("continue"), Colors::white_or_black(false), || {
-                        (on_next)(self);
+                        on_next(self);
                     });
                 });
             });

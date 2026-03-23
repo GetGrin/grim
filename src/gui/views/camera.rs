@@ -84,7 +84,7 @@ impl CameraContent {
                 });
             });
         }
-        ui.add_space(12.0);
+        ui.add_space(6.0);
         ui.ctx().request_repaint();
     }
 
