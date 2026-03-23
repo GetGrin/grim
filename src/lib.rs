@@ -47,7 +47,6 @@ pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 #[cfg(target_os = "android")]
 #[no_mangle]
 fn android_main(app: AndroidApp) {
-    #[cfg(debug_assertions)]
     {
         std::env::set_var("RUST_BACKTRACE", "full");
         let log_config = android_logger::Config::default()

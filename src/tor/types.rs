@@ -63,7 +63,7 @@ impl TorBridge {
     pub const ADDITIONAL_WEBTUNNEL_CONN_LINE_2: &'static str = "webtunnel [2001:db8:eedb:cae7:a345:4f72:f9cc:5de0]:443 B3C81E7A0CA474270DAA4A2C8633E1CA8935C37D url=https://wordpress.far-east-investment.ru/sORes7268CEUSRD7hAWvJU5A ver=0.0.3";
     pub const ADDITIONAL_WEBTUNNEL_CONN_LINE_3: &'static str = "webtunnel [2001:db8:945c:e0b9:7e4c:c974:ff00:d4c5]:443 91937F3EFB3BE5169788AC7C8BF07460B7E306DB url=https://kabel.entreri.de/YXbp1dNrJeOF8giAFFYWxvmf ver=0.0.3";
     pub const ADDITIONAL_WEBTUNNEL_CONN_LINE_4: &'static str = "webtunnel [2001:db8:4767:7aa2:df21:1b2b:d7f9:caee]:443 CD193CF0D0C29551928C01FCB28D1200D9F27CFA url=https://occurrence.pics/68SzSlQCRgnfSo32eLyjC1V3 ver=0.0.3";
-    pub const ADDITIONAL_WEBTUNNEL_CONN_LINE_5: &'static str = "webtunnel [2001:db8:4c9a:ffe8:70f8:d5af:a8f1:cf56]:443 DA1ECF055635C1A6ED7F5B5F36296A5E3015CE57 url=https://1axfa6xb.xoomlia.com/6qtxxkjw/ ver=0.0.3";
+    pub const ADDITIONAL_WEBTUNNEL_CONN_LINE_5: &'static str = "webtunnel [2001:db8:ce90:3593:272e:4975:a031:55b]:443 12382A2F3912AD1983A97C8709CBAE47ADB60BE3 url=https://miranda.today/LWwxIXDHCyyScn7oDauPMTmX ver=0.0.3";
     pub const ADDITIONAL_WEBTUNNEL_CONN_LINE_6: &'static str = "webtunnel [2001:db8:a12b:ff8:8a1a:a05b:5f21:2ccc]:443 F2A9C5AEE0A420EB9D55F9497B3C0FA243A2A770 url=https://bridge.lovecloud.me/wss-wc3p0euqrlne98t9 ver=0.0.3";
     pub const ADDITIONAL_WEBTUNNEL_CONN_LINE_7: &'static str = "webtunnel [2001:db8:8ed6:e6c9:5fc9:9f20:a373:2374]:443 1636A2EFFBAA4B162F5FF461A1663EB55C41AE11 url=https://hanoi.delivery/roQFPLtlspWT6yIKeXD6lEci ver=0.0.3";
 

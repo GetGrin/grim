@@ -100,22 +100,26 @@ impl Default for Tor {
 }
 
 impl Tor {
-    /// Create Tor client configuration.
-    fn build_config(bridges: Option<Vec<TorBridge>>) -> TorClientConfig {
+    /// Create Tor configuration returning unused bridges (exclude more than 2 to avoid stuck).
+    fn build_config(bridges: Option<Vec<TorBridge>>) -> (TorClientConfig, Vec<TorBridge>) {
         let mut builder = TorClientConfigBuilder::from_directories(
             TorConfig::state_path(),
             TorConfig::cache_path(),
         );
         // Build bridges.
-        if let Some(brs) = bridges {
-            for b in brs {
-                Self::build_bridge(&mut builder, b);
-            }
+        let bridges = bridges.unwrap_or(vec![]);
+        let max_two_bridges = if bridges.len() > 2 {
+            bridges.iter().take(2).map(|b| b.clone()).collect::<Vec<TorBridge>>()
+        } else {
+            bridges.clone()
+        };
+        for b in max_two_bridges {
+            Self::build_bridge(&mut builder, b);
         }
         builder.address_filter().allow_onion_addrs(true);
         // Create config.
         let config = builder.build().unwrap();
-        config
+        (config, bridges.iter().map(|b| b.clone()).collect::<Vec<TorBridge>>())
     }
 
     /// Build bootstrapped client from provided config.
@@ -163,9 +167,13 @@ impl Tor {
                 return;
             }
         }
+        // Cleanup keys, state and cache.
+        fs::remove_dir_all(TorConfig::keystore_path()).unwrap_or_default();
+        fs::remove_dir_all(TorConfig::state_path()).unwrap_or_default();
+        fs::remove_dir_all(TorConfig::cache_path()).unwrap_or_default();
         TOR_STATE.client_launching.store(true, Ordering::Relaxed);
-        // Setup config.
-        let config = if let Some(b) = TorConfig::get_bridge() {
+        // Get initial bridges.
+        let initial_bridges = if let Some(b) = TorConfig::get_bridge() {
             let lines_parse = serde_json::from_str::<Vec<String>>(&b.connection_line());
             let bridges = if let Ok(lines) = lines_parse {
                 lines.iter()
@@ -176,37 +184,51 @@ impl Tor {
                     .map(|l| TorBridge::Webtunnel(b.binary_path(), l.to_string()))
                     .collect()
             };
-            Self::build_config(Some(bridges))
+            Some(bridges)
         } else {
-            Self::build_config(None)
+            None
         };
-        // Launch client.
-        let client = Self::build_client_bootstrap(config.clone());
-        if let Some(c) = client {
-            TOR_STATE.client_config.write().replace((c, config));
-            thread::sleep(Duration::from_millis(5000));
-            TOR_STATE.client_launching.store(false, Ordering::Relaxed);
-        } else {
-            // Launch client with default Webtunnel bridges if failed.
-            let add_bridges = TorBridge::DEFAULT_WEBTUNNEL_CONN_LINES.iter()
-                .map(|b| TorBridge::Webtunnel(TorConfig::webtunnel_path(), b.to_string()))
-                .collect::<Vec<_>>();
-            let config = Self::build_config(Some(add_bridges));
+        // Bootstrap client in the loop, trying different bridges.
+        let mut default_attempt = false;
+        let mut config_bridges = Self::build_config(initial_bridges);
+        loop {
+            let (config, unused_bridges) = config_bridges.clone();
             let client = Self::build_client_bootstrap(config.clone());
             if let Some(c) = client {
-                TOR_STATE.client_config.write().replace((c, config));
-                thread::sleep(Duration::from_millis(5000));
-                TOR_STATE.client_launching.store(false, Ordering::Relaxed);
-            } else if TorConfig::get_bridge().is_some() {
-                // Launch without bridges if all attempts failed.
-                let config = Self::build_config(None);
-                let client = Self::build_client_bootstrap(config.clone());
-                if let Some(c) = client {
-                    TOR_STATE.client_config.write().replace((c, config));
-                    thread::sleep(Duration::from_millis(5000));
+                TOR_STATE.client_config.write().replace((c, config.clone()));
+                break;
+            } else {
+                if !unused_bridges.is_empty() {
+                    config_bridges = Self::build_config(Some(unused_bridges));
+                    continue;
+                }
+                // Cleanup state and cache.
+                fs::remove_dir_all(TorConfig::state_path()).unwrap_or_default();
+                fs::remove_dir_all(TorConfig::cache_path()).unwrap_or_default();
+                if !default_attempt {
+                    default_attempt = true;
+                    // Launch client with default Webtunnel bridges if failed.
+                    let add_bridges = TorBridge::DEFAULT_WEBTUNNEL_CONN_LINES.iter()
+                        .map(|b| TorBridge::Webtunnel(TorConfig::webtunnel_path(), b.to_string()))
+                        .collect::<Vec<_>>();
+                    config_bridges = Self::build_config(Some(add_bridges));
+                    continue;
+                } else if TorConfig::get_bridge().is_some() {
+                    // Cleanup state and cache.
+                    fs::remove_dir_all(TorConfig::state_path()).unwrap_or_default();
+                    fs::remove_dir_all(TorConfig::cache_path()).unwrap_or_default();
+                    // Launch without bridges if all attempts failed.
+                    let (config, _) = Self::build_config(None);
+                    let client = Self::build_client_bootstrap(config.clone());
+                    if let Some(c) = client {
+                        TOR_STATE.client_config.write().replace((c, config));
+                    }
+                    break;
                 }
             }
-        }
+        };
+        // Wait 5s after launch.
+        thread::sleep(Duration::from_millis(5000));
         TOR_STATE.client_launching.store(false, Ordering::Relaxed);
     }
 
@@ -362,8 +384,8 @@ impl Tor {
         // Save failed services if client was not created.
         if Self::client_config().is_none() {
             for id in service_ids {
-                let mut w_services = TOR_STATE.fail.write();
-                w_services.insert(id);
+                TOR_STATE.start.write().remove(&id);
+                TOR_STATE.fail.write().insert(id);
             }
             return;
         }
