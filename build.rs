@@ -2,6 +2,8 @@ use std::process::Command;
 use std::{env, fs};
 
 fn main() {
+    built::write_built_file().expect("Failed to acquire build-time information");
+
     let out_dir = env::var("OUT_DIR").unwrap();
     let tor_out_dir = format!("{}/tor", out_dir);
     let mut webtunnel_file = format!("{}/webtunnel", tor_out_dir);

@@ -23,11 +23,8 @@ pub fn main() {
 #[allow(dead_code)]
 #[cfg(not(target_os = "android"))]
 fn real_main() {
-    env_logger::builder()
-        .filter_level(log::LevelFilter::Info)
-        .parse_default_env()
-        .init();
-
+    // Initialize logger.
+    grim::logger::init_logger();
     // Handle file path argument passing.
     let args: Vec<_> = std::env::args().collect();
     let mut data = None;
@@ -40,50 +37,15 @@ fn real_main() {
         data = content
     }
 
-    // Setup callback on panic crash.
-    std::panic::set_hook(Box::new(|info| {
-        // Format error.
-        let backtrace = backtrace::Backtrace::new();
-        let time = grim::gui::views::View::format_time(chrono::Utc::now().timestamp());
-        let os = egui::os::OperatingSystem::from_target_os();
-        let ver = grim::VERSION;
-        let msg = panic_info_message(info);
-        let loc = if let Some(location) = info.location() {
-            format!("{}:{}:{}", location.file(), location.line(), location.column())
-        } else {
-            "no location found.".parse().unwrap()
-        };
-        let err = format!("{} - {:?} - v{}\n{}\n{}\n\n{:?}", time, os, ver, msg, loc, backtrace);
-        // Save backtrace to file.
-        let log = grim::Settings::crash_report_path();
-        if log.exists() {
-            use std::io::{Seek, SeekFrom, Write};
-            let mut file = std::fs::OpenOptions::new()
-                .write(true)
-                .append(true)
-                .open(log)
-                .unwrap();
-            if file.seek(SeekFrom::End(0)).is_ok() {
-                file.write(err.as_bytes()).unwrap_or_default();
-            }
-        } else {
-            std::fs::write(log, err.as_bytes()).unwrap_or_default();
-        }
-        // Print message error.
-        println!("{}\n{}", msg, loc);
-    }));
-
     // Start GUI.
-    let _ = std::panic::catch_unwind(|| {
-        if is_app_running(&data) {
-            return;
-        } else if let Some(data) = data {
-            grim::on_data(data);
-        }
-        let platform = grim::gui::platform::Desktop::new();
-        start_app_socket(platform.clone());
-        start_desktop_gui(platform);
-    });
+    if is_app_running(&data) {
+        return;
+    } else if let Some(data) = data {
+        grim::on_data(data);
+    }
+    let platform = grim::gui::platform::Desktop::new();
+    start_app_socket(platform.clone());
+    start_desktop_gui(platform);
 }
 
 /// Get panic message from crash payload.

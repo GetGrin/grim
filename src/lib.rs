@@ -19,8 +19,8 @@ rust_i18n::i18n!("locales");
 use eframe::NativeOptions;
 use egui::{Context, Stroke, Theme};
 use lazy_static::lazy_static;
-use std::sync::Arc;
 use parking_lot::RwLock;
+use std::sync::Arc;
 
 #[cfg(target_os = "android")]
 use winit::platform::android::activity::AndroidApp;
@@ -28,9 +28,9 @@ use winit::platform::android::activity::AndroidApp;
 pub use settings::AppConfig;
 pub use settings::Settings;
 
-use crate::gui::{Colors, App};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::View;
+use crate::gui::{App, Colors};
 use crate::node::Node;
 
 mod node;
@@ -39,6 +39,7 @@ mod tor;
 mod settings;
 mod http;
 pub mod gui;
+pub mod logger;
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -47,13 +48,8 @@ pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 #[cfg(target_os = "android")]
 #[no_mangle]
 fn android_main(app: AndroidApp) {
-    {
-        std::env::set_var("RUST_BACKTRACE", "full");
-        let log_config = android_logger::Config::default()
-            .with_max_level(log::LevelFilter::Info)
-            .with_tag("grim");
-        android_logger::init_once(log_config);
-    }
+    // Setup logger.
+    logger::init_logger();
 
     use gui::platform::Android;
     let platform = Android::new(app.clone());

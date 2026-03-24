@@ -52,6 +52,7 @@ egui-async = "0.3.4"
 rust-i18n = "3.1.5"
 
 ## other
+log4rs = "1.4.0"
 anyhow = "1.0.97"
 pin-project = "1.1.10"
 backtrace = "0.3.76"
@@ -137,3 +138,6 @@ jni = "0.21.1"
 android-activity = { version = "0.6.0", features = ["game-activity"] }
 winit = { version = "0.30.12", features = ["android-game-activity"] }
 eframe = { version = "0.33.2", default-features = false, features = ["glow", "android-game-activity"] }
+
+[build-dependencies]
+built = "0.8.0"

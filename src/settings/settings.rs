@@ -48,10 +48,10 @@ pub struct Settings {
 impl Settings {
     /// Main application directory name.
     pub const MAIN_DIR_NAME: &'static str = ".grim";
-    /// Crash report file name.
-    pub const CRASH_REPORT_FILE_NAME: &'static str = "crash.log";
     /// Application socket name.
     pub const SOCKET_NAME: &'static str = "grim.sock";
+    /// Log file name.
+    pub const LOG_FILE_NAME: &'static str = "grim.log";
 
     /// Initialize settings with app and node configs.
     fn init() -> Self {
@@ -148,6 +148,13 @@ impl Settings {
         path
     }
 
+    /// Get log file path.
+    pub fn log_path() -> String {
+        let mut log_path = Self::base_path(None);
+        log_path.push(Self::LOG_FILE_NAME);
+        log_path.to_str().unwrap().into()
+    }
+
     /// Get desktop application socket path.
     pub fn socket_path() -> PathBuf {
         let mut socket_path = Self::base_path(None);
@@ -162,16 +169,16 @@ impl Settings {
         path
     }
 
-    /// Get configuration file path from provided name and subdirectory if needed.
-    pub fn crash_report_path() -> PathBuf {
+    /// Get path of file created when application crashed.
+    pub fn crash_check_path() -> PathBuf {
         let mut path = Self::base_path(None);
-        path.push(Self::CRASH_REPORT_FILE_NAME);
+        path.push("crashed");
         path
     }
 
-    /// Delete crash report file.
-    pub fn delete_crash_report() {
-        let log = Self::crash_report_path();
+    /// Delete crash file.
+    pub fn delete_crash_check() {
+        let log = Self::crash_check_path();
         if log.exists() {
             let _ = fs::remove_file(log.clone());
         }
