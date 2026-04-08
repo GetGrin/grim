@@ -8,7 +8,7 @@
 
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
     <Product Id="*" Version="0.3.3" UpgradeCode="C19F9B41-CD13-4F0E-B27D-E0EF8CF1CE91" Language="1033" Name="Grim" Manufacturer="Ardocrat">
-        <Package Id="3E26CCB3-6293-47B8-A1AB-6C1CA335774F" InstallerVersion="300" Compressed="yes"/>
+        <Package Id="418F1310-31FE-4753-8622-6F5F7F70E385" InstallerVersion="300" Compressed="yes"/>
         <Media Id="1" Cabinet="grim.cab" EmbedCab="yes" />
 
         <MajorUpgrade AllowDowngrades = "yes"/>
