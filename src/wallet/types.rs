@@ -20,6 +20,7 @@ use grin_wallet_util::OnionV3Address;
 use serde_derive::{Deserialize, Serialize};
 use std::sync::Arc;
 
+use crate::tor::Tor;
 use crate::wallet::Wallet;
 
 /// Mnemonic phrase word.
@@ -377,12 +378,13 @@ impl WalletTx {
     }
 
     /// Check if possible to repeat transaction action.
-    pub fn can_repeat_action(&self) -> bool {
+    pub fn can_repeat_action(&self, wallet: &Wallet) -> bool {
         if let Some(a) = &self.action {
             self.action_error.is_some() && a != &WalletTxAction::Cancelling
         } else {
             // Can resend over Tor.
-            !self.data.confirmed && !self.sending_tor() && !self.broadcasting() &&
+            !self.data.confirmed && !self.sending_tor() &&
+                Tor::is_service_running(&wallet.identifier()) && !self.broadcasting() &&
                 self.receiver.is_some()
         }
     }

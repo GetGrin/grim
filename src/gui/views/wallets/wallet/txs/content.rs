@@ -242,7 +242,7 @@ impl WalletTransactionsContent {
                         });
                     }
                     // Draw button to repeat transaction action.
-                    if tx.can_repeat_action() || repeat {
+                    if tx.can_repeat_action(wallet) || repeat {
                         Self::tx_repeat_button_ui(ui, CornerRadius::default(), tx, wallet, repeat);
                     }
                 }

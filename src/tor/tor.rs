@@ -302,10 +302,8 @@ impl Tor {
                     return None;
                 }
             }
-            // Launch client if needed.
-            Self::launch();
             if Self::client_config().is_none() {
-                error!("Tor: can not launch Tor client");
+                error!("Tor: client not launched");
                 return None;
             }
             // Create http tor-powered client to post data.
@@ -580,7 +578,7 @@ impl Tor {
                     const MAX_ERRORS: i32 = 16;
                     let mut errors_count = 0;
                     // Wait 5 seconds.
-                    thread::sleep(Duration::from_millis(5000));
+                    tokio::time::sleep(Duration::from_millis(5000)).await;
                     loop {
                         if !Self::check_running(&service_id) {
                             break;

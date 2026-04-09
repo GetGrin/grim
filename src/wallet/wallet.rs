@@ -1735,9 +1735,13 @@ async fn handle_task(w: &Wallet, t: WalletTask) {
                 let tx = w.retrieve_tx_by_id(None, Some(s.id));
                 if let Some(tx) = tx {
                     if let Some(addr) = r {
-                        w.send_creating.store(false, Ordering::Relaxed);
-                        send_tor(tx, &s, addr).await;
-                        return;
+                        if Tor::is_service_running(&w.identifier()) {
+                            w.send_creating.store(false, Ordering::Relaxed);
+                            send_tor(tx, &s, addr).await;
+                            return;
+                        } else {
+                            w.on_task_result(Some(tx), &t);
+                        }
                     } else {
                         w.on_task_result(Some(tx), &t);
                     }

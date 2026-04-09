@@ -305,7 +305,7 @@ impl WalletTransactionContent {
                     });
                 }
                 // Draw button to repeat transaction action.
-                if tx.can_repeat_action() || repeat {
+                if tx.can_repeat_action(wallet) || repeat {
                     let r = if tx.can_finalize() || tx.can_cancel() {
                         CornerRadius::default()
                     } else {
