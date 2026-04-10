@@ -287,9 +287,14 @@ impl SendRequestContent {
             });
             columns[1].vertical_centered_justified(|ui| {
                 // Button to create Slatepack message request.
-                View::button(ui, t!("continue"), Colors::white_or_black(false), || {
-                    self.on_continue(wallet);
-                });
+                if self.max_calculating || wallet.fee_calculating() {
+                    ui.add_space(4.0);
+                   View::small_loading_spinner(ui);
+                } else {
+                    View::button(ui, t!("continue"), Colors::white_or_black(false), || {
+                        self.on_continue(wallet);
+                    });
+                }
             });
         });
         ui.add_space(6.0);
@@ -297,7 +302,7 @@ impl SendRequestContent {
 
     /// Callback when Continue button was pressed.
     fn on_continue(&mut self, wallet: &Wallet) {
-        if self.amount_edit.is_empty() || self.max_calculating || wallet.fee_calculating() {
+        if self.amount_edit.is_empty() {
             return;
         }
         // Check address to send over Tor if enabled.
