@@ -113,7 +113,7 @@ pub enum PullToRefreshState {
         /// `far_enough` is true if the user dragged far enough to trigger a refresh.
         far_enough: bool,
     },
-    /// The user dragged far enough to trigger a refresh and released the pointer.
+    /// The user dragged far enough to trigger a refresh.
     DoRefresh,
     /// The refresh is currently happening.
     Refreshing,
@@ -297,6 +297,12 @@ impl PullToRefresh {
                         }
                     } else {
                         state = PullToRefreshState::Idle;
+                    }
+                } else if let PullToRefreshState::Dragging {
+                    far_enough: enough, ..
+                } = state.clone() {
+                    if enough {
+                        state = PullToRefreshState::DoRefresh;
                     }
                 }
             } else {
