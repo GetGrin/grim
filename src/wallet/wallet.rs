@@ -52,6 +52,7 @@ use std::{fs, path, thread};
 use chrono::Utc;
 use log::error;
 use num_bigint::BigInt;
+use tor_config::deps::Itertools;
 use uuid::Uuid;
 
 /// Contains wallet instance, configuration and state, handles wallet commands.
@@ -648,8 +649,12 @@ impl Wallet {
         let w = lc.wallet_inst()?;
         let parent_key_id = w.parent_key_id();
         // Retrieve txs from database.
-        let txs_iter = w.tx_log_iter()
+        let txs: Vec<TxLogEntry> = w.tx_log_iter()
             .filter(|tx_entry| tx_entry.parent_key_id == parent_key_id)
+            // Filter transactions to not show txs without slate (usually unspent outputs).
+            .filter(|tx| {
+                tx.tx_slate_id.is_some() || (tx.tx_slate_id.is_none() && tx.payment_proof.is_some())
+            })
             .filter(|tx_entry| {
                 if tx_entry.tx_type == TxLogEntryType::TxSent
                     || tx_entry.tx_type == TxLogEntryType::TxSentCancelled {
@@ -661,20 +666,26 @@ impl Wallet {
                         - BigInt::from(tx_entry.amount_debited)
                         >= BigInt::from(1)
                 }
-            });
-        let mut return_txs: Vec<TxLogEntry> = txs_iter.collect();
-        // Sort txs by creation date and confirmation status reversing an order.
-        return_txs.sort_by_key(|tx| if !tx.confirmed && (tx.tx_type == TxLogEntryType::TxSent ||
-            tx.tx_type == TxLogEntryType::TxReceived) {
-            i64::MAX
-        } else {
-            tx.creation_ts.timestamp()
-        });
-        // return_txs.sort_by_key(|tx| tx.confirmed);
-        return_txs.reverse();
-        // Apply limit.
-        return_txs = return_txs.into_iter().take(limit as usize).collect();
-        Ok(return_txs)
+            })
+            // Sort txs by creation date and confirmation status.
+            .sorted_by_key(|tx| if !tx.confirmed && (tx.tx_type == TxLogEntryType::TxSent ||
+                tx.tx_type == TxLogEntryType::TxReceived) {
+                -i64::MAX
+            } else {
+                -tx.creation_ts.timestamp()
+            })
+            // Sort to show unconfirmed at top.
+            .sorted_by_key(|tx| {
+                tx.confirmed || tx.tx_type == TxLogEntryType::TxReceivedCancelled ||
+                    tx.tx_type == TxLogEntryType::TxSentCancelled ||
+                    tx.tx_type == TxLogEntryType::TxReverted
+            })
+            // Apply limit.
+            .take(limit as usize)
+            .collect();
+        // Reverse an order.
+        // txs.reverse();
+        Ok(txs)
     }
 
     /// Send a task to the wallet.
@@ -799,7 +810,7 @@ impl Wallet {
         let wallet = self.clone();
         thread::spawn(move || {
             // Wait when current sync will be finished.
-            if wallet.syncing() {
+            while wallet.syncing() {
                 thread::sleep(Duration::from_secs(1));
             }
             // Sync wallet data with new limit.
@@ -978,7 +989,10 @@ impl Wallet {
 							null
 						]
 			}).to_string();
-
+        // Wait Tor service to launch.
+        while Tor::is_service_starting(&self.identifier()) {
+            tokio::time::sleep(Duration::from_secs(1)).await;
+        }
         // Send request to receiver.
         let req_res = Tor::post(body, url).await;
         if req_res.is_none() {
@@ -1126,13 +1140,17 @@ impl Wallet {
     /// Update transaction action status.
     fn on_tx_action(&self, id: u32, action: Option<WalletTxAction>) {
         let mut w_data = self.data.write();
-        w_data.as_mut().unwrap().on_tx_action(id, action);
+        if let Some(data) = w_data.as_mut() {
+            data.on_tx_action(id, action);
+        }
     }
 
     /// Update transaction action error status.
     fn on_tx_error(&self, id: u32, err: Option<Error>) {
         let mut w_data = self.data.write();
-        w_data.as_mut().unwrap().on_tx_error(id, err);
+        if let Some(data) = w_data.as_mut() {
+            data.on_tx_error(id, err);
+        }
     }
 
     /// Save task result to consume later.
@@ -1735,7 +1753,8 @@ async fn handle_task(w: &Wallet, t: WalletTask) {
                 let tx = w.retrieve_tx_by_id(None, Some(s.id));
                 if let Some(tx) = tx {
                     if let Some(addr) = r {
-                        if Tor::is_service_running(&w.identifier()) {
+                        let id = w.identifier();
+                        if Tor::is_service_running(&id) || Tor::is_service_starting(&id) {
                             w.send_creating.store(false, Ordering::Relaxed);
                             send_tor(tx, &s, addr).await;
                             return;
@@ -1966,21 +1985,10 @@ fn update_txs(wallet: &Wallet, mut txs_limit: u32) -> Result<(), Error> {
         return Err(Error::GenericError("Wallet is not open".to_string()));
     }
 
-    // Filter transactions to not show txs without slate (usually unspent outputs).
-    let mut filter_txs = txs.iter().map(|v| v.clone()).filter(|tx| {
-        tx.tx_slate_id.is_some() || (tx.tx_slate_id.is_none() && tx.payment_proof.is_some())
-    }).collect::<Vec<TxLogEntry>>();
-
-    // Sort to show unconfirmed at top.
-    filter_txs.sort_by_key(|tx| {
-        tx.confirmed || tx.tx_type == TxLogEntryType::TxReceivedCancelled ||
-            tx.tx_type == TxLogEntryType::TxSentCancelled ||
-            tx.tx_type == TxLogEntryType::TxReverted
-    });
-
     // Update limit with actual length.
     let txs_size = txs.len() as u32;
-    let filter_size = filter_txs.len() as u32;
+    let filter_size = txs.len() as u32;
+
     if txs_size > filter_size && txs_limit >= filter_size {
         txs_limit = txs_limit - (txs_size - filter_size);
     }
@@ -1990,7 +1998,7 @@ fn update_txs(wallet: &Wallet, mut txs_limit: u32) -> Result<(), Error> {
     let data = wallet.get_data().unwrap();
     let data_txs = data.txs.unwrap_or(vec![]);
     let mut new_txs: Vec<WalletTx> = vec![];
-    for tx in &filter_txs {
+    for tx in &txs {
         let mut height: Option<u64> = None;
         let mut broadcasting_height: Option<u64> = None;
         let mut action: Option<WalletTxAction> = None;

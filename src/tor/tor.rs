@@ -656,7 +656,7 @@ impl Tor {
                             }
                         };
                         // Wait to check service again.
-                        thread::sleep(duration);
+                        tokio::time::sleep(duration).await;
                     }
                 });
         });
