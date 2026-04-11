@@ -709,7 +709,7 @@ lazy_static! {
 #[allow(dead_code)]
 #[cfg(target_os = "android")]
 #[allow(non_snake_case)]
-#[no_mangle]
+#[unsafe(no_mangle)]
 /// Callback from Java code to update display insets (cutouts).
 pub extern "C" fn Java_mw_gri_android_MainActivity_onDisplayInsets(
     _env: jni::JNIEnv,

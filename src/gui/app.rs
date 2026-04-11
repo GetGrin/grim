@@ -418,7 +418,7 @@ impl<Platform: PlatformCallbacks> eframe::App for App<Platform> {
 #[allow(dead_code)]
 #[cfg(target_os = "android")]
 #[allow(non_snake_case)]
-#[no_mangle]
+#[unsafe(no_mangle)]
 /// Handle Back key code event from Android.
 pub extern "C" fn Java_mw_gri_android_MainActivity_onBack(
     _env: jni::JNIEnv,

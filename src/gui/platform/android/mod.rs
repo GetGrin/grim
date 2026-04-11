@@ -203,7 +203,7 @@ lazy_static! {
 
 /// Callback from Java code with last entered character from soft keyboard.
 #[allow(non_snake_case)]
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn Java_mw_gri_android_MainActivity_onCameraImage(
     env: JNIEnv,
     _class: JObject,
@@ -218,7 +218,7 @@ pub extern "C" fn Java_mw_gri_android_MainActivity_onCameraImage(
 
 /// Callback from Java code with picked file path.
 #[allow(non_snake_case)]
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn Java_mw_gri_android_MainActivity_onFilePick(
     _env: JNIEnv,
     _class: JObject,

@@ -46,7 +46,7 @@ pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 /// Android platform entry point.
 #[allow(dead_code)]
 #[cfg(target_os = "android")]
-#[no_mangle]
+#[unsafe(no_mangle)]
 fn android_main(app: AndroidApp) {
     // Setup logger.
     logger::init_logger();
@@ -273,7 +273,7 @@ lazy_static! {
 #[allow(dead_code)]
 #[allow(non_snake_case)]
 #[cfg(target_os = "android")]
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn Java_mw_gri_android_MainActivity_onData(
     _env: jni::JNIEnv,
     _class: jni::objects::JObject,

@@ -710,7 +710,7 @@ pub fn start_stratum_mining_server(server: &Server, config: StratumServerConfig)
 #[allow(dead_code)]
 #[cfg(target_os = "android")]
 #[allow(non_snake_case)]
-#[no_mangle]
+#[unsafe(no_mangle)]
 /// Get sync status text for Android notification from [`NODE_STATE`] in Java string format.
 pub extern "C" fn Java_mw_gri_android_BackgroundService_getSyncStatusText(
     _env: jni::JNIEnv,
@@ -725,7 +725,7 @@ pub extern "C" fn Java_mw_gri_android_BackgroundService_getSyncStatusText(
 #[allow(dead_code)]
 #[cfg(target_os = "android")]
 #[allow(non_snake_case)]
-#[no_mangle]
+#[unsafe(no_mangle)]
 /// Get sync title for Android notification in Java string format.
 pub extern "C" fn Java_mw_gri_android_BackgroundService_getSyncTitle(
     _env: jni::JNIEnv,
@@ -739,7 +739,7 @@ pub extern "C" fn Java_mw_gri_android_BackgroundService_getSyncTitle(
 #[allow(dead_code)]
 #[cfg(target_os = "android")]
 #[allow(non_snake_case)]
-#[no_mangle]
+#[unsafe(no_mangle)]
 /// Get start text for Android notification in Java string format.
 pub extern "C" fn Java_mw_gri_android_BackgroundService_getStartText(
     _env: jni::JNIEnv,
@@ -753,7 +753,7 @@ pub extern "C" fn Java_mw_gri_android_BackgroundService_getStartText(
 #[allow(dead_code)]
 #[cfg(target_os = "android")]
 #[allow(non_snake_case)]
-#[no_mangle]
+#[unsafe(no_mangle)]
 /// Get stop text for Android notification in Java string format.
 pub extern "C" fn Java_mw_gri_android_BackgroundService_getStopText(
     _env: jni::JNIEnv,
@@ -767,7 +767,7 @@ pub extern "C" fn Java_mw_gri_android_BackgroundService_getStopText(
 #[allow(dead_code)]
 #[cfg(target_os = "android")]
 #[allow(non_snake_case)]
-#[no_mangle]
+#[unsafe(no_mangle)]
 /// Get exit text for Android notification in Java string format.
 pub extern "C" fn Java_mw_gri_android_BackgroundService_getExitText(
     _env: jni::JNIEnv,
@@ -781,7 +781,7 @@ pub extern "C" fn Java_mw_gri_android_BackgroundService_getExitText(
 #[allow(dead_code)]
 #[cfg(target_os = "android")]
 #[allow(non_snake_case)]
-#[no_mangle]
+#[unsafe(no_mangle)]
 /// Check if node launch is possible.
 pub extern "C" fn Java_mw_gri_android_BackgroundService_canStartNode(
     _env: jni::JNIEnv,
@@ -795,7 +795,7 @@ pub extern "C" fn Java_mw_gri_android_BackgroundService_canStartNode(
 #[allow(dead_code)]
 #[cfg(target_os = "android")]
 #[allow(non_snake_case)]
-#[no_mangle]
+#[unsafe(no_mangle)]
 /// Check if node stop is possible.
 pub extern "C" fn Java_mw_gri_android_BackgroundService_canStopNode(
     _env: jni::JNIEnv,
@@ -809,7 +809,7 @@ pub extern "C" fn Java_mw_gri_android_BackgroundService_canStopNode(
 #[allow(dead_code)]
 #[cfg(target_os = "android")]
 #[allow(non_snake_case)]
-#[no_mangle]
+#[unsafe(no_mangle)]
 /// Start node from Android Java code.
 pub extern "C" fn Java_mw_gri_android_NotificationActionsReceiver_startNode(
     _env: jni::JNIEnv,
@@ -822,7 +822,7 @@ pub extern "C" fn Java_mw_gri_android_NotificationActionsReceiver_startNode(
 #[allow(dead_code)]
 #[cfg(target_os = "android")]
 #[allow(non_snake_case)]
-#[no_mangle]
+#[unsafe(no_mangle)]
 /// Stop node from Android Java code.
 pub extern "C" fn Java_mw_gri_android_NotificationActionsReceiver_stopNode(
     _env: jni::JNIEnv,
@@ -835,7 +835,7 @@ pub extern "C" fn Java_mw_gri_android_NotificationActionsReceiver_stopNode(
 #[allow(dead_code)]
 #[cfg(target_os = "android")]
 #[allow(non_snake_case)]
-#[no_mangle]
+#[unsafe(no_mangle)]
 /// Stop node from Android Java code.
 pub extern "C" fn Java_mw_gri_android_NotificationActionsReceiver_stopNodeToExit(
     _env: jni::JNIEnv,
@@ -852,7 +852,7 @@ pub extern "C" fn Java_mw_gri_android_NotificationActionsReceiver_stopNodeToExit
 #[allow(dead_code)]
 #[cfg(target_os = "android")]
 #[allow(non_snake_case)]
-#[no_mangle]
+#[unsafe(no_mangle)]
 /// Check if app exit is needed after node stop to finish Android app at background.
 pub extern "C" fn Java_mw_gri_android_BackgroundService_exitAppAfterNodeStop(
     _env: jni::JNIEnv,
@@ -866,7 +866,7 @@ pub extern "C" fn Java_mw_gri_android_BackgroundService_exitAppAfterNodeStop(
 #[allow(dead_code)]
 #[cfg(target_os = "android")]
 #[allow(non_snake_case)]
-#[no_mangle]
+#[unsafe(no_mangle)]
 /// Handle unexpected application termination on Android (removal from recent apps).
 pub extern "C" fn Java_mw_gri_android_MainActivity_onTermination(
     _env: jni::JNIEnv,

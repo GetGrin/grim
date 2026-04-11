@@ -404,7 +404,7 @@ lazy_static! {
 #[allow(dead_code)]
 #[cfg(target_os = "android")]
 #[allow(non_snake_case)]
-#[no_mangle]
+#[unsafe(no_mangle)]
 /// Callback from Java code with last entered character from soft keyboard.
 pub extern "C" fn Java_mw_gri_android_MainActivity_onTextInput(
     _env: jni::JNIEnv,
@@ -429,7 +429,7 @@ pub extern "C" fn Java_mw_gri_android_MainActivity_onTextInput(
 #[allow(dead_code)]
 #[cfg(target_os = "android")]
 #[allow(non_snake_case)]
-#[no_mangle]
+#[unsafe(no_mangle)]
 /// Callback from Java code when Clear key was pressed at soft keyboard.
 pub extern "C" fn Java_mw_gri_android_MainActivity_onClearInput(
     _env: jni::JNIEnv,
@@ -442,7 +442,7 @@ pub extern "C" fn Java_mw_gri_android_MainActivity_onClearInput(
 #[allow(dead_code)]
 #[cfg(target_os = "android")]
 #[allow(non_snake_case)]
-#[no_mangle]
+#[unsafe(no_mangle)]
 /// Callback from Java code when Enter key was pressed at soft keyboard.
 pub extern "C" fn Java_mw_gri_android_MainActivity_onEnterInput(
     _env: jni::JNIEnv,
