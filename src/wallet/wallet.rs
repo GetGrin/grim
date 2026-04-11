@@ -64,7 +64,7 @@ pub struct Wallet {
     instance: Arc<RwLock<Option<WalletInstance>>>,
     /// Connection of current wallet instance.
     connection: Arc<RwLock<ConnectionMethod>>,
-    /// Wallet secret key for transport service.
+    /// Keychain mask for API calls.
     keychain_mask: Arc<RwLock<Option<SecretKey>>>,
 
     /// Wallet Slatepack address to receive txs at transport.
@@ -533,13 +533,16 @@ impl Wallet {
         if !self.is_open() || !has_instance {
             return;
         }
-        self.closing.store(true, Ordering::Relaxed);
-
+        // Stop repairing.
+        if self.is_repairing() {
+            self.repair_needed.store(false, Ordering::Relaxed);
+        }
         // Close wallet at separate thread.
         let wallet_close = self.clone();
         let service_id = wallet_close.identifier();
         let conn = wallet_close.connection.clone();
         thread::spawn(move || {
+            wallet_close.closing.store(true, Ordering::Relaxed);
             // Wait common operations to finish.
             while wallet_close.message_opening() || wallet_close.send_creating() ||
                 wallet_close.invoice_creating() {
@@ -2191,10 +2194,10 @@ fn repair_wallet(wallet: &Wallet) {
         }
     });
 
-    // Start wallet scanning.
     let r_inst = wallet.instance.as_ref().read();
     let instance = r_inst.clone().unwrap();
     let api = Owner::new(instance, Some(info_tx));
+    // Start wallet scanning.
     match api.scan(wallet.keychain_mask().as_ref(), Some(1), false) {
         Ok(()) => {
             // Set sync error if scanning was not complete and wallet is open.

@@ -87,7 +87,7 @@ const DELETE_TX_CONFIRMATION_MODAL: &'static str = "delete_tx_conf_modal";
 
 impl WalletTransactionsContent {
     /// Height of transaction list item.
-    pub const TX_ITEM_HEIGHT: f32 = 73.0;
+    pub const TX_ITEM_HEIGHT: f32 = 75.0;
 
     /// Create new content instance with opening tx info.
     pub fn new(tx: Option<WalletTx>) -> Self {

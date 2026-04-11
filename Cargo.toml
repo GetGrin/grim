@@ -6,7 +6,7 @@ description = "Cross-platform GUI for Grin with focus on usability and availabil
 license = "Apache-2.0"
 repository = "https://code.gri.mw/GUI/grim"
 keywords = [ "crypto", "grin", "mimblewimble" ]
-edition = "2021"
+edition = "2024"
 build = "build.rs"
 
 [[bin]]
