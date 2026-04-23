@@ -59,12 +59,12 @@ impl TorBridge {
 
     /// Default webtunnel protocol connection line.
     pub const DEFAULT_WEBTUNNEL_CONN_LINE: &'static str = "webtunnel [2001:db8:beb:5884:ffcc:bfe3:2858:b06b]:443 1E242C749707B4A68A269F0D31311CE36CDFEC28 url=https://wt.gri.mw/74Fm0lKUWWMMjZpKf6iSC0UH";
-    pub const ADDITIONAL_WEBTUNNEL_CONN_LINE_1: &'static str = "webtunnel [2001:db8:1640:379c:ad30:db5f:bff5:37d0]:443 AF8F7548C886D6F53A652411DBB71D089517085A url=https://app05.oneclickhost.eu/alpfZGTB9FckCgOkOOA0OHlh";
-    pub const ADDITIONAL_WEBTUNNEL_CONN_LINE_2: &'static str = "webtunnel [2001:db8:eedb:cae7:a345:4f72:f9cc:5de0]:443 B3C81E7A0CA474270DAA4A2C8633E1CA8935C37D url=https://wordpress.far-east-investment.ru/sORes7268CEUSRD7hAWvJU5A";
-    pub const ADDITIONAL_WEBTUNNEL_CONN_LINE_3: &'static str = "webtunnel [2001:db8:945c:e0b9:7e4c:c974:ff00:d4c5]:443 91937F3EFB3BE5169788AC7C8BF07460B7E306DB url=https://kabel.entreri.de/YXbp1dNrJeOF8giAFFYWxvmf";
-    pub const ADDITIONAL_WEBTUNNEL_CONN_LINE_4: &'static str = "webtunnel [2001:db8:4767:7aa2:df21:1b2b:d7f9:caee]:443 CD193CF0D0C29551928C01FCB28D1200D9F27CFA url=https://occurrence.pics/68SzSlQCRgnfSo32eLyjC1V3";
-    pub const ADDITIONAL_WEBTUNNEL_CONN_LINE_5: &'static str = "webtunnel [2001:db8:ce90:3593:272e:4975:a031:55b]:443 12382A2F3912AD1983A97C8709CBAE47ADB60BE3 url=https://miranda.today/LWwxIXDHCyyScn7oDauPMTmX";
-    pub const ADDITIONAL_WEBTUNNEL_CONN_LINE_6: &'static str = "webtunnel [2001:db8:a12b:ff8:8a1a:a05b:5f21:2ccc]:443 F2A9C5AEE0A420EB9D55F9497B3C0FA243A2A770 url=https://bridge.lovecloud.me/wss-wc3p0euqrlne98t9";
+    pub const ADDITIONAL_WEBTUNNEL_CONN_LINE_1: &'static str = "webtunnel [2001:db8:289b:84cd:4be3:77f1:1cdd:9cb1]:443 D71C8E9C2180D2F35DEBF4A39BFCA6972F076D1C sni-imitation=yandex.ru,google.com,dzen.ru,vk.com,mail.ru,ozon.ru,ya.ru,www.wildberries.ru,rutube.ru,www.avito.ru,ok.ru,vkvideo.ru url=https://streaming.the-forgotten-tales.com/gz9X1VBgl0r1Xfx3dHdNl5Tl";
+    pub const ADDITIONAL_WEBTUNNEL_CONN_LINE_2: &'static str = "webtunnel [2001:db8:dee9:5852:b4dc:7e14:21bd:c99b]:443 8ADF1761FA735FDD763781BB94A16EAB64A1CF6C url=https://app01.oneclickhost.eu/WJSgXJRlNnMStkuLZygVJ7lo";
+    pub const ADDITIONAL_WEBTUNNEL_CONN_LINE_3: &'static str = "webtunnel [2001:db8:eedb:cae7:a345:4f72:f9cc:5de0]:443 B3C81E7A0CA474270DAA4A2C8633E1CA8935C37D url=https://wordpress.far-east-investment.ru/sORes7268CEUSRD7hAWvJU5A";
+    pub const ADDITIONAL_WEBTUNNEL_CONN_LINE_4: &'static str = "webtunnel [2001:db8:945c:e0b9:7e4c:c974:ff00:d4c5]:443 91937F3EFB3BE5169788AC7C8BF07460B7E306DB url=https://kabel.entreri.de/YXbp1dNrJeOF8giAFFYWxvmf";
+    pub const ADDITIONAL_WEBTUNNEL_CONN_LINE_5: &'static str = "webtunnel [2001:db8:7d4:9e13:8c7a:7e3:1f62:d790]:443 B7E362F9079D0C908F204581EB019034023BB224 url=https://balades-et-gouts.fr/xt70R9oyJt3B1xj89UCWPdLt";
+    pub const ADDITIONAL_WEBTUNNEL_CONN_LINE_6: &'static str = "webtunnel [2001:db8:8c88:1b17:d7ae:cb68:f28e:e31c]:443 C115DAC2FE991CA25DDD43D7D4D398FEA9AA4C01 url=https://foglab.net/t9crLwo4LzFDWHdwcGf9gFrk";
     pub const ADDITIONAL_WEBTUNNEL_CONN_LINE_7: &'static str = "webtunnel [2001:db8:8ed6:e6c9:5fc9:9f20:a373:2374]:443 1636A2EFFBAA4B162F5FF461A1663EB55C41AE11 url=https://hanoi.delivery/roQFPLtlspWT6yIKeXD6lEci";
 
     pub const DEFAULT_WEBTUNNEL_CONN_LINES: [&'static str; 8] = [
