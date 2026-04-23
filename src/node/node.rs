@@ -93,11 +93,8 @@ impl Node {
         "main.gri.mw",
         "grincoin.org",
         "mainnet.grinffindor.org",
-        "mainnet.seed.grin.lesceller.com",
-        "grinseed.revcore.net",
+        "main-seed.grin.money",
         "mainnet-seed.grinnode.live",
-        "mainnet.grin.punksec.de",
-        "grinnode.30-r.com"
     ];
 
     /// Default Testnet DNS Seeds
@@ -105,10 +102,7 @@ impl Node {
         "test.gri.mw",
         "testnet.grincoin.org",
         "testnet.grinffindor.org",
-        "floonet.seed.grin.lesceller.com",
-        "grintestseed.revcore.net",
-        "testnet.grin.punksec.de",
-        "testnet.grinnode.30-r.com"
+        "test-seed.grin.money"
     ];
 
     /// Stop the [`Server`] and setup exit flag after if needed.
