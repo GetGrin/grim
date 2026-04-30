@@ -21,6 +21,7 @@ use crate::gui::views::network::ConnectionsContent;
 use crate::gui::views::types::{ContentContainer, ModalPosition};
 use crate::gui::views::{Modal, View};
 use crate::gui::Colors;
+use crate::node::Node;
 use crate::wallet::types::ConnectionMethod;
 use crate::wallet::{ConnectionsConfig, ExternalConnection};
 
@@ -35,8 +36,17 @@ pub struct ConnectionSettings {
 
 impl Default for ConnectionSettings {
     fn default() -> Self {
+        let method = {
+            let ext_conn_list = ConnectionsConfig::ext_conn_list();
+            if Node::is_running() || Node::is_starting() || ext_conn_list.is_empty() {
+                ConnectionMethod::Integrated
+            } else {
+                let ext_conn = ext_conn_list.get(0).unwrap();
+                ConnectionMethod::External(ext_conn.id, ext_conn.url.clone())
+            }
+        };
         Self {
-            method: ConnectionMethod::Integrated,
+            method,
             ext_conn_modal: ExternalConnectionModal::new(None),
         }
     }
