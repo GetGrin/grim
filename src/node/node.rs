@@ -89,20 +89,20 @@ impl Node {
     pub const STATS_UPDATE_DELAY: Duration = Duration::from_millis(1000);
 
     /// Default Mainnet DNS Seeds
-    pub const MAINNET_DNS_SEEDS: &'static[&'static str] = &[
-        "main.gri.mw",
-        "grincoin.org",
-        "mainnet.grinffindor.org",
-        "main-seed.grin.money",
-        "mainnet-seed.grinnode.live",
+    pub const MAINNET_DNS_SEEDS: &[&str] = &[
+        "mainnet-seed.grinnode.live",  // info@grinnode.live
+        "grincoin.org",                // xmpp:aglkm@conversations.im
+        "main.gri.mw",                 // admin@gri.mw
+        "mainnet.grinffindor.org",     // support@grinffindor.org
+        "main-seed.grin.money",        // support@grinily.com
     ];
 
     /// Default Testnet DNS Seeds
-    pub const TESTNET_DNS_SEEDS: &'static[&'static str] = &[
-        "test.gri.mw",
-        "testnet.grincoin.org",
-        "testnet.grinffindor.org",
-        "test-seed.grin.money"
+    pub const TESTNET_DNS_SEEDS: &[&str] = &[
+        "testnet.grincoin.org",    // xmpp:aglkm@conversations.im
+        "test.gri.mw",             // admin@gri.mw
+        "testnet.grinffindor.org", // support@grinffindor.org
+        "test-seed.grin.money",    // support@grinily.com
     ];
 
     /// Stop the [`Server`] and setup exit flag after if needed.
@@ -579,20 +579,25 @@ fn start_node_server() -> Result<Server, Error>  {
     PeersConfig::load_to_server_config(&mut config);
     let mut server_config = config.server.clone();
 
-    // Setup Mainnet DNSSeed
-    if server_config.chain_type == ChainTypes::Mainnet && NodeConfig::is_default_seeding_type() {
+    // DNS seed setup.
+    if NodeConfig::is_default_seeding_type() {
         server_config.p2p_config.seeding_type = Seeding::List;
         server_config.p2p_config.seeds = Some(PeerAddrs::default());
-        for seed in Node::MAINNET_DNS_SEEDS {
-            let addr = format!("{}:3414", seed);
+        let is_mainnet = server_config.chain_type == ChainTypes::Mainnet;
+        let seed_list = if is_mainnet {
+            Node::MAINNET_DNS_SEEDS
+        } else {
+            Node::TESTNET_DNS_SEEDS
+        };
+        let seed_port = if is_mainnet {
+            3414
+        } else {
+            13414
+        };
+        for seed_addr in seed_list {
+            let addr = format!("{}:{}", seed_addr, seed_port);
             if let Some(p) = PeersConfig::peer_to_addr(addr) {
-                let mut seeds = server_config
-                    .p2p_config
-                    .seeds
-                    .clone()
-                    .unwrap_or(PeerAddrs::default());
-                seeds.peers.insert(seeds.peers.len(), p);
-                server_config.p2p_config.seeds = Some(seeds);
+                server_config.p2p_config.seeds.as_mut().unwrap().peers.push(p)
             }
         }
     }
