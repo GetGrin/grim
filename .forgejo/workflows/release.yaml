@@ -10,7 +10,7 @@ on:
 
 jobs:
   version:
-    runs-on: ubuntu
+    runs-on: debian-release
     outputs:
       v: ${{ steps.version.outputs.v }}
       pre: ${{ steps.version.outputs.pre }}
@@ -370,7 +370,7 @@ jobs:
 
   release:
     if: ${{ forgejo.ref_type == 'branch' || needs.version.outputs.exists == 'false' }}
-    runs-on: ubuntu
+    runs-on: debian-release
     needs: [version, android_release, linux, linux_x86, macos, windows]
     steps:
       - name: Download All Artifacts
