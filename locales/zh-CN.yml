@@ -300,8 +300,8 @@ network_settings:
   ban_window_desc: 禁止的决定是由节点 根据从网络对点收到的数据的正确性做出的.
   max_inbound_count: '入站网络对点连接的最大数量:'
   max_outbound_count: '最大出站网络对点连接数:'
-  reset_peers_desc: 重置网络对点数据。仅当查找网络对点出现问题时，才请谨慎使用它.
-  reset_peers: 重置网络对点
+  reset_data_desc: 重置节点数据。只有在出现同步问题时才需谨慎使用.
+  reset_data: 重置数据
 modal:
   cancel: 取消
   save: 保存

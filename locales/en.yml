@@ -300,8 +300,8 @@ network_settings:
   ban_window_desc: The decision to ban is made by node, based on the correctness of the data received from the peer.
   max_inbound_count: 'Maximum number of inbound peer connections:'
   max_outbound_count: 'Maximum number of outbound peer connections:'
-  reset_peers_desc: Reset peers data. Use it with a caution only if there are problems with finding peers.
-  reset_peers: Reset peers
+  reset_data_desc: Reset the node data. Use it with a caution only if there are problems with synchronization.
+  reset_data: Reset data
 modal:
   cancel: Cancel
   save: Save

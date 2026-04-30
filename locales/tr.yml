@@ -300,8 +300,8 @@ network_settings:
   ban_window_desc: Banlama karari, peerden alinan verilerin dogruluguna bagli olarak Node tarafindan verilir.
   max_inbound_count: 'Maksimum gelen Peer baglanti sayisi:'
   max_outbound_count: 'Maksimum giden Peer baglanti sayisi:'
-  reset_peers_desc: Peers verilerini sifirlayin. Yalnizca Peers bulma konusunda sorun yasiyorsaniz dikkatli kullanin.
-  reset_peers: Peers Resetle
+  reset_data_desc: Node verisini sifirlama. Sadece senkronizasyonda sorun varsa dikkatli kullanin.
+  reset_data: Verileri sifirlama
 modal:
   cancel: Iptal
   save: Kaydet

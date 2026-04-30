@@ -28,7 +28,7 @@ use grin_p2p::msg::PeerAddrs;
 use grin_p2p::Seeding;
 use grin_servers::{Server, ServerStats, StratumServerConfig, StratumStats};
 use grin_servers::common::types::Error;
-
+use log::error;
 use crate::node::{NodeConfig, NodeError, PeersConfig};
 use crate::node::stratum::{StratumStopState, StratumServer};
 
@@ -57,8 +57,8 @@ pub struct Node {
     stop_needed: AtomicBool,
     /// Flag to check if app exit is needed after [`Server`] stop.
     exit_after_stop: AtomicBool,
-    /// Flag to reset peers data and restart the [`Server`].
-    reset_peers: AtomicBool,
+    /// Flag to reset data and restart the [`Server`].
+    reset_data: AtomicBool,
     /// Flag to change data directory and restart the [`Server`].
     change_data_dir: AtomicBool,
 
@@ -78,7 +78,7 @@ impl Default for Node {
             exit_after_stop: AtomicBool::new(false),
             start_stratum_needed: AtomicBool::new(false),
             error: Arc::new(RwLock::new(None)),
-            reset_peers: AtomicBool::new(false),
+            reset_data: AtomicBool::new(false),
             change_data_dir: AtomicBool::new(false),
         }
     }
@@ -169,12 +169,12 @@ impl Node {
 
     /// Check if [`Node`] is restarting.
     pub fn is_restarting() -> bool {
-        NODE_STATE.restart_needed.load(Ordering::Relaxed) || Self::reset_peers_needed()
+        NODE_STATE.restart_needed.load(Ordering::Relaxed) || Self::reset_data_needed()
     }
 
     /// Check if reset of [`Server`] peers is needed.
-    fn reset_peers_needed() -> bool {
-        NODE_STATE.reset_peers.load(Ordering::Relaxed)
+    fn reset_data_needed() -> bool {
+        NODE_STATE.reset_data.load(Ordering::Relaxed)
     }
 
     /// Get node [`Server`] statistics.
@@ -263,9 +263,9 @@ impl Node {
                             server.stop();
                             // Wait server after stop.
                             thread::sleep(Duration::from_millis(5000));
-                            // Reset peers data if requested.
-                            if Self::reset_peers_needed() {
-                                Node::reset_peers(true);
+                            // Reset data if requested.
+                            if Self::reset_data_needed() {
+                                Node::reset_data(true);
                             }
                             // Reset stratum stats.
                             {
@@ -279,7 +279,7 @@ impl Node {
                                     NODE_STATE.restart_needed.store(false, Ordering::Relaxed);
                                 }
                                 Err(e) => {
-                                    // Set an error.
+                                    error!("Error starting node: {:?}", e);
                                     {
                                         let mut w_err = NODE_STATE.error.write();
                                         *w_err = Some(e);
@@ -333,7 +333,7 @@ impl Node {
                     }
                 }
                 Err(e) => {
-                    // Set an error.
+                    error!("Error starting node: {:?}", e);
                     {
                         let mut w_err = NODE_STATE.error.write();
                         *w_err = Some(e);
@@ -428,24 +428,20 @@ impl Node {
         }
     }
 
-    /// Reset [`Server`] peers data.
-    pub fn reset_peers(force: bool) {
+    /// Reset [`Server`] data.
+    pub fn reset_data(force: bool) {
         if force || !Node::is_running() {
-            // Get saved server config.
             let config = NodeConfig::node_server_config();
             let server_config = config.server.clone();
-            // Remove peers folder.
-            let mut peers_dir = PathBuf::from(&server_config.db_root);
-            peers_dir.push("peer");
-            if peers_dir.exists() {
-                match fs::remove_dir_all(peers_dir) {
-                    Ok(_) => {}
-                    Err(_) => {}
-                }
+            // Remove data folder.
+            let data_dir = PathBuf::from(&server_config.db_root);
+            match fs::remove_dir_all(data_dir) {
+                Ok(_) => {}
+                Err(_) => {}
             }
-            NODE_STATE.reset_peers.store(false, Ordering::Relaxed);
+            NODE_STATE.reset_data.store(false, Ordering::Relaxed);
         } else {
-            NODE_STATE.reset_peers.store(true, Ordering::Relaxed);
+            NODE_STATE.reset_data.store(true, Ordering::Relaxed);
         }
     }
 

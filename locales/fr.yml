@@ -300,8 +300,8 @@ network_settings:
   ban_window_desc: La décision de bannir est prise par le noeud, en fonction de la validité des données reçues du pair.
   max_inbound_count: 'Nombre maximum de connexions de pairs entrants :'
   max_outbound_count: 'Nombre maximum de connexions de pairs sortants :'
-  reset_peers_desc: Réinitialiser les données des pairs. Utilisez-le avec précaution uniquement en cas de problèmes pour trouver des pairs.
-  reset_peers: Réinitialiser les pairs
+  reset_data_desc: Réinitialisez les données du noeud. Utilisez-le avec prudence uniquement en cas de problème de synchronisation.
+  reset_data: Réinitialisation des données
 modal:
   cancel: Annuler
   save: Sauvegarder

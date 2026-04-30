@@ -65,9 +65,6 @@ pub struct P2PSetup {
 
     /// Maximum number of outbound peer connections.
     max_outbound_count: String,
-
-    /// Flag to check if reset of peers was called.
-    peers_reset: bool,
 }
 
 /// Identifier for port value [`Modal`].
@@ -111,7 +108,6 @@ impl Default for P2PSetup {
             ban_window_edit: NodeConfig::get_p2p_ban_window(),
             max_inbound_count: NodeConfig::get_max_inbound_peers(),
             max_outbound_count: NodeConfig::get_max_outbound_peers(),
-            peers_reset: false,
         }
     }
 }
@@ -216,15 +212,6 @@ impl ContentContainer for P2PSetup {
 
             // Show maximum outbound peers value setup.
             self.max_outbound_ui(ui);
-
-            if !Node::is_restarting() && !self.peers_reset {
-                ui.add_space(6.0);
-                View::horizontal_line(ui, Colors::item_stroke());
-                ui.add_space(6.0);
-
-                // Show peers data reset content.
-                self.reset_peers_ui(ui);
-            }
         });
     }
 }
@@ -752,23 +739,6 @@ impl P2PSetup {
             });
             ui.add_space(6.0);
         });
-    }
-
-    /// Draw content to reset peers data.
-    fn reset_peers_ui(&mut self, ui: &mut egui::Ui) {
-        ui.add_space(4.0);
-        View::colored_text_button(ui,
-                                  format!("{} {}", TRASH, t!("network_settings.reset_peers")),
-                                  Colors::red(),
-                                  Colors::white_or_black(false), || {
-                Node::reset_peers(false);
-                self.peers_reset = true;
-            });
-        ui.add_space(6.0);
-        ui.label(RichText::new(t!("network_settings.reset_peers_desc"))
-            .size(16.0)
-            .color(Colors::inactive_text())
-        );
     }
 }
 

@@ -16,7 +16,7 @@ use egui::{RichText, ScrollArea};
 use egui::scroll_area::ScrollBarVisibility;
 
 use crate::gui::Colors;
-use crate::gui::icons::ARROW_COUNTER_CLOCKWISE;
+use crate::gui::icons::{ARROW_COUNTER_CLOCKWISE, TRASH};
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::{Modal, Content, View};
 use crate::gui::views::network::setup::{DandelionSetup, NodeSetup, P2PSetup, PoolSetup, StratumSetup};
@@ -36,6 +36,9 @@ pub struct NetworkSettings {
     pool: PoolSetup,
     /// Dandelion server setup content.
     dandelion: DandelionSetup,
+
+    /// Flag to check if reset of data was called.
+    data_reset: bool,
 }
 
 /// Identifier for settings reset confirmation [`Modal`].
@@ -49,6 +52,7 @@ impl Default for NetworkSettings {
             stratum: StratumSetup::default(),
             pool: PoolSetup::default(),
             dandelion: DandelionSetup::default(),
+            data_reset: false,
         }
     }
 }
@@ -109,6 +113,15 @@ impl ContentContainer for NetworkSettings {
 
                         // Draw Dandelion server setup section.
                         self.dandelion.ui(ui, cb);
+
+                        // Draw content to reset the data.
+                        if !Node::is_restarting() && !self.data_reset {
+                            ui.add_space(4.0);
+                            View::horizontal_line(ui, Colors::item_stroke());
+                            ui.add_space(6.0);
+
+                            self.reset_data_ui(ui);
+                        }
 
                         ui.add_space(6.0);
                         View::horizontal_line(ui, Colors::stroke());
@@ -179,7 +192,7 @@ impl NetworkSettings {
         }).collect::<Vec<_>>();
 
         if saved_ip != selected_ip {
-            (on_change)(&selected_ip.to_string());
+            on_change(&selected_ip.to_string());
         }
     }
 
@@ -193,37 +206,53 @@ impl NetworkSettings {
             ui.add_space(6.0);
         });
     }
+
+    /// Draw content to reset data.
+    fn reset_data_ui(&mut self, ui: &mut egui::Ui) {
+        ui.add_space(4.0);
+        View::colored_text_button(ui,
+                                  format!("{} {}", TRASH, t!("network_settings.reset_data")),
+                                  Colors::red(),
+                                  Colors::white_or_black(false), || {
+                Node::reset_data(false);
+                self.data_reset = true;
+            });
+        ui.add_space(6.0);
+        ui.label(RichText::new(t!("network_settings.reset_data_desc"))
+            .size(16.0)
+            .color(Colors::inactive_text())
+        );
+        ui.add_space(4.0);
+    }
+
 }
 
 /// Draw button to reset integrated node settings to default values.
 fn reset_settings_ui(ui: &mut egui::Ui) {
-    ui.vertical_centered(|ui| {
-        ui.label(RichText::new(t!("network_settings.reset_settings_desc"))
-            .size(16.0)
-            .color(Colors::text(false)));
-        ui.add_space(8.0);
-        let button_text = format!("{} {}",
-                                  ARROW_COUNTER_CLOCKWISE,
-                                  t!("network_settings.reset_settings"));
-        View::action_button(ui, button_text, || {
-            // Show modal to confirm settings reset.
-            Modal::new(RESET_SETTINGS_CONFIRMATION_MODAL)
-                .position(ModalPosition::Center)
-                .title(t!("confirmation"))
-                .show();
-        });
-
-        // Show reminder to restart enabled node.
-        if Node::is_running() {
-            ui.add_space(12.0);
-            ui.label(RichText::new(t!("network_settings.restart_node_required"))
-                .size(16.0)
-                .color(Colors::gray())
-            );
-        }
-        ui.add_space(12.0);
+    ui.label(RichText::new(t!("network_settings.reset_settings_desc"))
+        .size(16.0)
+        .color(Colors::text(false)));
+    ui.add_space(8.0);
+    let button_text = format!("{} {}",
+                              ARROW_COUNTER_CLOCKWISE,
+                              t!("network_settings.reset_settings"));
+    View::action_button(ui, button_text, || {
+        // Show modal to confirm settings reset.
+        Modal::new(RESET_SETTINGS_CONFIRMATION_MODAL)
+            .position(ModalPosition::Center)
+            .title(t!("confirmation"))
+            .show();
     });
 
+    // Show reminder to restart enabled node.
+    if Node::is_running() {
+        ui.add_space(12.0);
+        ui.label(RichText::new(t!("network_settings.restart_node_required"))
+            .size(16.0)
+            .color(Colors::gray())
+        );
+    }
+    ui.add_space(10.0);
 }
 
 /// Confirmation to reset settings to default values.
