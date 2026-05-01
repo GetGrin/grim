@@ -671,12 +671,7 @@ impl Wallet {
                 }
             })
             // Sort txs by creation date and confirmation status.
-            .sorted_by_key(|tx| if !tx.confirmed && (tx.tx_type == TxLogEntryType::TxSent ||
-                tx.tx_type == TxLogEntryType::TxReceived) {
-                -i64::MAX
-            } else {
-                -tx.creation_ts.timestamp()
-            })
+            .sorted_by_key(|tx| -tx.creation_ts.timestamp())
             // Sort to show unconfirmed at top.
             .sorted_by_key(|tx| {
                 tx.confirmed || tx.tx_type == TxLogEntryType::TxReceivedCancelled ||
