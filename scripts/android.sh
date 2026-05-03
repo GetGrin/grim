@@ -41,13 +41,10 @@ function build_lib() {
   sed -i -e 's/"cdylib","rlib"]/"rlib"]/g' Cargo.toml
   sed -i -e 's/"rlib"]/"cdylib","rlib"]/g' Cargo.toml
 
-  # Fix for https://stackoverflow.com/questions/57193895/error-use-of-undeclared-identifier-pthread-mutex-robust-cargo-build-liblmdb-s
-  export CPPFLAGS="-DMDB_USE_ROBUST=0" && export CFLAGS="-DMDB_USE_ROBUST=0"
   cargo ndk -t "${arch}" -o android/app/src/main/jniLibs build --profile release-apk
   if [ $? -ne 0 ]; then
     success=0
   fi
-  unset CPPFLAGS && unset CFLAGS
 
   sed -i -e 's/"cdylib","rlib"]/"rlib"]/g' Cargo.toml
   rm -f Cargo.toml-e
