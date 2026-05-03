@@ -58,36 +58,41 @@ pub struct WalletContent {
 const INVOICE_MODAL_ID: &'static str = "invoice_request_modal";
 /// Identifier for sending request creation [`Modal`].
 const SEND_MODAL_ID: &'static str = "send_request_modal";
-/// Identifier for Slatepack message input [`Modal`].
-pub const MESSAGE_MODAL_ID: &'static str = "input_message_modal";
 
 impl WalletContentContainer for WalletContent {
     fn modal_ids(&self) -> Vec<&'static str> {
         vec![
             INVOICE_MODAL_ID,
             SEND_MODAL_ID,
-            MESSAGE_MODAL_ID
+            MessageInputContent::MODAL_ID
         ]
     }
 
     fn modal_ui(&mut self, ui: &mut egui::Ui, w: &Wallet, m: &Modal, cb: &dyn PlatformCallbacks) {
         match m.id {
             INVOICE_MODAL_ID => {
-                if let Some(c) = self.invoice_content.as_mut() {
-                    c.modal_ui(ui, w, m, cb);
+                if self.invoice_content.is_none() {
+                    self.invoice_content = Some(InvoiceRequestContent::default());
                 }
+                self.invoice_content.as_mut().unwrap().ui(ui, w, m, cb);
             }
             SEND_MODAL_ID => {
-                if let Some(c) = self.send_content.as_mut() {
-                    c.modal_ui(ui, w, m, cb);
+                if self.send_content.is_none() {
+                    self.send_content = Some(SendRequestContent::new(None));
                 }
+                self.send_content.as_mut().unwrap().ui(ui, w, m, cb);
             }
-            MESSAGE_MODAL_ID => {
-                if let Some(c) = self.message_content.as_mut() {
-                    c.ui(ui, w, m, cb);
+            MessageInputContent::MODAL_ID => {
+                if self.message_content.is_none() {
+                    self.message_content = Some(MessageInputContent::default());
                 }
+                self.message_content.as_mut().unwrap().ui(ui, w, m, cb);
             }
-            _ => {}
+            _ => {
+                self.invoice_content = None;
+                self.send_content = None;
+                self.message_content = None;
+            }
         }
     }
 
@@ -394,7 +399,10 @@ impl WalletContent {
                     } else {
                         let (icon, color) = (FILE_ARROW_DOWN, Some(Colors::green()));
                         View::tab_button(ui, icon, color, active, |_| {
-                            self.invoice_content = Some(InvoiceRequestContent::default());
+                            if self.txs_content.is_none() {
+                                self.txs_content = Some(WalletTransactionsContent::new(None));
+                                self.settings_content = None;
+                            }
                             Modal::new(INVOICE_MODAL_ID)
                                 .position(ModalPosition::CenterTop)
                                 .title(t!("wallets.receive"))
@@ -409,8 +417,11 @@ impl WalletContent {
                     } else {
                         let (icon, color) = (FILE_TEXT, Some(Colors::gold_dark()));
                         View::tab_button(ui, icon, color, active, |_| {
-                            self.message_content = Some(MessageInputContent::default());
-                            Modal::new(MESSAGE_MODAL_ID)
+                            if self.txs_content.is_none() {
+                                self.txs_content = Some(WalletTransactionsContent::new(None));
+                                self.settings_content = None;
+                            }
+                            Modal::new(MessageInputContent::MODAL_ID)
                                 .position(ModalPosition::Center)
                                 .title(t!("wallets.messages"))
                                 .show();
@@ -425,7 +436,10 @@ impl WalletContent {
                         } else {
                             let (icon, color) = (FILE_ARROW_UP, Some(Colors::red()));
                             View::tab_button(ui, icon, color, active, |_| {
-                                self.send_content = Some(SendRequestContent::new(None));
+                                if self.txs_content.is_none() {
+                                    self.txs_content = Some(WalletTransactionsContent::new(None));
+                                    self.settings_content = None;
+                                }
                                 Modal::new(SEND_MODAL_ID)
                                     .position(ModalPosition::CenterTop)
                                     .title(t!("wallets.send"))
@@ -488,7 +502,7 @@ impl WalletContent {
                             _ => {}
                         }
                     }
-                    MESSAGE_MODAL_ID => {
+                    MessageInputContent::MODAL_ID => {
                         match t {
                             WalletTask::VerifyProof(proof, res) => {
                                 if let Some(res) = res {

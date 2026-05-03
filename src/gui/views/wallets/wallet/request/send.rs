@@ -73,11 +73,11 @@ impl SendRequestContent {
     }
 
     /// Draw [`Modal`] content.
-    pub fn modal_ui(&mut self,
-                    ui: &mut egui::Ui,
-                    wallet: &Wallet,
-                    modal: &Modal,
-                    cb: &dyn PlatformCallbacks) {
+    pub fn ui(&mut self,
+              ui: &mut egui::Ui,
+              wallet: &Wallet,
+              modal: &Modal,
+              cb: &dyn PlatformCallbacks) {
         ui.add_space(6.0);
 
         // Draw QR code scanner content if requested.

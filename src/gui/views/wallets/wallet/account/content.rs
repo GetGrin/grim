@@ -64,7 +64,7 @@ impl WalletContentContainer for WalletAccountContent {
             CREATE_MODAL_ID => self.create_account_content.ui(ui, wallet, modal, cb),
             SEND_MODAL_ID => {
                 if let Some(c) = self.send_content.as_mut() {
-                    c.modal_ui(ui, wallet, modal, cb);
+                    c.ui(ui, wallet, modal, cb);
                 }
             }
             _ => {}

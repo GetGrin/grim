@@ -45,6 +45,13 @@ pub struct WalletTransactionsContent {
     manual_sync: Option<u128>
 }
 
+/// Identifier for transaction information [`Modal`].
+const TX_INFO_MODAL: &'static str = "tx_info_modal";
+/// Identifier for transaction cancellation confirmation [`Modal`].
+const CANCEL_TX_CONFIRMATION_MODAL: &'static str = "cancel_tx_conf_modal";
+/// Identifier for transaction deletion confirmation [`Modal`].
+const DELETE_TX_CONFIRMATION_MODAL: &'static str = "delete_tx_conf_modal";
+
 impl WalletContentContainer for WalletTransactionsContent {
     fn modal_ids(&self) -> Vec<&'static str> {
         vec![TX_INFO_MODAL, CANCEL_TX_CONFIRMATION_MODAL, DELETE_TX_CONFIRMATION_MODAL]
@@ -77,13 +84,6 @@ impl WalletContentContainer for WalletTransactionsContent {
         self.txs_ui(ui, wallet);
     }
 }
-
-/// Identifier for transaction information [`Modal`].
-const TX_INFO_MODAL: &'static str = "tx_info_modal";
-/// Identifier for transaction cancellation confirmation [`Modal`].
-const CANCEL_TX_CONFIRMATION_MODAL: &'static str = "cancel_tx_conf_modal";
-/// Identifier for transaction deletion confirmation [`Modal`].
-const DELETE_TX_CONFIRMATION_MODAL: &'static str = "delete_tx_conf_modal";
 
 impl WalletTransactionsContent {
     /// Height of transaction list item.

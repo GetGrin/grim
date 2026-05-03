@@ -28,6 +28,8 @@ use crate::gui::Colors;
 use crate::wallet::types::{WalletTask, WalletTx};
 use crate::wallet::Wallet;
 use crate::AppConfig;
+use crate::gui::views::types::ModalPosition;
+use crate::gui::views::wallets::wallet::message::MessageInputContent;
 
 /// Transaction information [`Modal`] content.
 pub struct WalletTransactionContent {
@@ -219,6 +221,8 @@ impl WalletTransactionContent {
             // Setup spacing between buttons.
             ui.spacing_mut().item_spacing = egui::Vec2::new(8.0, 0.0);
 
+            let mut finalization_needed = false;
+
             ui.columns(2, |columns| {
                 columns[0].vertical_centered_justified(|ui| {
                     // Draw button to show Slatepack message as QR code.
@@ -232,7 +236,12 @@ impl WalletTransactionContent {
                     let copy_text = format!("{} {}", COPY, t!("copy"));
                     View::button(ui, copy_text, Colors::white_or_black(false), || {
                         cb.copy_string_to_buffer(m.clone());
-                        Modal::close();
+                        // Show message input or close modal.
+                        if tx.can_finalize() {
+                            finalization_needed = true;
+                        } else {
+                            Modal::close();
+                        }
                     });
                 });
             });
@@ -249,10 +258,22 @@ impl WalletTransactionContent {
                             let name = format!("{}.{}.slatepack", slate_id, tx.state);
                             let data = m.as_bytes().to_vec();
                             cb.share_data(name, data).unwrap_or_default();
-                            Modal::close();
+                            // Show message input or close modal.
+                            if tx.can_finalize() {
+                                finalization_needed = true;
+                            } else {
+                                Modal::close();
+                            }
                         }
                     });
             });
+
+            if finalization_needed {
+                Modal::new(MessageInputContent::MODAL_ID)
+                    .position(ModalPosition::Center)
+                    .title(t!("wallets.messages"))
+                    .show();
+            }
         }
     }
 

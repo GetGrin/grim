@@ -56,6 +56,9 @@ impl Default for MessageInputContent {
 }
 
 impl MessageInputContent {
+    /// Identifier for [`Modal`].
+    pub const MODAL_ID: &'static str = "input_message_modal";
+
     /// Draw [`Modal`] content.
     pub fn ui(&mut self,
               ui: &mut egui::Ui,

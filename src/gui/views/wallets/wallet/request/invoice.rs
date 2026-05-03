@@ -37,7 +37,7 @@ impl Default for InvoiceRequestContent {
 
 impl InvoiceRequestContent {
     /// Draw [`Modal`] content.
-    pub fn modal_ui(&mut self,
+    pub fn ui(&mut self,
               ui: &mut egui::Ui,
               wallet: &Wallet,
               modal: &Modal,
