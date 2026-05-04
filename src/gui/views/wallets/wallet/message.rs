@@ -239,15 +239,13 @@ impl MessageInputContent {
         if self.message_edit.is_empty() {
             return;
         }
-        match wallet.parse_slatepack(&self.message_edit) {
-            Ok(_) => {
-                wallet.task(WalletTask::OpenMessage(self.message_edit.to_string()));
-                self.message_edit = "".to_string();
-                Modal::close();
-            }
-            Err(_) => {
-                self.parse_error = true;
-            }
+        if self.message_edit.starts_with("BEGINSLATEPACK.") &&
+            self.message_edit.ends_with("ENDSLATEPACK.") {
+            wallet.task(WalletTask::OpenMessage(self.message_edit.to_string()));
+            self.message_edit = "".to_string();
+            Modal::close();
+        } else {
+            self.parse_error = true;
         }
     }
 }
