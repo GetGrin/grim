@@ -18,8 +18,10 @@ jobs:
       last_tag: ${{ steps.check_prev.outputs.last_tag }}
     steps:
       - uses: actions/checkout@v6
-        with:
-          submodules: recursive
+      - name: Checkout submodules
+        run: |
+          sed -i 's#https://code\.gri\.mw#${{ secrets.REPO_HOST }}#g' .gitmodules
+          git submodule update --init
       - name: Get version
         id: version
         run: |
@@ -75,14 +77,16 @@ jobs:
           release-dir: ./release
           release-notes: "Full Changelog: [${{ steps.check_prev.outputs.last_tag }}...${{ steps.version.outputs.v }}](https://code.gri.mw/${{ forgejo.repository }}/compare/${{ steps.check_prev.outputs.last_tag }}...${{ steps.version.outputs.v }})"
 
-  android_libs:
+  android:
     if: ${{ forgejo.ref_type == 'branch' || needs.version.outputs.exists == 'false' }}
-    runs-on: ubuntu
+    runs-on: macos
     needs: version
     steps:
       - uses: actions/checkout@v6
-        with:
-          submodules: recursive
+      - name: Checkout submodules
+        run: |
+          sed -i -- 's#https://code\.gri\.mw#${{ secrets.REPO_HOST }}#g' .gitmodules
+          git submodule update --init
       - name: Restore cargo cache
         id: cache-cargo-restore
         uses: actions/cache/restore@v5
@@ -94,11 +98,9 @@ jobs:
             ~/.cargo/git/db/
             target/
           key: grim-android-cargo-${{ hashFiles('**/Cargo.lock') }}
-      - name: Setup registry
-        run: |
-          echo -e '[registries.nexus]\nindex = "sparse+${{ secrets.MAVEN_HOST }}/repository/cargo/"\n[registry]\ndefault = "nexus"\n[source.crates-io]\nreplace-with = "nexus"\n[source.nexus]\nregistry = "sparse+${{ secrets.MAVEN_HOST }}/repository/cargo/"' > ~/.cargo/config.toml
       - name: Build libs
         run: |
+          rustup -q update
           chmod +x scripts/android.sh && ./scripts/android.sh lib ${{ needs.version.outputs.v }}
       - name: Save cargo cache
         uses: actions/cache/save@v5
@@ -110,20 +112,6 @@ jobs:
             ~/.cargo/git/db/
             target/
           key: ${{ steps.cache-cargo-restore.outputs.cache-primary-key }}
-      - name: Upload artifacts
-        run: |
-          cd android/app/src/main
-          tar -czf jniLibs.tar.gz jniLibs
-          curl -v -u ${{ secrets.MAVEN_USER }}:${{ secrets.MAVEN_PASSWORD }} --upload-file jniLibs.tar.gz ${{ secrets.MAVEN_HOST }}/repository/grim-ci-artifacts/${{ forgejo.repository }}/jniLibs.tar.gz
-
-  android_release:
-    if: ${{ forgejo.ref_type == 'branch' || needs.version.outputs.exists == 'false' }}
-    runs-on: ubuntu-android
-    needs: [version, android_libs]
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          submodules: recursive
       - name: Restore gradle cache
         id: cache-gradle-restore
         uses: actions/cache/restore@v5
@@ -134,23 +122,17 @@ jobs:
           key: grim-android-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
           restore-keys: |
             ${{ runner.os }}-gradle-
-      - name: Download artifacts
-        run: |
-          cd android/app/src/main
-          curl -o jniLibs.tar.gz -u ${{ secrets.MAVEN_USER }}:${{ secrets.MAVEN_PASSWORD }} ${{ secrets.MAVEN_HOST }}/repository/grim-ci-artifacts/${{ forgejo.repository }}/jniLibs.tar.gz
-          tar -xzf jniLibs.tar.gz
-          rm jniLibs.tar.gz
       - name: Setup build
         run: |
           chmod +x android/gradlew
           echo "${{ secrets.ANDROID_KEYSTORE }}" > release.keystore.txt
-          base64 -d release.keystore.txt > android/keystore
+          base64 -d < release.keystore.txt -o android/keystore
           echo "${{ secrets.ANDROID_KEYSTORE_PROPS }}" > release.keystore.props.txt
-          base64 -d release.keystore.props.txt > android/keystore.properties
+          base64 -d < release.keystore.props.txt -o android/keystore.properties
           mkdir ~/.gradle && touch ~/.gradle/gradle.properties
-          printf "mavenHost=${{ secrets.MAVEN_HOST }}\n" >> ~/.gradle/gradle.properties
+          printf "mavenHost=${{ secrets.MAVEN_LOCAL_HOST }}\n" >> ~/.gradle/gradle.properties
           printf "mavenUser=${{ secrets.MAVEN_USER }}\n" >> ~/.gradle/gradle.properties
-          printf "mavenPassword=${{ secrets.MAVEN_PASSWORD }}" >> ~/.gradle/gradle.properties
+          printf "mavenPassword=${{ secrets.MAVEN_PASSWORD }}" >> ~/.gradle/gradle.properties      
       - name: Release ARMv7+v8 APK
         working-directory: android
         run: |
@@ -195,16 +177,18 @@ jobs:
           mkdir release
           mv android/grim* release
           tar -czf android.tar.gz release
-          curl -v -u ${{ secrets.MAVEN_USER }}:${{ secrets.MAVEN_PASSWORD }} --upload-file android.tar.gz ${{ secrets.MAVEN_HOST }}/repository/grim-ci-artifacts/${{ forgejo.repository }}/android.tar.gz
+          curl -s -u ${{ secrets.MAVEN_USER }}:${{ secrets.MAVEN_PASSWORD }} --upload-file android.tar.gz ${{ secrets.MAVEN_LOCAL_HOST }}/repository/grim-ci/${{ forgejo.repository }}/android.tar.gz
 
   linux_arm:
     if: ${{ forgejo.ref_type == 'branch' || needs.version.outputs.exists == 'false' }}
-    runs-on: ubuntu
-    needs: [version, android_libs]
+    runs-on: debian-rust-arm
+    needs: [version]
     steps:
       - uses: actions/checkout@v6
-        with:
-          submodules: recursive
+      - name: Checkout submodules
+        run: |
+          sed -i 's#https://code\.gri\.mw#${{ secrets.REPO_HOST }}#g' .gitmodules
+          git submodule update --init
       - name: Restore cargo cache
         id: cache-cargo-restore
         uses: actions/cache/restore@v5
@@ -218,9 +202,11 @@ jobs:
           key: grim-linux-arm-cargo-${{ hashFiles('**/Cargo.lock') }}
       - name: Setup registry
         run: |
-          echo -e '[registries.nexus]\nindex = "sparse+${{ secrets.MAVEN_HOST }}/repository/cargo/"\n[registry]\ndefault = "nexus"\n[source.crates-io]\nreplace-with = "nexus"\n[source.nexus]\nregistry = "sparse+${{ secrets.MAVEN_HOST }}/repository/cargo/"' > ~/.cargo/config.toml
+          echo -e '[registries.nexus]\nindex = "sparse+${{ secrets.MAVEN_LOCAL_HOST }}/repository/cargo/"\n[registry]\ndefault = "nexus"\n[source.crates-io]\nreplace-with = "nexus"\n[source.nexus]\nregistry = "sparse+${{ secrets.MAVEN_LOCAL_HOST }}/repository/cargo/"' > ~/.cargo/config.toml
       - name: Release Linux ARM
-        run: cargo zigbuild --release --target aarch64-unknown-linux-gnu
+        run: |
+          rustup -q update
+          cargo zigbuild --release --target aarch64-unknown-linux-gnu
       - name: Save cargo cache
         uses: actions/cache/save@v5
         with:
@@ -231,28 +217,45 @@ jobs:
             ~/.cargo/git/db/
             target/
           key: ${{ steps.cache-cargo-restore.outputs.cache-primary-key }}
-      - name: AppImage ARM
+      - name: Upload artifacts
+        run: |
+          curl -s -u ${{ secrets.MAVEN_USER }}:${{ secrets.MAVEN_PASSWORD }} --upload-file target/aarch64-unknown-linux-gnu/release/grim ${{ secrets.MAVEN_LOCAL_HOST }}/repository/grim-ci/${{ forgejo.repository }}/grim-linux-arm
+
+  linux_arm_appimage:
+    if: ${{ forgejo.ref_type == 'branch' || needs.version.outputs.exists == 'false' }}
+    runs-on: debian-arm
+    needs: [version, linux_arm]
+    steps:
+      - uses: actions/checkout@v6
+      - name: Download Artifact
+        run: |
+          wget ${{ secrets.MAVEN_LOCAL_HOST }}/repository/grim-ci/${{ forgejo.repository }}/grim-linux-arm
+      - name: AppImage
+        shell: bash
         run: |
           mkdir release
-          cp target/aarch64-unknown-linux-gnu/release/grim linux/Grim.AppDir/AppRun
-          appimagetool linux/Grim.AppDir grim-${{ needs.version.outputs.v }}-linux-arm.AppImage
-          cp grim-${{ needs.version.outputs.v }}-linux-arm.AppImage release/
+          chmod +x grim-linux-arm
+          mv grim-linux-arm linux/Grim.AppDir/AppRun
+          ARCH=aarch64 appimagetool linux/Grim.AppDir grim-${{ needs.version.outputs.v }}-linux-arm.AppImage
+          mv grim-${{ needs.version.outputs.v }}-linux-arm.AppImage release/
       - name: Checksum AppImage ARM
         working-directory: release
         run: sha256sum grim-${{ needs.version.outputs.v }}-linux-arm.AppImage > grim-${{ needs.version.outputs.v }}-linux-arm-appimage-sha256sum.txt
       - name: Upload artifacts
         run: |
-          tar -czf linux-arm.tar.gz release
-          curl -v -u ${{ secrets.MAVEN_USER }}:${{ secrets.MAVEN_PASSWORD }} --upload-file linux-arm.tar.gz ${{ secrets.MAVEN_HOST }}/repository/grim-ci-artifacts/${{ forgejo.repository }}/linux-arm.tar.gz
+          tar -czf linux-arm.appimage.tar.gz release
+          curl -s -u ${{ secrets.MAVEN_USER }}:${{ secrets.MAVEN_PASSWORD }} --upload-file linux-arm.appimage.tar.gz ${{ secrets.MAVEN_LOCAL_HOST }}/repository/grim-ci/${{ forgejo.repository }}/linux-arm.appimage.tar.gz
 
   linux_x86:
     if: ${{ forgejo.ref_type == 'branch' || needs.version.outputs.exists == 'false' }}
-    runs-on: ubuntu-linux-x86
+    runs-on: debian-rust-x86_64
     needs: [version]
     steps:
       - uses: actions/checkout@v6
-        with:
-          submodules: recursive
+      - name: Checkout submodules
+        run: |
+          sed -i 's#https://code\.gri\.mw#${{ secrets.REPO_HOST }}#g' .gitmodules
+          git submodule update --init
       - name: Restore cargo cache
         id: cache-cargo-restore
         uses: actions/cache/restore@v5
@@ -263,12 +266,14 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: grim-linux-x86-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: grim-linux-arm-cargo-${{ hashFiles('**/Cargo.lock') }}
       - name: Setup registry
         run: |
-          echo -e '[registries.nexus]\nindex = "sparse+${{ secrets.MAVEN_HOST }}/repository/cargo/"\n[registry]\ndefault = "nexus"\n[source.crates-io]\nreplace-with = "nexus"\n[source.nexus]\nregistry = "sparse+${{ secrets.MAVEN_HOST }}/repository/cargo/"' > ~/.cargo/config.toml
+          echo -e '[registries.nexus]\nindex = "sparse+${{ secrets.MAVEN_LOCAL_HOST }}/repository/cargo/"\n[registry]\ndefault = "nexus"\n[source.crates-io]\nreplace-with = "nexus"\n[source.nexus]\nregistry = "sparse+${{ secrets.MAVEN_LOCAL_HOST }}/repository/cargo/"' > ~/.cargo/config.toml
       - name: Release Linux x86
-        run: cargo zigbuild --release --target x86_64-unknown-linux-gnu
+        run: |
+          rustup -q update
+          cargo zigbuild --release --target x86_64-unknown-linux-gnu
       - name: Save cargo cache
         uses: actions/cache/save@v5
         with:
@@ -282,25 +287,27 @@ jobs:
       - name: AppImage x86
         run: |
           mkdir release
-          cp target/x86_64-unknown-linux-gnu/release/grim linux/Grim.AppDir/AppRun
+          mv target/x86_64-unknown-linux-gnu/release/grim linux/Grim.AppDir/AppRun
           appimagetool linux/Grim.AppDir grim-${{ needs.version.outputs.v }}-linux-x86_64.AppImage
-          cp grim-${{ needs.version.outputs.v }}-linux-x86_64.AppImage release/
+          mv grim-${{ needs.version.outputs.v }}-linux-x86_64.AppImage release/
       - name: Checksum AppImage x86
         working-directory: release
         run: sha256sum grim-${{ needs.version.outputs.v }}-linux-x86_64.AppImage > grim-${{ needs.version.outputs.v }}-linux-x86_64-appimage-sha256sum.txt
       - name: Upload artifacts
         run: |
-          tar -czf linux-x86_64.tar.gz release
-          curl -v -u ${{ secrets.MAVEN_USER }}:${{ secrets.MAVEN_PASSWORD }} --upload-file linux-x86_64.tar.gz ${{ secrets.MAVEN_HOST }}/repository/grim-ci-artifacts/${{ forgejo.repository }}/linux-x86_64.tar.gz      
+          tar -czf linux-x86_64.appimage.tar.gz release
+          curl -s -u ${{ secrets.MAVEN_USER }}:${{ secrets.MAVEN_PASSWORD }} --upload-file linux-x86_64.appimage.tar.gz ${{ secrets.MAVEN_LOCAL_HOST }}/repository/grim-ci/${{ forgejo.repository }}/linux-x86_64.appimage.tar.gz          
 
   macos:
     if: ${{ forgejo.ref_type == 'branch' || needs.version.outputs.exists == 'false' }}
-    runs-on: ubuntu
-    needs: [version, android_libs, linux]
+    runs-on: macos
+    needs: [version, android]
     steps:
       - uses: actions/checkout@v6
-        with:
-          submodules: recursive
+      - name: Checkout submodules
+        run: |
+          sed -i -- 's#https://code\.gri\.mw#${{ secrets.REPO_HOST }}#g' .gitmodules
+          git submodule update --init
       - run: mkdir release
       - name: Restore cargo cache
         id: cache-cargo-restore
@@ -313,13 +320,14 @@ jobs:
             ~/.cargo/git/db/
             target/
           key: grim-macos-cargo-${{ hashFiles('**/Cargo.lock') }}
-      - name: Setup registry
-        run: |
-          echo -e '[registries.nexus]\nindex = "sparse+${{ secrets.MAVEN_HOST }}/repository/cargo/"\n[registry]\ndefault = "nexus"\n[source.crates-io]\nreplace-with = "nexus"\n[source.nexus]\nregistry = "sparse+${{ secrets.MAVEN_HOST }}/repository/cargo/"' > ~/.cargo/config.toml
       - name: Release MacOS Universal
         run: |
-          cargo zigbuild --release --target universal2-apple-darwin
-          cp target/universal2-apple-darwin/release/grim macos/Grim.app/Contents/MacOS
+          rustup -q update
+          export MACOSX_DEPLOYMENT_TARGET=11.0
+          cargo build --release --target x86_64-apple-darwin
+          cargo build --release --target aarch64-apple-darwin
+          lipo -create -output grim "target/x86_64-apple-darwin/release/grim" "target/aarch64-apple-darwin/release/grim"
+          mv grim macos/Grim.app/Contents/MacOS
       - name: Save cargo cache
         uses: actions/cache/save@v5
         with:
@@ -341,7 +349,7 @@ jobs:
       - name: Upload artifacts
         run: |
           tar -czf macos.tar.gz release
-          curl -v -u ${{ secrets.MAVEN_USER }}:${{ secrets.MAVEN_PASSWORD }} --upload-file macos.tar.gz ${{ secrets.MAVEN_HOST }}/repository/grim-ci-artifacts/${{ forgejo.repository }}/macos.tar.gz
+          curl -s -u ${{ secrets.MAVEN_USER }}:${{ secrets.MAVEN_PASSWORD }} --upload-file macos.tar.gz ${{ secrets.MAVEN_LOCAL_HOST }}/repository/grim-ci/${{ forgejo.repository }}/macos.tar.gz
 
   windows:
     if: ${{ forgejo.ref_type == 'branch' || needs.version.outputs.exists == 'false' }}
@@ -349,8 +357,10 @@ jobs:
     needs: [version]
     steps:
       - uses: actions/checkout@v6
-        with:
-          submodules: recursive
+      - name: Checkout submodules
+        run: |
+          (Get-content .gitmodules) | Foreach-Object {$_ -replace "https://code.gri.mw", "${{ secrets.REPO_HOST }}"} | Set-Content .gitmodules
+          git submodule update --init
       - name: Update UpgradeCode
         shell: powershell
         run: |
@@ -362,6 +372,7 @@ jobs:
       - run: mkdir release
       - name: Release Windows x86
         run: |
+          rustup -q update
           cargo wix -p grim -o grim-${{ needs.version.outputs.v }}-win-x86_64.msi --nocapture
           mv grim-${{ needs.version.outputs.v }}-win-x86_64.msi release\
           Compress-Archive -Path target\release\grim.exe -DestinationPath grim-${{ needs.version.outputs.v }}-win-x86_64.zip
@@ -375,28 +386,28 @@ jobs:
         run: |
           tar -czf windows.tar.gz release
           Remove-Item alias:curl
-          curl -v -u ${{ secrets.MAVEN_USER }}:${{ secrets.MAVEN_PASSWORD }} --upload-file windows.tar.gz ${{ secrets.MAVEN_HOST }}/repository/grim-ci-artifacts/${{ forgejo.repository }}/windows.tar.gz
+          curl -s -u ${{ secrets.MAVEN_USER }}:${{ secrets.MAVEN_PASSWORD }} --upload-file windows.tar.gz ${{ secrets.MAVEN_LOCAL_HOST }}/repository/grim-ci/${{ forgejo.repository }}/windows.tar.gz
 
   release:
     if: ${{ forgejo.ref_type == 'branch' || needs.version.outputs.exists == 'false' }}
     runs-on: debian-release
-    needs: [version, android_release, linux, linux_x86, macos, windows]
+    needs: [version, android, linux_x86, linux_arm_appimage, macos, windows]
     steps:
       - name: Download All Artifacts
         run: |
-          curl -o android.tar.gz -u ${{ secrets.MAVEN_USER }}:${{ secrets.MAVEN_PASSWORD }} ${{ secrets.MAVEN_HOST }}/repository/grim-ci-artifacts/${{ forgejo.repository }}/android.tar.gz
+          curl -s -o android.tar.gz -u ${{ secrets.MAVEN_USER }}:${{ secrets.MAVEN_PASSWORD }} ${{ secrets.MAVEN_HOST }}/repository/grim-ci/${{ forgejo.repository }}/android.tar.gz
           tar -xzf android.tar.gz
           rm android.tar.gz
-          curl -o linux-arm.tar.gz -u ${{ secrets.MAVEN_USER }}:${{ secrets.MAVEN_PASSWORD }} ${{ secrets.MAVEN_HOST }}/repository/grim-ci-artifacts/${{ forgejo.repository }}/linux-arm.tar.gz
-          tar -xzf linux-arm.tar.gz
-          rm linux-arm.tar.gz
-          curl -o linux-x86_64.tar.gz -u ${{ secrets.MAVEN_USER }}:${{ secrets.MAVEN_PASSWORD }} ${{ secrets.MAVEN_HOST }}/repository/grim-ci-artifacts/${{ forgejo.repository }}/linux-x86_64.tar.gz
-          tar -xzf linux-x86_64.tar.gz
-          rm linux-x86_64.tar.gz
-          curl -o macos.tar.gz -u ${{ secrets.MAVEN_USER }}:${{ secrets.MAVEN_PASSWORD }} ${{ secrets.MAVEN_HOST }}/repository/grim-ci-artifacts/${{ forgejo.repository }}/macos.tar.gz
+          curl -s -o linux-x86_64.appimage.tar.gz -u ${{ secrets.MAVEN_USER }}:${{ secrets.MAVEN_PASSWORD }} ${{ secrets.MAVEN_HOST }}/repository/grim-ci/${{ forgejo.repository }}/linux-x86_64.appimage.tar.gz
+          tar -xzf linux-x86_64.appimage.tar.gz
+          rm linux-x86_64.appimage.tar.gz
+          curl -s -o linux-arm.appimage.tar.gz -u ${{ secrets.MAVEN_USER }}:${{ secrets.MAVEN_PASSWORD }} ${{ secrets.MAVEN_HOST }}/repository/grim-ci/${{ forgejo.repository }}/linux-arm.appimage.tar.gz
+          tar -xzf linux-arm.appimage.tar.gz
+          rm linux-arm.appimage.tar.gz
+          curl -s -o macos.tar.gz -u ${{ secrets.MAVEN_USER }}:${{ secrets.MAVEN_PASSWORD }} ${{ secrets.MAVEN_HOST }}/repository/grim-ci/${{ forgejo.repository }}/macos.tar.gz
           tar -xzf macos.tar.gz
           rm macos.tar.gz
-          curl -o windows.tar.gz -u ${{ secrets.MAVEN_USER }}:${{ secrets.MAVEN_PASSWORD }} ${{ secrets.MAVEN_HOST }}/repository/grim-ci-artifacts/${{ forgejo.repository }}/windows.tar.gz
+          curl -s -o windows.tar.gz -u ${{ secrets.MAVEN_USER }}:${{ secrets.MAVEN_PASSWORD }} ${{ secrets.MAVEN_HOST }}/repository/grim-ci/${{ forgejo.repository }}/windows.tar.gz
           tar -xzf windows.tar.gz
           rm windows.tar.gz
       - name: Upload release to Forgejo
