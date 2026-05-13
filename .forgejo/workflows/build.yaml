@@ -13,8 +13,10 @@ jobs:
     runs-on: ubuntu
     steps:
       - uses: actions/checkout@v6
-        with:
-          submodules: recursive
+      - name: Checkout submodules
+        run: |
+          sed -i 's#https://code\.gri\.mw#${{ secrets.REPO_HOST }}#g' .gitmodules
+          git submodule update --init
       - name: Check commit
         id: check
         run: |
