@@ -25,7 +25,8 @@ use log4rs::Config;
 use log4rs::config::{Appender, Root};
 use log4rs::encode::pattern::PatternEncoder;
 use log4rs::filter::threshold::ThresholdFilter;
-use log::{error, LevelFilter};
+use log4rs::filter::{Filter, Response};
+use log::{error, LevelFilter, Record};
 
 use crate::Settings;
 
@@ -41,6 +42,21 @@ pub mod built_info {
     include!(concat!(env!("OUT_DIR"), "/built.rs"));
 }
 
+/// Filter is rejecting messages that doesn't start with "grin" or "grim"
+#[derive(Debug)]
+struct AppFilter;
+
+impl Filter for AppFilter {
+    fn filter(&self, record: &Record<'_>) -> Response {
+        if let Some(module_path) = record.module_path() {
+            if module_path.starts_with("grin") || module_path.starts_with("grim") {
+                return Response::Neutral;
+            }
+        }
+        Response::Reject
+    }
+}
+
 /// Initialize the logger.
 pub fn init_logger() {
     let stdout = ConsoleAppender::builder()
@@ -49,16 +65,18 @@ pub fn init_logger() {
 
     let mut root = Root::builder();
 
+    let level_filter = Box::new(ThresholdFilter::new(LevelFilter::Debug));
+
     let mut app = vec![];
     app.push(
         Appender::builder()
-            .filter(Box::new(ThresholdFilter::new(LevelFilter::Info)))
+            .filter(level_filter.clone())
+            .filter(Box::new(AppFilter))
             .build("stdout", Box::new(stdout)),
     );
     root = root.appender("stdout");
 
     // Setup file logging.
-    let filter = Box::new(ThresholdFilter::new(LevelFilter::Info));
     let file: Box<dyn Append> = {
         let path = Settings::log_path();
         let roller = FixedWindowRoller::builder()
@@ -76,14 +94,15 @@ pub fn init_logger() {
     };
     app.push(
         Appender::builder()
-            .filter(filter)
+            .filter(level_filter)
+            .filter(Box::new(AppFilter))
             .build("file", file),
     );
     root = root.appender("file");
 
     let config = Config::builder()
         .appenders(app)
-        .build(root.build(LevelFilter::Info))
+        .build(root.build(LevelFilter::Debug))
         .unwrap();
     let _ = log4rs::init_config(config).unwrap();
 
