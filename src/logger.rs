@@ -49,7 +49,8 @@ struct AppFilter;
 impl Filter for AppFilter {
     fn filter(&self, record: &Record<'_>) -> Response {
         if let Some(module_path) = record.module_path() {
-            if module_path.starts_with("grin") || module_path.starts_with("grim") {
+            if module_path.starts_with("grin") || module_path.starts_with("grim")
+                || module_path.starts_with("arti") {
                 return Response::Neutral;
             }
         }
