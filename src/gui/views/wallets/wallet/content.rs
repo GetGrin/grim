@@ -403,6 +403,8 @@ impl WalletContent {
                                 self.txs_content = Some(WalletTransactionsContent::new(None));
                                 self.settings_content = None;
                             }
+                            self.message_content = None;
+                            self.invoice_content = Some(InvoiceRequestContent::default());
                             Modal::new(INVOICE_MODAL_ID)
                                 .position(ModalPosition::CenterTop)
                                 .title(t!("wallets.receive"))
@@ -421,6 +423,7 @@ impl WalletContent {
                                 self.txs_content = Some(WalletTransactionsContent::new(None));
                                 self.settings_content = None;
                             }
+                            self.message_content = Some(MessageInputContent::default());
                             Modal::new(MessageInputContent::MODAL_ID)
                                 .position(ModalPosition::Center)
                                 .title(t!("wallets.messages"))
@@ -440,6 +443,8 @@ impl WalletContent {
                                     self.txs_content = Some(WalletTransactionsContent::new(None));
                                     self.settings_content = None;
                                 }
+                                self.message_content = None;
+                                self.send_content = Some(SendRequestContent::new(None));
                                 Modal::new(SEND_MODAL_ID)
                                     .position(ModalPosition::CenterTop)
                                     .title(t!("wallets.send"))
