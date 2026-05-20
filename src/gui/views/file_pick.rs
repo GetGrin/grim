@@ -14,179 +14,182 @@
 
 use egui::CornerRadius;
 use parking_lot::RwLock;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::{fs, thread};
 
+use crate::gui::Colors;
 use crate::gui::icons::ARCHIVE_BOX;
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::View;
-use crate::gui::Colors;
 
 /// Type of button.
 pub enum FilePickContentType {
-    Button(String), ItemButton(CornerRadius), Tab
+	Button(String),
+	ItemButton(CornerRadius),
+	Tab,
 }
 
 /// Button to pick file and parse its data into text.
 pub struct FilePickContent {
-    /// Content type.
-    content_type: FilePickContentType,
+	/// Content type.
+	content_type: FilePickContentType,
 
-    /// Flag to check if button is active.
-    active: bool,
+	/// Flag to check if button is active.
+	active: bool,
 
-    /// Flag to check if file is picking.
-    file_picking: Arc<AtomicBool>,
+	/// Flag to check if file is picking.
+	file_picking: Arc<AtomicBool>,
 
-    /// Flag to check if folder should be picked.
-    pick_folder: bool,
-    /// Flag to parse file content after pick.
-    parse_file: bool,
-    /// Flag to check if file is parsing.
-    file_parsing: Arc<AtomicBool>,
-    /// File parsing result.
-    file_parsing_result: Arc<RwLock<Option<String>>>,
+	/// Flag to check if folder should be picked.
+	pick_folder: bool,
+	/// Flag to parse file content after pick.
+	parse_file: bool,
+	/// Flag to check if file is parsing.
+	file_parsing: Arc<AtomicBool>,
+	/// File parsing result.
+	file_parsing_result: Arc<RwLock<Option<String>>>,
 }
 
 impl FilePickContent {
-    /// Create new content from provided type.
-    pub fn new(content_type: FilePickContentType) -> Self {
-        Self {
-            content_type,
-            active: false,
-            file_picking: Arc::new(AtomicBool::new(false)),
-            pick_folder: false,
-            parse_file: true,
-            file_parsing: Arc::new(AtomicBool::new(false)),
-            file_parsing_result: Arc::new(RwLock::new(None)),
-        }
-    }
+	/// Create new content from provided type.
+	pub fn new(content_type: FilePickContentType) -> Self {
+		Self {
+			content_type,
+			active: false,
+			file_picking: Arc::new(AtomicBool::new(false)),
+			pick_folder: false,
+			parse_file: true,
+			file_parsing: Arc::new(AtomicBool::new(false)),
+			file_parsing_result: Arc::new(RwLock::new(None)),
+		}
+	}
 
-    /// Pick folder.
-    pub fn pick_folder(mut self) -> Self {
-        self.pick_folder = true;
-        self
-    }
+	/// Pick folder.
+	pub fn pick_folder(mut self) -> Self {
+		self.pick_folder = true;
+		self
+	}
 
-    /// Do not parse file content.
-    pub fn no_parse(mut self) -> Self {
-        self.parse_file = false;
-        self
-    }
+	/// Do not parse file content.
+	pub fn no_parse(mut self) -> Self {
+		self.parse_file = false;
+		self
+	}
 
-    /// Enable or disable the button.
-    pub fn set_active(&mut self, active: bool) {
-        self.active = active;
-    }
+	/// Enable or disable the button.
+	pub fn set_active(&mut self, active: bool) {
+		self.active = active;
+	}
 
-    /// Draw content with provided callback to return path of the file.
-    pub fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks, pick: impl FnOnce(String)) {
-        if self.file_picking.load(Ordering::Relaxed) {
-            View::small_loading_spinner(ui);
-            // Check file pick result.
-            if let Some(path) = cb.picked_file() {
-                self.file_picking.store(false, Ordering::Relaxed);
-                if !path.is_empty() {
-                    if self.parse_file {
-                        self.parse_file(path);
-                    } else {
-                        pick(path);
-                    }
-                }
-            }
-        } else if self.file_parsing.load(Ordering::Relaxed) {
-            View::small_loading_spinner(ui);
-            // Check file parsing result.
-            let has_result = {
-                let r_res = self.file_parsing_result.read();
-                r_res.is_some()
-            };
-            if has_result {
-                let text = {
-                    let r_res = self.file_parsing_result.read();
-                    r_res.clone().unwrap()
-                };
-                // Callback on result.
-                pick(text);
-                // Clear result.
-                let mut w_res = self.file_parsing_result.write();
-                *w_res = None;
-                self.file_parsing.store(false, Ordering::Relaxed);
-            }
-        } else {
-            // Draw button to pick file.
-            match &self.content_type {
-                FilePickContentType::Button(text) => {
-                    let text = format!("{} {}", ARCHIVE_BOX, text);
-                    let text_color = Colors::blue();
-                    let fill = Colors::white_or_black(false);
-                    View::colored_text_button(ui, text, text_color, fill, || {
-                        self.on_file_pick(pick, cb);
-                    });
-                }
-                FilePickContentType::ItemButton(r) => {
-                    View::item_button(ui, r.clone(), ARCHIVE_BOX, Some(Colors::blue()), || {
-                        self.on_file_pick(pick, cb);
-                    });
-                }
-                FilePickContentType::Tab => {
-                    let active = match self.active {
-                        true => Some(self.file_parsing.load(Ordering::Relaxed) ||
-                            self.file_picking.load(Ordering::Relaxed)),
-                        false => None
-                    };
-                    View::tab_button(ui, ARCHIVE_BOX, Some(Colors::blue()), active, |_| {
-                        self.on_file_pick(pick, cb);
-                    });
-                }
-            }
-        }
-    }
+	/// Draw content with provided callback to return path of the file.
+	pub fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks, pick: impl FnOnce(String)) {
+		if self.file_picking.load(Ordering::Relaxed) {
+			View::small_loading_spinner(ui);
+			// Check file pick result.
+			if let Some(path) = cb.picked_file() {
+				self.file_picking.store(false, Ordering::Relaxed);
+				if !path.is_empty() {
+					if self.parse_file {
+						self.parse_file(path);
+					} else {
+						pick(path);
+					}
+				}
+			}
+		} else if self.file_parsing.load(Ordering::Relaxed) {
+			View::small_loading_spinner(ui);
+			// Check file parsing result.
+			let has_result = {
+				let r_res = self.file_parsing_result.read();
+				r_res.is_some()
+			};
+			if has_result {
+				let text = {
+					let r_res = self.file_parsing_result.read();
+					r_res.clone().unwrap()
+				};
+				// Callback on result.
+				pick(text);
+				// Clear result.
+				let mut w_res = self.file_parsing_result.write();
+				*w_res = None;
+				self.file_parsing.store(false, Ordering::Relaxed);
+			}
+		} else {
+			// Draw button to pick file.
+			match &self.content_type {
+				FilePickContentType::Button(text) => {
+					let text = format!("{} {}", ARCHIVE_BOX, text);
+					let text_color = Colors::blue();
+					let fill = Colors::white_or_black(false);
+					View::colored_text_button(ui, text, text_color, fill, || {
+						self.on_file_pick(pick, cb);
+					});
+				}
+				FilePickContentType::ItemButton(r) => {
+					View::item_button(ui, r.clone(), ARCHIVE_BOX, Some(Colors::blue()), || {
+						self.on_file_pick(pick, cb);
+					});
+				}
+				FilePickContentType::Tab => {
+					let active = match self.active {
+						true => Some(
+							self.file_parsing.load(Ordering::Relaxed)
+								|| self.file_picking.load(Ordering::Relaxed),
+						),
+						false => None,
+					};
+					View::tab_button(ui, ARCHIVE_BOX, Some(Colors::blue()), active, |_| {
+						self.on_file_pick(pick, cb);
+					});
+				}
+			}
+		}
+	}
 
-    /// Handle pick file request.
-    fn on_file_pick(&self, on_pick: impl FnOnce(String), cb: &dyn PlatformCallbacks) {
-        let path = if self.pick_folder {
-            cb.pick_folder()
-        } else {
-            cb.pick_file()
-        };
-        if path.is_none() {
-            return;
-        }
-        let path = path.unwrap();
-        // Wait for asynchronous file pick result if path is empty.
-        if path.is_empty() {
-            self.file_picking.store(true, Ordering::Relaxed);
-            return;
-        }
-        // Parse result if needed.
-        if self.parse_file {
-            self.parse_file(path);
-        } else {
-            on_pick(path);
-        }
-    }
+	/// Handle pick file request.
+	fn on_file_pick(&self, on_pick: impl FnOnce(String), cb: &dyn PlatformCallbacks) {
+		let path = if self.pick_folder {
+			cb.pick_folder()
+		} else {
+			cb.pick_file()
+		};
+		if path.is_none() {
+			return;
+		}
+		let path = path.unwrap();
+		// Wait for asynchronous file pick result if path is empty.
+		if path.is_empty() {
+			self.file_picking.store(true, Ordering::Relaxed);
+			return;
+		}
+		// Parse result if needed.
+		if self.parse_file {
+			self.parse_file(path);
+		} else {
+			on_pick(path);
+		}
+	}
 
-    /// Handle picked file path.
-    fn parse_file(&self, path: String) {
-        self.file_parsing.store(true, Ordering::Relaxed);
-        let result = self.file_parsing_result.clone();
-        thread::spawn(move || {
-            if path.ends_with(".gif") {
-                //TODO: Detect QR codes on GIF file.
-            } else if path.ends_with(".jpeg") || path.ends_with(".jpg") ||
-                path.ends_with(".png") {
-                //TODO: Detect QR codes on image files.
-            } else  {
-                // Parse file as plain text.
-                let mut w_res = result.write();
-                if let Ok(text) = fs::read_to_string(path) {
-                    *w_res = Some(text);
-                } else {
-                    *w_res = Some("".to_string());
-                }
-            }
-        });
-    }
+	/// Handle picked file path.
+	fn parse_file(&self, path: String) {
+		self.file_parsing.store(true, Ordering::Relaxed);
+		let result = self.file_parsing_result.clone();
+		thread::spawn(move || {
+			if path.ends_with(".gif") {
+				//TODO: Detect QR codes on GIF file.
+			} else if path.ends_with(".jpeg") || path.ends_with(".jpg") || path.ends_with(".png") {
+				//TODO: Detect QR codes on image files.
+			} else {
+				// Parse file as plain text.
+				let mut w_res = result.write();
+				if let Ok(text) = fs::read_to_string(path) {
+					*w_res = Some(text);
+				} else {
+					*w_res = Some("".to_string());
+				}
+			}
+		});
+	}
 }

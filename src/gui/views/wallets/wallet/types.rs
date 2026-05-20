@@ -22,55 +22,60 @@ pub const GRIN: &str = "ツ";
 
 /// Content container to simplify modals management and navigation.
 pub trait WalletContentContainer {
-    /// List of allowed [`Modal`] identifiers.
-    fn modal_ids(&self) -> Vec<&'static str>;
-    /// Draw modal content.
-    fn modal_ui(&mut self, ui: &mut egui::Ui, wallet: &Wallet, modal: &Modal, cb: &dyn PlatformCallbacks);
-    /// Draw container content.
-    fn container_ui(&mut self, ui: &mut egui::Ui, wallet: &Wallet, cb: &dyn PlatformCallbacks);
-    /// Draw content, to call by parent container.
-    fn ui(&mut self, ui: &mut egui::Ui, wallet: &Wallet, cb: &dyn PlatformCallbacks) {
-        // Draw modal content.
-        if let Some(id) = Modal::opened() {
-            if self.modal_ids().contains(&id) {
-                Modal::ui(ui.ctx(), cb, |ui, modal, cb| {
-                    self.modal_ui(ui, wallet, modal, cb);
-                });
-            }
-        }
-        self.container_ui(ui, wallet, cb);
-    }
+	/// List of allowed [`Modal`] identifiers.
+	fn modal_ids(&self) -> Vec<&'static str>;
+	/// Draw modal content.
+	fn modal_ui(
+		&mut self,
+		ui: &mut egui::Ui,
+		wallet: &Wallet,
+		modal: &Modal,
+		cb: &dyn PlatformCallbacks,
+	);
+	/// Draw container content.
+	fn container_ui(&mut self, ui: &mut egui::Ui, wallet: &Wallet, cb: &dyn PlatformCallbacks);
+	/// Draw content, to call by parent container.
+	fn ui(&mut self, ui: &mut egui::Ui, wallet: &Wallet, cb: &dyn PlatformCallbacks) {
+		// Draw modal content.
+		if let Some(id) = Modal::opened() {
+			if self.modal_ids().contains(&id) {
+				Modal::ui(ui.ctx(), cb, |ui, modal, cb| {
+					self.modal_ui(ui, wallet, modal, cb);
+				});
+			}
+		}
+		self.container_ui(ui, wallet, cb);
+	}
 }
 
 /// Get wallet status text.
 pub fn wallet_status_text(wallet: &Wallet) -> String {
-    if wallet.sync_error() && wallet.is_open() {
-        format!("{} {}", WARNING_CIRCLE, t!("error"))
-    } else if wallet.is_closing() {
-        format!("{} {}", SPINNER, t!("wallets.closing"))
-    } else if wallet.is_repairing() {
-        let repair_progress = wallet.repairing_progress();
-        if repair_progress == 0 {
-            format!("{} {}", SPINNER, t!("wallets.checking"))
-        } else {
-            format!("{} {}: {}%",
-                    SPINNER,
-                    t!("wallets.checking"),
-                    repair_progress)
-        }
-    } else if wallet.syncing() {
-        let info_progress = wallet.info_sync_progress();
-        if info_progress == 100 || info_progress == 0 {
-            format!("{} {}", SPINNER, t!("wallets.loading"))
-        } else {
-            format!("{} {}: {}%",
-                    SPINNER,
-                    t!("wallets.loading"),
-                    info_progress)
-        }
-    } else if wallet.is_open() {
-        format!("{} {}", FOLDER_OPEN, t!("wallets.unlocked"))
-    } else {
-        format!("{} {}", FOLDER_LOCK, t!("wallets.locked"))
-    }
+	if wallet.sync_error() && wallet.is_open() {
+		format!("{} {}", WARNING_CIRCLE, t!("error"))
+	} else if wallet.is_closing() {
+		format!("{} {}", SPINNER, t!("wallets.closing"))
+	} else if wallet.is_repairing() {
+		let repair_progress = wallet.repairing_progress();
+		if repair_progress == 0 {
+			format!("{} {}", SPINNER, t!("wallets.checking"))
+		} else {
+			format!(
+				"{} {}: {}%",
+				SPINNER,
+				t!("wallets.checking"),
+				repair_progress
+			)
+		}
+	} else if wallet.syncing() {
+		let info_progress = wallet.info_sync_progress();
+		if info_progress == 100 || info_progress == 0 {
+			format!("{} {}", SPINNER, t!("wallets.loading"))
+		} else {
+			format!("{} {}: {}%", SPINNER, t!("wallets.loading"), info_progress)
+		}
+	} else if wallet.is_open() {
+		format!("{} {}", FOLDER_OPEN, t!("wallets.unlocked"))
+	} else {
+		format!("{} {}", FOLDER_LOCK, t!("wallets.locked"))
+	}
 }

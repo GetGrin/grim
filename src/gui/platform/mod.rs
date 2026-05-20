@@ -22,20 +22,20 @@ pub mod platform;
 pub mod platform;
 
 pub trait PlatformCallbacks {
-    fn set_context(&mut self, ctx: &egui::Context);
-    fn exit(&self);
-    fn copy_string_to_buffer(&self, data: String);
-    fn get_string_from_buffer(&self) -> String;
-    fn start_camera(&self);
-    fn stop_camera(&self);
-    fn camera_image(&self) -> Option<(Vec<u8>, u32)>;
-    fn can_switch_camera(&self) -> bool;
-    fn switch_camera(&self);
-    fn share_data(&self, name: String, data: Vec<u8>) -> Result<(), std::io::Error>;
-    fn pick_file(&self) -> Option<String>;
-    fn pick_folder(&self) -> Option<String>;
-    fn picked_file(&self) -> Option<String>;
-    fn request_user_attention(&self);
-    fn user_attention_required(&self) -> bool;
-    fn clear_user_attention(&self);
+	fn set_context(&mut self, ctx: &egui::Context);
+	fn exit(&self);
+	fn copy_string_to_buffer(&self, data: String);
+	fn get_string_from_buffer(&self) -> String;
+	fn start_camera(&self);
+	fn stop_camera(&self);
+	fn camera_image(&self) -> Option<(Vec<u8>, u32)>;
+	fn can_switch_camera(&self) -> bool;
+	fn switch_camera(&self);
+	fn share_data(&self, name: String, data: Vec<u8>) -> Result<(), std::io::Error>;
+	fn pick_file(&self) -> Option<String>;
+	fn pick_folder(&self) -> Option<String>;
+	fn picked_file(&self) -> Option<String>;
+	fn request_user_attention(&self);
+	fn user_attention_required(&self) -> bool;
+	fn clear_user_attention(&self);
 }

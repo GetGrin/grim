@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub mod modals;
 mod creation;
+pub mod modals;
 
 mod content;
 pub use content::*;

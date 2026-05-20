@@ -1,6 +1,6 @@
 [package]
 name = "grim"
-version = "0.3.5"
+version = "0.3.6"
 authors = ["Ardocrat <ardocrat@gri.mw>"]
 description = "Cross-platform GUI for Grin with focus on usability and availability to be used by anyone, anywhere."
 license = "Apache-2.0"
@@ -92,8 +92,8 @@ uuid = { version = "0.8.2", features = ["v4"] }
 num-bigint = "0.4.6"
 
 ## tor
-arti-client = { version = "0.42.0", features = ["pt-client", "onion-service-service", "onion-service-client"] }
-tor-rtcompat = "0.42.0"
+arti-client = { version = "0.42.0", features = ["static", "pt-client", "onion-service-service", "onion-service-client"] }
+tor-rtcompat = { version = "0.42.0", features = ["static"] }
 tor-config = "0.42.0"
 fs-mistrust = "0.14.1"
 tor-hsservice = "0.42.0"

@@ -15,14 +15,14 @@
 /// Integrated node error type.
 #[derive(Clone)]
 pub enum NodeError {
-    /// Storage issue.
-    Storage,
-    /// P2P server issue.
-    P2P,
-    /// API server issue.
-    API,
-    /// Configuration issue.
-    Configuration,
-    /// Unknown error.
-    Unknown
+	/// Storage issue.
+	Storage,
+	/// P2P server issue.
+	P2P,
+	/// API server issue.
+	API,
+	/// Configuration issue.
+	Configuration,
+	/// Unknown error.
+	Unknown,
 }

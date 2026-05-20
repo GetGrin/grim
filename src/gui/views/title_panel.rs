@@ -12,117 +12,111 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::{Margin, Id, Layout, Align, UiBuilder};
+use egui::{Align, Id, Layout, Margin, UiBuilder};
 
 use crate::gui::Colors;
-use crate::gui::views::{Content, View};
 use crate::gui::views::types::{TitleContentType, TitleType};
+use crate::gui::views::{Content, View};
 
 /// Title panel with left/right action buttons and text in the middle.
 pub struct TitlePanel {
-    /// Widget identifier.
-    id: Id
+	/// Widget identifier.
+	id: Id,
 }
 
 impl TitlePanel {
-    /// Content height.
-    pub const HEIGHT: f32 = 54.0;
+	/// Content height.
+	pub const HEIGHT: f32 = 54.0;
 
-    /// Create new title panel with provided identifier.
-    pub fn new(id: Id) -> Self {
-        Self {
-            id,
-        }
-    }
+	/// Create new title panel with provided identifier.
+	pub fn new(id: Id) -> Self {
+		Self { id }
+	}
 
-    pub fn ui(&self,
-              title: TitleType,
-              mut left_content: impl FnMut(&mut egui::Ui),
-              mut right_content: impl FnMut(&mut egui::Ui),
-              ui: &mut egui::Ui) {
-        // Draw title panel.
-        egui::TopBottomPanel::top(self.id)
-            .resizable(false)
-            .exact_height(Self::HEIGHT + View::get_top_inset())
-            .frame(egui::Frame {
-                inner_margin:  Margin {
-                    left: View::far_left_inset_margin(ui) as i8,
-                    right: View::far_right_inset_margin(ui) as i8,
-                    top: View::get_top_inset() as i8,
-                    bottom: 0.0 as i8,
-                },
-                ..Default::default()
-            })
-            .show_inside(ui, |ui| {
-                let rect = ui.available_rect_before_wrap();
-                ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Max), |ui| {
-                    ui.horizontal_centered(|ui| {
-                        (right_content)(ui);
-                    });
-                    ui.with_layout(Layout::left_to_right(Align::Min), |ui| {
-                        ui.horizontal_centered(|ui| {
-                            (left_content)(ui);
-                        });
-                    });
-                    match title {
-                        TitleType::Single(content) => {
-                            let content_rect = {
-                                let mut r = rect.clone();
-                                r.min.x += Self::HEIGHT;
-                                r.max.x -= Self::HEIGHT;
-                                r
-                            };
-                            ui.scope_builder(UiBuilder::new().max_rect(content_rect), |ui| {
-                                Self::title_text_content(ui, content);
-                            });
-                        }
-                        TitleType::Dual(first, second) => {
-                            let first_rect = {
-                                let mut r = rect.clone();
-                                r.max.x = r.min.x + Content::SIDE_PANEL_WIDTH - Self::HEIGHT;
-                                r.min.x += Self::HEIGHT;
-                                r
-                            };
-                            // Draw first title content.
-                            ui.scope_builder(UiBuilder::new().max_rect(first_rect), |ui| {
-                                Self::title_text_content(ui, first);
-                            });
+	pub fn ui(
+		&self,
+		title: TitleType,
+		mut left_content: impl FnMut(&mut egui::Ui),
+		mut right_content: impl FnMut(&mut egui::Ui),
+		ui: &mut egui::Ui,
+	) {
+		// Draw title panel.
+		egui::TopBottomPanel::top(self.id)
+			.resizable(false)
+			.exact_height(Self::HEIGHT + View::get_top_inset())
+			.frame(egui::Frame {
+				inner_margin: Margin {
+					left: View::far_left_inset_margin(ui) as i8,
+					right: View::far_right_inset_margin(ui) as i8,
+					top: View::get_top_inset() as i8,
+					bottom: 0.0 as i8,
+				},
+				..Default::default()
+			})
+			.show_inside(ui, |ui| {
+				let rect = ui.available_rect_before_wrap();
+				ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Max), |ui| {
+					ui.horizontal_centered(|ui| {
+						(right_content)(ui);
+					});
+					ui.with_layout(Layout::left_to_right(Align::Min), |ui| {
+						ui.horizontal_centered(|ui| {
+							(left_content)(ui);
+						});
+					});
+					match title {
+						TitleType::Single(content) => {
+							let content_rect = {
+								let mut r = rect.clone();
+								r.min.x += Self::HEIGHT;
+								r.max.x -= Self::HEIGHT;
+								r
+							};
+							ui.scope_builder(UiBuilder::new().max_rect(content_rect), |ui| {
+								Self::title_text_content(ui, content);
+							});
+						}
+						TitleType::Dual(first, second) => {
+							let first_rect = {
+								let mut r = rect.clone();
+								r.max.x = r.min.x + Content::SIDE_PANEL_WIDTH - Self::HEIGHT;
+								r.min.x += Self::HEIGHT;
+								r
+							};
+							// Draw first title content.
+							ui.scope_builder(UiBuilder::new().max_rect(first_rect), |ui| {
+								Self::title_text_content(ui, first);
+							});
 
-                            let second_rect = {
-                                let mut r = rect.clone();
-                                r.min.x = first_rect.max.x + 2.0 * Self::HEIGHT;
-                                r.max.x -= Self::HEIGHT;
-                                r
-                            };
-                            // Draw second title content.
-                            ui.scope_builder(UiBuilder::new().max_rect(second_rect), |ui| {
-                                Self::title_text_content(ui, second);
-                            });
-                        }
-                    }
-                });
-            });
-    }
+							let second_rect = {
+								let mut r = rect.clone();
+								r.min.x = first_rect.max.x + 2.0 * Self::HEIGHT;
+								r.max.x -= Self::HEIGHT;
+								r
+							};
+							// Draw second title content.
+							ui.scope_builder(UiBuilder::new().max_rect(second_rect), |ui| {
+								Self::title_text_content(ui, second);
+							});
+						}
+					}
+				});
+			});
+	}
 
-    /// Setup title text content.
-    fn title_text_content(ui: &mut egui::Ui, content: TitleContentType) {
-        ui.vertical_centered(|ui| {
-            match content {
-                TitleContentType::Title(text) => {
-                    ui.add_space(13.0 + if !View::is_desktop() {
-                        1.0
-                    } else {
-                        0.0
-                    });
-                    View::ellipsize_text(ui, text.to_uppercase(), 19.0, Colors::title(true));
-                }
-                TitleContentType::WithSubTitle(text, subtitle, animate) => {
-                    ui.add_space(4.0);
-                    View::ellipsize_text(ui, text.to_uppercase(), 18.0, Colors::title(true));
-                    ui.add_space(-2.0);
-                    View::animate_text(ui, subtitle, 15.0, Colors::text(true), animate)
-                }
-            }
-        });
-    }
+	/// Setup title text content.
+	fn title_text_content(ui: &mut egui::Ui, content: TitleContentType) {
+		ui.vertical_centered(|ui| match content {
+			TitleContentType::Title(text) => {
+				ui.add_space(13.0 + if !View::is_desktop() { 1.0 } else { 0.0 });
+				View::ellipsize_text(ui, text.to_uppercase(), 19.0, Colors::title(true));
+			}
+			TitleContentType::WithSubTitle(text, subtitle, animate) => {
+				ui.add_space(4.0);
+				View::ellipsize_text(ui, text.to_uppercase(), 18.0, Colors::title(true));
+				ui.add_space(-2.0);
+				View::animate_text(ui, subtitle, 15.0, Colors::text(true), animate)
+			}
+		});
+	}
 }

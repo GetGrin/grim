@@ -14,52 +14,49 @@
 
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::types::ContentContainer;
-use crate::gui::views::wallets::{CommonSettings, ConnectionSettings, RecoverySettings};
 use crate::gui::views::wallets::wallet::types::WalletContentContainer;
+use crate::gui::views::wallets::{CommonSettings, ConnectionSettings, RecoverySettings};
 use crate::wallet::Wallet;
 
 /// Wallet settings tab content.
 pub struct WalletSettingsContent {
-    /// Common setup content.
-    common_setup: CommonSettings,
-    /// Connection setup content.
-    conn_setup: ConnectionSettings,
-    /// Recovery setup content.
-    recovery_setup: RecoverySettings
+	/// Common setup content.
+	common_setup: CommonSettings,
+	/// Connection setup content.
+	conn_setup: ConnectionSettings,
+	/// Recovery setup content.
+	recovery_setup: RecoverySettings,
 }
 
 impl Default for WalletSettingsContent {
-    fn default() -> Self {
-        Self {
-            common_setup: CommonSettings::default(),
-            conn_setup: ConnectionSettings::default(),
-            recovery_setup: RecoverySettings::default()
-        }
-    }
+	fn default() -> Self {
+		Self {
+			common_setup: CommonSettings::default(),
+			conn_setup: ConnectionSettings::default(),
+			recovery_setup: RecoverySettings::default(),
+		}
+	}
 }
 
 impl WalletSettingsContent {
-    pub fn ui(&mut self,
-          ui: &mut egui::Ui,
-          wallet: &Wallet,
-          cb: &dyn PlatformCallbacks) {
-        // Show common wallet setup.
-        self.common_setup.ui(ui, wallet, cb);
+	pub fn ui(&mut self, ui: &mut egui::Ui, wallet: &Wallet, cb: &dyn PlatformCallbacks) {
+		// Show common wallet setup.
+		self.common_setup.ui(ui, wallet, cb);
 
-        // Show wallet connections setup.
-        self.conn_setup.method = wallet.get_current_connection();
-        let method = self.conn_setup.method.clone();
-        self.conn_setup.ui(ui, cb);
-        if method != self.conn_setup.method {
-            wallet.update_connection(&self.conn_setup.method);
-            // Reopen wallet if connection changed.
-            if !wallet.reopen_needed() {
-                wallet.set_reopen(true);
-                wallet.close();
-            }
-        }
+		// Show wallet connections setup.
+		self.conn_setup.method = wallet.get_current_connection();
+		let method = self.conn_setup.method.clone();
+		self.conn_setup.ui(ui, cb);
+		if method != self.conn_setup.method {
+			wallet.update_connection(&self.conn_setup.method);
+			// Reopen wallet if connection changed.
+			if !wallet.reopen_needed() {
+				wallet.set_reopen(true);
+				wallet.close();
+			}
+		}
 
-        // Show wallet recovery setup.
-        self.recovery_setup.ui(ui, wallet, cb);
-    }
+		// Show wallet recovery setup.
+		self.recovery_setup.ui(ui, wallet, cb);
+	}
 }

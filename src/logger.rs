@@ -12,21 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::{panic, thread};
-use std::fs::File;
 use backtrace::Backtrace;
+use log::{LevelFilter, Record, error};
+use log4rs::Config;
 use log4rs::append::Append;
 use log4rs::append::console::ConsoleAppender;
+use log4rs::append::rolling_file::RollingFileAppender;
 use log4rs::append::rolling_file::policy::compound::CompoundPolicy;
 use log4rs::append::rolling_file::policy::compound::roll::fixed_window::FixedWindowRoller;
 use log4rs::append::rolling_file::policy::compound::trigger::size::SizeTrigger;
-use log4rs::append::rolling_file::RollingFileAppender;
-use log4rs::Config;
 use log4rs::config::{Appender, Root};
 use log4rs::encode::pattern::PatternEncoder;
 use log4rs::filter::threshold::ThresholdFilter;
 use log4rs::filter::{Filter, Response};
-use log::{error, LevelFilter, Record};
+use std::fs::File;
+use std::{panic, thread};
 
 use crate::Settings;
 
@@ -39,7 +39,7 @@ const MAX_FILE_SIZE: u64 = 1024 * 1024 * 6;
 
 /// Include build information.
 pub mod built_info {
-    include!(concat!(env!("OUT_DIR"), "/built.rs"));
+	include!(concat!(env!("OUT_DIR"), "/built.rs"));
 }
 
 /// Filter is rejecting messages that doesn't start with "grin" or "grim"
@@ -47,118 +47,122 @@ pub mod built_info {
 struct AppFilter;
 
 impl Filter for AppFilter {
-    fn filter(&self, record: &Record<'_>) -> Response {
-        if let Some(module_path) = record.module_path() {
-            if module_path.starts_with("grin") || module_path.starts_with("grim")
-                || module_path.starts_with("arti") {
-                return Response::Neutral;
-            }
-        }
-        Response::Reject
-    }
+	fn filter(&self, record: &Record<'_>) -> Response {
+		if let Some(module_path) = record.module_path() {
+			if module_path.starts_with("grin")
+				|| module_path.starts_with("grim")
+				|| module_path.starts_with("arti")
+			{
+				return Response::Neutral;
+			}
+		}
+		Response::Reject
+	}
 }
 
 /// Initialize the logger.
 pub fn init_logger() {
-    let stdout = ConsoleAppender::builder()
-        .encoder(Box::new(PatternEncoder::new(&LOGGING_PATTERN)))
-        .build();
+	let stdout = ConsoleAppender::builder()
+		.encoder(Box::new(PatternEncoder::new(&LOGGING_PATTERN)))
+		.build();
 
-    let mut root = Root::builder();
+	let mut root = Root::builder();
 
-    let level_filter = Box::new(ThresholdFilter::new(LevelFilter::Debug));
+	let level_filter = Box::new(ThresholdFilter::new(LevelFilter::Debug));
 
-    let mut app = vec![];
-    app.push(
-        Appender::builder()
-            .filter(level_filter.clone())
-            .filter(Box::new(AppFilter))
-            .build("stdout", Box::new(stdout)),
-    );
-    root = root.appender("stdout");
+	let mut app = vec![];
+	app.push(
+		Appender::builder()
+			.filter(level_filter.clone())
+			.filter(Box::new(AppFilter))
+			.build("stdout", Box::new(stdout)),
+	);
+	root = root.appender("stdout");
 
-    // Setup file logging.
-    let file: Box<dyn Append> = {
-        let path = Settings::log_path();
-        let roller = FixedWindowRoller::builder()
-            .build(&format!("{}.{{}}.gz", path), ROTATE_LOG_FILES)
-            .unwrap();
-        let trigger = SizeTrigger::new(MAX_FILE_SIZE);
-        let policy = CompoundPolicy::new(Box::new(trigger), Box::new(roller));
-        Box::new(
-            RollingFileAppender::builder()
-                .append(true)
-                .encoder(Box::new(PatternEncoder::new(&LOGGING_PATTERN)))
-                .build(path, Box::new(policy))
-                .expect("Failed to create logfile"),
-        )
-    };
-    app.push(
-        Appender::builder()
-            .filter(level_filter)
-            .filter(Box::new(AppFilter))
-            .build("file", file),
-    );
-    root = root.appender("file");
+	// Setup file logging.
+	let file: Box<dyn Append> = {
+		let path = Settings::log_path();
+		let roller = FixedWindowRoller::builder()
+			.build(&format!("{}.{{}}.gz", path), ROTATE_LOG_FILES)
+			.unwrap();
+		let trigger = SizeTrigger::new(MAX_FILE_SIZE);
+		let policy = CompoundPolicy::new(Box::new(trigger), Box::new(roller));
+		Box::new(
+			RollingFileAppender::builder()
+				.append(true)
+				.encoder(Box::new(PatternEncoder::new(&LOGGING_PATTERN)))
+				.build(path, Box::new(policy))
+				.expect("Failed to create logfile"),
+		)
+	};
+	app.push(
+		Appender::builder()
+			.filter(level_filter)
+			.filter(Box::new(AppFilter))
+			.build("file", file),
+	);
+	root = root.appender("file");
 
-    let config = Config::builder()
-        .appenders(app)
-        .build(root.build(LevelFilter::Debug))
-        .unwrap();
-    let _ = log4rs::init_config(config).unwrap();
+	let config = Config::builder()
+		.appenders(app)
+		.build(root.build(LevelFilter::Debug))
+		.unwrap();
+	let _ = log4rs::init_config(config).unwrap();
 
-    log::info!("{}", build_info());
+	log::info!("{}", build_info());
 
-    send_panic_to_log();
+	send_panic_to_log();
 }
 
 /// Get information about application build.
 fn build_info() -> String {
-    format!(
-        "This is Grim version {}, built for {} by {}.",
-        built_info::PKG_VERSION,
-        built_info::TARGET,
-        built_info::RUSTC_VERSION,
-    )
+	format!(
+		"This is Grim version {}, built for {} by {}.",
+		built_info::PKG_VERSION,
+		built_info::TARGET,
+		built_info::RUSTC_VERSION,
+	)
 }
 
 /// Hook to send panics to logs as well as stderr.
 fn send_panic_to_log() {
-    panic::set_hook(Box::new(|info| {
-        let backtrace = Backtrace::new();
+	panic::set_hook(Box::new(|info| {
+		let backtrace = Backtrace::new();
 
-        let thread = thread::current();
-        let thread = thread.name().unwrap_or("unnamed");
+		let thread = thread::current();
+		let thread = thread.name().unwrap_or("unnamed");
 
-        let msg = match info.payload().downcast_ref::<&'static str>() {
-            Some(s) => *s,
-            None => match info.payload().downcast_ref::<String>() {
-                Some(s) => &**s,
-                None => "Box<Any>",
-            },
-        };
+		let msg = match info.payload().downcast_ref::<&'static str>() {
+			Some(s) => *s,
+			None => match info.payload().downcast_ref::<String>() {
+				Some(s) => &**s,
+				None => "Box<Any>",
+			},
+		};
 
-        match info.location() {
-            Some(location) => {
-                error!(
+		match info.location() {
+			Some(location) => {
+				error!(
 					"{}\nThread '{}' panicked at '{}': {}:{}{:?}\n\n",
-                    build_info(),
+					build_info(),
 					thread,
 					msg,
 					location.file(),
 					location.line(),
 					backtrace
 				);
-            }
-            None => error!("Thread '{}' panicked at '{}'{:?}", thread, msg, backtrace),
-        }
-        // Also print to stderr.
-        eprintln!(
-            "Thread '{}' panicked with message:\n\"{}\"\nSee {} for further details.",
-            thread, msg, Settings::log_path()
-        );
-        // Create file to show report send on launch.
-        let log = Settings::crash_check_path();
-        let _ = File::create(log);
-    }));
+			}
+			None => error!("Thread '{}' panicked at '{}'{:?}", thread, msg, backtrace),
+		}
+		// Also print to stderr.
+		eprintln!(
+			"Thread '{}' panicked with message:\n\"{}\"\nSee {} for further details.",
+			thread,
+			msg,
+			Settings::log_path()
+		);
+		// Create file to show report send on launch.
+		let log = Settings::crash_check_path();
+		let _ = File::create(log);
+	}));
 }

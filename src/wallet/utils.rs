@@ -12,17 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use sha2::{Sha256, Digest};
+use sha2::{Digest, Sha256};
 
 /// Wallet utilities functions.
 pub struct WalletUtils {}
 
 impl WalletUtils {
-    /// Setup entropy data checksum.
-    pub fn setup_checksum(data: &mut Vec<u8>) {
-        let mut hasher = Sha256::new();
-        hasher.update(data.clone());
-        let checksum = hasher.finalize();
-        data.extend(checksum);
-    }
+	/// Setup entropy data checksum.
+	pub fn setup_checksum(data: &mut Vec<u8>) {
+		let mut hasher = Sha256::new();
+		hasher.update(data.clone());
+		let checksum = hasher.finalize();
+		data.extend(checksum);
+	}
 }

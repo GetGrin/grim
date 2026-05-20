@@ -13,71 +13,71 @@
 // limitations under the License.
 
 use crate::AppConfig;
+use crate::gui::Colors;
 use crate::gui::icons::GLOBE_SIMPLE;
 use crate::gui::platform::PlatformCallbacks;
+use crate::gui::views::View;
 use crate::gui::views::settings::{InterfaceSettingsContent, NetworkSettingsContent};
 use crate::gui::views::types::ContentContainer;
-use crate::gui::views::View;
-use crate::gui::Colors;
 
 /// Application settings content.
 pub struct SettingsContent {
-    /// User interface settings.
-    interface_settings: InterfaceSettingsContent,
-    /// Network communication settings.
-    network_settings: NetworkSettingsContent,
-    // tor_settings: TorSettingsContent,
+	/// User interface settings.
+	interface_settings: InterfaceSettingsContent,
+	/// Network communication settings.
+	network_settings: NetworkSettingsContent,
+	// tor_settings: TorSettingsContent,
 }
 
 impl Default for SettingsContent {
-    fn default() -> Self {
-        Self {
-            interface_settings: InterfaceSettingsContent::default(),
-            network_settings: NetworkSettingsContent::default(),
-            //tor_settings: TorSettingsContent::default(),
-        }
-    }
+	fn default() -> Self {
+		Self {
+			interface_settings: InterfaceSettingsContent::default(),
+			network_settings: NetworkSettingsContent::default(),
+			//tor_settings: TorSettingsContent::default(),
+		}
+	}
 }
 
 impl SettingsContent {
-    /// Draw application settings content.
-    pub fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
-        ui.add_space(5.0);
-        View::checkbox(ui, AppConfig::check_updates(), t!("check_updates"), || {
-            AppConfig::toggle_check_updates();
-        });
-        ui.add_space(6.0);
-        View::horizontal_line(ui, Colors::stroke());
+	/// Draw application settings content.
+	pub fn ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
+		ui.add_space(5.0);
+		View::checkbox(ui, AppConfig::check_updates(), t!("check_updates"), || {
+			AppConfig::toggle_check_updates();
+		});
+		ui.add_space(6.0);
+		View::horizontal_line(ui, Colors::stroke());
 
-        // Show interface settings.
-        self.interface_settings.ui(ui, cb);
+		// Show interface settings.
+		self.interface_settings.ui(ui, cb);
 
-        ui.add_space(8.0);
-        View::horizontal_line(ui, Colors::stroke());
-        ui.add_space(6.0);
+		ui.add_space(8.0);
+		View::horizontal_line(ui, Colors::stroke());
+		ui.add_space(6.0);
 
-        View::sub_title(ui, format!("{} {}", GLOBE_SIMPLE, t!("network.self")));
-        View::horizontal_line(ui, Colors::stroke());
-        ui.add_space(6.0);
+		View::sub_title(ui, format!("{} {}", GLOBE_SIMPLE, t!("network.self")));
+		View::horizontal_line(ui, Colors::stroke());
+		ui.add_space(6.0);
 
-        // Show network settings.
-        self.network_settings.ui(ui, cb);
-        ui.add_space(8.0);
+		// Show network settings.
+		self.network_settings.ui(ui, cb);
+		ui.add_space(8.0);
 
-        // Do not show Tor settings on Android.
-        // let os = OperatingSystem::from_target_os();
-        // let show_tor = os != OperatingSystem::Android;
-        // if show_tor {
-        //     View::horizontal_line(ui, Colors::stroke());
-        //     ui.add_space(6.0);
-        // 
-        //     View::sub_title(ui, format!("{} {}", CIRCLE_HALF, t!("transport.tor_network")));
-        //     View::horizontal_line(ui, Colors::stroke());
-        //     ui.add_space(6.0);
-        // 
-        //     // Show Tor settings.
-        //     self.tor_settings.ui(ui, cb);
-        //     ui.add_space(8.0);
-        // }
-    }
+		// Do not show Tor settings on Android.
+		// let os = OperatingSystem::from_target_os();
+		// let show_tor = os != OperatingSystem::Android;
+		// if show_tor {
+		//     View::horizontal_line(ui, Colors::stroke());
+		//     ui.add_space(6.0);
+		//
+		//     View::sub_title(ui, format!("{} {}", CIRCLE_HALF, t!("transport.tor_network")));
+		//     View::horizontal_line(ui, Colors::stroke());
+		//     ui.add_space(6.0);
+		//
+		//     // Show Tor settings.
+		//     self.tor_settings.ui(ui, cb);
+		//     ui.add_space(8.0);
+		// }
+	}
 }

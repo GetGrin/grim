@@ -24,7 +24,7 @@ mod content;
 pub use content::WalletContent;
 
 mod account;
-mod transport;
-mod request;
 mod message;
 mod proof;
+mod request;
+mod transport;

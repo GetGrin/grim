@@ -15,7 +15,10 @@
 use grin_keychain::ExtKeychain;
 use grin_util::Mutex;
 use grin_wallet_impls::{DefaultLCProvider, HTTPNodeClient};
-use grin_wallet_libwallet::{Error, PaymentProof, Slate, SlateState, SlatepackAddress, TxLogEntry, TxLogEntryType, WalletInfo, WalletInst};
+use grin_wallet_libwallet::{
+	Error, PaymentProof, Slate, SlateState, SlatepackAddress, TxLogEntry, TxLogEntryType,
+	WalletInfo, WalletInst,
+};
 use grin_wallet_util::OnionV3Address;
 use serde_derive::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -26,433 +29,439 @@ use crate::wallet::Wallet;
 /// Mnemonic phrase word.
 #[derive(Clone)]
 pub struct PhraseWord {
-    /// Word text.
-    pub text: String,
-    /// Flag to check if word is valid.
-    pub valid: bool,
+	/// Word text.
+	pub text: String,
+	/// Flag to check if word is valid.
+	pub valid: bool,
 }
 
 /// Mnemonic phrase setup mode.
 #[derive(PartialEq, Clone)]
 pub enum PhraseMode {
-    /// Generate new mnemonic phrase.
-    Generate,
-    /// Import existing mnemonic phrase.
-    Import
+	/// Generate new mnemonic phrase.
+	Generate,
+	/// Import existing mnemonic phrase.
+	Import,
 }
 
 /// Mnemonic phrase size based on entropy.
 #[derive(PartialEq, Clone)]
-pub enum PhraseSize { Words12, Words15, Words18, Words21, Words24 }
+pub enum PhraseSize {
+	Words12,
+	Words15,
+	Words18,
+	Words21,
+	Words24,
+}
 
 impl PhraseSize {
-    pub const VALUES: [PhraseSize; 5] = [
-        PhraseSize::Words12,
-        PhraseSize::Words15,
-        PhraseSize::Words18,
-        PhraseSize::Words21,
-        PhraseSize::Words24
-    ];
+	pub const VALUES: [PhraseSize; 5] = [
+		PhraseSize::Words12,
+		PhraseSize::Words15,
+		PhraseSize::Words18,
+		PhraseSize::Words21,
+		PhraseSize::Words24,
+	];
 
-    /// Get entropy value.
-    pub fn value(&self) -> usize {
-        match *self {
-            PhraseSize::Words12 => 12,
-            PhraseSize::Words15 => 15,
-            PhraseSize::Words18 => 18,
-            PhraseSize::Words21 => 21,
-            PhraseSize::Words24 => 24
-        }
-    }
+	/// Get entropy value.
+	pub fn value(&self) -> usize {
+		match *self {
+			PhraseSize::Words12 => 12,
+			PhraseSize::Words15 => 15,
+			PhraseSize::Words18 => 18,
+			PhraseSize::Words21 => 21,
+			PhraseSize::Words24 => 24,
+		}
+	}
 
-    /// Get entropy size for current phrase size.
-    pub fn entropy_size(&self) -> usize {
-        match *self {
-            PhraseSize::Words12 => 16,
-            PhraseSize::Words15 => 20,
-            PhraseSize::Words18 => 24,
-            PhraseSize::Words21 => 28,
-            PhraseSize::Words24 => 32
-        }
-    }
+	/// Get entropy size for current phrase size.
+	pub fn entropy_size(&self) -> usize {
+		match *self {
+			PhraseSize::Words12 => 16,
+			PhraseSize::Words15 => 20,
+			PhraseSize::Words18 => 24,
+			PhraseSize::Words21 => 28,
+			PhraseSize::Words24 => 32,
+		}
+	}
 
-    /// Get phrase type for entropy size.
-    pub fn type_for_value(count: usize) -> Option<PhraseSize> {
-        if Self::is_correct_count(count) {
-            match count {
-                12 => {
-                    Some(PhraseSize::Words12)
-                }
-                15 => {
-                    Some(PhraseSize::Words15)
-                }
-                18 => {
-                    Some(PhraseSize::Words18)
-                }
-                21 => {
-                    Some(PhraseSize::Words21)
-                }
-                24 => {
-                    Some(PhraseSize::Words24)
-                }
-                _ => {
-                    None
-                }
-            }
-        } else {
-            None
-        }
-    }
+	/// Get phrase type for entropy size.
+	pub fn type_for_value(count: usize) -> Option<PhraseSize> {
+		if Self::is_correct_count(count) {
+			match count {
+				12 => Some(PhraseSize::Words12),
+				15 => Some(PhraseSize::Words15),
+				18 => Some(PhraseSize::Words18),
+				21 => Some(PhraseSize::Words21),
+				24 => Some(PhraseSize::Words24),
+				_ => None,
+			}
+		} else {
+			None
+		}
+	}
 
-    /// Check if correct entropy size was provided.
-    pub fn is_correct_count(count: usize) -> bool {
-        count == 12 || count == 15 || count == 18 || count == 21 || count == 24
-    }
+	/// Check if correct entropy size was provided.
+	pub fn is_correct_count(count: usize) -> bool {
+		count == 12 || count == 15 || count == 18 || count == 21 || count == 24
+	}
 }
 
 /// Wallet connection method.
 #[derive(Serialize, Deserialize, Clone, PartialEq)]
 pub enum ConnectionMethod {
-    /// Integrated node.
-    Integrated,
-    /// External node, contains connection identifier and URL.
-    External(i64, String)
+	/// Integrated node.
+	Integrated,
+	/// External node, contains connection identifier and URL.
+	External(i64, String),
 }
 
 /// Wallet instance type.
 pub type WalletInstance = Arc<
-    Mutex<
-        Box<
-            dyn WalletInst<
-                'static,
-                DefaultLCProvider<'static, HTTPNodeClient, ExtKeychain>,
-                HTTPNodeClient,
-                ExtKeychain,
-            >,
-        >,
-    >,
+	Mutex<
+		Box<
+			dyn WalletInst<
+					'static,
+					DefaultLCProvider<'static, HTTPNodeClient, ExtKeychain>,
+					HTTPNodeClient,
+					ExtKeychain,
+				>,
+		>,
+	>,
 >;
 
 /// Wallet account data.
 #[derive(Clone)]
 pub struct WalletAccount {
-    /// Spendable balance amount.
-    pub spendable_amount: u64,
-    /// Account label.
-    pub label: String,
-    /// Account BIP32 derivation path.
-    pub path: String
+	/// Spendable balance amount.
+	pub spendable_amount: u64,
+	/// Account label.
+	pub label: String,
+	/// Account BIP32 derivation path.
+	pub path: String,
 }
 
 /// Wallet balance and transactions data.
 #[derive(Clone)]
 pub struct WalletData {
-    /// Balance data for current account.
-    pub info: WalletInfo,
+	/// Balance data for current account.
+	pub info: WalletInfo,
 
-    /// Transactions data.
-    pub txs: Option<Vec<WalletTx>>,
-    /// Number of txs to show on select from database.
-    pub txs_limit: u32,
+	/// Transactions data.
+	pub txs: Option<Vec<WalletTx>>,
+	/// Number of txs to show on select from database.
+	pub txs_limit: u32,
 }
 
 impl WalletData {
-    /// Number of transactions per select to show at list.
-    pub const TXS_LIMIT: u32 = 30;
+	/// Number of transactions per select to show at list.
+	pub const TXS_LIMIT: u32 = 30;
 
-    /// Update transaction action status.
-    pub fn on_tx_action(&mut self, id: u32, action: Option<WalletTxAction>) {
-        if self.txs.is_none() {
-            return;
-        }
-        for tx in self.txs.as_mut().unwrap() {
-            if id == tx.data.id {
-                tx.action = action;
-                tx.action_error = None;
-                break;
-            }
-        }
-    }
+	/// Update transaction action status.
+	pub fn on_tx_action(&mut self, id: u32, action: Option<WalletTxAction>) {
+		if self.txs.is_none() {
+			return;
+		}
+		for tx in self.txs.as_mut().unwrap() {
+			if id == tx.data.id {
+				tx.action = action;
+				tx.action_error = None;
+				break;
+			}
+		}
+	}
 
-    /// Update transaction action error status.
-    pub fn on_tx_error(&mut self, id: u32, err: Option<Error>) {
-        if self.txs.is_none() {
-            return;
-        }
-        for tx in self.txs.as_mut().unwrap() {
-            if id == tx.data.id {
-                tx.action_error = err;
-                break;
-            }
-        }
-    }
+	/// Update transaction action error status.
+	pub fn on_tx_error(&mut self, id: u32, err: Option<Error>) {
+		if self.txs.is_none() {
+			return;
+		}
+		for tx in self.txs.as_mut().unwrap() {
+			if id == tx.data.id {
+				tx.action_error = err;
+				break;
+			}
+		}
+	}
 
-    /// Get transaction by identifier.
-    pub fn tx_by_id(&self, id: u32) -> Option<WalletTx> {
-        if self.txs.is_none() {
-            return None;
-        }
-        for tx in self.txs.as_ref().unwrap() {
-            if tx.data.id == id {
-                return Some(tx.clone());
-            }
-        }
-        None
-    }
+	/// Get transaction by identifier.
+	pub fn tx_by_id(&self, id: u32) -> Option<WalletTx> {
+		if self.txs.is_none() {
+			return None;
+		}
+		for tx in self.txs.as_ref().unwrap() {
+			if tx.data.id == id {
+				return Some(tx.clone());
+			}
+		}
+		None
+	}
 }
 
 /// Wallet transaction action.
 #[derive(Clone, PartialEq)]
 pub enum WalletTxAction {
-    Cancelling, Finalizing, Posting, SendingTor, Deleting
+	Cancelling,
+	Finalizing,
+	Posting,
+	SendingTor,
+	Deleting,
 }
 
 /// Wallet transaction data.
 #[derive(Clone)]
 pub struct WalletTx {
-    /// Information from database.
-    pub data: TxLogEntry,
-    /// State of transaction Slate.
-    pub state: SlateState,
-    /// Payment proof.
-    pub(crate) proof: Option<PaymentProof>,
+	/// Information from database.
+	pub data: TxLogEntry,
+	/// State of transaction Slate.
+	pub state: SlateState,
+	/// Payment proof.
+	pub(crate) proof: Option<PaymentProof>,
 
-    /// Transaction amount without fees.
-    pub amount: u64,
-    /// Possible receiver of transaction.
-    pub receiver: Option<SlatepackAddress>,
-    /// Possible sender of transaction.
-    pub sender: Option<SlatepackAddress>,
-    /// Block height where tx was included.
-    pub height: Option<u64>,
-    /// Block height where tx started broadcasting.
-    pub broadcasting_height: Option<u64>,
+	/// Transaction amount without fees.
+	pub amount: u64,
+	/// Possible receiver of transaction.
+	pub receiver: Option<SlatepackAddress>,
+	/// Possible sender of transaction.
+	pub sender: Option<SlatepackAddress>,
+	/// Block height where tx was included.
+	pub height: Option<u64>,
+	/// Block height where tx started broadcasting.
+	pub broadcasting_height: Option<u64>,
 
-    /// Action on transaction.
-    pub action: Option<WalletTxAction>,
-    /// Action result error.
-    pub action_error: Option<Error>
+	/// Action on transaction.
+	pub action: Option<WalletTxAction>,
+	/// Action result error.
+	pub action_error: Option<Error>,
 }
 
 impl WalletTx {
-    /// Create new wallet transaction.
-    pub fn new(tx: TxLogEntry,
-               proof: Option<PaymentProof>,
-               wallet: &Wallet,
-               height: Option<u64>,
-               broadcasting_height: Option<u64>,
-               action: Option<WalletTxAction>,
-               action_error: Option<Error>) -> Self {
-        let amount = if tx.amount_debited > tx.amount_credited {
-            tx.amount_debited - tx.amount_credited
-        } else {
-            tx.amount_credited - tx.amount_debited
-        };
-        let mut receiver: Option<SlatepackAddress> = None;
-        let mut sender: Option<SlatepackAddress> = None;
-        if let Some(proof) = &tx.payment_proof {
-            let rec_onion_addr = OnionV3Address::from_bytes(proof.receiver_address.to_bytes());
-            if let Ok(addr) = SlatepackAddress::try_from(rec_onion_addr) {
-                receiver = Some(addr);
-            }
-            let send_onion_addr = OnionV3Address::from_bytes(proof.sender_address.to_bytes());
-            if let Ok(addr) = SlatepackAddress::try_from(send_onion_addr) {
-                sender = Some(addr);
-            }
-        }
-        let mut t = Self {
-            data: tx,
-            state: SlateState::Unknown,
-            proof,
-            amount,
-            receiver,
-            sender,
-            height,
-            broadcasting_height,
-            action,
-            action_error,
-        };
-        // Update Slate state for unconfirmed.
-        if !t.data.confirmed {
-            t.update_slate_state(wallet);
-        }
-        t
-    }
+	/// Create new wallet transaction.
+	pub fn new(
+		tx: TxLogEntry,
+		proof: Option<PaymentProof>,
+		wallet: &Wallet,
+		height: Option<u64>,
+		broadcasting_height: Option<u64>,
+		action: Option<WalletTxAction>,
+		action_error: Option<Error>,
+	) -> Self {
+		let amount = if tx.amount_debited > tx.amount_credited {
+			tx.amount_debited - tx.amount_credited
+		} else {
+			tx.amount_credited - tx.amount_debited
+		};
+		let mut receiver: Option<SlatepackAddress> = None;
+		let mut sender: Option<SlatepackAddress> = None;
+		if let Some(proof) = &tx.payment_proof {
+			let rec_onion_addr = OnionV3Address::from_bytes(proof.receiver_address.to_bytes());
+			if let Ok(addr) = SlatepackAddress::try_from(rec_onion_addr) {
+				receiver = Some(addr);
+			}
+			let send_onion_addr = OnionV3Address::from_bytes(proof.sender_address.to_bytes());
+			if let Ok(addr) = SlatepackAddress::try_from(send_onion_addr) {
+				sender = Some(addr);
+			}
+		}
+		let mut t = Self {
+			data: tx,
+			state: SlateState::Unknown,
+			proof,
+			amount,
+			receiver,
+			sender,
+			height,
+			broadcasting_height,
+			action,
+			action_error,
+		};
+		// Update Slate state for unconfirmed.
+		if !t.data.confirmed {
+			t.update_slate_state(wallet);
+		}
+		t
+	}
 
-    /// Update transaction [`Slate`] state for provided wallet.
-    pub fn update_slate_state(&mut self, wallet: &Wallet) {
-        let tx = &self.data;
-        let mut slate = Slate::blank(1, false);
-        slate.id = tx.tx_slate_id.unwrap();
-        slate.state = match tx.tx_type {
-            TxLogEntryType::TxReceived => SlateState::Invoice3,
-            _ => SlateState::Standard3
-        };
-        // Transaction was finalized.
-        if wallet.slatepack_exists(&slate) {
-            self.state = slate.state;
-        } else {
-            slate.id = tx.tx_slate_id.unwrap();
-            slate.state = match tx.tx_type {
-                TxLogEntryType::TxReceived => SlateState::Standard2,
-                _ => SlateState::Invoice2
-            };
-            // Transaction signed to be finalized.
-            if wallet.slatepack_exists(&slate) {
-                self.state = slate.state;
-            } else {
-                // Transaction just was created.
-                slate.state = match tx.tx_type {
-                    TxLogEntryType::TxReceived => SlateState::Invoice1,
-                    _ => SlateState::Standard1
-                };
-                if wallet.slatepack_exists(&slate) {
-                    self.state = slate.state;
-                } else {
-                    self.state = SlateState::Unknown;
-                }
-            }
-        }
-    }
+	/// Update transaction [`Slate`] state for provided wallet.
+	pub fn update_slate_state(&mut self, wallet: &Wallet) {
+		let tx = &self.data;
+		let mut slate = Slate::blank(1, false);
+		slate.id = tx.tx_slate_id.unwrap();
+		slate.state = match tx.tx_type {
+			TxLogEntryType::TxReceived => SlateState::Invoice3,
+			_ => SlateState::Standard3,
+		};
+		// Transaction was finalized.
+		if wallet.slatepack_exists(&slate) {
+			self.state = slate.state;
+		} else {
+			slate.id = tx.tx_slate_id.unwrap();
+			slate.state = match tx.tx_type {
+				TxLogEntryType::TxReceived => SlateState::Standard2,
+				_ => SlateState::Invoice2,
+			};
+			// Transaction signed to be finalized.
+			if wallet.slatepack_exists(&slate) {
+				self.state = slate.state;
+			} else {
+				// Transaction just was created.
+				slate.state = match tx.tx_type {
+					TxLogEntryType::TxReceived => SlateState::Invoice1,
+					_ => SlateState::Standard1,
+				};
+				if wallet.slatepack_exists(&slate) {
+					self.state = slate.state;
+				} else {
+					self.state = SlateState::Unknown;
+				}
+			}
+		}
+	}
 
-    /// Check if transactions can be finalized after receiving response.
-    pub fn can_finalize(&self) -> bool {
-        !self.cancelling() && !self.data.confirmed &&
-            (!self.sending_tor() || self.action_error.is_some()) &&
-            (self.data.tx_type == TxLogEntryType::TxSent ||
-                self.data.tx_type == TxLogEntryType::TxReceived) &&
-            (self.state == SlateState::Invoice1 || self.state == SlateState::Standard1)
-    }
+	/// Check if transactions can be finalized after receiving response.
+	pub fn can_finalize(&self) -> bool {
+		!self.cancelling()
+			&& !self.data.confirmed
+			&& (!self.sending_tor() || self.action_error.is_some())
+			&& (self.data.tx_type == TxLogEntryType::TxSent
+				|| self.data.tx_type == TxLogEntryType::TxReceived)
+			&& (self.state == SlateState::Invoice1 || self.state == SlateState::Standard1)
+	}
 
-    /// Check if transaction was finalized.
-    pub fn finalized(&self) -> bool {
-        (self.data.tx_type == TxLogEntryType::TxSent ||
-            self.data.tx_type == TxLogEntryType::TxReceived) &&
-        self.state == SlateState::Invoice3 || self.state == SlateState::Standard3
-    }
+	/// Check if transaction was finalized.
+	pub fn finalized(&self) -> bool {
+		(self.data.tx_type == TxLogEntryType::TxSent
+			|| self.data.tx_type == TxLogEntryType::TxReceived)
+			&& self.state == SlateState::Invoice3
+			|| self.state == SlateState::Standard3
+	}
 
-    /// Check if transaction is sending over Tor.
-    pub fn sending_tor(&self) -> bool {
-        if let Some(a) = self.action.as_ref() {
-            return a == &WalletTxAction::SendingTor;
-        }
-        false
-    }
+	/// Check if transaction is sending over Tor.
+	pub fn sending_tor(&self) -> bool {
+		if let Some(a) = self.action.as_ref() {
+			return a == &WalletTxAction::SendingTor;
+		}
+		false
+	}
 
-    /// Check if transaction is cancelling.
-    pub fn cancelling(&self) -> bool {
-        if let Some(a) = self.action.as_ref() {
-            return a == &WalletTxAction::Cancelling;
-        }
-        false
-    }
+	/// Check if transaction is cancelling.
+	pub fn cancelling(&self) -> bool {
+		if let Some(a) = self.action.as_ref() {
+			return a == &WalletTxAction::Cancelling;
+		}
+		false
+	}
 
-    /// Check if transaction is posting.
-    pub fn posting(&self) -> bool {
-        if let Some(a) = self.action.as_ref() {
-            return a == &WalletTxAction::Posting;
-        }
-        false
-    }
+	/// Check if transaction is posting.
+	pub fn posting(&self) -> bool {
+		if let Some(a) = self.action.as_ref() {
+			return a == &WalletTxAction::Posting;
+		}
+		false
+	}
 
-    /// Check if transaction can be cancelled.
-    pub fn can_cancel(&self) -> bool {
-        !self.cancelling() && !self.data.confirmed && !self.broadcasting() &&
-            (!self.sending_tor() || self.action_error.is_some()) &&
-            self.data.tx_type != TxLogEntryType::TxReceivedCancelled &&
-            self.data.tx_type != TxLogEntryType::TxSentCancelled
-    }
+	/// Check if transaction can be cancelled.
+	pub fn can_cancel(&self) -> bool {
+		!self.cancelling()
+			&& !self.data.confirmed
+			&& !self.broadcasting()
+			&& (!self.sending_tor() || self.action_error.is_some())
+			&& self.data.tx_type != TxLogEntryType::TxReceivedCancelled
+			&& self.data.tx_type != TxLogEntryType::TxSentCancelled
+	}
 
-    /// Check if transaction was canceled.
-    pub fn cancelled(&self) -> bool {
-        self.data.tx_type == TxLogEntryType::TxReceivedCancelled ||
-            self.data.tx_type == TxLogEntryType::TxSentCancelled
-    }
+	/// Check if transaction was canceled.
+	pub fn cancelled(&self) -> bool {
+		self.data.tx_type == TxLogEntryType::TxReceivedCancelled
+			|| self.data.tx_type == TxLogEntryType::TxSentCancelled
+	}
 
-    /// Check if transaction is finalizing.
-    pub fn finalizing(&self) -> bool {
-        if let Some(a) = self.action.as_ref() {
-            return a == &WalletTxAction::Finalizing;
-        }
-        false
-    }
+	/// Check if transaction is finalizing.
+	pub fn finalizing(&self) -> bool {
+		if let Some(a) = self.action.as_ref() {
+			return a == &WalletTxAction::Finalizing;
+		}
+		false
+	}
 
-    /// Check if possible to repeat transaction action.
-    pub fn can_repeat_action(&self, wallet: &Wallet) -> bool {
-        if let Some(a) = &self.action {
-            self.action_error.is_some() && a != &WalletTxAction::Cancelling
-        } else {
-            // Can resend over Tor.
-            !self.data.confirmed && !self.sending_tor() &&
-                Tor::is_service_running(&wallet.identifier()) && !self.broadcasting() &&
-                self.receiver.is_some()
-        }
-    }
+	/// Check if possible to repeat transaction action.
+	pub fn can_repeat_action(&self, wallet: &Wallet) -> bool {
+		if let Some(a) = &self.action {
+			self.action_error.is_some() && a != &WalletTxAction::Cancelling
+		} else {
+			// Can resend over Tor.
+			!self.data.confirmed
+				&& !self.sending_tor()
+				&& Tor::is_service_running(&wallet.identifier())
+				&& !self.broadcasting()
+				&& self.receiver.is_some()
+		}
+	}
 
-    /// Check if transaction is broadcasting after finalization.
-    pub fn broadcasting(&self) -> bool {
-        !self.data.confirmed && self.finalized()
-    }
+	/// Check if transaction is broadcasting after finalization.
+	pub fn broadcasting(&self) -> bool {
+		!self.data.confirmed && self.finalized()
+	}
 
-    /// Check if broadcasting of transaction was timed out.
-    pub fn broadcasting_timed_out(&self, wallet: &Wallet) -> bool {
-        if let Some(data) = wallet.get_data() {
-            if self.broadcasting() {
-                let last_height = data.info.last_confirmed_height;
-                let broadcasting_height = self.broadcasting_height.unwrap_or(0);
-                if broadcasting_height == 0 {
-                    return false;
-                }
-                let delay = wallet.broadcasting_delay();
-                return last_height - broadcasting_height > delay;
-            }
-        }
-        false
-    }
+	/// Check if broadcasting of transaction was timed out.
+	pub fn broadcasting_timed_out(&self, wallet: &Wallet) -> bool {
+		if let Some(data) = wallet.get_data() {
+			if self.broadcasting() {
+				let last_height = data.info.last_confirmed_height;
+				let broadcasting_height = self.broadcasting_height.unwrap_or(0);
+				if broadcasting_height == 0 {
+					return false;
+				}
+				let delay = wallet.broadcasting_delay();
+				return last_height - broadcasting_height > delay;
+			}
+		}
+		false
+	}
 
-    /// Check if transaction is deleting.
-    pub fn deleting(&self) -> bool {
-        if let Some(a) = self.action.as_ref() {
-            return a == &WalletTxAction::Deleting;
-        }
-        false
-    }
+	/// Check if transaction is deleting.
+	pub fn deleting(&self) -> bool {
+		if let Some(a) = self.action.as_ref() {
+			return a == &WalletTxAction::Deleting;
+		}
+		false
+	}
 }
 
 /// Task for the wallet.
 #[derive(Clone)]
 pub enum WalletTask {
-    /// Open Slatepack message parsing result and making an action.
-    OpenMessage(String),
-    /// Calculate fee to send amount.
-    /// * amount
-    /// * fee (to read at result)
-    CalculateFee(u64, u64),
-    /// Verify payment proof.
-    /// * payment proof
-    /// * result (tx id, sender mine, receiver mine)
-    VerifyProof(PaymentProof, Option<Result<(u32, bool, bool), Error>>),
-    /// Create request to send.
-    /// * amount
-    /// * receiver
-    Send(u64, Option<SlatepackAddress>),
-    /// Send request over Tor.
-    /// * tx
-    /// * receiver
-    SendTor(TxLogEntry, SlatepackAddress),
-    /// Invoice creation.
-    /// * amount
-    Receive(u64),
-    /// Transaction finalization.
-    /// * tx id
-    Finalize(u32),
-    /// Post transaction to blockchain.
-    /// * tx id
-    Post(u32),
-    /// Cancel transaction.
-    /// * tx id
-    Cancel(u32),
-    /// Delete transaction.
-    /// * tx id
-    Delete(u32)
+	/// Open Slatepack message parsing result and making an action.
+	OpenMessage(String),
+	/// Calculate fee to send amount.
+	/// * amount
+	/// * fee (to read at result)
+	CalculateFee(u64, u64),
+	/// Verify payment proof.
+	/// * payment proof
+	/// * result (tx id, sender mine, receiver mine)
+	VerifyProof(PaymentProof, Option<Result<(u32, bool, bool), Error>>),
+	/// Create request to send.
+	/// * amount
+	/// * receiver
+	Send(u64, Option<SlatepackAddress>),
+	/// Send request over Tor.
+	/// * tx
+	/// * receiver
+	SendTor(TxLogEntry, SlatepackAddress),
+	/// Invoice creation.
+	/// * amount
+	Receive(u64),
+	/// Transaction finalization.
+	/// * tx id
+	Finalize(u32),
+	/// Post transaction to blockchain.
+	/// * tx id
+	Post(u32),
+	/// Cancel transaction.
+	/// * tx id
+	Cancel(u32),
+	/// Delete transaction.
+	/// * tx id
+	Delete(u32),
 }

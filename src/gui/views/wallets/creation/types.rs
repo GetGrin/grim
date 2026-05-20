@@ -15,21 +15,21 @@
 /// Wallet creation step.
 #[derive(PartialEq, Clone)]
 pub enum Step {
-    /// Mnemonic phrase input.
-    EnterMnemonic,
-    /// Mnemonic phrase confirmation.
-    ConfirmMnemonic,
-    /// Wallet connection setup.
-    SetupConnection
+	/// Mnemonic phrase input.
+	EnterMnemonic,
+	/// Mnemonic phrase confirmation.
+	ConfirmMnemonic,
+	/// Wallet connection setup.
+	SetupConnection,
 }
 
 impl Step {
-    /// Short name representing creation step.
-    pub fn name(&self) -> String {
-        match *self {
-            Step::EnterMnemonic => "enter_phrase".to_owned(),
-            Step::ConfirmMnemonic => "confirm_phrase".to_owned(),
-            Step::SetupConnection => "setup_conn".to_owned(),
-        }
-    }
+	/// Short name representing creation step.
+	pub fn name(&self) -> String {
+		match *self {
+			Step::EnterMnemonic => "enter_phrase".to_owned(),
+			Step::ConfirmMnemonic => "confirm_phrase".to_owned(),
+			Step::SetupConnection => "setup_conn".to_owned(),
+		}
+	}
 }

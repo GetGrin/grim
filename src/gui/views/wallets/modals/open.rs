@@ -21,88 +21,101 @@ use crate::gui::views::{Modal, TextEdit, View};
 
 /// Wallet opening [`Modal`] content.
 pub struct OpenWalletModal {
-    /// Password to open wallet.
-    pass_edit: String,
-    /// Flag to check if wrong password was entered.
-    wrong_pass: bool,
+	/// Password to open wallet.
+	pass_edit: String,
+	/// Flag to check if wrong password was entered.
+	wrong_pass: bool,
 }
 
 impl OpenWalletModal {
-    /// Create new content instance.
-    pub fn new() -> Self {
-        Self {
-            pass_edit: "".to_string(),
-            wrong_pass: false,
-        }
-    }
-    /// Draw [`Modal`] content.
-    pub fn ui(&mut self,
-              ui: &mut egui::Ui,
-              modal: &Modal,
-              cb: &dyn PlatformCallbacks,
-              mut on_continue: impl FnMut(ZeroingString) -> bool) {
-        // Callback for button to continue.
-        let mut on_continue = |m: &mut OpenWalletModal| {
-            let pass = m.pass_edit.clone();
-            if pass.is_empty() {
-                return;
-            }
-            m.wrong_pass = !on_continue(ZeroingString::from(pass));
-            if !m.wrong_pass {
-                m.pass_edit = "".to_string();
-                Modal::close();
-            }
-        };
+	/// Create new content instance.
+	pub fn new() -> Self {
+		Self {
+			pass_edit: "".to_string(),
+			wrong_pass: false,
+		}
+	}
+	/// Draw [`Modal`] content.
+	pub fn ui(
+		&mut self,
+		ui: &mut egui::Ui,
+		modal: &Modal,
+		cb: &dyn PlatformCallbacks,
+		mut on_continue: impl FnMut(ZeroingString) -> bool,
+	) {
+		// Callback for button to continue.
+		let mut on_continue = |m: &mut OpenWalletModal| {
+			let pass = m.pass_edit.clone();
+			if pass.is_empty() {
+				return;
+			}
+			m.wrong_pass = !on_continue(ZeroingString::from(pass));
+			if !m.wrong_pass {
+				m.pass_edit = "".to_string();
+				Modal::close();
+			}
+		};
 
-        ui.vertical_centered(|ui| {
-            ui.add_space(6.0);
-            ui.label(RichText::new(t!("wallets.pass"))
-                .size(17.0)
-                .color(Colors::gray()));
-            ui.add_space(8.0);
+		ui.vertical_centered(|ui| {
+			ui.add_space(6.0);
+			ui.label(
+				RichText::new(t!("wallets.pass"))
+					.size(17.0)
+					.color(Colors::gray()),
+			);
+			ui.add_space(8.0);
 
-            // Show password input.
-            let mut pass_edit = TextEdit::new(Id::from(modal.id).with("pass_edit")).password();
-            pass_edit.ui(ui, &mut self.pass_edit, cb);
-            if pass_edit.enter_pressed {
-                (on_continue)(self);
-            }
+			// Show password input.
+			let mut pass_edit = TextEdit::new(Id::from(modal.id).with("pass_edit")).password();
+			pass_edit.ui(ui, &mut self.pass_edit, cb);
+			if pass_edit.enter_pressed {
+				(on_continue)(self);
+			}
 
-            // Show information when password is empty.
-            if self.pass_edit.is_empty() {
-                self.wrong_pass = false;
-                ui.add_space(10.0);
-                ui.label(RichText::new(t!("wallets.pass_empty"))
-                    .size(17.0)
-                    .color(Colors::inactive_text()));
-            } else if self.wrong_pass {
-                ui.add_space(10.0);
-                ui.label(RichText::new(t!("wallets.wrong_pass"))
-                    .size(17.0)
-                    .color(Colors::red()));
-            }
-            ui.add_space(12.0);
-        });
+			// Show information when password is empty.
+			if self.pass_edit.is_empty() {
+				self.wrong_pass = false;
+				ui.add_space(10.0);
+				ui.label(
+					RichText::new(t!("wallets.pass_empty"))
+						.size(17.0)
+						.color(Colors::inactive_text()),
+				);
+			} else if self.wrong_pass {
+				ui.add_space(10.0);
+				ui.label(
+					RichText::new(t!("wallets.wrong_pass"))
+						.size(17.0)
+						.color(Colors::red()),
+				);
+			}
+			ui.add_space(12.0);
+		});
 
-        // Show modal buttons.
-        ui.scope(|ui| {
-            // Setup spacing between buttons.
-            ui.spacing_mut().item_spacing = egui::Vec2::new(8.0, 0.0);
+		// Show modal buttons.
+		ui.scope(|ui| {
+			// Setup spacing between buttons.
+			ui.spacing_mut().item_spacing = egui::Vec2::new(8.0, 0.0);
 
-            ui.columns(2, |columns| {
-                columns[0].vertical_centered_justified(|ui| {
-                    View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
-                        // Close modal.
-                        Modal::close();
-                    });
-                });
-                columns[1].vertical_centered_justified(|ui| {
-                    View::button(ui, t!("continue"), Colors::white_or_black(false), || {
-                        (on_continue)(self);
-                    });
-                });
-            });
-            ui.add_space(6.0);
-        });
-    }
+			ui.columns(2, |columns| {
+				columns[0].vertical_centered_justified(|ui| {
+					View::button(
+						ui,
+						t!("modal.cancel"),
+						Colors::white_or_black(false),
+						|| {
+							// Close modal.
+							Modal::close();
+						},
+					);
+				});
+				columns[1].vertical_centered_justified(|ui| {
+					View::button(ui, t!("continue"), Colors::white_or_black(false), || {
+						(on_continue)(self);
+					});
+				});
+			});
+			ui.add_space(6.0);
+		});
+	}
 }

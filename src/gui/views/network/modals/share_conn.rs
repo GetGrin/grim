@@ -20,38 +20,38 @@ use crate::gui::views::{Modal, QrCodeContent, View};
 
 /// [`Modal`] content to share connection with QR code.
 pub struct ShareConnectionContent {
-    /// QR code content.
-    pub qr_details_content: QrCodeContent,
+	/// QR code content.
+	pub qr_details_content: QrCodeContent,
 }
 
 impl ShareConnectionContent {
-    /// Create new content instance from connection details.
-    pub fn new(details: ShareConnection) -> Result<Self, serde_json::Error> {
-        let details = serde_json::to_string_pretty(&details)?;
-        let c = Self {
-            qr_details_content: QrCodeContent::new(details, false).hide_text().no_copy(),
-        };
-        Ok(c)
-    }
+	/// Create new content instance from connection details.
+	pub fn new(details: ShareConnection) -> Result<Self, serde_json::Error> {
+		let details = serde_json::to_string_pretty(&details)?;
+		let c = Self {
+			qr_details_content: QrCodeContent::new(details, false).hide_text().no_copy(),
+		};
+		Ok(c)
+	}
 
-    /// Draw QR code content.
-    pub fn ui(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
-        let dark_theme = AppConfig::dark_theme().unwrap_or(false);
-        // Set light theme for better scanning.
-        AppConfig::set_dark_theme(false);
-        modal.set_background_color(Colors::FILL_DEEP);
-        crate::setup_visuals(ui.ctx());
-        // Draw QR code content.
-        ui.add_space(6.0);
-        self.qr_details_content.ui(ui, cb);
-        ui.vertical_centered_justified(|ui| {
-            View::button(ui, t!("close"), Colors::white_or_black(false), || {
-                Modal::close();
-            });
-        });
-        ui.add_space(6.0);
-        // Set color theme back.
-        AppConfig::set_dark_theme(dark_theme);
-        crate::setup_visuals(ui.ctx());
-    }
+	/// Draw QR code content.
+	pub fn ui(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
+		let dark_theme = AppConfig::dark_theme().unwrap_or(false);
+		// Set light theme for better scanning.
+		AppConfig::set_dark_theme(false);
+		modal.set_background_color(Colors::FILL_DEEP);
+		crate::setup_visuals(ui.ctx());
+		// Draw QR code content.
+		ui.add_space(6.0);
+		self.qr_details_content.ui(ui, cb);
+		ui.vertical_centered_justified(|ui| {
+			View::button(ui, t!("close"), Colors::white_or_black(false), || {
+				Modal::close();
+			});
+		});
+		ui.add_space(6.0);
+		// Set color theme back.
+		AppConfig::set_dark_theme(dark_theme);
+		crate::setup_visuals(ui.ctx());
+	}
 }

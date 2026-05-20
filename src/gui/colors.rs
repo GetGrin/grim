@@ -38,8 +38,11 @@ const RED: Color32 = Color32::from_rgb(0x8B, 0, 0);
 const RED_DARK: Color32 = Color32::from_rgb((0x8B as f32 * 1.3 + 0.5) as u8, 50, 30);
 
 const BLUE: Color32 = Color32::from_rgb(0, 0x66, 0xE4);
-const BLUE_DARK: Color32 =
-    Color32::from_rgb(0, (0x66 as f32 * 1.3 + 0.5) as u8, (0xE4 as f32 * 1.3 + 0.5) as u8);
+const BLUE_DARK: Color32 = Color32::from_rgb(
+	0,
+	(0x66 as f32 * 1.3 + 0.5) as u8,
+	(0xE4 as f32 * 1.3 + 0.5) as u8,
+);
 
 const FILL: Color32 = Color32::from_gray(244);
 const FILL_DARK: Color32 = Color32::from_gray(26);
@@ -80,187 +83,155 @@ const ITEM_HOVER_DARK: Color32 = Color32::from_gray(48);
 
 /// Check if dark theme should be used.
 fn use_dark() -> bool {
-    AppConfig::dark_theme().unwrap_or(false)
+	AppConfig::dark_theme().unwrap_or(false)
 }
 
 impl Colors {
-    pub const FILL_DEEP: Color32 = Color32::from_gray(238);
-    pub const TRANSPARENT: Color32 = Color32::from_rgba_premultiplied(0, 0, 0, 0);
-    pub const STROKE: Color32 = Color32::from_gray(200);
+	pub const FILL_DEEP: Color32 = Color32::from_gray(238);
+	pub const TRANSPARENT: Color32 = Color32::from_rgba_premultiplied(0, 0, 0, 0);
+	pub const STROKE: Color32 = Color32::from_gray(200);
 
-    pub fn white_or_black(black_in_white: bool) -> Color32 {
-        if use_dark() {
-            if black_in_white {
-                WHITE
-            } else {
-                BLACK
-            }
-        } else {
-            if black_in_white {
-                BLACK
-            } else {
-                WHITE
-            }
-        }
-    }
+	pub fn white_or_black(black_in_white: bool) -> Color32 {
+		if use_dark() {
+			if black_in_white { WHITE } else { BLACK }
+		} else {
+			if black_in_white { BLACK } else { WHITE }
+		}
+	}
 
-    pub fn semi_transparent() -> Color32 {
-        if use_dark() {
-            DARK_SEMI_TRANSPARENT
-        } else {
-            SEMI_TRANSPARENT
-        }
-    }
+	pub fn semi_transparent() -> Color32 {
+		if use_dark() {
+			DARK_SEMI_TRANSPARENT
+		} else {
+			SEMI_TRANSPARENT
+		}
+	}
 
-    pub fn gold() -> Color32 {
-        if use_dark() {
-            GOLD.gamma_multiply(0.9)
-        } else {
-            GOLD
-        }
-    }
+	pub fn gold() -> Color32 {
+		if use_dark() {
+			GOLD.gamma_multiply(0.9)
+		} else {
+			GOLD
+		}
+	}
 
-    pub fn gold_dark() -> Color32 {
-        if use_dark() {
-            GOLD_DARK.gamma_multiply(0.9)
-        } else {
-            GOLD_DARK
-        }
-    }
+	pub fn gold_dark() -> Color32 {
+		if use_dark() {
+			GOLD_DARK.gamma_multiply(0.9)
+		} else {
+			GOLD_DARK
+		}
+	}
 
-    pub fn yellow() -> Color32 {
-        YELLOW
-    }
+	pub fn yellow() -> Color32 {
+		YELLOW
+	}
 
-    pub fn yellow_dark() -> Color32 {
-        YELLOW_DARK
-    }
+	pub fn yellow_dark() -> Color32 {
+		YELLOW_DARK
+	}
 
-    pub fn green() -> Color32 {
-        if use_dark() {
-            GREEN_DARK
-        } else {
-            GREEN
-        }
-    }
+	pub fn green() -> Color32 {
+		if use_dark() { GREEN_DARK } else { GREEN }
+	}
 
-    pub fn red() -> Color32 {
-        if use_dark() {
-            RED_DARK
-        } else {
-            RED
-        }
-    }
+	pub fn red() -> Color32 {
+		if use_dark() { RED_DARK } else { RED }
+	}
 
-    pub fn blue() -> Color32 {
-        if use_dark() {
-            BLUE_DARK
-        } else {
-            BLUE
-        }
-    }
+	pub fn blue() -> Color32 {
+		if use_dark() { BLUE_DARK } else { BLUE }
+	}
 
-    pub fn fill() -> Color32 {
-        if use_dark() {
-            FILL_DARK
-        } else {
-            FILL
-        }
-    }
+	pub fn fill() -> Color32 {
+		if use_dark() { FILL_DARK } else { FILL }
+	}
 
-    pub fn fill_deep() -> Color32 {
-        if use_dark() {
-            FILL_DEEP_DARK
-        } else {
-            Self::FILL_DEEP
-        }
-    }
+	pub fn fill_deep() -> Color32 {
+		if use_dark() {
+			FILL_DEEP_DARK
+		} else {
+			Self::FILL_DEEP
+		}
+	}
 
-    pub fn fill_lite() -> Color32 {
-        if use_dark() {
-            FILL_LITE_DARK
-        } else {
-            FILL_LITE
-        }
-    }
+	pub fn fill_lite() -> Color32 {
+		if use_dark() {
+			FILL_LITE_DARK
+		} else {
+			FILL_LITE
+		}
+	}
 
-    pub fn checkbox() -> Color32 {
-        if use_dark() {
-            CHECKBOX_DARK
-        } else {
-            CHECKBOX
-        }
-    }
+	pub fn checkbox() -> Color32 {
+		if use_dark() { CHECKBOX_DARK } else { CHECKBOX }
+	}
 
-    pub fn text(always_light: bool) -> Color32 {
-        if use_dark() && !always_light {
-            TEXT_DARK
-        } else {
-            TEXT
-        }
-    }
+	pub fn text(always_light: bool) -> Color32 {
+		if use_dark() && !always_light {
+			TEXT_DARK
+		} else {
+			TEXT
+		}
+	}
 
-    pub fn text_button() -> Color32 {
-        if use_dark() {
-            TEXT_BUTTON_DARK
-        } else {
-            TEXT_BUTTON
-        }
-    }
+	pub fn text_button() -> Color32 {
+		if use_dark() {
+			TEXT_BUTTON_DARK
+		} else {
+			TEXT_BUTTON
+		}
+	}
 
-    pub fn title(always_light: bool) -> Color32 {
-        if use_dark() && !always_light {
-            TITLE_DARK
-        } else {
-            TITLE
-        }
-    }
+	pub fn title(always_light: bool) -> Color32 {
+		if use_dark() && !always_light {
+			TITLE_DARK
+		} else {
+			TITLE
+		}
+	}
 
-    pub fn gray() -> Color32 {
-        if use_dark() {
-            GRAY_DARK
-        } else {
-            GRAY
-        }
-    }
+	pub fn gray() -> Color32 {
+		if use_dark() { GRAY_DARK } else { GRAY }
+	}
 
-    pub fn stroke() -> Color32 {
-        if use_dark() {
-            STROKE_DARK
-        } else {
-            Self::STROKE
-        }
-    }
+	pub fn stroke() -> Color32 {
+		if use_dark() {
+			STROKE_DARK
+		} else {
+			Self::STROKE
+		}
+	}
 
-    pub fn inactive_text() -> Color32 {
-        if use_dark() {
-            INACTIVE_TEXT_DARK
-        } else {
-            INACTIVE_TEXT
-        }
-    }
+	pub fn inactive_text() -> Color32 {
+		if use_dark() {
+			INACTIVE_TEXT_DARK
+		} else {
+			INACTIVE_TEXT
+		}
+	}
 
-    pub fn item_button_text() -> Color32 {
-        if use_dark() {
-            ITEM_BUTTON_DARK
-        } else {
-            ITEM_BUTTON
-        }
-    }
+	pub fn item_button_text() -> Color32 {
+		if use_dark() {
+			ITEM_BUTTON_DARK
+		} else {
+			ITEM_BUTTON
+		}
+	}
 
-    pub fn item_stroke() -> Color32 {
-        if use_dark() {
-            ITEM_STROKE_DARK
-        } else {
-            ITEM_STROKE
-        }
-    }
+	pub fn item_stroke() -> Color32 {
+		if use_dark() {
+			ITEM_STROKE_DARK
+		} else {
+			ITEM_STROKE
+		}
+	}
 
-    pub fn item_hover() -> Color32 {
-        if use_dark() {
-            ITEM_HOVER_DARK
-        } else {
-            ITEM_HOVER
-        }
-    }
+	pub fn item_hover() -> Color32 {
+		if use_dark() {
+			ITEM_HOVER_DARK
+		} else {
+			ITEM_HOVER
+		}
+	}
 }

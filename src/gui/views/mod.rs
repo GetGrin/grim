@@ -27,8 +27,8 @@ mod content;
 pub use content::*;
 
 pub mod network;
-pub mod wallets;
 pub mod settings;
+pub mod wallets;
 
 mod camera;
 pub use camera::*;

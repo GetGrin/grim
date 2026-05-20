@@ -12,40 +12,40 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use serde_derive::{Deserialize, Serialize};
 use crate::gui::platform::PlatformCallbacks;
+use serde_derive::{Deserialize, Serialize};
 
 /// Integrated node tab content interface.
 pub trait NodeTab {
-    fn get_type(&self) -> NodeTabType;
-    fn tab_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks);
+	fn get_type(&self) -> NodeTabType;
+	fn tab_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks);
 }
 
 /// Type of [`NodeTab`] content.
 #[derive(PartialEq)]
 pub enum NodeTabType {
-    Info,
-    Metrics,
-    Mining,
-    Settings
+	Info,
+	Metrics,
+	Mining,
+	Settings,
 }
 
 impl NodeTabType {
-    pub fn title(&self) -> String {
-        match *self {
-            NodeTabType::Info => t!("network.node").into(),
-            NodeTabType::Metrics => t!("network.metrics").into(),
-            NodeTabType::Mining => t!("network.mining").into(),
-            NodeTabType::Settings => t!("network.settings").into()
-        }
-    }
+	pub fn title(&self) -> String {
+		match *self {
+			NodeTabType::Info => t!("network.node").into(),
+			NodeTabType::Metrics => t!("network.metrics").into(),
+			NodeTabType::Mining => t!("network.mining").into(),
+			NodeTabType::Settings => t!("network.settings").into(),
+		}
+	}
 }
 
 /// Connection details to share.
 #[derive(Serialize, Deserialize, Clone)]
 pub struct ShareConnection {
-    #[serde(rename(serialize = "ipPort", deserialize = "ipPort"))]
-    pub url: String,
-    pub username: String,
-    pub secret: String
+	#[serde(rename(serialize = "ipPort", deserialize = "ipPort"))]
+	pub url: String,
+	pub username: String,
+	pub secret: String,
 }

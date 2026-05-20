@@ -33,5 +33,5 @@ pub use content::*;
 mod connections;
 pub use connections::*;
 
-pub mod types;
 pub mod modals;
+pub mod types;

@@ -14,60 +14,64 @@
 
 use egui::RichText;
 
+use crate::gui::Colors;
 use crate::gui::platform::PlatformCallbacks;
+use crate::gui::views::View;
 use crate::gui::views::settings::TorSettingsContent;
 use crate::gui::views::types::ContentContainer;
-use crate::gui::views::View;
-use crate::gui::Colors;
 use crate::tor::Tor;
 use crate::wallet::Wallet;
 
 /// Wallet transport settings content.
 pub struct WalletTransportSettingsContent {
-    /// Tor transport content settings.
-    pub tor_settings_content: TorSettingsContent,
+	/// Tor transport content settings.
+	pub tor_settings_content: TorSettingsContent,
 }
 
 impl Default for WalletTransportSettingsContent {
-    fn default() -> Self {
-        Self {
-            tor_settings_content: TorSettingsContent::default()
-        }
-    }
+	fn default() -> Self {
+		Self {
+			tor_settings_content: TorSettingsContent::default(),
+		}
+	}
 }
 
 impl WalletTransportSettingsContent {
-    /// Draw transport settings content.
-    pub fn ui(&mut self,
-              ui: &mut egui::Ui,
-              wallet: &Wallet,
-              cb: &dyn PlatformCallbacks,
-              on_close: impl FnOnce()) {
-        ui.add_space(8.0);
-        ui.vertical_centered(|ui| {
-            // Show Tor settings.
-            self.tor_settings_content.ui(ui, cb);
-            ui.add_space(4.0);
-            View::horizontal_line(ui, Colors::item_stroke());
-            ui.add_space(8.0);
-            ui.label(RichText::new(t!("transport.tor_autorun_desc"))
-                .size(17.0)
-                .color(Colors::inactive_text()));
-            // Show Tor service autorun checkbox.
-            let autorun = wallet.auto_start_tor_listener();
-            View::checkbox(ui, autorun, t!("network.autorun"), || {
-                wallet.update_auto_start_tor_listener(!autorun);
-            });
-        });
-        ui.add_space(8.0);
-        ui.vertical_centered_justified(|ui| {
-            View::button(ui, t!("close"), Colors::white_or_black(false), || {
-                if self.tor_settings_content.settings_changed {
-                    Tor::restart();
-                }
-                on_close();
-            });
-        });
-        ui.add_space(6.0);
-    }
+	/// Draw transport settings content.
+	pub fn ui(
+		&mut self,
+		ui: &mut egui::Ui,
+		wallet: &Wallet,
+		cb: &dyn PlatformCallbacks,
+		on_close: impl FnOnce(),
+	) {
+		ui.add_space(8.0);
+		ui.vertical_centered(|ui| {
+			// Show Tor settings.
+			self.tor_settings_content.ui(ui, cb);
+			ui.add_space(4.0);
+			View::horizontal_line(ui, Colors::item_stroke());
+			ui.add_space(8.0);
+			ui.label(
+				RichText::new(t!("transport.tor_autorun_desc"))
+					.size(17.0)
+					.color(Colors::inactive_text()),
+			);
+			// Show Tor service autorun checkbox.
+			let autorun = wallet.auto_start_tor_listener();
+			View::checkbox(ui, autorun, t!("network.autorun"), || {
+				wallet.update_auto_start_tor_listener(!autorun);
+			});
+		});
+		ui.add_space(8.0);
+		ui.vertical_centered_justified(|ui| {
+			View::button(ui, t!("close"), Colors::white_or_black(false), || {
+				if self.tor_settings_content.settings_changed {
+					Tor::restart();
+				}
+				on_close();
+			});
+		});
+		ui.add_space(6.0);
+	}
 }

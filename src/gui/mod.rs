@@ -12,13 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
 mod app;
 pub use app::App;
 
 mod colors;
 pub use colors::Colors;
 
+pub mod icons;
 pub mod platform;
 pub mod views;
-pub mod icons;

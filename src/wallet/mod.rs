@@ -32,5 +32,5 @@ pub use list::*;
 mod utils;
 pub use utils::WalletUtils;
 
-pub mod store;
 mod seed;
+pub mod store;

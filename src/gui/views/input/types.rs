@@ -18,32 +18,36 @@ use std::sync::atomic::AtomicBool;
 /// Software keyboard input type.
 #[derive(Clone, PartialOrd, PartialEq)]
 pub enum KeyboardLayout {
-    TEXT, SYMBOLS, NUMBERS
+	TEXT,
+	SYMBOLS,
+	NUMBERS,
 }
 
 /// Software keyboard input event.
 #[derive(Clone)]
 pub enum KeyboardEvent {
-    TEXT(String), CLEAR, ENTER
+	TEXT(String),
+	CLEAR,
+	ENTER,
 }
 
 /// Software keyboard Window State.
 #[derive(Clone)]
 pub struct KeyboardState {
-    /// Last input event.
-    pub last_event: Arc<Option<KeyboardEvent>>,
-    /// Current layout.
-    pub layout: Arc<KeyboardLayout>,
-    /// Flag to enter uppercase symbol first.
-    pub shift: Arc<AtomicBool>,
+	/// Last input event.
+	pub last_event: Arc<Option<KeyboardEvent>>,
+	/// Current layout.
+	pub layout: Arc<KeyboardLayout>,
+	/// Flag to enter uppercase symbol first.
+	pub shift: Arc<AtomicBool>,
 }
 
 impl Default for KeyboardState {
-    fn default() -> Self {
-        Self {
-            last_event: Arc::new(None),
-            layout: Arc::new(KeyboardLayout::TEXT),
-            shift: Arc::new(AtomicBool::new(false)),
-        }
-    }
+	fn default() -> Self {
+		Self {
+			last_event: Arc::new(None),
+			layout: Arc::new(KeyboardLayout::TEXT),
+			shift: Arc::new(AtomicBool::new(false)),
+		}
+	}
 }

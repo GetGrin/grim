@@ -12,278 +12,302 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::{RichText, ScrollArea};
 use egui::scroll_area::ScrollBarVisibility;
+use egui::{RichText, ScrollArea};
 
 use crate::gui::Colors;
 use crate::gui::icons::{ARROW_COUNTER_CLOCKWISE, TRASH};
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Modal, Content, View};
-use crate::gui::views::network::setup::{DandelionSetup, NodeSetup, P2PSetup, PoolSetup, StratumSetup};
+use crate::gui::views::network::setup::{
+	DandelionSetup, NodeSetup, P2PSetup, PoolSetup, StratumSetup,
+};
 use crate::gui::views::network::types::{NodeTab, NodeTabType};
 use crate::gui::views::types::{ContentContainer, ModalPosition};
+use crate::gui::views::{Content, Modal, View};
 use crate::node::{Node, NodeConfig};
 
 /// Integrated node settings tab content.
 pub struct NetworkSettings {
-    /// Integrated node general setup content.
-    node: NodeSetup,
-    /// P2P server setup content.
-    p2p: P2PSetup,
-    /// Stratum server setup content.
-    stratum: StratumSetup,
-    /// Pool setup content.
-    pool: PoolSetup,
-    /// Dandelion server setup content.
-    dandelion: DandelionSetup,
+	/// Integrated node general setup content.
+	node: NodeSetup,
+	/// P2P server setup content.
+	p2p: P2PSetup,
+	/// Stratum server setup content.
+	stratum: StratumSetup,
+	/// Pool setup content.
+	pool: PoolSetup,
+	/// Dandelion server setup content.
+	dandelion: DandelionSetup,
 
-    /// Flag to check if reset of data was called.
-    data_reset: bool,
+	/// Flag to check if reset of data was called.
+	data_reset: bool,
 }
 
 /// Identifier for settings reset confirmation [`Modal`].
 pub const RESET_SETTINGS_CONFIRMATION_MODAL: &'static str = "reset_settings_confirmation";
 
 impl Default for NetworkSettings {
-    fn default() -> Self {
-        Self {
-            node: NodeSetup::default(),
-            p2p: P2PSetup::default(),
-            stratum: StratumSetup::default(),
-            pool: PoolSetup::default(),
-            dandelion: DandelionSetup::default(),
-            data_reset: false,
-        }
-    }
+	fn default() -> Self {
+		Self {
+			node: NodeSetup::default(),
+			p2p: P2PSetup::default(),
+			stratum: StratumSetup::default(),
+			pool: PoolSetup::default(),
+			dandelion: DandelionSetup::default(),
+			data_reset: false,
+		}
+	}
 }
 
 impl ContentContainer for NetworkSettings {
-    fn modal_ids(&self) -> Vec<&'static str> {
-        vec![
-            RESET_SETTINGS_CONFIRMATION_MODAL
-        ]
-    }
+	fn modal_ids(&self) -> Vec<&'static str> {
+		vec![RESET_SETTINGS_CONFIRMATION_MODAL]
+	}
 
-    fn modal_ui(&mut self,
-                ui: &mut egui::Ui,
-                modal: &Modal,
-                _: &dyn PlatformCallbacks) {
-        match modal.id {
-            RESET_SETTINGS_CONFIRMATION_MODAL => reset_settings_confirmation_modal(ui),
-            _ => {}
-        }
-    }
+	fn modal_ui(&mut self, ui: &mut egui::Ui, modal: &Modal, _: &dyn PlatformCallbacks) {
+		match modal.id {
+			RESET_SETTINGS_CONFIRMATION_MODAL => reset_settings_confirmation_modal(ui),
+			_ => {}
+		}
+	}
 
-    fn container_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
-        ScrollArea::vertical()
-            .id_salt("node_settings_scroll")
-            .scroll_bar_visibility(ScrollBarVisibility::AlwaysHidden)
-            .auto_shrink([false; 2])
-            .show(ui, |ui| {
-                ui.add_space(1.0);
-                ui.vertical_centered(|ui| {
-                    View::max_width_ui(ui, Content::SIDE_PANEL_WIDTH * 1.3, |ui| {
-                        // Draw node setup section.
-                        self.node.ui(ui, cb);
+	fn container_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
+		ScrollArea::vertical()
+			.id_salt("node_settings_scroll")
+			.scroll_bar_visibility(ScrollBarVisibility::AlwaysHidden)
+			.auto_shrink([false; 2])
+			.show(ui, |ui| {
+				ui.add_space(1.0);
+				ui.vertical_centered(|ui| {
+					View::max_width_ui(ui, Content::SIDE_PANEL_WIDTH * 1.3, |ui| {
+						// Draw node setup section.
+						self.node.ui(ui, cb);
 
-                        ui.add_space(6.0);
-                        View::horizontal_line(ui, Colors::stroke());
-                        ui.add_space(4.0);
+						ui.add_space(6.0);
+						View::horizontal_line(ui, Colors::stroke());
+						ui.add_space(4.0);
 
-                        // Draw P2P server setup section.
-                        self.p2p.ui(ui, cb);
+						// Draw P2P server setup section.
+						self.p2p.ui(ui, cb);
 
-                        ui.add_space(6.0);
-                        View::horizontal_line(ui, Colors::stroke());
-                        ui.add_space(4.0);
+						ui.add_space(6.0);
+						View::horizontal_line(ui, Colors::stroke());
+						ui.add_space(4.0);
 
-                        // Draw Stratum server setup section.
-                        self.stratum.ui(ui, cb);
+						// Draw Stratum server setup section.
+						self.stratum.ui(ui, cb);
 
-                        ui.add_space(6.0);
-                        View::horizontal_line(ui, Colors::stroke());
-                        ui.add_space(4.0);
+						ui.add_space(6.0);
+						View::horizontal_line(ui, Colors::stroke());
+						ui.add_space(4.0);
 
-                        // Draw pool setup section.
-                        self.pool.ui(ui, cb);
+						// Draw pool setup section.
+						self.pool.ui(ui, cb);
 
-                        ui.add_space(6.0);
-                        View::horizontal_line(ui, Colors::stroke());
-                        ui.add_space(4.0);
+						ui.add_space(6.0);
+						View::horizontal_line(ui, Colors::stroke());
+						ui.add_space(4.0);
 
-                        // Draw Dandelion server setup section.
-                        self.dandelion.ui(ui, cb);
+						// Draw Dandelion server setup section.
+						self.dandelion.ui(ui, cb);
 
-                        // Draw content to reset the data.
-                        if !Node::is_restarting() && !self.data_reset {
-                            ui.add_space(4.0);
-                            View::horizontal_line(ui, Colors::item_stroke());
-                            ui.add_space(6.0);
+						// Draw content to reset the data.
+						if !Node::is_restarting() && !self.data_reset {
+							ui.add_space(4.0);
+							View::horizontal_line(ui, Colors::item_stroke());
+							ui.add_space(6.0);
 
-                            self.reset_data_ui(ui);
-                        }
+							self.reset_data_ui(ui);
+						}
 
-                        ui.add_space(6.0);
-                        View::horizontal_line(ui, Colors::stroke());
-                        ui.add_space(6.0);
+						ui.add_space(6.0);
+						View::horizontal_line(ui, Colors::stroke());
+						ui.add_space(6.0);
 
-                        // Draw reset settings content.
-                        reset_settings_ui(ui);
-                    });
-                });
-            });
-    }
+						// Draw reset settings content.
+						reset_settings_ui(ui);
+					});
+				});
+			});
+	}
 }
 
 impl NodeTab for NetworkSettings {
-    fn get_type(&self) -> NodeTabType {
-        NodeTabType::Settings
-    }
+	fn get_type(&self) -> NodeTabType {
+		NodeTabType::Settings
+	}
 
-    fn tab_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
-        self.ui(ui, cb);
-    }
+	fn tab_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
+		self.ui(ui, cb);
+	}
 }
 
 impl NetworkSettings {
-    /// Reminder to restart enabled node to show on edit setting at [`Modal`].
-    pub fn node_restart_required_ui(ui: &mut egui::Ui) {
-        if Node::is_running() {
-            ui.add_space(12.0);
-            ui.label(RichText::new(t!("network_settings.restart_node_required"))
-                .size(16.0)
-                .color(Colors::green())
-            );
-        }
-    }
+	/// Reminder to restart enabled node to show on edit setting at [`Modal`].
+	pub fn node_restart_required_ui(ui: &mut egui::Ui) {
+		if Node::is_running() {
+			ui.add_space(12.0);
+			ui.label(
+				RichText::new(t!("network_settings.restart_node_required"))
+					.size(16.0)
+					.color(Colors::green()),
+			);
+		}
+	}
 
-    /// Draw IP addresses as radio buttons.
-    pub fn ip_addrs_ui(ui: &mut egui::Ui,
-                       saved_ip: &String,
-                       ips: &Vec<String>,
-                       on_change: impl FnOnce(&String)) {
-        let mut selected_ip = saved_ip;
+	/// Draw IP addresses as radio buttons.
+	pub fn ip_addrs_ui(
+		ui: &mut egui::Ui,
+		saved_ip: &String,
+		ips: &Vec<String>,
+		on_change: impl FnOnce(&String),
+	) {
+		let mut selected_ip = saved_ip;
 
-        // Set first IP address as current if saved is not present at system.
-        if !ips.contains(saved_ip) {
-            selected_ip = ips.get(0).unwrap();
-        }
+		// Set first IP address as current if saved is not present at system.
+		if !ips.contains(saved_ip) {
+			selected_ip = ips.get(0).unwrap();
+		}
 
-        ui.add_space(2.0);
+		ui.add_space(2.0);
 
-        // Show available IP addresses on the system.
-        let _ = ips.chunks(2).map(|x| {
-            if x.len() == 2 {
-                ui.columns(2, |columns| {
-                    let ip_left = x.get(0).unwrap();
-                    columns[0].vertical_centered(|ui| {
-                        View::radio_value(ui, &mut selected_ip, ip_left, ip_left.to_string());
-                    });
-                    let ip_right = x.get(1).unwrap();
-                    columns[1].vertical_centered(|ui| {
-                        View::radio_value(ui, &mut selected_ip, ip_right, ip_right.to_string());
-                    })
-                });
-            } else {
-                let ip = x.get(0).unwrap();
-                View::radio_value(ui, &mut selected_ip, ip, ip.to_string());
-            }
-            ui.add_space(12.0);
-        }).collect::<Vec<_>>();
+		// Show available IP addresses on the system.
+		let _ = ips
+			.chunks(2)
+			.map(|x| {
+				if x.len() == 2 {
+					ui.columns(2, |columns| {
+						let ip_left = x.get(0).unwrap();
+						columns[0].vertical_centered(|ui| {
+							View::radio_value(ui, &mut selected_ip, ip_left, ip_left.to_string());
+						});
+						let ip_right = x.get(1).unwrap();
+						columns[1].vertical_centered(|ui| {
+							View::radio_value(ui, &mut selected_ip, ip_right, ip_right.to_string());
+						})
+					});
+				} else {
+					let ip = x.get(0).unwrap();
+					View::radio_value(ui, &mut selected_ip, ip, ip.to_string());
+				}
+				ui.add_space(12.0);
+			})
+			.collect::<Vec<_>>();
 
-        if saved_ip != selected_ip {
-            on_change(&selected_ip.to_string());
-        }
-    }
+		if saved_ip != selected_ip {
+			on_change(&selected_ip.to_string());
+		}
+	}
 
-    /// Show message when IP addresses are not available at system.
-    pub fn no_ip_address_ui(ui: &mut egui::Ui) {
-        ui.vertical_centered(|ui| {
-            ui.label(RichText::new(t!("network.no_ips"))
-                .size(16.0)
-                .color(Colors::inactive_text())
-            );
-            ui.add_space(6.0);
-        });
-    }
+	/// Show message when IP addresses are not available at system.
+	pub fn no_ip_address_ui(ui: &mut egui::Ui) {
+		ui.vertical_centered(|ui| {
+			ui.label(
+				RichText::new(t!("network.no_ips"))
+					.size(16.0)
+					.color(Colors::inactive_text()),
+			);
+			ui.add_space(6.0);
+		});
+	}
 
-    /// Draw content to reset data.
-    fn reset_data_ui(&mut self, ui: &mut egui::Ui) {
-        ui.add_space(4.0);
-        View::colored_text_button(ui,
-                                  format!("{} {}", TRASH, t!("network_settings.reset_data")),
-                                  Colors::red(),
-                                  Colors::white_or_black(false), || {
-                Node::reset_data(false);
-                self.data_reset = true;
-            });
-        ui.add_space(6.0);
-        ui.label(RichText::new(t!("network_settings.reset_data_desc"))
-            .size(16.0)
-            .color(Colors::inactive_text())
-        );
-        ui.add_space(4.0);
-    }
-
+	/// Draw content to reset data.
+	fn reset_data_ui(&mut self, ui: &mut egui::Ui) {
+		ui.add_space(4.0);
+		View::colored_text_button(
+			ui,
+			format!("{} {}", TRASH, t!("network_settings.reset_data")),
+			Colors::red(),
+			Colors::white_or_black(false),
+			|| {
+				Node::reset_data(false);
+				self.data_reset = true;
+			},
+		);
+		ui.add_space(6.0);
+		ui.label(
+			RichText::new(t!("network_settings.reset_data_desc"))
+				.size(16.0)
+				.color(Colors::inactive_text()),
+		);
+		ui.add_space(4.0);
+	}
 }
 
 /// Draw button to reset integrated node settings to default values.
 fn reset_settings_ui(ui: &mut egui::Ui) {
-    ui.label(RichText::new(t!("network_settings.reset_settings_desc"))
-        .size(16.0)
-        .color(Colors::text(false)));
-    ui.add_space(8.0);
-    let button_text = format!("{} {}",
-                              ARROW_COUNTER_CLOCKWISE,
-                              t!("network_settings.reset_settings"));
-    View::action_button(ui, button_text, || {
-        // Show modal to confirm settings reset.
-        Modal::new(RESET_SETTINGS_CONFIRMATION_MODAL)
-            .position(ModalPosition::Center)
-            .title(t!("confirmation"))
-            .show();
-    });
+	ui.label(
+		RichText::new(t!("network_settings.reset_settings_desc"))
+			.size(16.0)
+			.color(Colors::text(false)),
+	);
+	ui.add_space(8.0);
+	let button_text = format!(
+		"{} {}",
+		ARROW_COUNTER_CLOCKWISE,
+		t!("network_settings.reset_settings")
+	);
+	View::action_button(ui, button_text, || {
+		// Show modal to confirm settings reset.
+		Modal::new(RESET_SETTINGS_CONFIRMATION_MODAL)
+			.position(ModalPosition::Center)
+			.title(t!("confirmation"))
+			.show();
+	});
 
-    // Show reminder to restart enabled node.
-    if Node::is_running() {
-        ui.add_space(12.0);
-        ui.label(RichText::new(t!("network_settings.restart_node_required"))
-            .size(16.0)
-            .color(Colors::gray())
-        );
-    }
-    ui.add_space(10.0);
+	// Show reminder to restart enabled node.
+	if Node::is_running() {
+		ui.add_space(12.0);
+		ui.label(
+			RichText::new(t!("network_settings.restart_node_required"))
+				.size(16.0)
+				.color(Colors::gray()),
+		);
+	}
+	ui.add_space(10.0);
 }
 
 /// Confirmation to reset settings to default values.
 fn reset_settings_confirmation_modal(ui: &mut egui::Ui) {
-    ui.add_space(6.0);
-    ui.vertical_centered(|ui| {
-        let reset_text = format!("{}?", t!("network_settings.reset_settings_desc"));
-        ui.label(RichText::new(reset_text)
-            .size(17.0)
-            .color(Colors::text(false)));
-        ui.add_space(8.0);
-    });
+	ui.add_space(6.0);
+	ui.vertical_centered(|ui| {
+		let reset_text = format!("{}?", t!("network_settings.reset_settings_desc"));
+		ui.label(
+			RichText::new(reset_text)
+				.size(17.0)
+				.color(Colors::text(false)),
+		);
+		ui.add_space(8.0);
+	});
 
-    // Show modal buttons.
-    ui.scope(|ui| {
-        // Setup spacing between buttons.
-        ui.spacing_mut().item_spacing = egui::Vec2::new(8.0, 0.0);
+	// Show modal buttons.
+	ui.scope(|ui| {
+		// Setup spacing between buttons.
+		ui.spacing_mut().item_spacing = egui::Vec2::new(8.0, 0.0);
 
-        ui.columns(2, |columns| {
-            columns[0].vertical_centered_justified(|ui| {
-                View::button(ui, t!("network_settings.reset"), Colors::white_or_black(false), || {
-                    NodeConfig::reset_to_default();
-                    Modal::close();
-                });
-            });
-            columns[1].vertical_centered_justified(|ui| {
-                View::button(ui, t!("modal.cancel"), Colors::white_or_black(false), || {
-                    Modal::close();
-                });
-            });
-        });
-        ui.add_space(6.0);
-    });
+		ui.columns(2, |columns| {
+			columns[0].vertical_centered_justified(|ui| {
+				View::button(
+					ui,
+					t!("network_settings.reset"),
+					Colors::white_or_black(false),
+					|| {
+						NodeConfig::reset_to_default();
+						Modal::close();
+					},
+				);
+			});
+			columns[1].vertical_centered_justified(|ui| {
+				View::button(
+					ui,
+					t!("modal.cancel"),
+					Colors::white_or_black(false),
+					|| {
+						Modal::close();
+					},
+				);
+			});
+		});
+		ui.add_space(6.0);
+	});
 }
