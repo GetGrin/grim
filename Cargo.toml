@@ -92,8 +92,8 @@ uuid = { version = "0.8.2", features = ["v4"] }
 num-bigint = "0.4.6"
 
 ## tor
-arti-client = { version = "0.42.0", features = ["pt-client", "static", "onion-service-service", "onion-service-client", "experimental-api", "bridge-client"] }
-tor-rtcompat = { version = "0.42.0", features = ["static"] }
+arti-client = { version = "0.42.0", features = ["pt-client", "onion-service-service", "onion-service-client"] }
+tor-rtcompat = "0.42.0"
 tor-config = "0.42.0"
 fs-mistrust = "0.14.1"
 tor-hsservice = "0.42.0"

@@ -250,8 +250,6 @@ impl Tor {
                 }
             }
         };
-        // Wait 5s after launch.
-        thread::sleep(Duration::from_millis(5000));
         TOR_STATE.client_launching.store(false, Ordering::Relaxed);
     }
 
@@ -537,6 +535,11 @@ impl Tor {
                                 let id = service_id.clone();
                                 w_services.insert(id, (port, key.clone(), service, proxy));
                             }
+                            // Remove service from starting.
+                            {
+                                let mut w_services = TOR_STATE.start.write();
+                                w_services.remove(&service_id);
+                            }
                             // Check service availability.
                             let addr = onion_addr.unwrap().display_unredacted().to_string();
                             let url = format!("http://{}/", addr);
@@ -577,8 +580,8 @@ impl Tor {
                 .block_on(async {
                     const MAX_ERRORS: i32 = 16;
                     let mut errors_count = 0;
-                    // Wait 5 seconds.
-                    tokio::time::sleep(Duration::from_millis(5000)).await;
+                    // Wait 10 seconds.
+                    tokio::time::sleep(Duration::from_millis(10000)).await;
                     loop {
                         if !Self::check_running(&service_id) {
                             break;
@@ -609,9 +612,6 @@ impl Tor {
                                         // Remove service from checking.
                                         let mut w_services = TOR_STATE.check.write();
                                         w_services.remove(service_id);
-                                        // Remove service from starting.
-                                        let mut w_services = TOR_STATE.start.write();
-                                        w_services.remove(service_id);
                                     }
                                     // Restart services.
                                     Self::restart();
@@ -626,9 +626,6 @@ impl Tor {
                                             if !Self::check_running(&service_id) {
                                                 break;
                                             }
-                                            // Remove service from starting.
-                                            let mut w_services = TOR_STATE.start.write();
-                                            w_services.remove(&service_id);
                                             errors_count = 0;
                                             // Check again after 60s.
                                             Duration::from_millis(60000)
