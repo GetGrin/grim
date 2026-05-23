@@ -115,7 +115,11 @@ impl WalletTransactionsContent {
 
 	/// Draw transactions content.
 	fn txs_ui(&mut self, ui: &mut egui::Ui, wallet: &Wallet) {
-		let data = wallet.get_data().unwrap();
+		let data = wallet.get_data();
+		if data.is_none() {
+			return;
+		}
+		let data = data.unwrap();
 		let config = wallet.get_config();
 		if data.txs.is_none() {
 			ui.centered_and_justified(|ui| {
@@ -177,7 +181,7 @@ impl WalletTransactionsContent {
 					.show_rows(ui, Self::TX_ITEM_HEIGHT, rows_size, |ui, row_range| {
 						ui.add_space(1.0);
 						View::max_width_ui(ui, Content::SIDE_PANEL_WIDTH * 1.3, |ui| {
-							self.tx_list_ui(ui, row_range, &wallet, txs);
+							self.tx_list_ui(ui, row_range, &wallet, &data, txs);
 						});
 					})
 			});
@@ -197,9 +201,9 @@ impl WalletTransactionsContent {
 		ui: &mut egui::Ui,
 		row_range: Range<usize>,
 		wallet: &Wallet,
+		data: &WalletData,
 		txs: Vec<&WalletTx>,
 	) {
-		let data = wallet.get_data().unwrap();
 		for index in row_range {
 			if index == txs.len() && ui.is_visible() {
 				// Load more txs when needed.
@@ -652,6 +656,11 @@ impl WalletTransactionsContent {
 
 	/// Confirmation [`Modal`] to cancel transaction.
 	fn cancel_confirmation_modal(&mut self, ui: &mut egui::Ui, wallet: &Wallet) {
+		let data = wallet.get_data();
+		if data.is_none() {
+			Modal::close();
+			return;
+		}
 		let data = wallet.get_data().unwrap();
 		let data_txs = data.txs.unwrap();
 		let txs = data_txs
@@ -721,7 +730,12 @@ impl WalletTransactionsContent {
 
 	/// Confirmation [`Modal`] to delete transaction.
 	fn delete_confirmation_modal(&mut self, ui: &mut egui::Ui, wallet: &Wallet) {
-		let data = wallet.get_data().unwrap();
+		let data = wallet.get_data();
+		if data.is_none() {
+			Modal::close();
+			return;
+		}
+		let data = data.unwrap();
 		let data_txs = data.txs.unwrap();
 		let txs = data_txs
 			.into_iter()

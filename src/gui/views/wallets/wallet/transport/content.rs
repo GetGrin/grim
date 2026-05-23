@@ -104,10 +104,11 @@ impl WalletTransportContent {
 
 	/// Draw Tor transport header content.
 	fn tor_header_ui(&mut self, ui: &mut egui::Ui, wallet: &Wallet) {
-		let wallet_data = wallet.get_data();
-		if wallet_data.is_none() {
+		let data = wallet.get_data();
+		if data.is_none() {
 			return;
 		}
+		let data = data.unwrap();
 		let addr = wallet.slatepack_address().unwrap();
 
 		// Setup layout size.
@@ -115,7 +116,7 @@ impl WalletTransportContent {
 		rect.set_height(78.0);
 
 		// Draw round background.
-		let info = wallet.get_data().unwrap().info;
+		let info = data.info;
 		let awaiting_balance = info.amount_awaiting_confirmation > 0
 			|| info.amount_awaiting_finalization > 0
 			|| info.amount_locked > 0;

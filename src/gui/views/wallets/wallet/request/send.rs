@@ -80,6 +80,13 @@ impl SendRequestContent {
 		modal: &Modal,
 		cb: &dyn PlatformCallbacks,
 	) {
+		let data = wallet.get_data();
+		if data.is_none() {
+			Modal::close();
+			return;
+		}
+		let data = data.unwrap();
+
 		ui.add_space(6.0);
 
 		// Draw QR code scanner content if requested.
@@ -122,7 +129,6 @@ impl SendRequestContent {
 		}
 
 		ui.vertical_centered(|ui| {
-			let data = wallet.get_data().unwrap();
 			let amount = amount_to_hr_string(data.info.amount_currently_spendable, true);
 			let enter_text = t!("wallets.enter_amount_send","amount" => amount);
 			ui.label(RichText::new(enter_text).size(17.0).color(Colors::gray()));
@@ -158,7 +164,7 @@ impl SendRequestContent {
 		});
 		if calculate_max {
 			self.max_calculating = true;
-			let max = wallet.get_data().unwrap().info.amount_currently_spendable;
+			let max = data.info.amount_currently_spendable;
 			self.amount_edit = amount_to_hr_string(max, true);
 		}
 		ui.add_space(8.0);
@@ -196,7 +202,7 @@ impl SendRequestContent {
 						// Do not input amount more than balance.
 						if amount != 0 && self.amount_edit != amount_edit_before {
 							let fee = amount_from_hr_string(self.fee_edit.as_str()).unwrap_or(0);
-							let max = wallet.get_data().unwrap().info.amount_currently_spendable;
+							let max = data.info.amount_currently_spendable;
 							if amount > max || amount + fee > max {
 								self.max_calculating = true;
 								wallet.task(WalletTask::CalculateFee(max, 0));

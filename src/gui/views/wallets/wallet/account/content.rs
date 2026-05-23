@@ -133,11 +133,11 @@ impl WalletAccountContent {
 	/// Draw wallet account content.
 	fn account_ui(&mut self, ui: &mut egui::Ui, wallet: &Wallet, cb: &dyn PlatformCallbacks) {
 		// Check wallet data.
-		if wallet.get_data().is_none() {
+		let data = wallet.get_data();
+		if data.is_none() {
 			return;
 		}
-
-		let data = wallet.get_data().unwrap();
+		let data = data.unwrap();
 
 		let mut rect = ui.available_rect_before_wrap();
 		rect.set_height(75.0);

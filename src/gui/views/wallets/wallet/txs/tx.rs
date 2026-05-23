@@ -300,6 +300,13 @@ impl WalletTransactionContent {
 		cb: &dyn PlatformCallbacks,
 		on_delete: impl FnOnce(u32),
 	) {
+		let data = wallet.get_data();
+		if data.is_none() {
+			Modal::close();
+			return;
+		}
+		let data = wallet.get_data().unwrap();
+
 		ui.add_space(6.0);
 		// Transaction item background setup.
 		let mut rect = ui.available_rect_before_wrap();
@@ -307,7 +314,6 @@ impl WalletTransactionContent {
 		let rounding = View::item_rounding(0, 2, false);
 		let bg = Colors::TRANSPARENT;
 		// Show transaction amount status and time.
-		let data = wallet.get_data().unwrap();
 		let on_click = (false, || {});
 		WalletTransactionsContent::tx_item_ui(ui, tx, rect, bg, rounding, &data, on_click, |ui| {
 			// Show button to delete transaction from database.

@@ -32,7 +32,7 @@ use crate::gui::views::wallets::wallet::types::WalletContentContainer;
 use crate::gui::views::wallets::wallet::{WalletSettingsContent, WalletTransactionsContent};
 use crate::gui::views::{Content, Modal, View};
 use crate::node::Node;
-use crate::wallet::types::{ConnectionMethod, WalletTask};
+use crate::wallet::types::{ConnectionMethod, WalletData, WalletTask};
 use crate::wallet::{ExternalConnection, Wallet};
 
 /// Wallet content.
@@ -131,7 +131,7 @@ impl WalletContentContainer for WalletContent {
 			.show_animated_inside(ui, !block_nav, |ui| {
 				let r = ui.available_rect_before_wrap();
 				View::max_width_ui(ui, Content::SIDE_PANEL_WIDTH * 1.3, |ui| {
-					self.tabs_ui(wallet, ui);
+					self.tabs_ui(wallet, data, ui);
 				});
 				let rect = {
 					let mut r = r.clone();
@@ -360,14 +360,13 @@ impl WalletContent {
 	}
 
 	/// Draw tab buttons at the bottom of the screen.
-	fn tabs_ui(&mut self, wallet: &Wallet, ui: &mut egui::Ui) {
+	fn tabs_ui(&mut self, wallet: &Wallet, data: Option<WalletData>, ui: &mut egui::Ui) {
 		ui.scope(|ui| {
 			// Setup spacing between tabs.
 			ui.style_mut().spacing.item_spacing = egui::vec2(View::TAB_ITEMS_PADDING, 0.0);
 
-			let has_wallet_data = wallet.get_data().is_some();
-			let can_send = if has_wallet_data {
-				wallet.get_data().unwrap().info.amount_currently_spendable > 0
+			let can_send = if let Some(data) = &data {
+				data.info.amount_currently_spendable > 0
 			} else {
 				false
 			};
@@ -381,7 +380,7 @@ impl WalletContent {
 						self.settings_content = None;
 					});
 				});
-				let active = if has_wallet_data { Some(false) } else { None };
+				let active = if data.is_some() { Some(false) } else { None };
 				columns[1].vertical_centered_justified(|ui| {
 					if wallet.invoice_creating() {
 						ui.add_space(4.0);
@@ -458,15 +457,17 @@ impl WalletContent {
 	/// Handle wallet task result.
 	fn handle_task_result(&mut self, wallet: &Wallet) {
 		let res = wallet.consume_task_result();
-		if res.is_none() || wallet.get_data().is_none() {
+		let data = wallet.get_data();
+		if res.is_none() || data.is_none() {
 			return;
 		}
+		let data = data.unwrap();
 		let (id, t) = res.unwrap();
 		match Modal::opened() {
 			None => {
 				// Show transaction modal on wallet task result.
 				if let Some(id) = id {
-					let tx = wallet.get_data().unwrap().tx_by_id(id);
+					let tx = data.tx_by_id(id);
 					if tx.is_some() {
 						self.txs_content = Some(WalletTransactionsContent::new(tx));
 						self.settings_content = None;
@@ -481,7 +482,6 @@ impl WalletContent {
 								// Setup calculated tx fee at modal.
 								if let Some(m) = self.send_content.as_mut() {
 									if m.max_calculating {
-										let data = wallet.get_data().unwrap();
 										let a = data.info.amount_currently_spendable;
 										let max = if f > a { 0 } else { a - f };
 										m.on_max_amount_calculated(max, f);
@@ -510,7 +510,7 @@ impl WalletContent {
 											}
 										}
 									} else if let Ok((id, _, _)) = res {
-										let tx = wallet.get_data().unwrap().tx_by_id(id);
+										let tx = data.tx_by_id(id);
 										if let Some(tx) = tx {
 											let mut tx_c = WalletTransactionsContent::new(Some(tx));
 											if let Ok(p) = serde_json::to_string_pretty(&proof) {
