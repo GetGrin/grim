@@ -60,6 +60,7 @@ lazy_static! {
 
 /// Tor client to use as SOCKS proxy for requests and to launch Onion services.
 pub struct Tor {
+	runtime: TokioNativeTlsRuntime,
 	/// Tor client and config.
 	client_config: Arc<RwLock<Option<(TorClient<TokioNativeTlsRuntime>, TorClientConfig)>>>,
 	/// Flag to check if client is launching.
@@ -97,6 +98,7 @@ impl Default for Tor {
 			}
 		}
 		Self {
+			runtime: TokioNativeTlsRuntime::create().unwrap(),
 			client_config: Arc::new(RwLock::new(None)),
 			client_launching: Arc::new(AtomicBool::new(false)),
 			run: Arc::new(RwLock::new(BTreeMap::new())),
@@ -140,8 +142,7 @@ impl Tor {
 
 	/// Build bootstrapped client from provided config.
 	fn build_client_bootstrap(config: TorClientConfig) -> Option<TorClient<TokioNativeTlsRuntime>> {
-		let runtime = TokioNativeTlsRuntime::create().unwrap();
-		let client_res = TorClient::with_runtime(runtime)
+		let client_res = TorClient::with_runtime(TOR_STATE.runtime.clone())
 			.config(config.clone())
 			.create_unbootstrapped();
 		if client_res.is_err() {
