@@ -168,7 +168,9 @@ impl WalletTransactionContent {
 		cb: &dyn PlatformCallbacks,
 	) {
 		if self.message.is_none() {
-			let slatepack_path = wallet.get_config().get_tx_slate_path(tx);
+			let slatepack_path = wallet
+				.get_config()
+				.get_slate_path(tx.data.tx_slate_id.unwrap(), &tx.state);
 			self.message = Some(fs::read_to_string(slatepack_path).unwrap_or("".to_string()));
 		}
 		if let Some(m) = &self.message {

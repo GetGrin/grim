@@ -695,9 +695,44 @@ impl Wallet {
 			// Apply limit.
 			.take(limit as usize)
 			.collect();
-		// Reverse an order.
-		// txs.reverse();
 		Ok(txs)
+	}
+
+	/// Delete txs with 0 amount.
+	fn clear_empty_txs(&self) -> Result<(), Error> {
+		let txs: Vec<TxLogEntry> = {
+			let r_inst = self.instance.as_ref().read();
+			let inst = r_inst.clone().unwrap();
+			let mut wallet_lock = inst.lock();
+			let lc = wallet_lock.lc_provider()?;
+			let w = lc.wallet_inst()?;
+			let parent_key_id = w.parent_key_id();
+			// Retrieve txs from database.
+			w.tx_log_iter()
+				.filter(|tx_entry| tx_entry.parent_key_id == parent_key_id)
+				.filter(|tx_entry| {
+					if tx_entry.tx_type == TxLogEntryType::TxSent
+						|| tx_entry.tx_type == TxLogEntryType::TxSentCancelled
+					{
+						BigInt::from(tx_entry.amount_debited)
+							- BigInt::from(tx_entry.amount_credited)
+							== BigInt::from(0)
+					} else if tx_entry.tx_type == TxLogEntryType::TxReceived
+						|| tx_entry.tx_type == TxLogEntryType::TxReceivedCancelled
+					{
+						BigInt::from(tx_entry.amount_credited)
+							- BigInt::from(tx_entry.amount_debited)
+							== BigInt::from(0)
+					} else {
+						false
+					}
+				})
+				.collect()
+		};
+		for t in &txs {
+			self.delete_tx(t.id)?;
+		}
+		Ok(())
 	}
 
 	/// Send a task to the wallet.
@@ -896,7 +931,7 @@ impl Wallet {
 			&mut api,
 			self.keychain_mask().as_ref(),
 			None,
-			Some(text.clone()),
+			Some(text.trim().to_string()),
 		) {
 			Ok(s) => Ok(s),
 			Err(e) => Err(e),
@@ -907,7 +942,7 @@ impl Wallet {
 	fn create_slatepack_message(
 		&self,
 		slate: &Slate,
-		dest: Option<SlatepackAddress>,
+		_: Option<SlatepackAddress>,
 	) -> Result<String, Error> {
 		let mut message = "".to_string();
 		let r_inst = self.instance.as_ref().read();
@@ -918,17 +953,17 @@ impl Wallet {
 			self.keychain_mask().as_ref(),
 			Some(&mut api),
 			|api, m| {
-				let recipients = match dest {
-					Some(a) => vec![a],
-					None => vec![],
-				};
-				message = api.create_slatepack_message(m, &slate, Some(0), recipients)?;
+				// let recipients = match dest {
+				// 	Some(a) => vec![a],
+				// 	None => vec![],
+				// };
+				message = api.create_slatepack_message(m, &slate, Some(0), vec![])?;
 				Ok(())
 			},
 		)?;
 
 		// Write Slatepack message to file.
-		let slatepack_dir = self.get_config().get_slate_path(&slate);
+		let slatepack_dir = self.get_config().get_slate_path(slate.id, &slate.state);
 		let mut output = File::create(slatepack_dir)?;
 		output.write_all(message.as_bytes())?;
 		output.sync_all()?;
@@ -937,8 +972,42 @@ impl Wallet {
 
 	/// Check if Slatepack file exists.
 	pub fn slatepack_exists(&self, slate: &Slate) -> bool {
-		let slatepack_path = self.get_config().get_slate_path(slate);
+		let slatepack_path = self.get_config().get_slate_path(slate.id, &slate.state);
 		fs::exists(slatepack_path).unwrap_or(false)
+	}
+
+	/// Get possible state from tx type.
+	pub fn get_slate_state(&self, slate_id: Uuid, tx_type: &TxLogEntryType) -> SlateState {
+		let mut slate = Slate::blank(1, false);
+		slate.id = slate_id;
+		slate.state = match tx_type {
+			TxLogEntryType::TxReceived => SlateState::Invoice3,
+			_ => SlateState::Standard3,
+		};
+		// Transaction was finalized.
+		if self.slatepack_exists(&slate) {
+			slate.state
+		} else {
+			slate.state = match tx_type {
+				TxLogEntryType::TxReceived => SlateState::Standard2,
+				_ => SlateState::Invoice2,
+			};
+			// Transaction signed to be finalized.
+			if self.slatepack_exists(&slate) {
+				slate.state
+			} else {
+				// Transaction just was created.
+				slate.state = match tx_type {
+					TxLogEntryType::TxReceived => SlateState::Invoice1,
+					_ => SlateState::Standard1,
+				};
+				if self.slatepack_exists(&slate) {
+					slate.state
+				} else {
+					SlateState::Unknown
+				}
+			}
+		}
 	}
 
 	/// Calculate transaction fee for provided amount.
@@ -1247,12 +1316,16 @@ impl Wallet {
 	}
 
 	/// Get stored transaction Slate.
-	fn get_tx_slate(&self, tx_id: Option<u32>, slate_id: Option<&Uuid>) -> Option<Slate> {
-		let r_inst = self.instance.as_ref().read();
-		let instance = r_inst.clone().unwrap();
-		let api = Owner::new(instance, None);
-		if let Ok(s) = api.get_stored_tx(self.keychain_mask().as_ref(), tx_id, slate_id) {
-			return s;
+	fn get_tx_slate(&self, tx_id: u32) -> Option<Slate> {
+		if let Some(tx) = self.retrieve_tx_by_id(Some(tx_id), None) {
+			if let Some(slate_id) = tx.tx_slate_id {
+				let slate_state = self.get_slate_state(slate_id, &tx.tx_type);
+				let slatepack_path = self.get_config().get_slate_path(slate_id, &slate_state);
+				let msg = fs::read_to_string(slatepack_path).unwrap_or("".to_string());
+				if let Ok((slate, _)) = self.parse_slatepack(&msg) {
+					return Some(slate);
+				}
+			}
 		}
 		None
 	}
@@ -1261,7 +1334,7 @@ impl Wallet {
 	fn delete_tx(&self, id: u32) -> Result<(), Error> {
 		self.on_tx_action(id, Some(WalletTxAction::Deleting));
 
-		let slate = self.get_tx_slate(Some(id), None);
+		let slate = self.get_tx_slate(id);
 		let r_inst = self.instance.as_ref().read();
 		let instance = r_inst.clone().unwrap();
 		let keychain_mask = self.keychain_mask();
@@ -1275,7 +1348,7 @@ impl Wallet {
 
 		// Delete transaction files.
 		if let Some(s) = slate {
-			let slatepack_path = self.get_config().get_slate_path(&s);
+			let slatepack_path = self.get_config().get_slate_path(s.id, &s.state);
 			fs::remove_file(&slatepack_path).unwrap_or_default();
 			let path = path::Path::new(&self.get_config().get_data_path())
 				.join("saved_txs")
@@ -1800,6 +1873,7 @@ async fn handle_task(w: &Wallet, t: WalletTask) {
 		WalletTask::Send(a, r) => {
 			w.send_creating.store(true, Ordering::Relaxed);
 			if let Ok(s) = w.send(*a, r.clone()) {
+				error!("send amount: {}", s.amount);
 				sync_wallet_data(&w, false);
 				let tx = w.retrieve_tx_by_id(None, Some(s.id));
 				if let Some(tx) = tx {
@@ -1820,7 +1894,7 @@ async fn handle_task(w: &Wallet, t: WalletTask) {
 			w.send_creating.store(false, Ordering::Relaxed);
 		}
 		WalletTask::SendTor(tx, r) => {
-			if let Some(s) = w.get_tx_slate(Some(tx.id), None) {
+			if let Some(s) = w.get_tx_slate(tx.id) {
 				send_tor(tx.clone(), &s, r).await;
 			}
 		}
@@ -1836,7 +1910,7 @@ async fn handle_task(w: &Wallet, t: WalletTask) {
 			w.invoice_creating.store(false, Ordering::Relaxed);
 		}
 		WalletTask::Finalize(id) => {
-			if let Some(s) = w.get_tx_slate(Some(*id), None) {
+			if let Some(s) = w.get_tx_slate(*id) {
 				w.on_tx_error(*id, None);
 				match w.finalize(&s, *id) {
 					Ok(s) => match w.post(&s, Some(*id)) {
@@ -1859,7 +1933,7 @@ async fn handle_task(w: &Wallet, t: WalletTask) {
 			}
 		}
 		WalletTask::Post(id) => {
-			if let Some(s) = w.get_tx_slate(Some(*id), None) {
+			if let Some(s) = w.get_tx_slate(*id) {
 				w.on_tx_error(*id, None);
 				// Cleanup broadcasting tx height.
 				let tx_height_store = TxHeightStore::new(w.get_config().get_extra_db_path());
@@ -2031,6 +2105,7 @@ fn sync_wallet_data(wallet: &Wallet, from_node: bool) {
 
 /// Update wallet transactions.
 fn update_txs(wallet: &Wallet, mut txs_limit: u32) -> Result<(), Error> {
+	let _ = wallet.clear_empty_txs();
 	let txs = wallet.retrieve_txs(txs_limit)?;
 
 	// Exit if wallet was closed.
@@ -2076,12 +2151,6 @@ fn update_txs(wallet: &Wallet, mut txs_limit: u32) -> Result<(), Error> {
 			action,
 			action_error,
 		);
-		// Update Slate state for unconfirmed.
-		let unconfirmed = !tx.confirmed
-			&& (tx.tx_type == TxLogEntryType::TxSent || tx.tx_type == TxLogEntryType::TxReceived);
-		if unconfirmed {
-			new.update_slate_state(wallet);
-		}
 		// Payment proof setup.
 		if proof.is_none()
 			&& tx.payment_proof.is_some()

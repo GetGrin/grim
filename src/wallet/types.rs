@@ -16,8 +16,8 @@ use grin_keychain::ExtKeychain;
 use grin_util::Mutex;
 use grin_wallet_impls::{DefaultLCProvider, HTTPNodeClient};
 use grin_wallet_libwallet::{
-	Error, PaymentProof, Slate, SlateState, SlatepackAddress, TxLogEntry, TxLogEntryType,
-	WalletInfo, WalletInst,
+	Error, PaymentProof, SlateState, SlatepackAddress, TxLogEntry, TxLogEntryType, WalletInfo,
+	WalletInst,
 };
 use grin_wallet_util::OnionV3Address;
 use serde_derive::{Deserialize, Serialize};
@@ -276,46 +276,15 @@ impl WalletTx {
 			action_error,
 		};
 		// Update Slate state for unconfirmed.
-		if !t.data.confirmed {
-			t.update_slate_state(wallet);
-		}
-		t
-	}
-
-	/// Update transaction [`Slate`] state for provided wallet.
-	pub fn update_slate_state(&mut self, wallet: &Wallet) {
-		let tx = &self.data;
-		let mut slate = Slate::blank(1, false);
-		slate.id = tx.tx_slate_id.unwrap();
-		slate.state = match tx.tx_type {
-			TxLogEntryType::TxReceived => SlateState::Invoice3,
-			_ => SlateState::Standard3,
-		};
-		// Transaction was finalized.
-		if wallet.slatepack_exists(&slate) {
-			self.state = slate.state;
-		} else {
-			slate.id = tx.tx_slate_id.unwrap();
-			slate.state = match tx.tx_type {
-				TxLogEntryType::TxReceived => SlateState::Standard2,
-				_ => SlateState::Invoice2,
-			};
-			// Transaction signed to be finalized.
-			if wallet.slatepack_exists(&slate) {
-				self.state = slate.state;
-			} else {
-				// Transaction just was created.
-				slate.state = match tx.tx_type {
-					TxLogEntryType::TxReceived => SlateState::Invoice1,
-					_ => SlateState::Standard1,
-				};
-				if wallet.slatepack_exists(&slate) {
-					self.state = slate.state;
-				} else {
-					self.state = SlateState::Unknown;
-				}
+		if !t.data.confirmed
+			&& (t.data.tx_type == TxLogEntryType::TxSent
+				|| t.data.tx_type == TxLogEntryType::TxReceived)
+		{
+			if let Some(slate_id) = t.data.tx_slate_id {
+				t.state = wallet.get_slate_state(slate_id, &t.data.tx_type)
 			}
 		}
+		t
 	}
 
 	/// Check if transactions can be finalized after receiving response.

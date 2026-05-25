@@ -12,10 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::scroll_area::ScrollBarVisibility;
-use egui::{Id, Margin, RichText, ScrollArea};
-use grin_chain::SyncStatus;
-
 use crate::AppConfig;
 use crate::gui::Colors;
 use crate::gui::icons::{
@@ -35,6 +31,10 @@ use crate::node::Node;
 use crate::wallet::types::{ConnectionMethod, WalletData, WalletTask};
 use crate::wallet::{ExternalConnection, Wallet};
 
+use egui::scroll_area::ScrollBarVisibility;
+use egui::{Id, Margin, RichText, ScrollArea};
+use grin_chain::SyncStatus;
+
 /// Wallet content.
 pub struct WalletContent {
 	/// Transactions content.
@@ -52,8 +52,6 @@ pub struct WalletContent {
 	invoice_content: Option<InvoiceRequestContent>,
 	/// Send request creation [`Modal`] content.
 	send_content: Option<SendRequestContent>,
-	/// Slatepack message input [`Modal`] content.
-	message_content: Option<MessageInputContent>,
 }
 
 /// Identifier for invoice creation [`Modal`].
@@ -63,11 +61,7 @@ const SEND_MODAL_ID: &'static str = "send_request_modal";
 
 impl WalletContentContainer for WalletContent {
 	fn modal_ids(&self) -> Vec<&'static str> {
-		vec![
-			INVOICE_MODAL_ID,
-			SEND_MODAL_ID,
-			MessageInputContent::MODAL_ID,
-		]
+		vec![INVOICE_MODAL_ID, SEND_MODAL_ID]
 	}
 
 	fn modal_ui(&mut self, ui: &mut egui::Ui, w: &Wallet, m: &Modal, cb: &dyn PlatformCallbacks) {
@@ -84,17 +78,7 @@ impl WalletContentContainer for WalletContent {
 				}
 				self.send_content.as_mut().unwrap().ui(ui, w, m, cb);
 			}
-			MessageInputContent::MODAL_ID => {
-				if self.message_content.is_none() {
-					self.message_content = Some(MessageInputContent::default());
-				}
-				self.message_content.as_mut().unwrap().ui(ui, w, m, cb);
-			}
-			_ => {
-				self.invoice_content = None;
-				self.send_content = None;
-				self.message_content = None;
-			}
+			_ => {}
 		}
 	}
 
@@ -309,7 +293,6 @@ impl Default for WalletContent {
 			transport_content: WalletTransportContent::default(),
 			invoice_content: None,
 			send_content: None,
-			message_content: None,
 		}
 	}
 }
@@ -392,7 +375,8 @@ impl WalletContent {
 								self.txs_content = Some(WalletTransactionsContent::new(None));
 								self.settings_content = None;
 							}
-							self.message_content = None;
+							self.txs_content.as_mut().unwrap().message_content = None;
+
 							self.invoice_content = Some(InvoiceRequestContent::default());
 							Modal::new(INVOICE_MODAL_ID)
 								.position(ModalPosition::CenterTop)
@@ -412,7 +396,8 @@ impl WalletContent {
 								self.txs_content = Some(WalletTransactionsContent::new(None));
 								self.settings_content = None;
 							}
-							self.message_content = Some(MessageInputContent::default());
+							self.txs_content.as_mut().unwrap().message_content =
+								Some(MessageInputContent::default());
 							Modal::new(MessageInputContent::MODAL_ID)
 								.position(ModalPosition::Center)
 								.title(t!("wallets.messages"))
@@ -432,7 +417,8 @@ impl WalletContent {
 									self.txs_content = Some(WalletTransactionsContent::new(None));
 									self.settings_content = None;
 								}
-								self.message_content = None;
+								self.txs_content.as_mut().unwrap().message_content = None;
+
 								self.send_content = Some(SendRequestContent::new(None));
 								Modal::new(SEND_MODAL_ID)
 									.position(ModalPosition::CenterTop)
@@ -495,25 +481,27 @@ impl WalletContent {
 					}
 					MessageInputContent::MODAL_ID => {
 						match t {
-							WalletTask::VerifyProof(proof, res) => {
+							WalletTask::VerifyProof(p, res) => {
 								if let Some(res) = res {
 									// Update message content on validation error
 									// or when tx not belongs to current wallet.
 									if res.is_err()
 										|| (!res.as_ref().unwrap().1 && !res.as_ref().unwrap().2)
 									{
-										if let Some(m) = self.message_content.as_mut() {
-											if let Ok(p) = serde_json::to_string_pretty(&proof) {
-												let mut c = PaymentProofContent::new(Some(p));
-												c.validation_result = Some(res);
-												m.proof_content = Some(c);
+										if let Some(txs) = self.txs_content.as_mut() {
+											if let Some(m) = txs.message_content.as_mut() {
+												if let Ok(p) = serde_json::to_string_pretty(&p) {
+													let mut c = PaymentProofContent::new(Some(p));
+													c.validation_result = Some(res);
+													m.proof_content = Some(c);
+												}
 											}
 										}
 									} else if let Ok((id, _, _)) = res {
 										let tx = data.tx_by_id(id);
 										if let Some(tx) = tx {
 											let mut tx_c = WalletTransactionsContent::new(Some(tx));
-											if let Ok(p) = serde_json::to_string_pretty(&proof) {
+											if let Ok(p) = serde_json::to_string_pretty(&p) {
 												let proof_c = PaymentProofContent::new(Some(p));
 												tx_c.tx_info_content
 													.as_mut()

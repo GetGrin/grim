@@ -32,6 +32,7 @@ use crate::gui::icons::{
 use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::types::{LinePosition, ModalPosition};
 use crate::gui::views::wallets::wallet::WalletTransactionContent;
+use crate::gui::views::wallets::wallet::message::MessageInputContent;
 use crate::gui::views::wallets::wallet::types::{GRIN, WalletContentContainer};
 use crate::gui::views::{Content, Modal, PullToRefresh, View};
 use crate::wallet::Wallet;
@@ -41,6 +42,8 @@ use crate::wallet::types::{WalletData, WalletTask, WalletTx, WalletTxAction};
 pub struct WalletTransactionsContent {
 	/// Transaction information [`Modal`] content.
 	pub tx_info_content: Option<WalletTransactionContent>,
+	/// Message input [`Modal`] content.
+	pub message_content: Option<MessageInputContent>,
 
 	/// Transaction identifier to use at confirmation [`Modal`] to cancel.
 	confirm_cancel_tx_id: Option<u32>,
@@ -64,6 +67,7 @@ impl WalletContentContainer for WalletTransactionsContent {
 			TX_INFO_MODAL,
 			CANCEL_TX_CONFIRMATION_MODAL,
 			DELETE_TX_CONFIRMATION_MODAL,
+			MessageInputContent::MODAL_ID,
 		]
 	}
 
@@ -86,6 +90,12 @@ impl WalletContentContainer for WalletTransactionsContent {
 			DELETE_TX_CONFIRMATION_MODAL => {
 				self.delete_confirmation_modal(ui, w);
 			}
+			MessageInputContent::MODAL_ID => {
+				if self.message_content.is_none() {
+					self.message_content = Some(MessageInputContent::default());
+				}
+				self.message_content.as_mut().unwrap().ui(ui, w, m, cb);
+			}
 			_ => {}
 		}
 	}
@@ -103,6 +113,7 @@ impl WalletTransactionsContent {
 	pub fn new(tx: Option<WalletTx>) -> Self {
 		let mut content = Self {
 			tx_info_content: None,
+			message_content: None,
 			confirm_cancel_tx_id: None,
 			confirm_delete_tx_id: None,
 			manual_sync: None,
@@ -647,6 +658,7 @@ impl WalletTransactionsContent {
 	/// Show transaction information [`Modal`].
 	fn show_tx_info_modal(&mut self, id: u32) {
 		let modal = WalletTransactionContent::new(id);
+		self.message_content = None;
 		self.tx_info_content = Some(modal);
 		Modal::new(TX_INFO_MODAL)
 			.position(ModalPosition::Center)

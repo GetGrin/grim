@@ -16,14 +16,14 @@ use std::fs;
 use std::path::PathBuf;
 use std::string::ToString;
 
+use crate::wallet::ConnectionsConfig;
+use crate::wallet::types::ConnectionMethod;
+use crate::{AppConfig, Settings};
 use grin_core::global::ChainTypes;
-use grin_wallet_libwallet::Slate;
+use grin_wallet_libwallet::SlateState;
 use rand::Rng;
 use serde_derive::{Deserialize, Serialize};
-
-use crate::wallet::ConnectionsConfig;
-use crate::wallet::types::{ConnectionMethod, WalletTx};
-use crate::{AppConfig, Settings};
+use uuid::Uuid;
 
 /// Wallet configuration.
 #[derive(Serialize, Deserialize, Clone)]
@@ -227,26 +227,14 @@ impl WalletConfig {
 		path.to_str().unwrap().to_string()
 	}
 
-	/// Get Slatepack file path for transaction.
-	pub fn get_tx_slate_path(&self, tx: &WalletTx) -> PathBuf {
-		let mut path = PathBuf::from(self.get_base_data_path());
-		path.push(SLATEPACKS_DIR_NAME);
-		if !path.exists() {
-			let _ = fs::create_dir_all(path.clone());
-		}
-		let file = format!("{}.{}.slatepack", tx.data.tx_slate_id.unwrap(), tx.state);
-		path.push(file);
-		path
-	}
-
 	/// Get Slatepack file path for Slate.
-	pub fn get_slate_path(&self, slate: &Slate) -> PathBuf {
+	pub fn get_slate_path(&self, id: Uuid, state: &SlateState) -> PathBuf {
 		let mut path = PathBuf::from(self.get_base_data_path());
 		path.push(SLATEPACKS_DIR_NAME);
 		if !path.exists() {
 			let _ = fs::create_dir_all(path.clone());
 		}
-		let file = format!("{}.{}.slatepack", slate.id, slate.state);
+		let file = format!("{}.{}.slatepack", id, state);
 		path.push(file);
 		path
 	}

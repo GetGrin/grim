@@ -109,6 +109,7 @@ impl MessageInputContent {
 			ui.vertical_centered_justified(|ui| {
 				View::button(ui, t!("close"), Colors::white_or_black(false), || {
 					self.message_edit = "".to_string();
+					self.parse_error = false;
 					Modal::close();
 				});
 			});
@@ -240,7 +241,7 @@ impl MessageInputContent {
 	/// Parse Slatepack message on input change.
 	fn on_message_input(&mut self, text: String, wallet: &Wallet) {
 		self.parse_error = false;
-		self.message_edit = text;
+		self.message_edit = text.trim().to_string();
 		if self.message_edit.is_empty() {
 			return;
 		}
