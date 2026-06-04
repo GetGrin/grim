@@ -4275,6 +4275,7 @@ dependencies = [
  "easy-jsonrpc-mw",
  "futures 0.3.31",
  "grin_api",
+ "grin_chain",
  "grin_core",
  "grin_keychain",
  "grin_util",

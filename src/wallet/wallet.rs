@@ -35,7 +35,7 @@ use grin_wallet_api::Owner;
 use grin_wallet_controller::command::parse_slatepack;
 use grin_wallet_controller::controller;
 use grin_wallet_controller::controller::ForeignAPIHandlerV2;
-use grin_wallet_impls::{DefaultLCProvider, DefaultWalletImpl, HTTPNodeClient, LMDBBackend};
+use grin_wallet_impls::{DefaultLCProvider, DefaultWalletImpl, HTTPNodeClient};
 use grin_wallet_libwallet::api_impl::owner::{
 	cancel_tx, init_send_tx, retrieve_summary_info, retrieve_txs, verify_payment_proof,
 };
@@ -206,8 +206,8 @@ impl Wallet {
 			)
 			.map_err(|_| Error::IO("Seed file creation error".to_string()))?;
 			let node_client = Self::create_node_client(&config)?;
-			let mut wallet: LMDBBackend<'static, HTTPNodeClient, ExtKeychain> =
-				match LMDBBackend::new(path.to_str().unwrap(), node_client) {
+			let mut wallet: WalletBackend<HTTPNodeClient, ExtKeychain> =
+				match WalletBackend::new(path.to_str().unwrap(), node_client) {
 					Err(_) => {
 						return Err(Error::Lifecycle("DB creation error".to_string()).into());
 					}
@@ -311,12 +311,12 @@ impl Wallet {
 		node_client: C,
 	) -> Result<Arc<Mutex<Box<dyn WalletInst<'static, L, C, K>>>>, Error>
 	where
-		DefaultWalletImpl<'static, C>: WalletInst<'static, L, C, K>,
+		DefaultWalletImpl<C>: WalletInst<'static, L, C, K>,
 		L: WalletLCProvider<'static, C, K>,
 		C: NodeClient + 'static,
 		K: Keychain + 'static,
 	{
-		let mut wallet = Box::new(DefaultWalletImpl::<'static, C>::new(node_client).unwrap())
+		let mut wallet = Box::new(DefaultWalletImpl::<C>::new(node_client).unwrap())
 			as Box<dyn WalletInst<'static, L, C, K>>;
 		let lc = wallet.lc_provider()?;
 		lc.set_top_level_directory(config.get_data_path().as_str())?;
@@ -666,7 +666,7 @@ impl Wallet {
 		let parent_key_id = w.parent_key_id();
 		// Retrieve txs from database.
 		let txs: Vec<TxLogEntry> = w
-			.tx_log_iter()
+			.tx_log_iter()?
 			.filter(|tx_entry| tx_entry.parent_key_id == parent_key_id)
 			// Filter transactions to not show txs without slate (usually unspent outputs).
 			.filter(|tx| {
@@ -708,7 +708,7 @@ impl Wallet {
 			let w = lc.wallet_inst()?;
 			let parent_key_id = w.parent_key_id();
 			// Retrieve txs from database.
-			w.tx_log_iter()
+			w.tx_log_iter()?
 				.filter(|tx_entry| tx_entry.parent_key_id == parent_key_id)
 				.filter(|tx_entry| {
 					if tx_entry.tx_type == TxLogEntryType::TxSent
@@ -1026,7 +1026,7 @@ impl Wallet {
 			estimate_only: Some(true),
 			..Default::default()
 		};
-		let res = init_send_tx(&mut **w, self.keychain_mask().as_ref(), args, false);
+		let res = init_send_tx(w, self.keychain_mask().as_ref(), args, false);
 		match res {
 			Ok(slate) => Ok(slate.fee_fields.fee()),
 			Err(e) => match e {
@@ -1490,7 +1490,7 @@ impl Wallet {
 					let w = lc.wallet_inst()?;
 					// Find wallet transaction to update or create.
 					let txs = w
-						.tx_log_iter()
+						.tx_log_iter()?
 						.filter(|entry| {
 							if let Some(excess) = entry.kernel_excess {
 								return excess == proof.excess;
@@ -1873,7 +1873,6 @@ async fn handle_task(w: &Wallet, t: WalletTask) {
 		WalletTask::Send(a, r) => {
 			w.send_creating.store(true, Ordering::Relaxed);
 			if let Ok(s) = w.send(*a, r.clone()) {
-				error!("send amount: {}", s.amount);
 				sync_wallet_data(&w, false);
 				let tx = w.retrieve_tx_by_id(None, Some(s.id));
 				if let Some(tx) = tx {

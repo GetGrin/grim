@@ -682,7 +682,7 @@ fn start_node_server() -> Result<Server, Error> {
 	// Start integrated node server.
 	let api_chan: &'static mut (oneshot::Sender<()>, oneshot::Receiver<()>) =
 		Box::leak(Box::new(oneshot::channel::<()>()));
-	let server_result = Server::new(server_config, None, api_chan);
+	let server_result = Server::new(server_config, None, None, api_chan);
 	server_result
 }
 

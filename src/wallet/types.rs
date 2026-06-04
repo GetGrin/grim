@@ -122,7 +122,7 @@ pub type WalletInstance = Arc<
 		Box<
 			dyn WalletInst<
 					'static,
-					DefaultLCProvider<'static, HTTPNodeClient, ExtKeychain>,
+					DefaultLCProvider<HTTPNodeClient, ExtKeychain>,
 					HTTPNodeClient,
 					ExtKeychain,
 				>,
