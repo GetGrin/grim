@@ -667,6 +667,8 @@ impl Wallet {
 		// Retrieve txs from database.
 		let txs: Vec<TxLogEntry> = w
 			.tx_log_iter()?
+			.filter(|tx| tx.is_ok())
+			.map(|tx| tx.unwrap())
 			.filter(|tx_entry| tx_entry.parent_key_id == parent_key_id)
 			// Filter transactions to not show txs without slate (usually unspent outputs).
 			.filter(|tx| {
@@ -709,6 +711,8 @@ impl Wallet {
 			let parent_key_id = w.parent_key_id();
 			// Retrieve txs from database.
 			w.tx_log_iter()?
+				.filter(|tx| tx.is_ok())
+				.map(|tx| tx.unwrap())
 				.filter(|tx_entry| tx_entry.parent_key_id == parent_key_id)
 				.filter(|tx_entry| {
 					if tx_entry.tx_type == TxLogEntryType::TxSent
@@ -1491,6 +1495,8 @@ impl Wallet {
 					// Find wallet transaction to update or create.
 					let txs = w
 						.tx_log_iter()?
+						.filter(|tx| tx.is_ok())
+						.map(|tx| tx.unwrap())
 						.filter(|entry| {
 							if let Some(excess) = entry.kernel_excess {
 								return excess == proof.excess;
