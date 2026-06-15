@@ -113,8 +113,6 @@ pub struct Wallet {
 
 	/// Running wallet foreign API server and port.
 	foreign_api_server: Arc<RwLock<Option<(ApiServer, u16)>>>,
-	/// Wallet secret key for transport service.
-	secret_key: Arc<RwLock<Option<SecretKey>>>,
 
 	/// Flag to check if wallet repairing and restoring missing outputs is needed.
 	repair_needed: Arc<AtomicBool>,
@@ -169,7 +167,6 @@ impl Wallet {
 			closing: Arc::new(AtomicBool::new(false)),
 			deleted: Arc::new(AtomicBool::new(false)),
 			foreign_api_server: Arc::new(RwLock::new(None)),
-			secret_key: Arc::new(RwLock::new(None)),
 			repair_needed: Arc::new(AtomicBool::new(false)),
 			repair_progress: Arc::new(AtomicU8::new(0)),
 			files_moving: Arc::new(AtomicBool::new(false)),
@@ -391,8 +388,8 @@ impl Wallet {
 			}
 		}
 
-		// Update Slatepack address and secret key.
-		self.update_secret_key_addr()?;
+		// Update Slatepack address.
+		self.update_slatepack_addr()?;
 
 		Ok(())
 	}
@@ -403,14 +400,17 @@ impl Wallet {
 		r_key.clone()
 	}
 
-	/// Get wallet [`SecretKey`] for transport.
-	pub fn secret_key(&self) -> Option<SecretKey> {
-		let r_key = self.secret_key.read();
-		r_key.clone()
+	/// Retrieve wallet Slatepack address for transport.
+	fn update_slatepack_addr(&self) -> Result<(), Error> {
+		let sec_key = self.retrieve_secret_key()?;
+		let addr = SlatepackAddress::try_from(&sec_key)?;
+		let mut w_address = self.slatepack_address.write();
+		*w_address = Some(addr.to_string());
+		Ok(())
 	}
 
-	/// Retrieve wallet [`SecretKey`] and Slatepack address for transport.
-	fn update_secret_key_addr(&self) -> Result<(), Error> {
+	/// Retrieve wallet [`SecretKey`] for transport.
+	pub fn retrieve_secret_key(&self) -> Result<SecretKey, Error> {
 		let r_inst = self.instance.as_ref().read();
 		let instance = r_inst.clone().unwrap();
 		let mut w_lock = instance.lock();
@@ -420,12 +420,7 @@ impl Wallet {
 		let parent_key_id = w_inst.parent_key_id();
 		let sec_key = address::address_from_derivation_path(&k, &parent_key_id, 0)
 			.map_err(|e| Error::TorConfig(format!("{:?}", e)))?;
-		let addr = SlatepackAddress::try_from(&sec_key)?;
-		let mut w_key = self.secret_key.write();
-		*w_key = Some(sec_key);
-		let mut w_address = self.slatepack_address.write();
-		*w_address = Some(addr.to_string());
-		Ok(())
+		Ok(sec_key)
 	}
 
 	/// Get unique opened wallet identifier, including current account.
@@ -790,12 +785,6 @@ impl Wallet {
 		let cur_service_id = self.identifier();
 		Tor::stop_service(&cur_service_id);
 
-		// Clear secret key for previous account.
-		{
-			let mut w_key = self.secret_key.write();
-			*w_key = None;
-		}
-
 		// Set new active account.
 		let r_inst = self.instance.as_ref().read();
 		let instance = r_inst.clone().unwrap();
@@ -812,8 +801,8 @@ impl Wallet {
 			},
 		)?;
 
-		// Update Slatepack address and secret key.
-		self.update_secret_key_addr()?;
+		// Update Slatepack address.
+		self.update_slatepack_addr()?;
 
 		// Save account label into config.
 		let mut w_config = self.config.write();
@@ -1708,18 +1697,14 @@ fn start_sync(wallet: Wallet) -> Thread {
 							}
 							Err(_) => {}
 						}
-					}
-
-					// Start unfailed Tor service if API server is running.
-					let service_id = wallet.identifier();
-					if wallet.auto_start_tor_listener()
-						&& api_server_running
-						&& !Tor::is_service_failed(&service_id)
-					{
-						let r_foreign_api = wallet.foreign_api_server.read();
-						let api = r_foreign_api.as_ref().unwrap();
-						if let Some(key) = wallet.secret_key() {
-							Tor::start_service(api.1, key, &wallet.identifier());
+						// Start unfailed Tor service if API server is running.
+						let service_id = wallet.identifier();
+						if wallet.auto_start_tor_listener()
+							&& api_server_running && !Tor::is_service_failed(&service_id)
+						{
+							let r_foreign_api = wallet.foreign_api_server.read();
+							let api = r_foreign_api.as_ref().unwrap();
+							Tor::start_service(api.1, Some(&wallet), &service_id);
 						}
 					}
 				}
@@ -1993,6 +1978,13 @@ async fn handle_task(w: &Wallet, t: WalletTask) {
 				w.on_tx_error(*id, Some(e));
 			}
 		},
+		WalletTask::StartTor => {
+			let r_foreign_api = w.foreign_api_server.read();
+			if let Some(api) = r_foreign_api.as_ref() {
+				let id = w.identifier();
+				Tor::start_service(api.1, Some(w), &id);
+			}
+		}
 	};
 }
 

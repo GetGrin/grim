@@ -433,4 +433,6 @@ pub enum WalletTask {
 	/// Delete transaction.
 	/// * tx id
 	Delete(u32),
+	/// Start Tor service.
+	StartTor,
 }
