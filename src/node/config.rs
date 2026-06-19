@@ -16,7 +16,7 @@ use local_ip_address::list_afinet_netifas;
 use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::{BufRead, BufReader, Write};
-use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4, TcpListener, ToSocketAddrs};
+use std::net::{IpAddr, SocketAddr, TcpListener, ToSocketAddrs};
 use std::path::PathBuf;
 use std::str::FromStr;
 
@@ -29,6 +29,7 @@ use grin_p2p::msg::PeerAddrs;
 use grin_p2p::{PeerAddr, Seeding};
 use grin_servers::common::types::ChainValidationMode;
 use rand::Rng;
+use url::Url;
 
 use crate::node::Node;
 use crate::{AppConfig, Settings};
@@ -136,6 +137,9 @@ pub struct NodeConfig {
 }
 
 impl NodeConfig {
+	/// To launch on all available interfaces (including IPv6).
+	pub const ALL_INTERFACES: &str = "::";
+
 	/// Initialize config fields from provided [`ChainTypes`].
 	pub fn for_chain_type(chain_type: &ChainTypes) -> Self {
 		// Check secret files for current chain type.
@@ -210,8 +214,7 @@ impl NodeConfig {
 				(api, p2p)
 			}
 		};
-		let api_addr = config.server.api_http_addr.split_once(":").unwrap().0;
-		config.server.api_http_addr = format!("{}:{}", api_addr, api);
+		config.server.api_http_addr = format!("127.0.0.1:{}", api);
 		config.server.p2p_config.port = p2p;
 	}
 
@@ -290,28 +293,16 @@ impl NodeConfig {
 
 	/// Check whether a port is available on the provided host.
 	fn is_host_port_available(host: &String, port: &String) -> bool {
+		if host == Self::ALL_INTERFACES {
+			return true;
+		}
 		if let Ok(p) = port.parse::<u16>() {
-			let ip_addr = Ipv4Addr::from_str(host.as_str()).unwrap();
-			let ipv4 = SocketAddrV4::new(ip_addr, p);
-			return TcpListener::bind(ipv4).is_ok();
+			if let Ok(ip) = IpAddr::from_str(&host) {
+				let addr = SocketAddr::new(ip, p);
+				return TcpListener::bind(addr).is_ok();
+			}
 		}
 		false
-	}
-
-	/// Check whether a port is available across the system at all hosts.
-	fn is_port_available(port: &String) -> bool {
-		if let Ok(p) = port.parse::<u16>() {
-			for ip in Self::get_ip_addrs() {
-				let ip_addr = Ipv4Addr::from_str(ip.as_str()).unwrap();
-				let ipv4 = SocketAddrV4::new(ip_addr, p);
-				if TcpListener::bind(ipv4).is_err() {
-					return false;
-				}
-			}
-		} else {
-			return false;
-		}
-		true
 	}
 
 	/// Get chain data path.
@@ -327,6 +318,60 @@ impl NodeConfig {
 		w_config.save();
 	}
 
+	/// Get default Stratum server port.
+	fn default_stratum_port() -> u16 {
+		match AppConfig::chain_type() {
+			ChainTypes::Mainnet => 3416,
+			_ => 13416,
+		}
+	}
+
+	/// Format address to support ipv6.
+	fn format_address(ip: &String, port: &String) -> String {
+		let addr = if ip.contains(Self::ALL_INTERFACES) {
+			&format!("[{}]", ip)
+		} else {
+			ip
+		};
+		format!("{}:{}", addr, port)
+	}
+
+	/// Parse host to support ipv6.
+	fn parse_host(host: &String) -> String {
+		if host.contains(Self::ALL_INTERFACES) {
+			host.replace("[", "").replace("]", "")
+		} else {
+			host.to_string()
+		}
+	}
+
+	/// Parse saved address, returning default host or port on fail.
+	fn parse_address_port(
+		addr: &String,
+		default_host: &str,
+		default_port: u16,
+	) -> (String, String) {
+		let addr = if addr.contains("http") {
+			addr.to_string()
+		} else {
+			format!("http://{}", addr)
+		};
+		if let Ok(url) = Url::parse(addr.as_str()) {
+			let host = if let Some(h) = url.host() {
+				Self::parse_host(&h.to_string())
+			} else {
+				default_host.to_string()
+			};
+			let port = if let Some(p) = url.port() {
+				p.to_string()
+			} else {
+				default_port.to_string()
+			};
+			return (host, port);
+		}
+		(default_host.to_string(), default_port.to_string())
+	}
+
 	/// Get stratum server IP address and port.
 	pub fn get_stratum_address() -> (String, String) {
 		let r_config = Settings::node_config_to_read();
@@ -339,13 +384,16 @@ impl NodeConfig {
 			.stratum_server_addr
 			.as_ref()
 			.unwrap();
-		let (addr, port) = saved_stratum_addr.split_once(":").unwrap();
-		(addr.into(), port.into())
+		Self::parse_address_port(
+			saved_stratum_addr,
+			"127.0.0.1",
+			Self::default_stratum_port(),
+		)
 	}
 
 	/// Save stratum server IP address and port.
-	pub fn save_stratum_address(addr: &String, port: &String) {
-		let addr_to_save = format!("{}:{}", addr, port);
+	pub fn save_stratum_address(host: &String, port: &String) {
+		let addr_to_save = Self::format_address(host, port);
 		let mut w_config = Settings::node_config_to_update();
 		w_config
 			.node
@@ -358,27 +406,31 @@ impl NodeConfig {
 	}
 
 	/// Check if stratum server port is available across the system and config.
-	pub fn is_stratum_port_available(ip: &String, port: &String) -> bool {
-		if Node::get_stratum_stats().is_running {
-			// Check if Stratum server with same address is running.
-			let (cur_ip, cur_port) = Self::get_stratum_address();
-			let same_running = ip == &cur_ip && port == &cur_port;
-			return same_running || Self::is_not_running_stratum_port_available(ip, port);
-		}
-		Self::is_not_running_stratum_port_available(&ip, &port)
-	}
+	pub fn is_stratum_port_available(host: &String, port: &String) -> bool {
+		let host = Self::parse_host(host);
 
-	/// Check if stratum port is available when server is not running.
-	fn is_not_running_stratum_port_available(ip: &String, port: &String) -> bool {
-		if Self::is_host_port_available(&ip, &port) {
-			if &Self::get_p2p_port() != port {
-				let (api_ip, api_port) = Self::get_api_ip_port();
-				return if &api_ip == ip {
-					&api_port != port
-				} else {
-					true
-				};
+		// Check if Stratum server with same address is running.
+		if Node::get_stratum_stats().is_running {
+			let (cur_ip, cur_port) = Self::get_stratum_address();
+			let same_running = host == cur_ip && port == &cur_port;
+			if same_running {
+				return true;
 			}
+		}
+
+		// Check if address not conflicts with p2p and api.
+		if Self::is_host_port_available(&host, &port) {
+			let p2p_ip = Self::get_p2p_host();
+			let p2p_port = Self::get_p2p_port();
+			if p2p_ip == host && &p2p_port == port {
+				return false;
+			}
+			let (api_ip, api_port) = Self::get_api_address();
+			return if api_ip == host {
+				&api_port != port
+			} else {
+				true
+			};
 		}
 		false
 	}
@@ -493,38 +545,55 @@ impl NodeConfig {
 		w_config.save();
 	}
 
-	/// Get API server address.
-	pub fn get_api_address() -> String {
-		let r_config = Settings::node_config_to_read();
-		r_config.node.server.api_http_addr.clone()
+	/// Get default Stratum server port.
+	fn default_api_port() -> u16 {
+		match AppConfig::chain_type() {
+			ChainTypes::Mainnet => 3413,
+			_ => 13413,
+		}
 	}
 
 	/// Get API server IP and port.
-	pub fn get_api_ip_port() -> (String, String) {
-		let saved_addr = Self::get_api_address();
-		let (addr, port) = saved_addr.split_once(":").unwrap();
-		(addr.into(), port.into())
+	pub fn get_api_address() -> (String, String) {
+		let r_config = Settings::node_config_to_read();
+		let saved_api_addr = r_config.node.server.api_http_addr.clone();
+		Self::parse_address_port(&saved_api_addr, "127.0.0.1", Self::default_api_port())
 	}
 
 	/// Save API server IP address and port.
 	pub fn save_api_address(addr: &String, port: &String) {
-		let addr_to_save = format!("{}:{}", addr, port);
+		let addr_to_save = Self::format_address(addr, port);
 		let mut w_config = Settings::node_config_to_update();
 		w_config.node.server.api_http_addr = addr_to_save;
 		w_config.save();
 	}
 
 	/// Check if api server port is available across the system and config.
-	pub fn is_api_port_available(ip: &String, port: &String) -> bool {
+	pub fn is_api_port_available(host: &String, port: &String) -> bool {
+		let host = Self::parse_host(host);
+
+		// Check if API server with same address is running.
 		if Node::is_running() {
-			// Check if API server with same address is running.
-			let same_running = NodeConfig::get_api_address() == format!("{}:{}", ip, port);
-			if same_running || Self::is_host_port_available(ip, port) {
-				return &Self::get_p2p_port() != port;
+			let (cur_ip, cur_port) = Self::get_api_address();
+			let same_running = host == cur_ip && port == &cur_port;
+			if same_running {
+				return true;
 			}
-			return false;
-		} else if Self::is_host_port_available(ip, port) {
-			return &Self::get_p2p_port() != port;
+		}
+
+		// Check if address not conflicts with p2p and stratum.
+		if Self::is_host_port_available(&host, port) {
+			let p2p_ip = Self::get_p2p_host();
+			let p2p_port = Self::get_p2p_port();
+			if p2p_ip == host && &p2p_port == port {
+				return false;
+			}
+			let (str_ip, str_port) = Self::get_stratum_address();
+			return if str_ip == host {
+				&str_port != port
+			} else {
+				true
+			};
 		}
 		false
 	}
@@ -662,6 +731,25 @@ impl NodeConfig {
 		w_config.save();
 	}
 
+	/// Get P2P server IP address.
+	pub fn get_p2p_host() -> String {
+		let host = Settings::node_config_to_read()
+			.node
+			.server
+			.p2p_config
+			.host
+			.to_string();
+		Self::parse_host(&host)
+	}
+
+	/// Get P2P server IP address.
+	pub fn save_p2p_host(host: &String) {
+		let mut w_config = Settings::node_config_to_update();
+		w_config.node.server.p2p_config.host =
+			IpAddr::from_str(host).unwrap_or(IpAddr::from_str(Self::ALL_INTERFACES).unwrap());
+		w_config.save();
+	}
+
 	/// Get P2P server port.
 	pub fn get_p2p_port() -> String {
 		Settings::node_config_to_read()
@@ -673,20 +761,30 @@ impl NodeConfig {
 	}
 
 	/// Check if P2P server port is available across the system and config.
-	pub fn is_p2p_port_available(port: &String) -> bool {
-		if port.parse::<u16>().is_err() {
-			return false;
-		}
-		let (_, api_port) = Self::get_api_ip_port();
+	pub fn is_p2p_port_available(host: &String, port: &String) -> bool {
+		let host = Self::parse_host(host);
+
+		// Check if P2P server with same address is running.
 		if Node::is_running() {
-			// Check if P2P server with same port is running.
-			let same_running = &NodeConfig::get_p2p_port() == port;
-			if same_running || Self::is_port_available(port) {
-				return &api_port != port;
+			let same_running =
+				&NodeConfig::get_p2p_port() == port && NodeConfig::get_p2p_host() == host;
+			if same_running {
+				return true;
 			}
-			return false;
-		} else if Self::is_port_available(port) {
-			return &api_port != port;
+		}
+
+		// Check if address not conflicts with stratum and api.
+		if Self::is_host_port_available(&host, &port) {
+			let (str_ip, str_port) = Self::get_stratum_address();
+			if str_ip == host && &str_port == port {
+				return false;
+			}
+			let (api_ip, api_port) = Self::get_api_address();
+			return if api_ip == host {
+				&api_port != port
+			} else {
+				true
+			};
 		}
 		false
 	}

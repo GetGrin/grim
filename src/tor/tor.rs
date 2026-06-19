@@ -29,13 +29,10 @@ use safelog::DisplayRedacted;
 use sha2::Sha512;
 use std::collections::{BTreeMap, BTreeSet};
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
-use std::str::FromStr;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 use std::{fs, thread};
-use tls_api::{TlsConnector as TlsConnectorTrait, TlsConnectorBuilder};
-use tls_api_native_tls::TlsConnector;
 use tor_hscrypto::pk::{HsIdKey, HsIdKeypair};
 use tor_hsrproxy::OnionServiceReverseProxy;
 use tor_hsrproxy::config::{

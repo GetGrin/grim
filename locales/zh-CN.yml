@@ -302,6 +302,7 @@ network_settings:
   max_outbound_count: '最大出站网络对点连接数:'
   reset_data_desc: 重置节点数据。只有在出现同步问题时才需谨慎使用.
   reset_data: 重置数据
+  ip_listen_all: 在所有接口上监听
 modal:
   cancel: 取消
   save: 保存

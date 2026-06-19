@@ -302,6 +302,7 @@ network_settings:
   max_outbound_count: 'Maximale Anzahl von ausgehenden Peer-Verbindungen:'
   reset_data_desc: Reset-Knotendaten. Verwenden Sie diese Funktion nur, wenn es Probleme mit der Synchronisation gibt.
   reset_data: Daten zurücksetzten
+  ip_listen_all: Hören Sie auf allen Schnittstellen
 modal:
   cancel: Abbrechen
   save: Speichern

@@ -12,9 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::scroll_area::ScrollBarVisibility;
-use egui::{RichText, ScrollArea};
-
 use crate::gui::Colors;
 use crate::gui::icons::{ARROW_COUNTER_CLOCKWISE, TRASH};
 use crate::gui::platform::PlatformCallbacks;
@@ -25,6 +22,9 @@ use crate::gui::views::network::types::{NodeTab, NodeTabType};
 use crate::gui::views::types::{ContentContainer, ModalPosition};
 use crate::gui::views::{Content, Modal, View};
 use crate::node::{Node, NodeConfig};
+
+use egui::scroll_area::ScrollBarVisibility;
+use egui::{RichText, ScrollArea};
 
 /// Integrated node settings tab content.
 pub struct NetworkSettings {
@@ -162,39 +162,75 @@ impl NetworkSettings {
 		ips: &Vec<String>,
 		on_change: impl FnOnce(&String),
 	) {
-		let mut selected_ip = saved_ip;
-
-		// Set first IP address as current if saved is not present at system.
-		if !ips.contains(saved_ip) {
-			selected_ip = ips.get(0).unwrap();
+		let mut all = NodeConfig::ALL_INTERFACES.to_string();
+		let all_ips = saved_ip == &all || saved_ip == &format!("[{}]", &all);
+		if all_ips {
+			all = saved_ip.clone();
 		}
 
-		ui.add_space(2.0);
+		let mut selected_ip = saved_ip.clone();
 
-		// Show available IP addresses on the system.
-		let _ = ips
-			.chunks(2)
-			.map(|x| {
-				if x.len() == 2 {
-					ui.columns(2, |columns| {
-						let ip_left = x.get(0).unwrap();
-						columns[0].vertical_centered(|ui| {
-							View::radio_value(ui, &mut selected_ip, ip_left, ip_left.to_string());
+		let mut listen_all_changed = false;
+		View::checkbox(ui, all_ips, t!("network_settings.ip_listen_all"), || {
+			listen_all_changed = true;
+		});
+		if listen_all_changed {
+			let new_ip = if all_ips {
+				ips.get(0).unwrap_or(&all).clone()
+			} else {
+				all.clone()
+			};
+			selected_ip = new_ip;
+		}
+
+		ui.add_space(8.0);
+
+		if selected_ip != all {
+			// Set first IP address as current if saved is not present at system.
+			if !ips.contains(&saved_ip) {
+				selected_ip = ips.get(0).unwrap().clone();
+			}
+
+			// Show available IP addresses on the system.
+			let _ = ips
+				.chunks(2)
+				.map(|x| {
+					if x.len() == 2 {
+						ui.columns(2, |columns| {
+							let ip_left = x.get(0).unwrap();
+							let val = if all_ips {
+								&mut ip_left.clone()
+							} else {
+								&mut selected_ip
+							};
+							columns[0].vertical_centered(|ui| {
+								View::radio_value(ui, val, ip_left.clone(), ip_left.to_string());
+							});
+							let ip_right = x.get(1).unwrap();
+							let val = if all_ips {
+								&mut ip_right.clone()
+							} else {
+								&mut selected_ip
+							};
+							columns[1].vertical_centered(|ui| {
+								View::radio_value(ui, val, ip_right.clone(), ip_right.to_string());
+							})
 						});
-						let ip_right = x.get(1).unwrap();
-						columns[1].vertical_centered(|ui| {
-							View::radio_value(ui, &mut selected_ip, ip_right, ip_right.to_string());
-						})
-					});
-				} else {
-					let ip = x.get(0).unwrap();
-					View::radio_value(ui, &mut selected_ip, ip, ip.to_string());
-				}
-				ui.add_space(12.0);
-			})
-			.collect::<Vec<_>>();
+					} else {
+						let ip = x.get(0).unwrap();
+						let val = if all_ips {
+							&mut ip.clone()
+						} else {
+							&mut selected_ip
+						};
+						View::radio_value(ui, val, ip.clone(), ip.to_string());
+					}
+					ui.add_space(12.0);
+				})
+				.collect::<Vec<_>>();
+		}
 
-		if saved_ip != selected_ip {
+		if saved_ip != &selected_ip {
 			on_change(&selected_ip.to_string());
 		}
 	}

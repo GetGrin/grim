@@ -235,7 +235,8 @@ impl Wallet {
 	/// Create [`HTTPNodeClient`] from provided config.
 	fn create_node_client(config: &WalletConfig) -> Result<HTTPNodeClient, Error> {
 		let integrated = || {
-			let api_url = format!("http://{}", NodeConfig::get_api_address());
+			let (api_address, api_port) = NodeConfig::get_api_address();
+			let api_url = format!("http://{}:{}", api_address, api_port);
 			let api_secret = NodeConfig::get_api_secret(true);
 			(api_url, api_secret)
 		};
@@ -2222,7 +2223,7 @@ fn start_api_server(wallet: &Wallet) -> Result<(ApiServer, u16), Error> {
 			return match TcpListener::bind((host, port.to_owned())) {
 				Ok(_) => {
 					let node_p2p_port = NodeConfig::get_p2p_port();
-					let node_api_port = NodeConfig::get_api_ip_port().1;
+					let node_api_port = NodeConfig::get_api_address().1;
 					let free =
 						port.to_string() != node_p2p_port && port.to_string() != node_api_port;
 					if free {

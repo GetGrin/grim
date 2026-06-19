@@ -45,6 +45,9 @@ pub struct P2PSetup {
 	/// Flag to check if p2p port is available.
 	port_available_edit: bool,
 
+	/// IP Addresses available at system.
+	available_ips: Vec<String>,
+
 	/// Flag to check if p2p port from saved config value is available.
 	is_port_available: bool,
 
@@ -90,7 +93,8 @@ pub const MAX_OUTBOUND_MODAL: &'static str = "p2p_max_outbound";
 impl Default for P2PSetup {
 	fn default() -> Self {
 		let port = NodeConfig::get_p2p_port();
-		let is_port_available = NodeConfig::is_p2p_port_available(&port);
+		let ip = NodeConfig::get_p2p_host();
+		let is_port_available = NodeConfig::is_p2p_port_available(&ip, &port);
 		let default_main_seeds = Node::MAINNET_DNS_SEEDS
 			.iter()
 			.map(|s| s.to_string())
@@ -102,9 +106,10 @@ impl Default for P2PSetup {
 		Self {
 			port_edit: port,
 			port_available_edit: is_port_available,
+			available_ips: NodeConfig::get_ip_addrs(),
+			is_port_available,
 			address_check: Bind::new(false),
 			address_available: Some(true),
-			is_port_available,
 			peer_edit: "".to_string(),
 			default_main_seeds,
 			default_test_seeds,
@@ -152,8 +157,8 @@ impl ContentContainer for P2PSetup {
 		ui.add_space(6.0);
 
 		ui.vertical_centered(|ui| {
-			// Show p2p port setup.
-			self.port_ui(ui);
+			// Show p2p address setup.
+			self.address_ui(ui);
 
 			ui.add_space(6.0);
 			View::horizontal_line(ui, Colors::item_stroke());
@@ -229,8 +234,14 @@ impl ContentContainer for P2PSetup {
 const DNS_SEEDS_TITLE: &'static str = "DNS Seeds";
 
 impl P2PSetup {
-	/// Draw p2p port setup content.
-	fn port_ui(&mut self, ui: &mut egui::Ui) {
+	/// Draw p2p address setup content.
+	fn address_ui(&mut self, ui: &mut egui::Ui) {
+		// Show message when IP addresses are not available on the system.
+		if self.available_ips.is_empty() {
+			NetworkSettings::no_ip_address_ui(ui);
+			return;
+		}
+
 		ui.label(
 			RichText::new(t!("network_settings.p2p_port"))
 				.size(16.0)
@@ -238,7 +249,17 @@ impl P2PSetup {
 		);
 		ui.add_space(6.0);
 
+		let ip = NodeConfig::get_p2p_host();
 		let port = NodeConfig::get_p2p_port();
+
+		NetworkSettings::ip_addrs_ui(ui, &ip, &self.available_ips, |selected_ip| {
+			NodeConfig::save_p2p_host(selected_ip);
+			let p2p_available = NodeConfig::is_p2p_port_available(selected_ip, &port);
+			self.is_port_available = p2p_available;
+		});
+
+		ui.add_space(6.0);
+
 		View::button(
 			ui,
 			format!("{} {}", PLUG, &port),
@@ -272,7 +293,8 @@ impl P2PSetup {
 	fn port_modal(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
 		let on_save = |c: &mut P2PSetup| {
 			// Check if port is available.
-			let available = NodeConfig::is_p2p_port_available(&c.port_edit);
+			let ip = NodeConfig::get_p2p_host();
+			let available = NodeConfig::is_p2p_port_available(&ip, &c.port_edit);
 			c.port_available_edit = available;
 
 			// Save port at config if it's available.

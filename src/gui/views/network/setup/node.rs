@@ -67,7 +67,7 @@ const FTL_MODAL: &'static str = "node_ftl";
 
 impl Default for NodeSetup {
 	fn default() -> Self {
-		let (api_ip, api_port) = NodeConfig::get_api_ip_port();
+		let (api_ip, api_port) = NodeConfig::get_api_address();
 		let is_api_port_available = NodeConfig::is_api_port_available(&api_ip, &api_port);
 		Self {
 			data_path_edit: NodeConfig::get_chain_data_path(),
@@ -204,7 +204,7 @@ impl ContentContainer for NodeSetup {
 				ui.add_space(6.0);
 
 				// Show API IP addresses to select.
-				let (api_ip, api_port) = NodeConfig::get_api_ip_port();
+				let (api_ip, api_port) = NodeConfig::get_api_address();
 				NetworkSettings::ip_addrs_ui(ui, &api_ip, &self.available_ips, |selected_ip| {
 					let api_available = NodeConfig::is_api_port_available(selected_ip, &api_port);
 					self.is_api_port_available = api_available;
@@ -416,7 +416,7 @@ impl NodeSetup {
 		);
 		ui.add_space(6.0);
 
-		let (_, port) = NodeConfig::get_api_ip_port();
+		let (_, port) = NodeConfig::get_api_address();
 		View::button(
 			ui,
 			format!("{} {}", PLUG, &port),
@@ -436,6 +436,7 @@ impl NodeSetup {
 		ui.add_space(6.0);
 
 		if !self.is_api_port_available {
+			ui.add_space(6.0);
 			// Show error when API server port is unavailable.
 			ui.label(
 				RichText::new(t!("network_settings.port_unavailable"))
@@ -451,7 +452,7 @@ impl NodeSetup {
 	fn api_port_modal(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
 		let on_save = |c: &mut NodeSetup| {
 			// Check if port is available.
-			let (api_ip, _) = NodeConfig::get_api_ip_port();
+			let (api_ip, _) = NodeConfig::get_api_address();
 			let available = NodeConfig::is_api_port_available(&api_ip, &c.api_port_edit);
 			c.api_port_available_edit = available;
 			if available {

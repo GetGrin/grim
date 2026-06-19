@@ -105,8 +105,9 @@ impl ContentContainer for ConnectionsContent {
 			|ui| {
 				let r = View::item_rounding(0, 1, true);
 				View::item_button(ui, r, QR_CODE, None, || {
+					let (api_address, api_port) = NodeConfig::get_api_address();
 					if let Ok(c) = ShareConnectionContent::new(ShareConnection {
-						url: format!("http://{}", NodeConfig::get_api_address()),
+						url: format!("http://{}:{}", api_address, api_port),
 						username: "grin".to_string(),
 						secret: NodeConfig::get_api_secret(true).unwrap_or("".to_string()),
 					}) {
@@ -277,9 +278,11 @@ impl ConnectionsContent {
 								ui.add_space(1.0);
 
 								// Setup node API address text.
-								let api_address = NodeConfig::get_api_address();
-								let address_text =
-									format!("{} http://{}", COMPUTER_TOWER, api_address);
+								let (api_address, api_port) = NodeConfig::get_api_address();
+								let address_text = format!(
+									"{} http://{}:{}",
+									COMPUTER_TOWER, api_address, api_port
+								);
 								ui.label(
 									RichText::new(address_text).size(15.0).color(Colors::gray()),
 								);

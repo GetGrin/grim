@@ -302,6 +302,7 @@ network_settings:
   max_outbound_count: 'Maksimum giden Peer baglanti sayisi:'
   reset_data_desc: Node verisini sifirlama. Sadece senkronizasyonda sorun varsa dikkatli kullanin.
   reset_data: Verileri sifirlama
+  ip_listen_all: Tüm arayüzlerde dinle
 modal:
   cancel: Iptal
   save: Kaydet

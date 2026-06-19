@@ -302,6 +302,7 @@ network_settings:
   max_outbound_count: 'Maximum number of outbound peer connections:'
   reset_data_desc: Reset the node data. Use it with a caution only if there are problems with synchronization.
   reset_data: Reset data
+  ip_listen_all: Listen on all interfaces
 modal:
   cancel: Cancel
   save: Save

@@ -302,6 +302,7 @@ network_settings:
   max_outbound_count: 'Nombre maximum de connexions de pairs sortants :'
   reset_data_desc: Réinitialisez les données du noeud. Utilisez-le avec prudence uniquement en cas de problème de synchronisation.
   reset_data: Réinitialisation des données
+  ip_listen_all: Écoutez sur toutes les interfaces
 modal:
   cancel: Annuler
   save: Sauvegarder
