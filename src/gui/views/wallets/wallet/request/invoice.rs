@@ -12,25 +12,36 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::{Id, RichText};
-use grin_core::core::{amount_from_hr_string, amount_to_hr_string};
-
 use crate::gui::Colors;
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::{Modal, TextEdit, View};
+use crate::gui::views::{CameraContent, Modal, TextEdit, View};
 use crate::wallet::Wallet;
 use crate::wallet::types::WalletTask;
+use egui::{Id, RichText};
+use grin_core::core::{amount_from_hr_string, amount_to_hr_string};
+use grin_wallet_libwallet::SlatepackAddress;
 
 /// Invoice request creation content.
 pub struct InvoiceRequestContent {
 	/// Amount to receive.
 	amount_edit: String,
+
+	/// Sender address.
+	address_edit: String,
+	/// Flag to check if entered address is incorrect.
+	address_error: bool,
+
+	/// Address QR code scanner content.
+	address_scan_content: Option<CameraContent>,
 }
 
 impl Default for InvoiceRequestContent {
 	fn default() -> Self {
 		Self {
 			amount_edit: "".to_string(),
+			address_edit: "".to_string(),
+			address_error: false,
+			address_scan_content: None,
 		}
 	}
 }
@@ -50,13 +61,35 @@ impl InvoiceRequestContent {
 				return;
 			}
 			if let Ok(a) = amount_from_hr_string(m.amount_edit.as_str()) {
-				m.amount_edit = "".to_string();
-				wallet.task(WalletTask::Receive(a));
+				let addr_str = m.address_edit.as_str();
+				let addr = if let Ok(r) = SlatepackAddress::try_from(addr_str.trim()) {
+					Some(r)
+				} else {
+					None
+				};
+				wallet.task(WalletTask::Receive(a, addr));
 				Modal::close();
 			}
 		};
 
 		ui.add_space(6.0);
+
+		// Draw QR code scanner content if requested.
+		if let Some(content) = self.address_scan_content.as_mut() {
+			let mut close_scan = true;
+			content.modal_ui(ui, cb, |result| {
+				if let Some(result) = result {
+					self.address_edit = result.text();
+				} else {
+					modal.enable_closing();
+					close_scan = true;
+				}
+			});
+			if close_scan {
+				self.address_scan_content = None;
+			}
+			return;
+		}
 
 		// Draw amount input content.
 		ui.vertical_centered(|ui| {
@@ -72,11 +105,9 @@ impl InvoiceRequestContent {
 		let amount_edit_before = self.amount_edit.clone();
 		let mut amount_edit = TextEdit::new(Id::from(modal.id).with(wallet.get_config().id))
 			.h_center()
-			.numeric();
+			.numeric()
+			.focus(Modal::first_draw());
 		amount_edit.ui(ui, &mut self.amount_edit, cb);
-		if amount_edit.enter_pressed {
-			on_continue(self);
-		}
 
 		// Check value if input was changed.
 		if amount_edit_before != self.amount_edit {
@@ -109,7 +140,54 @@ impl InvoiceRequestContent {
 			}
 		}
 
+		ui.add_space(8.0);
+
+		// Show address error or input description.
+		ui.vertical_centered(|ui| {
+			if self.address_error {
+				ui.label(
+					RichText::new(t!("transport.incorrect_addr_err"))
+						.size(17.0)
+						.color(Colors::red()),
+				);
+			} else {
+				ui.label(
+					RichText::new(t!("transport.sender_address"))
+						.size(17.0)
+						.color(Colors::gray()),
+				);
+			}
+		});
+		ui.add_space(6.0);
+
+		// Show address text edit.
+		let addr_edit_before = self.address_edit.clone();
+		let address_edit_id = Id::from(modal.id)
+			.with("_address")
+			.with(wallet.get_config().id);
+		let mut address_edit = TextEdit::new(address_edit_id)
+			.paste()
+			.focus(false)
+			.scan_qr();
+		if amount_edit.enter_pressed {
+			address_edit.focus_request();
+		}
+		address_edit.ui(ui, &mut self.address_edit, cb);
+		// Check if scan button was pressed.
+		if address_edit.scan_pressed {
+			modal.disable_closing();
+			self.address_scan_content = Some(CameraContent::default());
+		}
+
 		ui.add_space(12.0);
+		// Check value if input was changed.
+		if addr_edit_before != self.address_edit {
+			self.address_error = false;
+		}
+		// Continue on Enter press.
+		if address_edit.enter_pressed {
+			on_continue(self);
+		}
 
 		// Setup spacing between buttons.
 		ui.spacing_mut().item_spacing = egui::Vec2::new(8.0, 0.0);
@@ -121,7 +199,6 @@ impl InvoiceRequestContent {
 					t!("modal.cancel"),
 					Colors::white_or_black(false),
 					|| {
-						self.amount_edit = "".to_string();
 						Modal::close();
 					},
 				);

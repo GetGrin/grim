@@ -45,7 +45,7 @@ use grin_wallet_libwallet::{
 	VersionedSlate, WalletBackend, WalletInitStatus, WalletInst, WalletLCProvider, address,
 };
 use grin_wallet_util::OnionV3Address;
-use log::error;
+use log::{debug, error};
 use num_bigint::BigInt;
 use parking_lot::RwLock;
 use rand::Rng;
@@ -936,7 +936,7 @@ impl Wallet {
 	fn create_slatepack_message(
 		&self,
 		slate: &Slate,
-		_: Option<SlatepackAddress>,
+		address: Option<SlatepackAddress>,
 	) -> Result<String, Error> {
 		let mut message = "".to_string();
 		let r_inst = self.instance.as_ref().read();
@@ -947,11 +947,11 @@ impl Wallet {
 			self.keychain_mask().as_ref(),
 			Some(&mut api),
 			|api, m| {
-				// let recipients = match dest {
-				// 	Some(a) => vec![a],
-				// 	None => vec![],
-				// };
-				message = api.create_slatepack_message(m, &slate, Some(0), vec![])?;
+				let addrs = match address {
+					Some(a) => vec![a],
+					None => vec![],
+				};
+				message = api.create_slatepack_message(m, &slate, Some(0), addrs)?;
 				Ok(())
 			},
 		)?;
@@ -968,40 +968,6 @@ impl Wallet {
 	pub fn slatepack_exists(&self, slate: &Slate) -> bool {
 		let slatepack_path = self.get_config().get_slate_path(slate.id, &slate.state);
 		fs::exists(slatepack_path).unwrap_or(false)
-	}
-
-	/// Get possible state from tx type.
-	pub fn get_slate_state(&self, slate_id: Uuid, tx_type: &TxLogEntryType) -> SlateState {
-		let mut slate = Slate::blank(1, false);
-		slate.id = slate_id;
-		slate.state = match tx_type {
-			TxLogEntryType::TxReceived => SlateState::Invoice3,
-			_ => SlateState::Standard3,
-		};
-		// Transaction was finalized.
-		if self.slatepack_exists(&slate) {
-			slate.state
-		} else {
-			slate.state = match tx_type {
-				TxLogEntryType::TxReceived => SlateState::Standard2,
-				_ => SlateState::Invoice2,
-			};
-			// Transaction signed to be finalized.
-			if self.slatepack_exists(&slate) {
-				slate.state
-			} else {
-				// Transaction just was created.
-				slate.state = match tx_type {
-					TxLogEntryType::TxReceived => SlateState::Invoice1,
-					_ => SlateState::Standard1,
-				};
-				if self.slatepack_exists(&slate) {
-					slate.state
-				} else {
-					SlateState::Unknown
-				}
-			}
-		}
 	}
 
 	/// Calculate transaction fee for provided amount.
@@ -1057,7 +1023,7 @@ impl Wallet {
 		controller::owner_single_use(None, keychain_mask.as_ref(), Some(&mut api), |api, m| {
 			let s = api.init_send_tx(m, args)?;
 			// Create Slatepack message response.
-			let _ = self.create_slatepack_message(&s, dest)?;
+			let _ = self.create_slatepack_message(&s, None)?;
 			// Lock outputs to for this transaction.
 			api.tx_lock_outputs(m, &s)?;
 			slate = Some(s);
@@ -1118,7 +1084,11 @@ impl Wallet {
 	}
 
 	/// Initialize an invoice transaction to receive amount, return request for funds sender.
-	fn issue_invoice(&self, amount: u64) -> Result<Slate, Error> {
+	fn issue_invoice(
+		&self,
+		amount: u64,
+		address: Option<SlatepackAddress>,
+	) -> Result<Slate, Error> {
 		let args = IssueInvoiceTxArgs {
 			dest_acct_name: None,
 			amount,
@@ -1130,7 +1100,7 @@ impl Wallet {
 		let slate = api.issue_invoice_tx(self.keychain_mask().as_ref(), args)?;
 
 		// Create Slatepack message response.
-		let _ = self.create_slatepack_message(&slate, None)?;
+		let _ = self.create_slatepack_message(&slate, address)?;
 
 		Ok(slate)
 	}
@@ -1313,11 +1283,12 @@ impl Wallet {
 	fn get_tx_slate(&self, tx_id: u32) -> Option<Slate> {
 		if let Some(tx) = self.retrieve_tx_by_id(Some(tx_id), None) {
 			if let Some(slate_id) = tx.tx_slate_id {
-				let slate_state = self.get_slate_state(slate_id, &tx.tx_type);
-				let slatepack_path = self.get_config().get_slate_path(slate_id, &slate_state);
-				let msg = fs::read_to_string(slatepack_path).unwrap_or("".to_string());
-				if let Ok((slate, _)) = self.parse_slatepack(&msg) {
-					return Some(slate);
+				if let Some(slate_state) = tx.tx_slate_state {
+					let slatepack_path = self.get_config().get_slate_path(slate_id, &slate_state);
+					let msg = fs::read_to_string(slatepack_path).unwrap_or("".to_string());
+					if let Ok((slate, _)) = self.parse_slatepack(&msg) {
+						return Some(slate);
+					}
 				}
 			}
 		}
@@ -1889,9 +1860,10 @@ async fn handle_task(w: &Wallet, t: WalletTask) {
 				send_tor(tx.clone(), &s, r).await;
 			}
 		}
-		WalletTask::Receive(a) => {
+		WalletTask::Receive(amount, address) => {
 			w.invoice_creating.store(true, Ordering::Relaxed);
-			if let Ok(s) = w.issue_invoice(*a) {
+			debug!("receive: {} at {:?}", amount, address.clone());
+			if let Ok(s) = w.issue_invoice(*amount, address.clone()) {
 				sync_wallet_data(&w, false);
 				let tx = w.retrieve_tx_by_id(None, Some(s.id));
 				if let Some(tx) = tx {
@@ -2143,7 +2115,6 @@ fn update_txs(wallet: &Wallet, mut txs_limit: u32) -> Result<(), Error> {
 		let mut new = WalletTx::new(
 			tx.clone(),
 			proof.clone(),
-			wallet,
 			height,
 			broadcasting_height,
 			action,

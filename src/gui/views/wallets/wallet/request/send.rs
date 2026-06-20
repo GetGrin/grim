@@ -90,40 +90,18 @@ impl SendRequestContent {
 		ui.add_space(6.0);
 
 		// Draw QR code scanner content if requested.
-		if let Some(scanner) = self.address_scan_content.as_mut() {
-			let on_stop = || {
-				cb.stop_camera();
-				modal.enable_closing();
-			};
-
-			if let Some(result) = scanner.qr_scan_result() {
-				self.address_edit = result.text();
-				on_stop();
+		if let Some(content) = self.address_scan_content.as_mut() {
+			let mut close_scan = true;
+			content.modal_ui(ui, cb, |result| {
+				if let Some(result) = result {
+					self.address_edit = result.text();
+				} else {
+					modal.enable_closing();
+					close_scan = true;
+				}
+			});
+			if close_scan {
 				self.address_scan_content = None;
-			} else {
-				ui.add_space(6.0);
-				scanner.ui(ui, cb);
-				ui.add_space(6.0);
-
-				// Setup spacing between buttons.
-				ui.spacing_mut().item_spacing = egui::Vec2::new(8.0, 0.0);
-
-				// Show buttons to close modal or come back to sending input.
-				ui.columns(2, |cols| {
-					cols[0].vertical_centered_justified(|ui| {
-						View::button(ui, t!("close"), Colors::white_or_black(false), || {
-							on_stop();
-							self.close();
-						});
-					});
-					cols[1].vertical_centered_justified(|ui| {
-						View::button(ui, t!("back"), Colors::white_or_black(false), || {
-							on_stop();
-							self.address_scan_content = None;
-						});
-					});
-				});
-				ui.add_space(6.0);
 			}
 			return;
 		}

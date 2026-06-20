@@ -168,10 +168,12 @@ impl WalletTransactionContent {
 		cb: &dyn PlatformCallbacks,
 	) {
 		if self.message.is_none() {
-			let slatepack_path = wallet
-				.get_config()
-				.get_slate_path(tx.data.tx_slate_id.unwrap(), &tx.state);
-			self.message = Some(fs::read_to_string(slatepack_path).unwrap_or("".to_string()));
+			if let Some(slate_state) = tx.data.tx_slate_state.as_ref() {
+				let slatepack_path = wallet
+					.get_config()
+					.get_slate_path(tx.data.tx_slate_id.unwrap(), slate_state);
+				self.message = Some(fs::read_to_string(slatepack_path).unwrap_or("".to_string()));
+			}
 		}
 		if let Some(m) = &self.message {
 			if m.is_empty() {
@@ -260,29 +262,31 @@ impl WalletTransactionContent {
 			});
 
 			// Draw button to share response as file.
-			ui.add_space(8.0);
-			ui.vertical_centered(|ui| {
-				let share_text = format!("{} {}", FILE_TEXT, t!("share"));
-				View::colored_text_button(
-					ui,
-					share_text,
-					Colors::blue(),
-					Colors::white_or_black(false),
-					|| {
-						if let Some(slate_id) = tx.data.tx_slate_id {
-							let name = format!("{}.{}.slatepack", slate_id, tx.state);
-							let data = m.as_bytes().to_vec();
-							cb.share_data(name, data).unwrap_or_default();
-							// Show message input or close modal.
-							if tx.can_finalize() {
-								finalization_needed = true;
-							} else {
-								Modal::close();
-							}
-						}
-					},
-				);
-			});
+			if let Some(slate_id) = tx.data.tx_slate_id {
+				if let Some(slate_state) = tx.data.tx_slate_state.as_ref() {
+					ui.add_space(8.0);
+					ui.vertical_centered(|ui| {
+						let share_text = format!("{} {}", FILE_TEXT, t!("share"));
+						View::colored_text_button(
+							ui,
+							share_text,
+							Colors::blue(),
+							Colors::white_or_black(false),
+							|| {
+								let name = format!("{}.{}.slatepack", slate_id, slate_state);
+								let data = m.as_bytes().to_vec();
+								cb.share_data(name, data).unwrap_or_default();
+								// Show message input or close modal.
+								if tx.can_finalize() {
+									finalization_needed = true;
+								} else {
+									Modal::close();
+								}
+							},
+						);
+					});
+				}
+			}
 
 			if finalization_needed {
 				Modal::new(MessageInputContent::MODAL_ID)
@@ -370,13 +374,13 @@ impl WalletTransactionContent {
 			info_item_ui(ui, kernel.0.to_hex(), label, true, cb);
 		}
 		// Show receiver or sender address.
-		let addr = if tx.data.tx_type == TxLogEntryType::TxSent {
-			&tx.receiver
+		let (addr, label) = if tx.data.tx_type == TxLogEntryType::TxSent {
+			(&tx.receiver, t!("transport.receiver_address"))
 		} else {
-			&tx.sender
+			(&tx.sender, t!("transport.sender_address"))
 		};
 		if let Some(addr) = addr {
-			let label = format!("{} {}", CIRCLE_HALF, t!("network_mining.address"));
+			let label = format!("{} {}", CIRCLE_HALF, label.replace(":", ""));
 			info_item_ui(ui, addr.to_string(), label, true, cb);
 		}
 	}
