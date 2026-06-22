@@ -1036,23 +1036,41 @@ impl Wallet {
 		}
 	}
 
-	/// Send slate to Tor address.
-	async fn send_tor(&self, id: u32, s: &Slate, addr: &SlatepackAddress) -> Result<Slate, Error> {
+	/// Send slate to Tor address. When `finalize` is true, posts the slate to the
+	/// peer's foreign-api `finalize_tx` (used by the invoice-flow payer to push the
+	/// signed Invoice2 back to the merchant for broadcast); otherwise posts to
+	/// `receive_tx` (standard send flow).
+	async fn send_tor(
+		&self,
+		id: u32,
+		s: &Slate,
+		addr: &SlatepackAddress,
+		finalize: bool,
+	) -> Result<Slate, Error> {
 		self.on_tx_action(id, Some(WalletTxAction::SendingTor));
 
 		let tor_addr = OnionV3Address::try_from(addr).unwrap().to_http_str();
 		let url = format!("{}/v2/foreign", tor_addr);
 		let slate_send = VersionedSlate::into_version(s.clone(), SlateVersion::V4)?;
-		let body = json!({
-			"jsonrpc": "2.0",
-			"method": "receive_tx",
-			"id": 1,
-			"params": [
-						slate_send,
-						null,
-						null
-					]
-		})
+		let body = if finalize {
+			json!({
+				"jsonrpc": "2.0",
+				"method": "finalize_tx",
+				"id": 1,
+				"params": [slate_send]
+			})
+		} else {
+			json!({
+				"jsonrpc": "2.0",
+				"method": "receive_tx",
+				"id": 1,
+				"params": [
+							slate_send,
+							null,
+							null
+						]
+			})
+		}
 		.to_string();
 		// Wait Tor service to launch.
 		while Tor::is_service_starting(&self.identifier()) {
@@ -1106,7 +1124,7 @@ impl Wallet {
 	}
 
 	/// Handle message from the invoice issuer to send founds, return response for funds receiver.
-	fn pay(&self, slate: &Slate) -> Result<Slate, Error> {
+	fn pay(&self, slate: &Slate, dest: Option<SlatepackAddress>) -> Result<Slate, Error> {
 		let config = self.get_config();
 		let args = InitTxArgs {
 			src_acct_name: None,
@@ -1121,8 +1139,9 @@ impl Wallet {
 		let slate = api.process_invoice_tx(self.keychain_mask().as_ref(), &slate, args)?;
 		api.tx_lock_outputs(self.keychain_mask().as_ref(), &slate)?;
 
-		// Create Slatepack message response.
-		let _ = self.create_slatepack_message(&slate, None)?;
+		// Create Slatepack message response (kept as on-disk paste-back fallback even
+		// when an auto-Tor reply is attempted by the caller).
+		let _ = self.create_slatepack_message(&slate, dest)?;
 
 		Ok(slate)
 	}
@@ -1715,7 +1734,7 @@ fn start_sync(wallet: Wallet) -> Thread {
 /// Handle wallet task.
 async fn handle_task(w: &Wallet, t: WalletTask) {
 	let send_tor = async |tx: TxLogEntry, s: &Slate, r: &SlatepackAddress| match w
-		.send_tor(tx.id, &s, r)
+		.send_tor(tx.id, &s, r, false)
 		.await
 	{
 		Ok(s) => match w.finalize(&s, tx.id) {
@@ -1736,6 +1755,23 @@ async fn handle_task(w: &Wallet, t: WalletTask) {
 		},
 		Err(e) => {
 			error!("send tor error: {:?}", e);
+			w.on_tx_error(tx.id, Some(e));
+			w.on_task_result(Some(tx), &t);
+		}
+	};
+	// Invoice-flow counterpart to send_tor. After signing an Invoice2 the payer
+	// posts the slate to the merchant's foreign-api finalize_tx; the merchant
+	// finalizes + broadcasts on their side, so no local finalize/post is needed.
+	let pay_tor = async |tx: TxLogEntry, s: &Slate, r: &SlatepackAddress| match w
+		.send_tor(tx.id, &s, r, true)
+		.await
+	{
+		Ok(_) => {
+			sync_wallet_data(&w, false);
+			w.on_task_result(Some(tx), &t);
+		}
+		Err(e) => {
+			error!("pay tor error: {:?}", e);
 			w.on_tx_error(tx.id, Some(e));
 			w.on_task_result(Some(tx), &t);
 		}
@@ -1775,9 +1811,24 @@ async fn handle_task(w: &Wallet, t: WalletTask) {
 				match s.state {
 					SlateState::Standard1 | SlateState::Invoice1 => {
 						if s.state != SlateState::Standard1 {
-							if let Ok(_) = w.pay(&s) {
+							// Invoice1: sign + lock outputs. If the slatepack embedded a
+							// sender address and our Tor service is up, also push the
+							// signed Invoice2 back to the merchant for broadcast — the
+							// on-disk slatepack is still written as a paste-back fallback.
+							if let Ok(signed) = w.pay(&s, dest.clone()) {
 								sync_wallet_data(&w, false);
 								let tx = w.retrieve_tx_by_id(None, Some(s.id));
+								if let Some(addr) = dest {
+									let id = w.identifier();
+									if tx.is_some()
+										&& (Tor::is_service_running(&id)
+											|| Tor::is_service_starting(&id))
+									{
+										w.message_opening.store(false, Ordering::Relaxed);
+										pay_tor(tx.unwrap(), &signed, &addr).await;
+										return;
+									}
+								}
 								w.on_task_result(tx, &t);
 							}
 						} else {
