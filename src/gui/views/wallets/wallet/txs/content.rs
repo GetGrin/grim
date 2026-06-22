@@ -633,24 +633,20 @@ impl WalletTransactionsContent {
 		View::item_button(ui, rounding, icon, color, || {
 			if repost {
 				wallet.task(WalletTask::Post(tx.data.id));
+				return;
 			} else if let Some(action) = tx.action.as_ref() {
-				match action {
-					WalletTxAction::Finalizing => {
-						wallet.task(WalletTask::Finalize(tx.data.id));
-					}
-					WalletTxAction::Posting => {
-						wallet.task(WalletTask::Post(tx.data.id));
-					}
-					_ => {
-						if let Some(a) = &tx.receiver {
-							wallet.task(WalletTask::SendTor(tx.data.clone(), a.clone()));
-						}
-					}
+				if action == &WalletTxAction::Finalizing {
+					wallet.task(WalletTask::Finalize(tx.data.id));
+					return;
+				} else if action == &WalletTxAction::Posting {
+					wallet.task(WalletTask::Post(tx.data.id));
+					return;
 				}
+			}
+			if let Some(a) = &tx.receiver {
+				wallet.task(WalletTask::SendTor(tx.data.clone(), a.clone()));
 			} else {
-				if let Some(a) = &tx.receiver {
-					wallet.task(WalletTask::SendTor(tx.data.clone(), a.clone()));
-				}
+				wallet.task(WalletTask::PayTor(tx.data.clone()));
 			}
 		});
 	}

@@ -45,7 +45,7 @@ use grin_wallet_libwallet::{
 	VersionedSlate, WalletBackend, WalletInitStatus, WalletInst, WalletLCProvider, address,
 };
 use grin_wallet_util::OnionV3Address;
-use log::{debug, error};
+use log::error;
 use num_bigint::BigInt;
 use parking_lot::RwLock;
 use rand::Rng;
@@ -1073,8 +1073,10 @@ impl Wallet {
 		}
 		.to_string();
 		// Wait Tor service to launch.
-		while Tor::is_service_starting(&self.identifier()) {
-			tokio::time::sleep(Duration::from_secs(1)).await;
+		while !Tor::is_service_running(&self.identifier()) {
+			return Err(Error::GenericError(
+				"Tor service is not running".to_string(),
+			));
 		}
 		// Send request to receiver.
 		let req_res = Tor::post(body, url).await;
@@ -1299,14 +1301,14 @@ impl Wallet {
 	}
 
 	/// Get stored transaction Slate.
-	fn get_tx_slate(&self, tx_id: u32) -> Option<Slate> {
+	fn get_tx_slate(&self, tx_id: u32) -> Option<(Slate, Option<SlatepackAddress>)> {
 		if let Some(tx) = self.retrieve_tx_by_id(Some(tx_id), None) {
 			if let Some(slate_id) = tx.tx_slate_id {
 				if let Some(slate_state) = tx.tx_slate_state {
 					let slatepack_path = self.get_config().get_slate_path(slate_id, &slate_state);
 					let msg = fs::read_to_string(slatepack_path).unwrap_or("".to_string());
-					if let Ok((slate, _)) = self.parse_slatepack(&msg) {
-						return Some(slate);
+					if let Ok((slate, dest)) = self.parse_slatepack(&msg) {
+						return Some((slate, dest));
 					}
 				}
 			}
@@ -1331,7 +1333,7 @@ impl Wallet {
 		batch.commit()?;
 
 		// Delete transaction files.
-		if let Some(s) = slate {
+		if let Some((s, _)) = slate {
 			let slatepack_path = self.get_config().get_slate_path(s.id, &s.state);
 			fs::remove_file(&slatepack_path).unwrap_or_default();
 			let path = path::Path::new(&self.get_config().get_data_path())
@@ -1759,7 +1761,7 @@ async fn handle_task(w: &Wallet, t: WalletTask) {
 			w.on_task_result(Some(tx), &t);
 		}
 	};
-	// Invoice-flow counterpart to send_tor. After signing an Invoice2 the payer
+	// Invoice-flow counterpart to send_tor. After signing an invoice the payer
 	// posts the slate to the merchant's foreign-api finalize_tx; the merchant
 	// finalizes + broadcasts on their side, so no local finalize/post is needed.
 	let pay_tor = async |tx: TxLogEntry, s: &Slate, r: &SlatepackAddress| match w
@@ -1809,34 +1811,28 @@ async fn handle_task(w: &Wallet, t: WalletTask) {
 				}
 				// Create response or finalize.
 				match s.state {
-					SlateState::Standard1 | SlateState::Invoice1 => {
-						if s.state != SlateState::Standard1 {
-							// Invoice1: sign + lock outputs. If the slatepack embedded a
-							// sender address and our Tor service is up, also push the
-							// signed Invoice2 back to the merchant for broadcast — the
-							// on-disk slatepack is still written as a paste-back fallback.
-							if let Ok(signed) = w.pay(&s, dest.clone()) {
-								sync_wallet_data(&w, false);
-								let tx = w.retrieve_tx_by_id(None, Some(s.id));
-								if let Some(addr) = dest {
-									let id = w.identifier();
-									if tx.is_some()
-										&& (Tor::is_service_running(&id)
-											|| Tor::is_service_starting(&id))
-									{
+					SlateState::Standard1 => {
+						if let Ok(_) = w.receive(&s, dest) {
+							sync_wallet_data(&w, false);
+							let tx = w.retrieve_tx_by_id(None, Some(s.id));
+							w.on_task_result(tx, &t);
+						}
+					}
+					SlateState::Invoice1 => {
+						if let Ok(signed) = w.pay(&s, None) {
+							sync_wallet_data(&w, false);
+							let tx = w.retrieve_tx_by_id(None, Some(s.id));
+							let id = w.identifier();
+							if Tor::is_service_running(&id) {
+								if let Some(tx) = tx.as_ref() {
+									if let Some(addr) = dest {
 										w.message_opening.store(false, Ordering::Relaxed);
-										pay_tor(tx.unwrap(), &signed, &addr).await;
+										pay_tor(tx.clone(), &signed, &addr).await;
 										return;
 									}
 								}
-								w.on_task_result(tx, &t);
 							}
-						} else {
-							if let Ok(_) = w.receive(&s, dest) {
-								sync_wallet_data(&w, false);
-								let tx = w.retrieve_tx_by_id(None, Some(s.id));
-								w.on_task_result(tx, &t);
-							}
+							w.on_task_result(tx, &t);
 						}
 					}
 					SlateState::Standard2 | SlateState::Invoice2 => {
@@ -1892,7 +1888,7 @@ async fn handle_task(w: &Wallet, t: WalletTask) {
 				if let Some(tx) = tx {
 					if let Some(addr) = r {
 						let id = w.identifier();
-						if Tor::is_service_running(&id) || Tor::is_service_starting(&id) {
+						if Tor::is_service_running(&id) {
 							w.send_creating.store(false, Ordering::Relaxed);
 							send_tor(tx, &s, addr).await;
 							return;
@@ -1907,13 +1903,19 @@ async fn handle_task(w: &Wallet, t: WalletTask) {
 			w.send_creating.store(false, Ordering::Relaxed);
 		}
 		WalletTask::SendTor(tx, r) => {
-			if let Some(s) = w.get_tx_slate(tx.id) {
-				send_tor(tx.clone(), &s, r).await;
+			if let Some((slate, _)) = w.get_tx_slate(tx.id) {
+				send_tor(tx.clone(), &slate, r).await;
+			}
+		}
+		WalletTask::PayTor(tx) => {
+			if let Some((slate, dest)) = w.get_tx_slate(tx.id) {
+				if let Some(dest) = dest {
+					pay_tor(tx.clone(), &slate, &dest).await;
+				}
 			}
 		}
 		WalletTask::Receive(amount, address) => {
 			w.invoice_creating.store(true, Ordering::Relaxed);
-			debug!("receive: {} at {:?}", amount, address.clone());
 			if let Ok(s) = w.issue_invoice(*amount, address.clone()) {
 				sync_wallet_data(&w, false);
 				let tx = w.retrieve_tx_by_id(None, Some(s.id));
@@ -1924,7 +1926,7 @@ async fn handle_task(w: &Wallet, t: WalletTask) {
 			w.invoice_creating.store(false, Ordering::Relaxed);
 		}
 		WalletTask::Finalize(id) => {
-			if let Some(s) = w.get_tx_slate(*id) {
+			if let Some((s, _)) = w.get_tx_slate(*id) {
 				w.on_tx_error(*id, None);
 				match w.finalize(&s, *id) {
 					Ok(s) => match w.post(&s, Some(*id)) {
@@ -1947,7 +1949,7 @@ async fn handle_task(w: &Wallet, t: WalletTask) {
 			}
 		}
 		WalletTask::Post(id) => {
-			if let Some(s) = w.get_tx_slate(*id) {
+			if let Some((s, _)) = w.get_tx_slate(*id) {
 				w.on_tx_error(*id, None);
 				// Cleanup broadcasting tx height.
 				let tx_height_store = TxHeightStore::new(w.get_config().get_extra_db_path());
