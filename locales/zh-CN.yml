@@ -1,4 +1,4 @@
-lang_name: 英语
+lang_name: 中文
 copy: 复制
 paste: 粘贴
 continue: 继续
@@ -9,7 +9,7 @@ close: 关闭
 change: 更改
 show: 显示
 delete: 删除
-clear: 清楚
+clear: 清除
 create: 创建
 id: 标识
 kernel: 核心
@@ -29,23 +29,23 @@ file: 文件
 choose_file: 选择文件
 choose_folder: 选择文件夹
 crash_report: 崩溃报告
-crash_report_warning: 上次应用程序意外关闭，您可以报告开发人员崩溃事件.
+crash_report_warning: 上次应用程序意外关闭，您可以报告开发人员崩溃事件。
 confirmation: 确认
 enter_url: 输入 URL
-max_short: 最大數量
-files_location: 檔案位置
-moving_files: 檔案移動
-wrong_path_error: 指定錯誤路徑
-check_updates: 啟動時請查看更新
+max_short: 最大数量
+files_location: 文件位置
+moving_files: 移动文件
+wrong_path_error: 指定错误路径
+check_updates: 启动时请查看更新
 update_available: 最新消息已发布！
-changelog: '更新日誌:'
+changelog: '更新日志:'
 wallets:
   await_conf_amount: 等待确认中
   await_fin_amount: 等待确定中
   locked_amount: 锁定帐户
-  txs_empty: '手动接收资金或通过传输接收资金 %{message} or %{transport} 更改钱包设置, 请按屏幕底部的按钮 %{settings} 按钮.'
+  txs_empty: '手动接收资金或通过传输接收资金 %{message} or %{transport} 更改钱包设置, 请按屏幕底部的按钮 %{settings} 按钮。'
   title: 钱包
-  create_desc: 创建或种子单词导入已有钱包.
+  create_desc: 创建或种子单词导入已有钱包。
   add: 添加钱包
   name: '用户名:'
   pass: '密码:'
@@ -72,8 +72,8 @@ wallets:
   wrong_pass: 输入的密码错误
   locked: 已锁定
   unlocked: 解锁
-  enable_node: '通过选择屏幕底部的按钮 %{settings} 启用集成节点以使用钱包或更改连接设置.'
-  node_loading: '集成节点同步后钱包会加载，你可选择屏幕底部的按钮 %{settings} 更改连接.'
+  enable_node: '通过选择屏幕底部的按钮 %{settings} 启用集成节点以使用钱包或更改连接设置。'
+  node_loading: '集成节点同步后钱包会加载，你可选择屏幕底部的按钮 %{settings} 更改连接。'
   loading: 正在加载
   closing: 正在关闭
   checking: 检查中
@@ -101,7 +101,7 @@ wallets:
   transport: 传输
   input_slatepack_desc: '输入收到的 Slatepack 消息创建响应或完成的请求:'
   parse_slatepack_err: '读取消息时出错，请检查输入:'
-  pay_balance_error: '账户余额不足以支付 %{amount} ツ 和网络费用.'
+  pay_balance_error: '账户余额不足以支付 %{amount} ツ 网络费用。'
   parse_i1_slatepack_desc: '要支付 %{amount} ツ 请将此消息发送给接收者:'
   parse_i2_slatepack_desc: '完成交易以接收 %{amount} ツ:'
   parse_i3_slatepack_desc: '发布交易以完成 %{amount} ツ的接收 ツ:'
@@ -109,40 +109,40 @@ wallets:
   parse_s2_slatepack_desc: '完成交易以发送 %{amount} ツ:'
   parse_s3_slatepack_desc: '发布交易以完成 %{amount} ツ的发送:'
   resp_slatepack_err: '创建响应时出错，请检查输入数据或重试:'
-  resp_exists_err: 此交易已存在.
-  resp_canceled_err: 此交易已被取消.
+  resp_exists_err: 此交易已存在。
+  resp_canceled_err: 此交易已被取消。
   create_request_desc: '创建发送或接收资金的请求:'
-  send_request_desc: '您已创建发送请求 %{amount} ツ. 将此消息发送给接收者:'
-  send_slatepack_err: 创建发送资金请求时出错，请检查输入数据或重试.
-  invoice_desc: '您已创建接收请求 %{amount} ツ. 将此消息发送给发送者:'
-  invoice_slatepack_err: 发票开具时出错，请检查输入数据或重试.
+  send_request_desc: '您已创建发送请求 %{amount} ツ， 将此消息发送给接收者:'
+  send_slatepack_err: 创建发送资金请求时出错，请检查输入数据或重试。
+  invoice_desc: '您已创建接收请求 %{amount} ツ，将此消息发送给发送者:'
+  invoice_slatepack_err: 发票开具时出错，请检查输入数据或重试。
   finalize_slatepack_err: '完结时出错，请检查输入数据或重试:'
   finalize: 完成
   use_dandelion: 使用蒲公英
-  enter_amount_send: '你有 %{amount} ツ. 输入要发送的金额:'
+  enter_amount_send: '你有 %{amount} ツ， 输入要发送的金额:'
   enter_amount_receive: '输入要接收的金额:'
   recovery: 恢复
   repair_wallet: 修复钱包
-  repair_desc: 检查钱包，必要时修复和恢复丢失的输出. 此操作需要时间.
-  repair_unavailable: 您需要与节点建立有效连接并完成钱包同步.
+  repair_desc: 检查钱包，必要时修复和恢复丢失的输出。此操作需要时间。
+  repair_unavailable: 您需要与节点建立有效连接并完成钱包同步。
   delete: 删除钱包
   delete_conf: 您确定要删除钱包吗？
   delete_desc: 确保您已保存恢复助记语，以便日后使用资金。.
-  wallet_loading_err: '同步钱包时出错，你可以通过选择屏幕底部的按钮 %{settings} 来重试或更改连接设置.'
+  wallet_loading_err: '同步钱包时出错，你可以通过选择屏幕底部的按钮 %{settings} 来重试或更改连接设置。'
   wallet: 钱包
   send: 发送
   receive: 接收
   settings: 钱包设置
-  tx_send_cancel_conf: '您确定要取消 %{amount} ツ的发送吗?'
-  tx_receive_cancel_conf: '您确定要取消 %{amount} ツ的接收吗?'
-  rec_phrase_not_found: 找不到恢复助记词.
-  restore_wallet_desc: 如果常规修复没有帮助，通过删除所有文件来恢复钱包.您将需要重新打开您的钱包.
+  tx_send_cancel_conf: '您确定要取消 %{amount} ツ的发送吗？'
+  tx_receive_cancel_conf: '您确定要取消 %{amount} ツ的接收吗？'
+  rec_phrase_not_found: 找不到恢复助记词。
+  restore_wallet_desc: 如果常规修复没有帮助，通过删除所有文件来恢复钱包。您将需要重新打开您的钱包。
   fee_base_desc: '费用 (基值%{value}):'
-  payment_proof: 付款證明
-  payment_proof_desc: '輸入已收款證明以驗證交易:'
-  payment_proof_valid: '輸入的付款證明有效:'
-  payment_proof_error: '輸入的付款證明無效:'
-  tx_delete_confirmation: 你確定要從歷史紀錄中刪除這筆交易嗎？
+  payment_proof: 付款证明
+  payment_proof_desc: '输入已收款证明以验证交易:'
+  payment_proof_valid: '输入的付款证明有效:'
+  payment_proof_error: '输入的付款证明无效:'
+  tx_delete_confirmation: 你确定要从历史记录中刪除这笔交易吗？
 transport:
   desc: '使用传输同步接收或发送消息:'
   tor_network: Tor 网络
@@ -153,12 +153,12 @@ transport:
   disconnected: 已断开连接
   receiver_address: '接收者的地址:'
   incorrect_addr_err: '输入的地址不正确:'
-  tor_send_error: 通过 Tor 发送时出错，请确保接收方在线, 交易已取消.
-  tor_autorun_desc: 是否在开钱包时启动 Tor 服务以同步接收交易.
+  tor_send_error: 通过 Tor 发送时出错，请确保接收方在线, 交易已取消。
+  tor_autorun_desc: 是否在开钱包时启动 Tor 服务以同步接收交易。
   tor_sending: 通过 Tor 发送
   tor_settings: Tor 设置
   bridges: 桥梁
-  bridges_desc: 如果常规连接不正常，设置网桥，可以绕过 Tor 网络审查.
+  bridges_desc: 如果常规连接不正常，设置网桥，可以绕过 Tor 网络审查。
   bin_file: '二进制文件:'
   conn_line: '连接线:'
   bridges_disabled: 网桥已禁用
@@ -175,12 +175,12 @@ network:
   settings: 节点设置
   enable_node: 启用节点
   autorun: 自动运行
-  disabled_server: '按屏幕左上角的按钮 %{dots}启用集成节点或添加其他连接方法.'
-  no_ips: T您的系统上没有可用的 IP 地址，服务器无法启动，请检查您的网络连接.
+  disabled_server: '按屏幕左上角的按钮 %{dots}启用集成节点或添加其他连接方法。'
+  no_ips: 您的系统上没有可用的 IP 地址，服务器无法启动，请检查您的网络连接。
   available: 可用
   not_available: 不可用
   availability_check: 检查是否可用
-  android_warning: Android 用户注意 .要成功同步集成节点，您必须在手机的系统设置中允许访问通知并取消 Grim 应用程序的电池使用限制.这是在后台正确运行应用程序的必要操作.
+  android_warning: Android 用户注意：要成功同步集成节点，您必须在手机的系统设置中允许访问通知并取消 Grim 应用程序的电池使用限制，这是在后台正确运行应用程序的必要操作。
 sync_status:
   node_restarting: 节点正在重新启动
   node_down: 节点已关闭
@@ -216,21 +216,21 @@ network_node:
   peers: 网络对点
   error_clean: 点数据已损坏，需要重新同步.
   resync: 重新同步
-  error_p2p_api: '%{p2p_api} 服务器初始化时出错，请选择屏幕底部的按钮 %{p2p_api} 来检查 %{settings}设置.'
-  error_config: '配置初始化时出错，请选择屏幕底部的按钮 %{settings} 检查设置.'
-  error_unknown: '初始化时出错，请选择屏幕底部的按钮 %{settings} 来检查集成节点设置，或者重新同步.'
+  error_p2p_api: '%{p2p_api} 服务器初始化时出错，请选择屏幕底部的按钮 %{p2p_api} 来检查 %{settings}设置。'
+  error_config: '配置初始化时出错，请选择屏幕底部的按钮 %{settings} 检查设置。'
+  error_unknown: '初始化时出错，请选择屏幕底部的按钮 %{settings} 来检查集成节点设置，或者重新同步。'
 network_metrics:
   loading: 指标在同步后将可用
   emission: 发射
   inflation: 通货膨胀
   supply: 供应
-  block_time: Block time
+  block_time: 区块时间
   reward: 奖励
   difficulty_window: '难度窗口 %{size}'
 network_mining:
   loading: 同步后即可挖矿
-  info: '挖矿服务器已启用，您可以通过选择屏幕底部的按钮 %{settings} 来更改其设置。连接设备后，数据会更新.'
-  restart_server_required: 需要重启服务器才能应用更改.
+  info: '挖矿服务器已启用，您可以通过选择屏幕底部的按钮 %{settings} 来更改其设置。连接设备后，数据会更新。'
+  restart_server_required: 需要重启服务器才能应用更改。
   rewards_wallet: 奖励钱包
   server: 阶层服务器
   address: 地址
@@ -245,9 +245,9 @@ network_settings:
   stratum_ip: '层 IP 地址:'
   stratum_port: '层端口:'
   port_unavailable: 指定的端口不可用
-  restart_node_required: 需要重启节点才能应用更改.
+  restart_node_required: 需要重启节点才能应用更改。
   choose_wallet: 选择钱包
-  stratum_wallet_warning: 必须打开钱包才能获得奖励.
+  stratum_wallet_warning: 必须打开钱包才能获得奖励。
   enable: 启用
   disable: 禁用
   restart: 重新启动
@@ -259,12 +259,12 @@ network_settings:
   disabled: 已禁用
   enabled: 已启用
   ftl: '未来时间限制 (FTL):'
-  ftl_description: 限制未来多长时间, 相对于节点的本地时间，以秒为单位, 新区块的时间戳可以被接受.
+  ftl_description: 限制未来多长时间, 相对于节点的本地时间，以秒为单位, 新区块的时间戳可以被接受。
   not_valid_value: 输入的值无效
   full_validation: 完全验证
-  full_validation_description: 在处理每个区块时是否运行全链验证(同步期间除外).
+  full_validation_description: 在处理每个区块时是否运行全链验证(同步期间除外)。
   archive_mode: 存档模式
-  archive_mode_desc: 以全部存档模式运行全节点（同步需要更多的磁盘空间和时间）.
+  archive_mode_desc: 以全部存档模式运行全节点（同步需要更多的磁盘空间和时间）。
   attempt_time: '尝试挖矿时间 (秒):'
   attempt_time_desc: 在停止并从池中重新收集交易之前尝试对特定标题进行挖矿的时间
   min_share_diff: '可接受的最低份额难度:'
@@ -280,7 +280,7 @@ network_settings:
   epoch_duration: '纪元持续时间（以秒为单位):'
   embargo_timer: '禁止计时器（以秒为单位):'
   aggregation_period: '聚合周期（以秒为单位):'
-  stem_probability: 'stem助记词概率:'
+  stem_probability: 'stem概率:'
   stem_txs: stem交易
   p2p_server: P2P 服务器
   p2p_port: 'P2P 端口:'
@@ -291,16 +291,16 @@ network_settings:
   peer_address_error: '以正确的格式输入 IP 地址或 DNS 名称（确保指定的主机可用），例如：192.168.0.1：1234 或 example.com:5678'
   default: 默认
   allow_list: 允许列表
-  allow_list_desc: 仅连接到此列表中的网络对点.
+  allow_list_desc: 仅连接到此列表中的网络对点。
   deny_list: 拒绝列表
-  deny_list_desc: 切勿连接到此列表中的网络对点.
+  deny_list_desc: 切勿连接到此列表中的网络对点。
   favourites: 收藏夹
   favourites_desc: 要连接的首选网络对点列表.
   ban_window: '被封禁的网络对点应该保持被封禁多长时间（以秒为单位）:'
-  ban_window_desc: 禁止的决定是由节点 根据从网络对点收到的数据的正确性做出的.
+  ban_window_desc: 禁止的决定是由节点 根据从网络对点收到的数据的正确性做出的。
   max_inbound_count: '入站网络对点连接的最大数量:'
   max_outbound_count: '最大出站网络对点连接数:'
-  reset_data_desc: 重置节点数据。只有在出现同步问题时才需谨慎使用.
+  reset_data_desc: 重置节点数据。只有在出现同步问题时才需谨慎使用。
   reset_data: 重置数据
   ip_listen_all: 在所有接口上监听
 modal:
@@ -309,7 +309,7 @@ modal:
   add: 添加
 modal_exit:
   description: 您确定要退出应用程序吗？
-  exit: 退出手
+  exit: 退出
 app_settings:
   proxy: 代理
   proxy_desc: 是否值得对来自应用程序的网络请求使用代理.
@@ -348,7 +348,7 @@ keyboard:
   l1: \
   l2: ':'
   z: 重
-  x: 難
+  x: 难
   c: 金
   v: 女
   b: 月
