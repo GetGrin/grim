@@ -21,7 +21,7 @@ jobs:
       - name: Checkout submodules
         run: |
           sed -i 's#https://code\.gri\.mw#${{ secrets.REPO_HOST }}#g' .gitmodules
-          git submodule update --init
+          git submodule update --init --recursive --remote
       - name: Get version
         id: version
         run: |
@@ -86,7 +86,7 @@ jobs:
       - name: Checkout submodules
         run: |
           sed -i -- 's#https://code\.gri\.mw#${{ secrets.REPO_HOST }}#g' .gitmodules
-          git submodule update --init
+          git submodule update --init --recursive --remote
       - name: Restore cargo cache
         id: cache-cargo-restore
         uses: actions/cache/restore@v5
@@ -188,7 +188,7 @@ jobs:
       - name: Checkout submodules
         run: |
           sed -i 's#https://code\.gri\.mw#${{ secrets.REPO_HOST }}#g' .gitmodules
-          git submodule update --init
+          git submodule update --init --recursive --remote
       - name: Restore cargo cache
         id: cache-cargo-restore
         uses: actions/cache/restore@v5
@@ -255,7 +255,7 @@ jobs:
       - name: Checkout submodules
         run: |
           sed -i 's#https://code\.gri\.mw#${{ secrets.REPO_HOST }}#g' .gitmodules
-          git submodule update --init
+          git submodule update --init --recursive --remote
       - name: Restore cargo cache
         id: cache-cargo-restore
         uses: actions/cache/restore@v5
@@ -307,7 +307,7 @@ jobs:
       - name: Checkout submodules
         run: |
           sed -i -- 's#https://code\.gri\.mw#${{ secrets.REPO_HOST }}#g' .gitmodules
-          git submodule update --init
+          git submodule update --init --recursive --remote
       - run: mkdir release
       - name: Restore cargo cache
         id: cache-cargo-restore
@@ -360,7 +360,7 @@ jobs:
       - name: Checkout submodules
         run: |
           (Get-content .gitmodules) | Foreach-Object {$_ -replace "https://code.gri.mw", "${{ secrets.REPO_HOST }}"} | Set-Content .gitmodules
-          git submodule update --init
+          git submodule update --init --recursive --remote
       - name: Update UpgradeCode
         shell: powershell
         run: |

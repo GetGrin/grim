@@ -16,7 +16,7 @@ jobs:
       - name: Checkout submodules
         run: |
           sed -i 's#https://code\.gri\.mw#${{ secrets.REPO_HOST }}#g' .gitmodules
-          git submodule update --init
+          git submodule update --init --recursive --remote
       - name: Check commit
         id: check
         run: |
