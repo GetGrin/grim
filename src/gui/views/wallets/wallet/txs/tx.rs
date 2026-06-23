@@ -12,13 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::scroll_area::ScrollBarVisibility;
-use egui::{Align, CornerRadius, Id, Layout, RichText, ScrollArea, StrokeKind};
-use grin_core::core::amount_to_hr_string;
-use grin_util::ToHex;
-use grin_wallet_libwallet::TxLogEntryType;
-use std::fs;
-
 use crate::AppConfig;
 use crate::gui::Colors;
 use crate::gui::icons::{
@@ -33,6 +26,13 @@ use crate::gui::views::wallets::wallet::txs::WalletTransactionsContent;
 use crate::gui::views::{Modal, QrCodeContent, View};
 use crate::wallet::Wallet;
 use crate::wallet::types::{WalletTask, WalletTx};
+
+use egui::scroll_area::ScrollBarVisibility;
+use egui::{Align, CornerRadius, Id, Layout, RichText, ScrollArea, StrokeKind};
+use grin_core::core::amount_to_hr_string;
+use grin_util::ToHex;
+use grin_wallet_libwallet::TxLogEntryType;
+use std::fs;
 
 /// Transaction information [`Modal`] content.
 pub struct WalletTransactionContent {

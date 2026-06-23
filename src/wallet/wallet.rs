@@ -39,6 +39,7 @@ use grin_wallet_impls::{DefaultLCProvider, DefaultWalletImpl, HTTPNodeClient};
 use grin_wallet_libwallet::api_impl::owner::{
 	cancel_tx, init_send_tx, retrieve_summary_info, retrieve_txs, verify_payment_proof,
 };
+use grin_wallet_libwallet::api_impl::types::update_tx_slate_state;
 use grin_wallet_libwallet::{
 	Error, InitTxArgs, IssueInvoiceTxArgs, NodeClient, PaymentProof, Slate, SlateState,
 	SlateVersion, SlatepackAddress, StatusMessage, StoredProofInfo, TxLogEntry, TxLogEntryType,
@@ -1316,6 +1317,18 @@ impl Wallet {
 		None
 	}
 
+	/// Update transaction slate state.
+	fn update_slate_state(&self, slate: &Slate) -> Result<(), Error> {
+		let r_inst = self.instance.as_ref().read();
+		let instance = r_inst.clone().unwrap();
+		let mut w_lock = instance.lock();
+		let w = w_lock.lc_provider()?.wallet_inst()?;
+		let keychain_mask = self.keychain_mask();
+		let parent_key = w.parent_key_id();
+		update_tx_slate_state(w, keychain_mask.as_ref(), &parent_key, slate)?;
+		Ok(())
+	}
+
 	/// Delete transaction from database.
 	fn delete_tx(&self, id: u32) -> Result<(), Error> {
 		self.on_tx_action(id, Some(WalletTxAction::Deleting));
@@ -1735,6 +1748,7 @@ fn start_sync(wallet: Wallet) -> Thread {
 
 /// Handle wallet task.
 async fn handle_task(w: &Wallet, t: WalletTask) {
+	// Send amount over Tor.
 	let send_tor = async |tx: TxLogEntry, s: &Slate, r: &SlatepackAddress| match w
 		.send_tor(tx.id, &s, r, false)
 		.await
@@ -1746,34 +1760,35 @@ async fn handle_task(w: &Wallet, t: WalletTask) {
 					w.on_task_result(Some(tx), &t);
 				}
 				Err(e) => {
-					error!("send tor post error: {:?}", e);
+					error!("Send Tor post error: {:?}", e);
 					w.on_tx_error(tx.id, Some(e));
 				}
 			},
 			Err(e) => {
-				error!("send tor finalize error: {:?}", e);
+				error!("Send Tor finalize error: {:?}", e);
 				w.task(WalletTask::Cancel(tx.id));
 			}
 		},
 		Err(e) => {
-			error!("send tor error: {:?}", e);
+			error!("Send Tor error: {:?}", e);
 			w.on_tx_error(tx.id, Some(e));
 			w.on_task_result(Some(tx), &t);
 		}
 	};
-	// Invoice-flow counterpart to send_tor. After signing an invoice the payer
-	// posts the slate to the merchant's foreign-api finalize_tx; the merchant
-	// finalizes + broadcasts on their side, so no local finalize/post is needed.
-	let pay_tor = async |tx: TxLogEntry, s: &Slate, r: &SlatepackAddress| match w
+	// Finalize tx over Tor.
+	let finalize_tor = async |tx: TxLogEntry, s: &Slate, r: &SlatepackAddress| match w
 		.send_tor(tx.id, &s, r, true)
 		.await
 	{
-		Ok(_) => {
+		Ok(s) => {
+			w.on_tx_action(tx.id, None);
+			let _ = w.update_slate_state(&s);
+			let _ = w.create_slatepack_message(&s, None);
 			sync_wallet_data(&w, false);
 			w.on_task_result(Some(tx), &t);
 		}
 		Err(e) => {
-			error!("pay tor error: {:?}", e);
+			error!("Finalize Tor error: {:?}", e);
 			w.on_tx_error(tx.id, Some(e));
 			w.on_task_result(Some(tx), &t);
 		}
@@ -1809,29 +1824,33 @@ async fn handle_task(w: &Wallet, t: WalletTask) {
 					w.message_opening.store(false, Ordering::Relaxed);
 					return;
 				}
+				// Finalize over Tor if service is running.
+				let maybe_finalize_tor = async |s: Slate| {
+					sync_wallet_data(&w, false);
+					let tx = w.retrieve_tx_by_id(None, Some(s.id));
+					let id = w.identifier();
+					if Tor::is_service_running(&id) {
+						if let Some(tx) = tx.as_ref() {
+							if let Some(addr) = dest {
+								w.message_opening.store(false, Ordering::Relaxed);
+								finalize_tor(tx.clone(), &s, &addr).await;
+								return;
+							}
+						}
+					}
+				};
 				// Create response or finalize.
 				match s.state {
 					SlateState::Standard1 => {
-						if let Ok(_) = w.receive(&s, dest) {
-							sync_wallet_data(&w, false);
-							let tx = w.retrieve_tx_by_id(None, Some(s.id));
+						if let Ok(s) = w.receive(&s, None) {
+							maybe_finalize_tor(s).await;
 							w.on_task_result(tx, &t);
 						}
 					}
 					SlateState::Invoice1 => {
-						if let Ok(signed) = w.pay(&s, None) {
+						if let Ok(s) = w.pay(&s, None) {
 							sync_wallet_data(&w, false);
-							let tx = w.retrieve_tx_by_id(None, Some(s.id));
-							let id = w.identifier();
-							if Tor::is_service_running(&id) {
-								if let Some(tx) = tx.as_ref() {
-									if let Some(addr) = dest {
-										w.message_opening.store(false, Ordering::Relaxed);
-										pay_tor(tx.clone(), &signed, &addr).await;
-										return;
-									}
-								}
-							}
+							maybe_finalize_tor(s).await;
 							w.on_task_result(tx, &t);
 						}
 					}
@@ -1907,10 +1926,10 @@ async fn handle_task(w: &Wallet, t: WalletTask) {
 				send_tor(tx.clone(), &slate, r).await;
 			}
 		}
-		WalletTask::PayTor(tx) => {
+		WalletTask::FinalizeTor(tx) => {
 			if let Some((slate, dest)) = w.get_tx_slate(tx.id) {
 				if let Some(dest) = dest {
-					pay_tor(tx.clone(), &slate, &dest).await;
+					finalize_tor(tx.clone(), &slate, &dest).await;
 				}
 			}
 		}

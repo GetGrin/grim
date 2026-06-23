@@ -406,9 +406,9 @@ pub enum WalletTask {
 	/// * tx
 	/// * receiver
 	SendTor(TxLogEntry, SlatepackAddress),
-	/// Pay over Tor.
+	/// Finalize over Tor.
 	/// * tx
-	PayTor(TxLogEntry),
+	FinalizeTor(TxLogEntry),
 	/// Invoice creation.
 	/// * amount
 	Receive(u64, Option<SlatepackAddress>),

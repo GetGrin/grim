@@ -646,7 +646,7 @@ impl WalletTransactionsContent {
 			if let Some(a) = &tx.receiver {
 				wallet.task(WalletTask::SendTor(tx.data.clone(), a.clone()));
 			} else {
-				wallet.task(WalletTask::PayTor(tx.data.clone()));
+				wallet.task(WalletTask::FinalizeTor(tx.data.clone()));
 			}
 		});
 	}
