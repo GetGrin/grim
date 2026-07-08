@@ -152,6 +152,7 @@ transport:
   conn_error: 連線錯誤
   disconnected: 已中斷
   receiver_address: '接收方位址：'
+  sender_address: '傳送方位址:'
   incorrect_addr_err: '輸入的位址不正確：'
   tor_send_error: 透過 Tor 傳送時發生錯誤，請確認接收方在線上，交易已取消。
   tor_autorun_desc: 是否在開啟錢包時啟動 Tor 服務以同步接收交易。
