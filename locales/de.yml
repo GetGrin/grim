@@ -152,6 +152,7 @@ transport:
   conn_error: Verbindungsproblem
   disconnected: Verbindung getrennt
   receiver_address: 'Empfängeraddresse:'
+  sender_address: 'Absenderadresse:'
   incorrect_addr_err: 'Eingegebene Addresse ist inkorrekt:'
   tor_send_error: Beim Senden über Tor ist ein Fehler aufgetreten. Stellen Sie sicher, dass der Empfänger online ist. Die Transaktion wurde abgebrochen.
   tor_autorun_desc: Gibt an, ob beim Öffnen des Wallets der Tor-Dienst gestartet werden soll, um Transaktionen synchron zu empfangen.

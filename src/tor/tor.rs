@@ -323,7 +323,7 @@ impl Tor {
 					.block_on(async move {
 						let res = c
 							.runtime()
-							.timeout(Duration::from_millis(600000), async {
+							.timeout(Duration::from_millis(60000), async {
 								if let Ok(stream) = c
 									.connect((uri.host().unwrap(), uri.port_u16().unwrap_or(80)))
 									.await

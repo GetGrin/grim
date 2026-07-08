@@ -25,8 +25,8 @@ use std::thread;
 use crate::gui::Colors;
 use crate::gui::icons::CAMERA_ROTATE;
 use crate::gui::platform::PlatformCallbacks;
-use crate::gui::views::View;
 use crate::gui::views::types::{QrScanResult, QrScanState};
+use crate::gui::views::{Modal, View};
 use crate::wallet::WalletUtils;
 use crate::wallet::types::PhraseSize;
 
@@ -86,6 +86,42 @@ impl CameraContent {
 		}
 		ui.add_space(6.0);
 		ui.ctx().request_repaint();
+	}
+
+	/// Draw modal camera content.
+	pub fn modal_ui(
+		&mut self,
+		ui: &mut egui::Ui,
+		cb: &dyn PlatformCallbacks,
+		mut on_result: impl FnMut(Option<QrScanResult>),
+	) {
+		if let Some(result) = self.qr_scan_result() {
+			on_result(Some(result));
+		} else {
+			ui.add_space(6.0);
+			self.ui(ui, cb);
+			ui.add_space(6.0);
+
+			// Setup spacing between buttons.
+			ui.spacing_mut().item_spacing = egui::Vec2::new(8.0, 0.0);
+
+			// Show buttons to close modal or come back to sending input.
+			ui.columns(2, |cols| {
+				cols[0].vertical_centered_justified(|ui| {
+					View::button(ui, t!("close"), Colors::white_or_black(false), || {
+						cb.stop_camera();
+						on_result(None);
+						Modal::close();
+					});
+				});
+				cols[1].vertical_centered_justified(|ui| {
+					View::button(ui, t!("back"), Colors::white_or_black(false), || {
+						on_result(None);
+					});
+				});
+			});
+			ui.add_space(6.0);
+		}
 	}
 
 	/// Draw camera image.

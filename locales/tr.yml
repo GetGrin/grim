@@ -152,6 +152,7 @@ transport:
   conn_error: Bagalanti hatasi
   disconnected: Baglanti yok
   receiver_address: 'Alicinin adresi:'
+  sender_address: 'Gönderici adresi:'
   incorrect_addr_err: 'Girilen adres hatali:'
   tor_send_error: Tor adresi uzerinden gonderimde aksaklik olustu, alici online olmasi gerek, islem iptal edildi.
   tor_autorun_desc: Islemleri Tor adresi olarak AL,bunun için  cuzdan acilisinda Tor hizmetinin baslatilip baslatilmayacagi.

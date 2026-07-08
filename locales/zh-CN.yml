@@ -152,6 +152,7 @@ transport:
   conn_error: 连接错误
   disconnected: 已断开
   receiver_address: '接收方地址：'
+  sender_address: '发送方地址:'
   incorrect_addr_err: '输入的地址不正确：'
   tor_send_error: 通过 Tor 发送时发生错误，请确认接收方在线，交易已取消。
   tor_autorun_desc: 是否在打开钱包时启动 Tor 服务以同步接收交易。
@@ -325,35 +326,35 @@ keyboard:
   9: 9
   0: 0
   01: '-'
-  q: q
-  w: w
-  e: e
-  r: r
-  t: t
-  y: y
-  u: u
-  i: i
-  o: o
-  p: p
+  q: 手
+  w: 田
+  e: 水
+  r: 口
+  t: 廿
+  y: 卜
+  u: 山
+  i: 戈
+  o: 人
+  p: 心
   p1: '"'
-  a: a
-  s: s
-  d: d
-  f: f
-  g: g
-  h: h
-  j: j
-  k: k
-  l: l
+  a: 日
+  s: 尸
+  d: 木
+  f: 火
+  g: 土
+  h: 竹
+  j: 十
+  k: 大
+  l: 中
   l1: \
   l2: ':'
-  z: z
-  x: x
-  c: c
-  v: v
-  b: b
-  n: n
-  m: m
+  z: 重
+  x: 難
+  c: 金
+  v: 女
+  b: 月
+  n: 弓
+  m: 一
   m1: ','
   m2: .
   m3: /

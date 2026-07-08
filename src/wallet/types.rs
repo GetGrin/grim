@@ -213,8 +213,6 @@ pub enum WalletTxAction {
 pub struct WalletTx {
 	/// Information from database.
 	pub data: TxLogEntry,
-	/// State of transaction Slate.
-	pub state: SlateState,
 	/// Payment proof.
 	pub(crate) proof: Option<PaymentProof>,
 
@@ -240,7 +238,6 @@ impl WalletTx {
 	pub fn new(
 		tx: TxLogEntry,
 		proof: Option<PaymentProof>,
-		wallet: &Wallet,
 		height: Option<u64>,
 		broadcasting_height: Option<u64>,
 		action: Option<WalletTxAction>,
@@ -263,9 +260,8 @@ impl WalletTx {
 				sender = Some(addr);
 			}
 		}
-		let mut t = Self {
+		let t = Self {
 			data: tx,
-			state: SlateState::Unknown,
 			proof,
 			amount,
 			receiver,
@@ -275,15 +271,6 @@ impl WalletTx {
 			action,
 			action_error,
 		};
-		// Update Slate state for unconfirmed.
-		if !t.data.confirmed
-			&& (t.data.tx_type == TxLogEntryType::TxSent
-				|| t.data.tx_type == TxLogEntryType::TxReceived)
-		{
-			if let Some(slate_id) = t.data.tx_slate_id {
-				t.state = wallet.get_slate_state(slate_id, &t.data.tx_type)
-			}
-		}
 		t
 	}
 
@@ -294,15 +281,16 @@ impl WalletTx {
 			&& (!self.sending_tor() || self.action_error.is_some())
 			&& (self.data.tx_type == TxLogEntryType::TxSent
 				|| self.data.tx_type == TxLogEntryType::TxReceived)
-			&& (self.state == SlateState::Invoice1 || self.state == SlateState::Standard1)
+			&& (self.data.tx_slate_state == Some(SlateState::Invoice1)
+				|| self.data.tx_slate_state == Some(SlateState::Standard1))
 	}
 
 	/// Check if transaction was finalized.
 	pub fn finalized(&self) -> bool {
 		(self.data.tx_type == TxLogEntryType::TxSent
 			|| self.data.tx_type == TxLogEntryType::TxReceived)
-			&& self.state == SlateState::Invoice3
-			|| self.state == SlateState::Standard3
+			&& self.data.tx_slate_state == Some(SlateState::Invoice3)
+			|| self.data.tx_slate_state == Some(SlateState::Standard3)
 	}
 
 	/// Check if transaction is sending over Tor.
@@ -418,9 +406,12 @@ pub enum WalletTask {
 	/// * tx
 	/// * receiver
 	SendTor(TxLogEntry, SlatepackAddress),
+	/// Finalize over Tor.
+	/// * tx
+	FinalizeTor(TxLogEntry),
 	/// Invoice creation.
 	/// * amount
-	Receive(u64),
+	Receive(u64, Option<SlatepackAddress>),
 	/// Transaction finalization.
 	/// * tx id
 	Finalize(u32),
