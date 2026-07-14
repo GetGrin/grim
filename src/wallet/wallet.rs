@@ -24,7 +24,6 @@ use crate::wallet::types::{
 use crate::wallet::{ConnectionsConfig, Mnemonic, WalletConfig};
 
 use chrono::Utc;
-use futures::channel::oneshot;
 use grin_api::{ApiServer, Router};
 use grin_chain::SyncStatus;
 use grin_keychain::{ExtKeychain, Keychain};
@@ -250,6 +249,8 @@ impl Wallet {
 		} else {
 			integrated()
 		};
+
+		let timeout = Duration::from_secs(60);
 		let client = if AppConfig::use_proxy() {
 			let socks = AppConfig::use_socks_proxy();
 			let url = if socks {
@@ -278,14 +279,19 @@ impl Wallet {
 			};
 
 			match addr_res {
-				None => HTTPNodeClient::new(&node_api_url, node_secret)?,
+				None => HTTPNodeClient::new(&node_api_url, node_secret, timeout)?,
 				Some(addr) => {
 					let scheme = if socks { "socks5://" } else { "http://" };
-					HTTPNodeClient::new_proxy(&node_api_url, node_secret, Some((addr, scheme)))?
+					HTTPNodeClient::new_proxy(
+						&node_api_url,
+						node_secret,
+						Some((addr, scheme)),
+						timeout,
+					)?
 				}
 			}
 		} else {
-			HTTPNodeClient::new(&node_api_url, node_secret)?
+			HTTPNodeClient::new(&node_api_url, node_secret, timeout)?
 		};
 		Ok(client)
 	}
@@ -2299,11 +2305,9 @@ fn start_api_server(wallet: &Wallet) -> Result<(ApiServer, u16), Error> {
 		.add_route("/v2/foreign", Arc::new(api_handler_v2))
 		.map_err(|_| Error::GenericError("Router failed to add route".to_string()))?;
 
-	let api_chan: &'static mut (oneshot::Sender<()>, oneshot::Receiver<()>) =
-		Box::leak(Box::new(oneshot::channel::<()>()));
-
 	let mut apis = ApiServer::new();
 	let socket_addr: SocketAddr = api_addr.parse().unwrap();
+	let api_chan = tokio::sync::mpsc::channel::<()>(1);
 	let _ = apis
 		.start(socket_addr, router, None, api_chan)
 		.map_err(|_| Error::GenericError("API thread failed to start".to_string()))?;

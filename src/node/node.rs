@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use futures::channel::oneshot;
 use lazy_static::lazy_static;
 use parking_lot::RwLock;
 use std::path::{Path, PathBuf};
@@ -680,8 +679,7 @@ fn start_node_server() -> Result<Server, Error> {
 	}
 
 	// Start integrated node server.
-	let api_chan: &'static mut (oneshot::Sender<()>, oneshot::Receiver<()>) =
-		Box::leak(Box::new(oneshot::channel::<()>()));
+	let api_chan = tokio::sync::mpsc::channel::<()>(1);
 	let server_result = Server::new(server_config, None, None, api_chan);
 	server_result
 }

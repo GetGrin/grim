@@ -16,7 +16,7 @@ use arti_client::config::pt::TransportConfigBuilder;
 use arti_client::config::{CfgPath, TorClientConfigBuilder};
 use arti_client::{TorClient, TorClientConfig};
 use bytes::Bytes;
-use curve25519_dalek::digest::Digest;
+use ed25519_dalek::Digest;
 use ed25519_dalek::hazmat::ExpandedSecretKey;
 use fs_mistrust::Mistrust;
 use grin_util::secp::SecretKey;
