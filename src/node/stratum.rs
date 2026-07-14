@@ -32,6 +32,8 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
 use std::time::{Duration, SystemTime};
 
+use crate::node::mine_block::get_block;
+use crate::wallet::WalletConfig;
 use grin_chain::{self, SyncState};
 use grin_core::consensus::graph_weight;
 use grin_core::core::Block;
@@ -42,9 +44,6 @@ use grin_servers::ServerTxPool;
 use grin_servers::common::stats::{StratumStats, WorkerStats};
 use grin_servers::common::types::StratumServerConfig;
 use grin_util::ToHex;
-
-use crate::node::mine_block::get_block;
-use crate::wallet::WalletConfig;
 use log::{debug, error};
 use serde_derive::{Deserialize, Serialize};
 
@@ -679,61 +678,68 @@ fn accept_connections(
 ) {
 	debug!("Start tokio stratum server");
 	let task = async move {
-		let mut listener = TcpListener::bind(&listen_addr).await.unwrap_or_else(|_| {
-			panic!("Stratum: Failed to bind to listen address {}", listen_addr)
-		});
-		let server = listener
-			.incoming()
-			.filter_map(|s| async { s.map_err(|e| error!("accept error = {:?}", e)).ok() })
-			.for_each(move |socket| {
-				let handler = handler.clone();
-				async move {
-					// Spawn a task to process the connection
-					let (tx, mut rx) = mpsc::unbounded();
+		match TcpListener::bind(&listen_addr).await {
+			Ok(mut l) => {
+				let server = l
+					.incoming()
+					.filter_map(|s| async { s.map_err(|e| error!("accept error = {:?}", e)).ok() })
+					.for_each(move |socket| {
+						let handler = handler.clone();
+						async move {
+							// Spawn a task to process the connection
+							let (tx, mut rx) = mpsc::unbounded();
 
-					let worker_id = handler.workers.add_worker(tx);
-					debug!("Worker {} connected", worker_id);
+							let worker_id = handler.workers.add_worker(tx);
+							debug!("Worker {} connected", worker_id);
 
-					let framed = Framed::new(socket, LinesCodec::new());
-					let (mut writer, mut reader) = framed.split();
+							let framed = Framed::new(socket, LinesCodec::new());
+							let (mut writer, mut reader) = framed.split();
 
-					let h = handler.clone();
-					let read = async move {
-						while let Some(line) = reader
-							.try_next()
-							.await
-							.map_err(|e| debug!("error reading line: {}", e))?
-						{
-							let request = serde_json::from_str(&line)
-								.map_err(|e| debug!("error serializing line: {}", e))?;
-							let resp = h.handle_rpc_requests(request, worker_id);
-							h.workers.send_to(worker_id, resp);
+							let h = handler.clone();
+							let read = async move {
+								while let Some(line) = reader
+									.try_next()
+									.await
+									.map_err(|e| debug!("error reading line: {}", e))?
+								{
+									let request = serde_json::from_str(&line)
+										.map_err(|e| debug!("error serializing line: {}", e))?;
+									let resp = h.handle_rpc_requests(request, worker_id);
+									h.workers.send_to(worker_id, resp);
+								}
+
+								Result::<_, ()>::Ok(())
+							};
+
+							let write = async move {
+								while let Some(line) = rx.next().await {
+									writer
+										.send(line)
+										.await
+										.map_err(|e| debug!("error writing line: {}", e))?;
+								}
+
+								Result::<_, ()>::Ok(())
+							};
+
+							let task = async move {
+								pin_mut!(read, write);
+								futures::future::select(read, write).await;
+								handler.workers.remove_worker(worker_id);
+								debug!("Worker {} disconnected", worker_id);
+							};
+							tokio_old::spawn(task);
 						}
-
-						Result::<_, ()>::Ok(())
-					};
-
-					let write = async move {
-						while let Some(line) = rx.next().await {
-							writer
-								.send(line)
-								.await
-								.map_err(|e| debug!("error writing line: {}", e))?;
-						}
-
-						Result::<_, ()>::Ok(())
-					};
-
-					let task = async move {
-						pin_mut!(read, write);
-						futures::future::select(read, write).await;
-						handler.workers.remove_worker(worker_id);
-						debug!("Worker {} disconnected", worker_id);
-					};
-					tokio_old::spawn(task);
-				}
-			});
-		server.await
+					});
+				server.await
+			}
+			Err(e) => {
+				error!(
+					"Stratum: Failed to bind to listen address {} {}",
+					listen_addr, e
+				)
+			}
+		}
 	};
 
 	let mut rt = Runtime::new().unwrap();
