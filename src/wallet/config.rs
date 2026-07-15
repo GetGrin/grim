@@ -21,7 +21,6 @@ use crate::wallet::types::ConnectionMethod;
 use crate::{AppConfig, Settings};
 use grin_core::global::ChainTypes;
 use grin_wallet_libwallet::SlateState;
-use rand::Rng;
 use serde_derive::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -101,7 +100,9 @@ impl WalletConfig {
 			min_confirmations: MIN_CONFIRMATIONS_DEFAULT,
 			use_dandelion: Some(true),
 			enable_tor_listener: Some(false),
-			api_port: Some(rand::rng().random_range(10000..30000)),
+			api_port: Some(
+				Settings::open_port("127.0.0.1").unwrap_or(WalletConfig::default_api_port()),
+			),
 			tx_broadcast_timeout: Some(Self::BROADCASTING_TIMEOUT_DEFAULT),
 			data_path: Some(Self::wallet_path(id.to_string())),
 			ver: Some(WALLET_CONFIG_VERSION),
@@ -129,6 +130,14 @@ impl WalletConfig {
 			return Some(cfg.name);
 		}
 		None
+	}
+
+	/// Get default Foreign API port.
+	pub fn default_api_port() -> u16 {
+		match AppConfig::chain_type() {
+			ChainTypes::Mainnet => 3415,
+			_ => 13415,
+		}
 	}
 
 	/// Get wallet API port by provided identifier.

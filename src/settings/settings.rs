@@ -12,6 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use crate::node::NodeConfig;
+use crate::settings::AppConfig;
+use crate::tor::TorConfig;
+use crate::wallet::ConnectionsConfig;
+
 use grin_config::ConfigError;
 use grin_core::global;
 use lazy_static::lazy_static;
@@ -20,13 +25,9 @@ use serde::Serialize;
 use serde::de::DeserializeOwned;
 use std::fs::{self, File};
 use std::io::Write;
+use std::net::TcpListener;
 use std::path::PathBuf;
 use std::sync::Arc;
-
-use crate::node::NodeConfig;
-use crate::settings::AppConfig;
-use crate::tor::TorConfig;
-use crate::wallet::ConnectionsConfig;
 
 lazy_static! {
 	/// Static settings state to be accessible globally.
@@ -202,5 +203,15 @@ impl Settings {
 		let conf_out = toml::to_string(config).unwrap();
 		let mut file = File::create(path.to_str().unwrap()).unwrap();
 		file.write_all(conf_out.as_bytes()).unwrap();
+	}
+
+	/// Choose random possible open port from OS.
+	pub fn open_port(host: &str) -> Option<u16> {
+		if let Ok(l) = TcpListener::bind(format!("{}:0", host)) {
+			if let Ok(a) = l.local_addr() {
+				return Some(a.port());
+			}
+		}
+		None
 	}
 }

@@ -26,9 +26,9 @@ use grin_config::config::{
 use grin_config::{ConfigError, ConfigMembers, GlobalConfig, config};
 use grin_core::global::ChainTypes;
 use grin_p2p::msg::PeerAddrs;
+use grin_p2p::types::{MAINNET_PEER_PORT, TESTNET_PEER_PORT};
 use grin_p2p::{PeerAddr, Seeding};
 use grin_servers::common::types::ChainValidationMode;
-use rand::Rng;
 use url::Url;
 
 use crate::node::Node;
@@ -204,13 +204,15 @@ impl NodeConfig {
 	fn setup_default_ports(config: &mut ConfigMembers) {
 		let (api, p2p) = match config.server.chain_type {
 			ChainTypes::Mainnet => {
-				let api = rand::rng().random_range(30000..33000);
-				let p2p = rand::rng().random_range(33000..37000);
+				let api = Settings::open_port("127.0.0.1")
+					.unwrap_or(Self::default_api_port(config.server.chain_type));
+				let p2p = Settings::open_port("127.0.0.1").unwrap_or(MAINNET_PEER_PORT);
 				(api, p2p)
 			}
 			_ => {
-				let api = rand::rng().random_range(40000..43000);
-				let p2p = rand::rng().random_range(43000..47000);
+				let api = Settings::open_port("127.0.0.1")
+					.unwrap_or(Self::default_api_port(config.server.chain_type));
+				let p2p = Settings::open_port("127.0.0.1").unwrap_or(TESTNET_PEER_PORT);
 				(api, p2p)
 			}
 		};
@@ -546,8 +548,8 @@ impl NodeConfig {
 	}
 
 	/// Get default Stratum server port.
-	fn default_api_port() -> u16 {
-		match AppConfig::chain_type() {
+	fn default_api_port(chain_type: ChainTypes) -> u16 {
+		match chain_type {
 			ChainTypes::Mainnet => 3413,
 			_ => 13413,
 		}
@@ -557,7 +559,11 @@ impl NodeConfig {
 	pub fn get_api_address() -> (String, String) {
 		let r_config = Settings::node_config_to_read();
 		let saved_api_addr = r_config.node.server.api_http_addr.clone();
-		Self::parse_address_port(&saved_api_addr, "127.0.0.1", Self::default_api_port())
+		Self::parse_address_port(
+			&saved_api_addr,
+			"127.0.0.1",
+			Self::default_api_port(AppConfig::chain_type()),
+		)
 	}
 
 	/// Save API server IP address and port.
