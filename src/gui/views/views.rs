@@ -668,7 +668,7 @@ impl View {
 			points,
 			closed: false,
 			fill: Default::default(),
-			stroke: PathStroke::new(1.0, color),
+			stroke: PathStroke::new(1.0_f32, color),
 		};
 		ui.painter().add(stroke);
 	}

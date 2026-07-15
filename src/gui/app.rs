@@ -263,7 +263,7 @@ impl<Platform: PlatformCallbacks> App<Platform> {
 				}
 			},
 			Colors::yellow_dark(),
-			Stroke::new(1.0, Colors::STROKE),
+			Stroke::new(1.0_f32, Colors::STROKE),
 			StrokeKind::Outside,
 		);
 		// Draw title background.
