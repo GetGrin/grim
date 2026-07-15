@@ -189,19 +189,19 @@ sync_status:
   no_sync: Le noeud fonctionne
   awaiting_peers: En attente de pairs
   header_sync: Téléchargement des en-têtes
-  header_sync_percent: 'Téléchargement des en-têtes : %{percent}%'
+  header_sync_percent: 'Téléchargement des en-têtes%{type}: %{percent}%'
   tx_hashset_pibd: "Téléchargement de l'état (PIBD)"
-  tx_hashset_pibd_percent: "Téléchargement de l'état (PIBD) : %{percent}%"
+  tx_hashset_pibd_percent: "Téléchargement de l'état (PIBD): %{percent}%"
   tx_hashset_download: "Téléchargement de l'état"
-  tx_hashset_download_percent: "Téléchargement de l'état : %{percent}%"
-  tx_hashset_setup_history: "Préparation de l'état (historique) : %{percent}%"
-  tx_hashset_setup_position: "Préparation de l'état (position) : %{percent}%"
+  tx_hashset_download_percent: "Téléchargement de l'état: %{percent}%"
+  tx_hashset_setup_history: "Préparation de l'état (historique): %{percent}%"
+  tx_hashset_setup_position: "Préparation de l'état (position): %{percent}%"
   tx_hashset_setup: "Préparation de l'état"
-  tx_hashset_range_proofs_validation: "Validation de l'état (preuves de plage) : %{percent}%"
-  tx_hashset_kernels_validation: "Validation de l'état (kernels) : %{percent}%"
+  tx_hashset_range_proofs_validation: "Validation de l'état (preuves de plage): %{percent}%"
+  tx_hashset_kernels_validation: "Validation de l'état (kernels): %{percent}%"
   tx_hashset_save: "Finalisation de l'état de la chaîne"
   body_sync: Téléchargement des blocs
-  body_sync_percent: 'Téléchargement des blocs : %{percent}%'
+  body_sync_percent: 'Téléchargement des blocs: %{percent}%'
   shutdown: Le noeud se ferme
 network_node:
   header: En-tête
@@ -243,8 +243,8 @@ network_mining:
   disconnected: Déconnecté
 network_settings:
   change_value: Modifier la valeur
-  stratum_ip: 'Adresse IP Stratum :'
-  stratum_port: 'Port Stratum :'
+  stratum_ip: 'Adresse IP Stratum:'
+  stratum_port: 'Port Stratum:'
   port_unavailable: Le port spécifié est indisponible
   restart_node_required: Le redémarrage du noeud est nécessaire pour appliquer les modifications.
   choose_wallet: Choisir un portefeuille
@@ -253,43 +253,43 @@ network_settings:
   disable: Désactiver
   restart: Redémarrer
   server: Serveur
-  api_ip: 'Adresse IP API :'
-  api_port: 'Port API :'
-  api_secret: 'Jeton API Rest et API Propriétaire V2 :'
-  foreign_api_secret: 'Jeton API étranger :'
+  api_ip: 'Adresse IP API:'
+  api_port: 'Port API:'
+  api_secret: 'Jeton API Rest et API Propriétaire V2:'
+  foreign_api_secret: 'Jeton API étranger:'
   disabled: Désactivé
   enabled: Activé
-  ftl: 'La Limite de Temps Futur (FTL) :'
+  ftl: 'La Limite de Temps Futur (FTL):'
   ftl_description: "Limite de combien de temps dans le futur, par rapport à l'heure locale d'un noeud en secondes, l'horodatage sur un nouveau bloc peut être, afin que le bloc soit accepté."
   not_valid_value: "La valeur entrée n'est pas valide"
   full_validation: Validation complète
   full_validation_description: Exécuter une validation complète de la chaîne lors du traitement de chaque bloc (sauf pendant la synchronisation).
   archive_mode: Mode archive
   archive_mode_desc: "Exécuter le noeud en mode archive complet (plus d'espace disque et de temps seront nécessaires pour la synchronisation)."
-  attempt_time: 'Temps de tentative de minage (en secondes) :'
+  attempt_time: 'Temps de tentative de minage (en secondes):'
   attempt_time_desc: "Le temps pendant lequel tenter de miner sur un en-tête particulier avant d'arrêter et de récupérer à nouveau les transactions du pool"
-  min_share_diff: 'La difficulté minimale acceptable du partage :'
+  min_share_diff: 'La difficulté minimale acceptable du partage:'
   reset_settings_desc: Réinitialiser les paramètres du noeud aux valeurs par défaut
   reset_settings: Réinitialiser les paramètres
   reset: Réinitialiser
   tx_pool: Pool de transactions
-  pool_fee: 'Frais de base acceptés dans le pool :'
-  reorg_period: 'Période de rétention du cache de réorganisation (en minutes) :'
-  max_tx_pool: 'Nombre maximum de transactions dans le pool :'
-  max_tx_stempool: 'Nombre maximum de transactions dans le pool secondaire :'
-  max_tx_weight: 'Poids total maximum des transactions pouvant être sélectionnées pour créer un bloc :'
-  epoch_duration: "Durée de l'époque (en secondes) :"
-  embargo_timer: "Minuterie d'embargo (en secondes) :"
-  aggregation_period: "Période d'agrégation (en secondes) :"
-  stem_probability: 'Probabilité de la phase secondaire :'
+  pool_fee: 'Frais de base acceptés dans le pool:'
+  reorg_period: 'Période de rétention du cache de réorganisation (en minutes):'
+  max_tx_pool: 'Nombre maximum de transactions dans le pool:'
+  max_tx_stempool: 'Nombre maximum de transactions dans le pool secondaire:'
+  max_tx_weight: 'Poids total maximum des transactions pouvant être sélectionnées pour créer un bloc:'
+  epoch_duration: "Durée de l'époque (en secondes):"
+  embargo_timer: "Minuterie d'embargo (en secondes):"
+  aggregation_period: "Période d'agrégation (en secondes):"
+  stem_probability: 'Probabilité de la phase secondaire:'
   stem_txs: Transactions secondaires
   p2p_server: Serveur P2P
-  p2p_port: 'Port P2P :'
+  p2p_port: 'Port P2P:'
   add_seed: Ajouter une seed DNS
-  seed_address: 'Adresse de la seed DNS :'
+  seed_address: 'Adresse de la seed DNS:'
   add_peer: Ajouter un pair
-  peer_address: 'Adresse du pair :'
-  peer_address_error: "Entrez l'adresse IP ou le nom DNS (assurez-vous que l'hôte spécifié est disponible) au format correct, par exemple : 192.168.0.1:1234 ou example.com:5678"
+  peer_address: 'Adresse du pair:'
+  peer_address_error: "Entrez l'adresse IP ou le nom DNS (assurez-vous que l'hôte spécifié est disponible) au format correct, par exemple: 192.168.0.1:1234 ou example.com:5678"
   default: Par défaut
   allow_list: Liste autorisée
   allow_list_desc: Se connecter uniquement aux pairs de cette liste.
@@ -297,10 +297,10 @@ network_settings:
   deny_list_desc: Ne jamais se connecter aux pairs de cette liste.
   favourites: Favoris
   favourites_desc: Une liste de pairs préférés à connecter.
-  ban_window: 'Combien de temps (en secondes) un pair banni doit rester banni :'
+  ban_window: 'Combien de temps (en secondes) un pair banni doit rester banni:'
   ban_window_desc: La décision de bannir est prise par le noeud, en fonction de la validité des données reçues du pair.
-  max_inbound_count: 'Nombre maximum de connexions de pairs entrants :'
-  max_outbound_count: 'Nombre maximum de connexions de pairs sortants :'
+  max_inbound_count: 'Nombre maximum de connexions de pairs entrants:'
+  max_outbound_count: 'Nombre maximum de connexions de pairs sortants:'
   reset_data_desc: Réinitialisez les données du noeud. Utilisez-le avec prudence uniquement en cas de problème de synchronisation.
   reset_data: Réinitialisation des données
   ip_listen_all: Écoutez sur toutes les interfaces

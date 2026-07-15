@@ -189,7 +189,7 @@ sync_status:
   no_sync: Node is running
   awaiting_peers: Waiting for peers
   header_sync: Downloading headers
-  header_sync_percent: 'Downloading headers: %{percent}%'
+  header_sync_percent: 'Downloading headers%{type}: %{percent}%'
   tx_hashset_pibd: Downloading state (PIBD)
   tx_hashset_pibd_percent: 'Downloading state (PIBD): %{percent}%'
   tx_hashset_download: Downloading state

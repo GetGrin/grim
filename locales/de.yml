@@ -188,8 +188,8 @@ sync_status:
   initial: Node startet
   no_sync: Node läuft
   awaiting_peers: Warten auf Peers
-  header_sync: Header werden heruntergeladen
-  header_sync_percent: 'Header werden heruntergeladen: %{percent}%'
+  header_sync: Header herunterladen
+  header_sync_percent: 'Header herunterladen%{type}: %{percent}%'
   tx_hashset_pibd: Downloadstatus (PIBD)
   tx_hashset_pibd_percent: 'Downloadstatus (PIBD): %{percent}%'
   tx_hashset_download: Downloadstatus

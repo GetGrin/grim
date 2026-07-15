@@ -189,7 +189,7 @@ sync_status:
   no_sync: Узел запущен
   awaiting_peers: Ожидание пиров
   header_sync: Загрузка заголовков
-  header_sync_percent: 'Загрузка заголовков: %{percent}%'
+  header_sync_percent: 'Загрузка заголовков%{type}: %{percent}%'
   tx_hashset_pibd: Загрузка состояния (PIBD)
   tx_hashset_pibd_percent: 'Загрузка состояния (PIBD): %{percent}%'
   tx_hashset_download: Загрузка состояния

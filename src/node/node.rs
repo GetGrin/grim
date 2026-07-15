@@ -22,7 +22,7 @@ use std::{fs, thread};
 
 use crate::node::stratum::{StratumServer, StratumStopState};
 use crate::node::{NodeConfig, NodeError, PeersConfig};
-use grin_chain::SyncStatus;
+use grin_chain::{HeaderSyncMode, SyncStatus};
 use grin_core::global;
 use grin_core::global::ChainTypes;
 use grin_p2p::Seeding;
@@ -478,13 +478,18 @@ impl Node {
 			SyncStatus::HeaderSync {
 				sync_head,
 				highest_height,
+				sync_mode,
 				..
 			} => {
 				if highest_height == 0 {
 					t!("sync_status.header_sync")
 				} else {
 					let percent = sync_head.height * 100 / highest_height;
-					t!("sync_status.header_sync_percent", "percent" => percent)
+					let mode = match sync_mode {
+						HeaderSyncMode::Legacy => "",
+						HeaderSyncMode::Pihd => " (PIHD)",
+					};
+					t!("sync_status.header_sync_percent", "percent" => percent, "type" => mode)
 				}
 			}
 			SyncStatus::TxHashsetPibd {

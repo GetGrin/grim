@@ -189,7 +189,7 @@ sync_status:
   no_sync: 节点正在运行
   awaiting_peers: 等待对等节点
   header_sync: 正在下载区块头
-  header_sync_percent: '正在下载区块头：%{percent}%'
+  header_sync_percent: '正在下载区块头%{type}：%{percent}%'
   tx_hashset_pibd: 正在下载状态（PIBD）
   tx_hashset_pibd_percent: '正在下载状态（PIBD）：%{percent}%'
   tx_hashset_download: 正在下载状态
