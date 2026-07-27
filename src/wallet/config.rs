@@ -86,7 +86,7 @@ impl WalletConfig {
 		// Setup configuration path.
 		let id = chrono::Utc::now().timestamp();
 		let chain_type = AppConfig::chain_type();
-		let config_path = Self::get_config_file_path(chain_type, id);
+		let data_path = Self::wallet_path(id.to_string());
 		// Write configuration to the file.
 		let config = WalletConfig {
 			account: Self::DEFAULT_ACCOUNT_LABEL.to_string(),
@@ -104,9 +104,10 @@ impl WalletConfig {
 				Settings::open_port("127.0.0.1").unwrap_or(WalletConfig::default_api_port()),
 			),
 			tx_broadcast_timeout: Some(Self::BROADCASTING_TIMEOUT_DEFAULT),
-			data_path: Some(Self::wallet_path(id.to_string())),
+			data_path: Some(data_path.to_str().unwrap().to_string()),
 			ver: Some(WALLET_CONFIG_VERSION),
 		};
+		let config_path = Self::get_config_file_path(chain_type, id);
 		Settings::write_to_file(&config, config_path);
 		config
 	}
@@ -191,54 +192,54 @@ impl WalletConfig {
 	}
 
 	/// Get wallet path from provided identifier.
-	fn wallet_path(id: String) -> String {
+	fn wallet_path(id: String) -> PathBuf {
 		let chain_type = AppConfig::chain_type();
 		let mut data_path = Self::get_base_path(chain_type);
 		data_path.push(id);
-		data_path.to_str().unwrap().to_string()
+		data_path
 	}
 
 	/// Get current wallet path.
-	pub fn get_wallet_path(&self) -> String {
+	pub fn get_wallet_path(&self) -> PathBuf {
 		Self::wallet_path(self.id.to_string())
 	}
 
 	/// Get wallet data path.
-	pub fn get_data_path(&self) -> String {
+	pub fn get_data_path(&self) -> PathBuf {
 		if let Some(path) = &self.data_path {
-			path.clone()
+			PathBuf::from(path)
 		} else {
 			self.get_wallet_path()
 		}
 	}
 
 	/// Get base wallet data path.
-	fn get_base_data_path(&self) -> String {
-		let mut path = PathBuf::from(self.get_data_path());
+	fn get_base_data_path(&self) -> PathBuf {
+		let mut path = self.get_data_path();
 		path.push(Self::DATA_DIR_NAME);
 		if !path.exists() {
 			let _ = fs::create_dir_all(path.clone());
 		}
-		path.to_str().unwrap().to_string()
+		path
 	}
 
 	/// Get wallet seed path.
-	pub fn seed_path(&self) -> String {
-		let mut path = PathBuf::from(self.get_base_data_path());
+	pub fn seed_path(&self) -> PathBuf {
+		let mut path = self.get_base_data_path();
 		path.push(SEED_FILE);
-		path.to_str().unwrap().to_string()
+		path
 	}
 
 	/// Get wallet database data path.
-	pub fn get_db_path(&self) -> String {
-		let mut path = PathBuf::from(self.get_base_data_path());
+	pub fn get_db_path(&self) -> PathBuf {
+		let mut path = self.get_base_data_path();
 		path.push(DB_DIR_NAME);
-		path.to_str().unwrap().to_string()
+		path
 	}
 
 	/// Get Slatepack file path for Slate.
 	pub fn get_slate_path(&self, id: Uuid, state: &SlateState) -> PathBuf {
-		let mut path = PathBuf::from(self.get_base_data_path());
+		let mut path = self.get_base_data_path();
 		path.push(SLATEPACKS_DIR_NAME);
 		if !path.exists() {
 			let _ = fs::create_dir_all(path.clone());
@@ -250,7 +251,7 @@ impl WalletConfig {
 
 	/// Get path to extra db storage.
 	pub fn get_extra_db_path(&self) -> PathBuf {
-		let mut path = PathBuf::from(self.get_db_path());
+		let mut path = self.get_db_path();
 		path.push("extra");
 		if !path.exists() {
 			let _ = fs::create_dir_all(path.clone());
@@ -263,16 +264,17 @@ impl WalletConfig {
 		match self.ver {
 			None => {
 				// Migrate Slatepack data.
-				let mut old_slate_path = PathBuf::from(self.get_wallet_path());
+				let wallet_path = self.get_wallet_path();
+				let mut old_slate_path = wallet_path.clone();
 				old_slate_path.push(SLATEPACKS_DIR_NAME);
 				if old_slate_path.exists() {
-					let mut new_slate_path = PathBuf::from(self.get_data_path());
+					let mut new_slate_path = self.get_data_path();
 					new_slate_path.push(SLATEPACKS_DIR_NAME);
 					let _ = fs::rename(&old_slate_path, &new_slate_path);
 				}
 				// Write data path to config.
 				if self.data_path.is_none() {
-					self.data_path = Some(self.get_wallet_path());
+					self.data_path = Some(wallet_path.to_str().unwrap().to_string());
 				}
 				// Migrate to 1st version.
 				self.ver = Some(1);

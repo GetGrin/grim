@@ -456,7 +456,6 @@ impl WalletContent {
 					let tx = data.tx_by_id(id);
 					if tx.is_some() {
 						self.txs_content = Some(WalletTransactionsContent::new(tx));
-						self.settings_content = None;
 					}
 				}
 			}
