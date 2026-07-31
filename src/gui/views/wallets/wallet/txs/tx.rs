@@ -341,7 +341,7 @@ impl WalletTransactionContent {
 				}
 				return;
 			}
-			if wallet.synced_from_node() && !tx.cancelled() && !tx.cancelling() && !tx.posting() {
+			if !tx.cancelled() && !tx.cancelling() && !tx.posting() {
 				let repeat = tx.broadcasting_timed_out(&wallet);
 				// Draw button to cancel transaction.
 				if tx.can_cancel() || repeat {

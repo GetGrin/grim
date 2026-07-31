@@ -55,7 +55,7 @@ use std::io::Write;
 use std::net::{SocketAddr, TcpListener, ToSocketAddrs};
 use std::path::PathBuf;
 use std::str::FromStr;
-use std::sync::atomic::{AtomicBool, AtomicI64, AtomicU8, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicI64, AtomicU8, AtomicU64, Ordering};
 use std::sync::mpsc::Sender;
 use std::sync::{Arc, mpsc};
 use std::thread::Thread;
@@ -125,8 +125,10 @@ pub struct Wallet {
 	/// Flag to check if Slatepack message file is opening.
 	message_opening: Arc<AtomicBool>,
 
-	/// Amount requests to calculate fee.
-	fee_calculating: Arc<AtomicU8>,
+	/// Request to calculate fee for amount.
+	amount_to_calculate_fee: Arc<AtomicU64>,
+	/// Calculating fee for amount.
+	amount_fee_calculating: Arc<AtomicU64>,
 
 	/// Flag to check if sending request is creating.
 	send_creating: Arc<AtomicBool>,
@@ -172,7 +174,8 @@ impl Wallet {
 			files_moving: Arc::new(AtomicBool::new(false)),
 			message_opening: Arc::new(AtomicBool::from(false)),
 			send_creating: Arc::new(AtomicBool::new(false)),
-			fee_calculating: Arc::new(AtomicU8::new(0)),
+			amount_to_calculate_fee: Arc::new(AtomicU64::new(0)),
+			amount_fee_calculating: Arc::new(AtomicU64::new(0)),
 			invoice_creating: Arc::new(AtomicBool::new(false)),
 			proof_verifying: Arc::new(AtomicBool::new(false)),
 			tasks_sender: Arc::new(RwLock::new(None)),
@@ -747,10 +750,8 @@ impl Wallet {
 		let r_tasks = self.tasks_sender.read();
 		if r_tasks.is_some() {
 			match task {
-				WalletTask::CalculateFee(_, _) => {
-					let calculating = self.fee_calculating.load(Ordering::Relaxed);
-					self.fee_calculating
-						.store(calculating + 1, Ordering::Relaxed);
+				WalletTask::CalculateFee(a, _) => {
+					self.amount_to_calculate_fee.store(a, Ordering::Relaxed);
 				}
 				_ => {}
 			}
@@ -1041,7 +1042,7 @@ impl Wallet {
 
 	/// Check if transaction fee is calculating.
 	pub fn fee_calculating(&self) -> bool {
-		self.fee_calculating.load(Ordering::Relaxed) > 0
+		self.amount_to_calculate_fee.load(Ordering::Relaxed) != 0
 	}
 
 	/// Initialize a transaction to send amount.
@@ -1863,21 +1864,23 @@ async fn handle_task(w: &Wallet, t: WalletTask) {
 				};
 				// Create response or finalize.
 				match s.state {
-					SlateState::Standard1 => {
-						if let Ok(s) = w.receive(&s, None) {
+					SlateState::Standard1 => match w.receive(&s, None) {
+						Ok(s) => {
 							maybe_finalize_tor(s.clone()).await;
 							let tx = w.retrieve_tx_by_id(None, Some(s.id));
 							w.on_task_result(tx, &t);
 						}
-					}
-					SlateState::Invoice1 => {
-						if let Ok(s) = w.pay(&s, None) {
+						Err(e) => error!("message tx receive error: {:?}", e),
+					},
+					SlateState::Invoice1 => match w.pay(&s, None) {
+						Ok(s) => {
 							sync_wallet_data(&w, false);
 							maybe_finalize_tor(s.clone()).await;
 							let tx = w.retrieve_tx_by_id(None, Some(s.id));
 							w.on_task_result(tx, &t);
 						}
-					}
+						Err(e) => error!("message tx pay error: {:?}", e),
+					},
 					SlateState::Standard2 | SlateState::Invoice2 => {
 						if let Some(tx) = tx {
 							match w.finalize(&s, tx.id) {
@@ -1903,45 +1906,48 @@ async fn handle_task(w: &Wallet, t: WalletTask) {
 			w.message_opening.store(false, Ordering::Relaxed);
 		}
 		WalletTask::CalculateFee(a, _) => {
-			// Wait if there are no more fee tasks or handle next input value.
-			let calculating = w.fee_calculating.load(Ordering::Relaxed);
-			if calculating == 1 {
-				async_std::task::sleep(Duration::from_millis(100)).await;
-				let calculating = w.fee_calculating.load(Ordering::Relaxed);
-				if calculating > 1 {
-					w.fee_calculating.store(calculating - 1, Ordering::Relaxed);
-					return;
-				}
-			} else {
-				w.fee_calculating.store(calculating - 1, Ordering::Relaxed);
+			let mut amount = w.amount_fee_calculating.load(Ordering::Relaxed);
+			if amount != 0 {
 				return;
 			}
-			// Calculate fee for provided amount.
-			if let Ok(fee) = w.calculate_fee(*a) {
-				w.on_task_result(None, &WalletTask::CalculateFee(*a, fee))
+			w.amount_fee_calculating.store(*a, Ordering::Relaxed);
+			amount = *a;
+			loop {
+				if let Ok(fee) = w.calculate_fee(amount) {
+					w.on_task_result(None, &WalletTask::CalculateFee(amount, fee));
+				}
+				let amount_to_calculate = w.amount_to_calculate_fee.load(Ordering::Relaxed);
+				if amount_to_calculate == amount {
+					w.amount_fee_calculating.store(0, Ordering::Relaxed);
+					w.amount_to_calculate_fee.store(0, Ordering::Relaxed);
+					break;
+				} else {
+					amount = amount_to_calculate;
+				}
 			}
-			let calculating = w.fee_calculating.load(Ordering::Relaxed);
-			w.fee_calculating.store(calculating - 1, Ordering::Relaxed);
 		}
 		WalletTask::Send(a, r) => {
 			w.send_creating.store(true, Ordering::Relaxed);
-			if let Ok(s) = w.send(*a, r.clone()) {
-				sync_wallet_data(&w, false);
-				let tx = w.retrieve_tx_by_id(None, Some(s.id));
-				if let Some(tx) = tx {
-					if let Some(addr) = r {
-						let id = w.identifier();
-						if Tor::is_service_running(&id) {
-							w.send_creating.store(false, Ordering::Relaxed);
-							send_tor(tx, &s, addr).await;
-							return;
+			match w.send(*a, r.clone()) {
+				Ok(s) => {
+					sync_wallet_data(&w, false);
+					let tx = w.retrieve_tx_by_id(None, Some(s.id));
+					if let Some(tx) = tx {
+						if let Some(addr) = r {
+							let id = w.identifier();
+							if Tor::is_service_running(&id) {
+								w.send_creating.store(false, Ordering::Relaxed);
+								send_tor(tx, &s, addr).await;
+								return;
+							} else {
+								w.on_task_result(Some(tx), &t);
+							}
 						} else {
 							w.on_task_result(Some(tx), &t);
 						}
-					} else {
-						w.on_task_result(Some(tx), &t);
 					}
 				}
+				Err(e) => error!("send error: {:?}", e),
 			}
 			w.send_creating.store(false, Ordering::Relaxed);
 		}

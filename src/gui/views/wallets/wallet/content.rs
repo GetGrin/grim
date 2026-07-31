@@ -92,8 +92,11 @@ impl WalletContentContainer for WalletContent {
 
 		// Show wallet account panel not on settings tab when navigation is not blocked and QR code
 		// scanner is not showing and wallet data is not empty.
-		let mut show_account =
-			self.settings_content.is_none() && !block_nav && !wallet.sync_error() && data.is_some();
+		let mut show_account = wallet.synced_from_node()
+			&& self.settings_content.is_none()
+			&& !block_nav
+			&& !wallet.sync_error()
+			&& data.is_some();
 		if wallet.get_current_connection() == ConnectionMethod::Integrated && !Node::is_running() {
 			show_account = false;
 		}
@@ -334,12 +337,11 @@ impl WalletContent {
 		let sync_error = wallet.sync_error();
 		let integrated_node = wallet.get_current_connection() == ConnectionMethod::Integrated;
 		let integrated_node_ready = Node::get_sync_status() == Some(SyncStatus::NoSync);
-		let sync_after_opening = wallet.get_data().is_none() && !wallet.sync_error();
+		// let sync_after_opening = wallet.get_data().is_none() && !wallet.sync_error();
 		// Block navigation if wallet is repairing and integrated node is not launching
-		// and if wallet is closing or syncing after opening when there is no data to show.
+		// and if wallet is closing.
 		(wallet.is_repairing() && (integrated_node_ready || !integrated_node) && !sync_error)
 			|| wallet.is_closing()
-			|| (sync_after_opening && (!integrated_node || integrated_node_ready))
 	}
 
 	/// Draw tab buttons at the bottom of the screen.
@@ -363,7 +365,11 @@ impl WalletContent {
 						self.settings_content = None;
 					});
 				});
-				let active = if data.is_some() { Some(false) } else { None };
+				let active = if wallet.synced_from_node() && data.is_some() {
+					Some(false)
+				} else {
+					None
+				};
 				columns[1].vertical_centered_justified(|ui| {
 					if wallet.invoice_creating() {
 						ui.add_space(4.0);
@@ -525,10 +531,10 @@ impl WalletContent {
 
 /// Draw content when wallet is syncing and not ready to use, returns `true` at this case.
 fn sync_ui(ui: &mut egui::Ui, wallet: &Wallet) -> bool {
-	if wallet.is_repairing() && !wallet.sync_error() {
-		sync_progress_ui(ui, wallet);
-		return true;
-	} else if wallet.is_closing() || wallet.files_moving() {
+	if ((wallet.is_repairing() || !wallet.synced_from_node()) && !wallet.sync_error())
+		|| wallet.is_closing()
+		|| wallet.files_moving()
+	{
 		sync_progress_ui(ui, wallet);
 		return true;
 	} else if wallet.get_current_connection() == ConnectionMethod::Integrated {
