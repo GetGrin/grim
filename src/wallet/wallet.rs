@@ -1939,7 +1939,7 @@ async fn handle_task(w: &Wallet, t: WalletTask) {
 			w.message_opening.store(false, Ordering::Relaxed);
 		}
 		WalletTask::CalculateMax(_, _) => {
-			if !w.max_amount_calculating.swap(true, Ordering::SeqCst) {
+			if w.max_amount_calculating.load(Ordering::SeqCst) {
 				return;
 			}
 			w.max_amount_calculating.store(true, Ordering::SeqCst);
