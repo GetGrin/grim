@@ -36,7 +36,7 @@ use grin_wallet_controller::controller;
 use grin_wallet_controller::controller::ForeignAPIHandlerV2;
 use grin_wallet_impls::{DefaultLCProvider, DefaultWalletImpl, HTTPNodeClient};
 use grin_wallet_libwallet::api_impl::owner::{
-	cancel_tx, init_send_tx, retrieve_summary_info, retrieve_txs, verify_payment_proof,
+	cancel_tx, retrieve_summary_info, retrieve_txs, verify_payment_proof,
 };
 use grin_wallet_libwallet::api_impl::types::update_tx_slate_state;
 use grin_wallet_libwallet::{
@@ -46,7 +46,7 @@ use grin_wallet_libwallet::{
 	WalletInst, WalletLCProvider, address,
 };
 use grin_wallet_util::OnionV3Address;
-use log::{debug, error};
+use log::error;
 use num_bigint::BigInt;
 use parking_lot::RwLock;
 use serde_json::{Value, json};
@@ -125,10 +125,15 @@ pub struct Wallet {
 	/// Flag to check if Slatepack message file is opening.
 	message_opening: Arc<AtomicBool>,
 
-	/// Request to calculate fee for amount.
-	amount_to_calculate_fee: Arc<AtomicU64>,
-	/// Calculating fee for amount.
-	amount_fee_calculating: Arc<AtomicU64>,
+	/// Request to calculate fee for amount to send.
+	calculate_fee: Arc<AtomicU64>,
+	/// Calculating fee for amount to send.
+	amount_fee_calculating: Arc<AtomicBool>,
+
+	/// Calculating max amount to send and fee.
+	max_amount_calculating: Arc<AtomicBool>,
+	/// Last calculated max amount to send.
+	calculated_max_amount: Arc<AtomicU64>,
 
 	/// Flag to check if sending request is creating.
 	send_creating: Arc<AtomicBool>,
@@ -174,8 +179,10 @@ impl Wallet {
 			files_moving: Arc::new(AtomicBool::new(false)),
 			message_opening: Arc::new(AtomicBool::from(false)),
 			send_creating: Arc::new(AtomicBool::new(false)),
-			amount_to_calculate_fee: Arc::new(AtomicU64::new(0)),
-			amount_fee_calculating: Arc::new(AtomicU64::new(0)),
+			calculate_fee: Arc::new(AtomicU64::new(0)),
+			amount_fee_calculating: Arc::new(AtomicBool::new(false)),
+			max_amount_calculating: Arc::new(AtomicBool::new(false)),
+			calculated_max_amount: Arc::new(AtomicU64::new(0)),
 			invoice_creating: Arc::new(AtomicBool::new(false)),
 			proof_verifying: Arc::new(AtomicBool::new(false)),
 			tasks_sender: Arc::new(RwLock::new(None)),
@@ -751,7 +758,7 @@ impl Wallet {
 		if r_tasks.is_some() {
 			match task {
 				WalletTask::CalculateFee(a, _) => {
-					self.amount_to_calculate_fee.store(a, Ordering::Relaxed);
+					self.calculate_fee.store(a, Ordering::SeqCst);
 				}
 				_ => {}
 			}
@@ -1013,11 +1020,9 @@ impl Wallet {
 	}
 
 	/// Calculate transaction fee for provided amount.
-	fn calculate_fee(&self, a: u64) -> Result<u64, Error> {
+	fn calculate_fee(&self, a: u64) -> Result<(u64, Option<u64>), Error> {
 		let r_inst = self.instance.as_ref().read();
 		let instance = r_inst.clone().unwrap();
-		let mut w_lock = instance.lock();
-		let w = w_lock.lc_provider()?.wallet_inst()?;
 		let config = self.get_config();
 		let args = InitTxArgs {
 			src_acct_name: Some(config.account.clone()),
@@ -1028,13 +1033,16 @@ impl Wallet {
 			estimate_only: Some(true),
 			..Default::default()
 		};
-		let res = init_send_tx(w, self.keychain_mask().as_ref(), args, false);
+		let api = Owner::new(instance, None, config.get_wallet_path());
+		let res = api.init_send_tx(self.keychain_mask().as_ref(), args.clone());
 		match res {
-			Ok(slate) => Ok(slate.fee_fields.fee()),
+			Ok(slate) => Ok((slate.fee_fields.fee(), None)),
 			Err(e) => match e {
-				Error::NotEnoughFunds {
-					available, needed, ..
-				} => Ok(needed - available),
+				Error::BigAmountError(amount, fee, ..) => Ok((fee, Some(amount - fee))),
+				Error::NotEnoughFunds { .. } => {
+					let (amount, fee) = self.calculate_max_amount()?;
+					Ok((fee, Some(amount - fee)))
+				}
 				e => Err(e),
 			},
 		}
@@ -1042,7 +1050,33 @@ impl Wallet {
 
 	/// Check if transaction fee is calculating.
 	pub fn fee_calculating(&self) -> bool {
-		self.amount_to_calculate_fee.load(Ordering::Relaxed) != 0
+		self.amount_fee_calculating.load(Ordering::SeqCst)
+	}
+
+	/// Calculate max amount and fee.
+	fn calculate_max_amount(&self) -> Result<(u64, u64), Error> {
+		let r_inst = self.instance.as_ref().read();
+		let instance = r_inst.clone().unwrap();
+		let config = self.get_config();
+		let api = Owner::new(instance, None, config.get_wallet_path());
+		match api.estimate_max_sendable(
+			self.keychain_mask().as_ref(),
+			false,
+			config.min_confirmations,
+		) {
+			Ok((_, amount, fee, _)) => Ok((amount, fee)),
+			Err(e) => Err(e),
+		}
+	}
+
+	/// Check if max transaction amount is calculating.
+	pub fn max_amount_calculating(&self) -> bool {
+		self.max_amount_calculating.load(Ordering::SeqCst)
+	}
+
+	/// Check if max transaction amount is calculating.
+	pub fn last_calculated_max_amount(&self) -> u64 {
+		self.calculated_max_amount.load(Ordering::SeqCst)
 	}
 
 	/// Initialize a transaction to send amount.
@@ -1283,7 +1317,6 @@ impl Wallet {
 
 	/// Save task result to consume later.
 	fn on_task_result(&self, tx: Option<TxLogEntry>, task: &WalletTask) {
-		debug!("on task result: {:?}", tx);
 		let mut w_res = self.task_result.write();
 		let id = if let Some(t) = tx { Some(t.id) } else { None };
 		*w_res = Some((id, task.clone()));
@@ -1905,21 +1938,44 @@ async fn handle_task(w: &Wallet, t: WalletTask) {
 			}
 			w.message_opening.store(false, Ordering::Relaxed);
 		}
-		WalletTask::CalculateFee(a, _) => {
-			let mut amount = w.amount_fee_calculating.load(Ordering::Relaxed);
-			if amount != 0 {
+		WalletTask::CalculateMax(_, _) => {
+			if !w.max_amount_calculating.swap(true, Ordering::SeqCst) {
 				return;
 			}
-			w.amount_fee_calculating.store(*a, Ordering::Relaxed);
-			amount = *a;
-			loop {
-				if let Ok(fee) = w.calculate_fee(amount) {
-					w.on_task_result(None, &WalletTask::CalculateFee(amount, fee));
+			w.max_amount_calculating.store(true, Ordering::SeqCst);
+			match w.calculate_max_amount() {
+				Ok((a, fee)) => {
+					w.calculated_max_amount.store(a, Ordering::SeqCst);
+					w.on_task_result(None, &WalletTask::CalculateMax(a, fee));
 				}
-				let amount_to_calculate = w.amount_to_calculate_fee.load(Ordering::Relaxed);
+				Err(e) => error!("calculate max error: {:?}", e),
+			}
+			w.max_amount_calculating.store(false, Ordering::SeqCst);
+		}
+		WalletTask::CalculateFee(a, _) => {
+			if w.amount_fee_calculating.load(Ordering::SeqCst) {
+				return;
+			}
+			w.amount_fee_calculating.store(true, Ordering::SeqCst);
+
+			let mut amount = *a;
+			loop {
+				if let Ok((fee, max_amount)) = w.calculate_fee(amount) {
+					if let Some(max) = max_amount {
+						w.calculated_max_amount.store(max, Ordering::SeqCst);
+						w.amount_fee_calculating.store(false, Ordering::SeqCst);
+						w.calculate_fee.store(0, Ordering::SeqCst);
+						w.on_task_result(None, &WalletTask::CalculateMax(max, fee));
+						break;
+					} else {
+						w.on_task_result(None, &WalletTask::CalculateFee(amount, fee));
+					}
+				}
+				let amount_to_calculate = w.calculate_fee.load(Ordering::SeqCst);
 				if amount_to_calculate == amount {
-					w.amount_fee_calculating.store(0, Ordering::Relaxed);
-					w.amount_to_calculate_fee.store(0, Ordering::Relaxed);
+					w.calculated_max_amount.store(0, Ordering::SeqCst);
+					w.amount_fee_calculating.store(false, Ordering::SeqCst);
+					w.calculate_fee.store(0, Ordering::SeqCst);
 					break;
 				} else {
 					amount = amount_to_calculate;

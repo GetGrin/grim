@@ -27,8 +27,6 @@ use crate::wallet::types::WalletTask;
 pub struct SendRequestContent {
 	/// Amount to send.
 	amount_edit: String,
-	/// Flag to check if maximum amount is calculating.
-	pub max_calculating: bool,
 
 	/// Fee amount.
 	fee_edit: String,
@@ -47,7 +45,6 @@ impl SendRequestContent {
 	pub fn new(addr: Option<String>) -> Self {
 		Self {
 			amount_edit: "".to_string(),
-			max_calculating: false,
 			fee_edit: "".to_string(),
 			address_edit: addr.unwrap_or("".to_string()),
 			address_error: false,
@@ -62,7 +59,6 @@ impl SendRequestContent {
 
 	/// Setup maximum amount to send and fee.
 	pub fn on_max_amount_calculated(&mut self, amount: u64, fee: u64) {
-		self.max_calculating = false;
 		if amount == 0 {
 			self.amount_edit = "".to_string();
 			self.fee_edit = "".to_string();
@@ -121,7 +117,7 @@ impl SendRequestContent {
 			.h_center()
 			.numeric()
 			.focus(Modal::first_draw());
-		if self.max_calculating {
+		if wallet.max_amount_calculating() {
 			amount_edit = amount_edit.disable();
 		}
 		let amount_edit_before = self.amount_edit.clone();
@@ -129,7 +125,7 @@ impl SendRequestContent {
 		// Draw button to calculate maximum amount to send.
 		let mut calculate_max = false;
 		amount_edit.custom_buttons_ui(ui, &mut self.amount_edit, cb, |ui| {
-			if self.max_calculating {
+			if wallet.max_amount_calculating() {
 				ui.add_space(12.0);
 				View::loading_spinner(ui, 40.0);
 				ui.add_space(12.0);
@@ -141,10 +137,11 @@ impl SendRequestContent {
 			}
 		});
 		if calculate_max {
-			self.max_calculating = true;
+			wallet.task(WalletTask::CalculateMax(0, 0));
 			let max = data.info.amount_currently_spendable;
 			self.amount_edit = amount_to_hr_string(max, true);
 		}
+
 		ui.add_space(8.0);
 
 		// Check value if input was changed.
@@ -177,13 +174,17 @@ impl SendRequestContent {
 								self.amount_edit = amount_edit_before.clone();
 							}
 						}
-						// Do not input amount more than balance.
-						if amount != 0 && self.amount_edit != amount_edit_before {
+						// Do not input amount more than balance and if max calculating or max.
+						if amount != 0
+							&& self.amount_edit != amount_edit_before
+							&& amount != wallet.last_calculated_max_amount()
+							&& !wallet.max_amount_calculating()
+						{
 							let fee = amount_from_hr_string(self.fee_edit.as_str()).unwrap_or(0);
 							let max = data.info.amount_currently_spendable;
-							if amount > max || amount + fee > max {
-								self.max_calculating = true;
-								wallet.task(WalletTask::CalculateFee(max, 0));
+							if amount >= max || amount + fee > max {
+								wallet.task(WalletTask::CalculateMax(0, 0));
+								amount_edit.cursor_to_end(self.amount_edit.len(), ui);
 							} else {
 								wallet.task(WalletTask::CalculateFee(amount, 0));
 							}
@@ -284,7 +285,7 @@ impl SendRequestContent {
 			});
 			columns[1].vertical_centered_justified(|ui| {
 				// Button to create Slatepack message request.
-				if self.max_calculating || wallet.fee_calculating() {
+				if wallet.max_amount_calculating() || wallet.fee_calculating() {
 					ui.add_space(4.0);
 					View::small_loading_spinner(ui);
 				} else {
