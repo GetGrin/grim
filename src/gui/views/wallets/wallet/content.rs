@@ -37,6 +37,9 @@ use grin_chain::SyncStatus;
 
 /// Wallet content.
 pub struct WalletContent {
+	/// Current wallet identifier.
+	wallet_id: Option<String>,
+
 	/// Transactions content.
 	pub txs_content: Option<WalletTransactionsContent>,
 
@@ -83,6 +86,13 @@ impl WalletContentContainer for WalletContent {
 	}
 
 	fn container_ui(&mut self, ui: &mut egui::Ui, wallet: &Wallet, cb: &dyn PlatformCallbacks) {
+		let wallet_id = Some(wallet.identifier());
+		if wallet_id != self.wallet_id {
+			self.wallet_id = wallet_id;
+			self.txs_content = Some(WalletTransactionsContent::new(None));
+			self.settings_content = None;
+		}
+
 		let dual_panel = Content::is_dual_panel_mode(ui.ctx());
 		let show_wallets_dual = AppConfig::show_wallets_at_dual_panel();
 
@@ -290,7 +300,8 @@ impl WalletContentContainer for WalletContent {
 impl Default for WalletContent {
 	fn default() -> Self {
 		Self {
-			txs_content: Some(WalletTransactionsContent::new(None)),
+			wallet_id: None,
+			txs_content: None,
 			settings_content: None,
 			account_content: WalletAccountContent::default(),
 			transport_content: WalletTransportContent::default(),
@@ -467,23 +478,19 @@ impl WalletContent {
 			}
 			Some(modal_id) => {
 				match modal_id {
-					SEND_MODAL_ID => {
-						match t {
-							WalletTask::CalculateFee(_, f) => {
-								// Setup calculated tx fee at modal.
-								if let Some(m) = self.send_content.as_mut() {
-									if m.max_calculating {
-										let a = data.info.amount_currently_spendable;
-										let max = if f > a { 0 } else { a - f };
-										m.on_max_amount_calculated(max, f);
-									} else {
-										m.on_fee_calculated(f);
-									}
-								}
+					SEND_MODAL_ID => match t {
+						WalletTask::CalculateMax(a, fee) => {
+							if let Some(m) = self.send_content.as_mut() {
+								m.on_max_amount_calculated(a, fee);
 							}
-							_ => {}
 						}
-					}
+						WalletTask::CalculateFee(_, f) => {
+							if let Some(m) = self.send_content.as_mut() {
+								m.on_fee_calculated(f);
+							}
+						}
+						_ => {}
+					},
 					MessageInputContent::MODAL_ID => {
 						match t {
 							WalletTask::VerifyProof(p, res) => {
