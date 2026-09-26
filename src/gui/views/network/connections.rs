@@ -16,6 +16,7 @@ use eframe::epaint::RectShape;
 use egui::{
 	Align, Color32, CornerRadius, CursorIcon, Layout, RichText, Sense, StrokeKind, UiBuilder,
 };
+use std::net::{Ipv4Addr, Ipv6Addr};
 
 use crate::AppConfig;
 use crate::gui::Colors;
@@ -90,7 +91,7 @@ impl ContentContainer for ConnectionsContent {
 		NodeSetup::chain_type_ui(ui);
 		ui.add_space(6.0);
 
-		// Check connections availability.
+		// Check availability of connections.
 		if saved_chain_type != AppConfig::chain_type() {
 			ExternalConnection::check(None, ui.ctx());
 		}
@@ -106,8 +107,24 @@ impl ContentContainer for ConnectionsContent {
 				let r = View::item_rounding(0, 1, true);
 				View::item_button(ui, r, QR_CODE, None, || {
 					let (api_address, api_port) = NodeConfig::get_api_address();
+					let api_address = if api_address.contains(NodeConfig::ALL_INTERFACES) {
+						let all_ips = NodeConfig::get_ip_addrs().clone();
+						let first_public = all_ips
+							.iter()
+							.filter(|ip| {
+								**ip != Ipv4Addr::LOCALHOST.to_string()
+									&& **ip != Ipv6Addr::LOCALHOST.to_string()
+							})
+							.collect::<Vec<_>>();
+						match first_public.get(0) {
+							None => Ipv4Addr::LOCALHOST.to_string(),
+							Some(a) => a.to_string(),
+						}
+					} else {
+						api_address
+					};
 					if let Ok(c) = ShareConnectionContent::new(ShareConnection {
-						url: format!("http://{}:{}", api_address, api_port),
+						url: format!("http://{}:{}", &api_address, &api_port),
 						username: "grin".to_string(),
 						secret: NodeConfig::get_api_secret(true).unwrap_or("".to_string()),
 					}) {
@@ -280,8 +297,9 @@ impl ConnectionsContent {
 								// Setup node API address text.
 								let (api_address, api_port) = NodeConfig::get_api_address();
 								let address_text = format!(
-									"{} http://{}:{}",
-									COMPUTER_TOWER, api_address, api_port
+									"{} http://{}",
+									COMPUTER_TOWER,
+									NodeConfig::format_address(&api_address, &api_port)
 								);
 								ui.label(
 									RichText::new(address_text).size(15.0).color(Colors::gray()),

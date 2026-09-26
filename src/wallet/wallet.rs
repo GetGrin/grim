@@ -52,7 +52,7 @@ use parking_lot::RwLock;
 use serde_json::{Value, json};
 use std::fs::File;
 use std::io::Write;
-use std::net::{SocketAddr, TcpListener, ToSocketAddrs};
+use std::net::{Ipv4Addr, SocketAddr, TcpListener, ToSocketAddrs};
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::atomic::{AtomicBool, AtomicI64, AtomicU8, AtomicU64, Ordering};
@@ -245,7 +245,10 @@ impl Wallet {
 	/// Create [`HTTPNodeClient`] from provided config.
 	fn create_node_client(config: &WalletConfig) -> Result<HTTPNodeClient, Error> {
 		let integrated = || {
-			let (api_address, api_port) = NodeConfig::get_api_address();
+			let (mut api_address, api_port) = NodeConfig::get_api_address();
+			if api_address.contains(NodeConfig::ALL_INTERFACES) {
+				api_address = Ipv4Addr::LOCALHOST.to_string();
+			}
 			let api_url = format!("http://{}:{}", api_address, api_port);
 			let api_secret = NodeConfig::get_api_secret(true);
 			(api_url, api_secret)

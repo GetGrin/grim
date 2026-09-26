@@ -329,7 +329,7 @@ impl NodeConfig {
 	}
 
 	/// Format address to support ipv6.
-	fn format_address(ip: &String, port: &String) -> String {
+	pub fn format_address(ip: &String, port: &String) -> String {
 		let addr = if ip.contains(Self::ALL_INTERFACES) {
 			&format!("[{}]", ip)
 		} else {

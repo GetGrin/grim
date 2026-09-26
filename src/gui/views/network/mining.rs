@@ -83,7 +83,7 @@ impl NodeTab for NetworkMining {
 				let (stratum_addr, stratum_port) = NodeConfig::get_stratum_address();
 				View::label_box(
 					ui,
-					format!("{}:{}", stratum_addr, stratum_port),
+					NodeConfig::format_address(&stratum_addr, &stratum_port),
 					t!("network_mining.address"),
 					[true, false, true, false],
 				);
