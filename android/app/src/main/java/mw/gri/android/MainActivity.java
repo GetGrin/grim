@@ -404,7 +404,7 @@ public class MainActivity extends GameActivity {
         } else if (desc != null && (!(desc.hasMimeType(MIMETYPE_TEXT_PLAIN))
                 && !(desc.hasMimeType(MIMETYPE_TEXT_HTML)))) {
             text = "";
-        } else if (data != null) {
+        } else if (data != null && data.getItemCount() > 0) {
             ClipData.Item item = data.getItemAt(0);
             text = item.getText().toString();
         }
