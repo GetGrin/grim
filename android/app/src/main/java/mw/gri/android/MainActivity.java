@@ -282,7 +282,10 @@ public class MainActivity extends GameActivity {
             String input = String.valueOf(state.text.charAt(state.composingRegionStart));
             if (input.contains("\n")) {
                 onEnterInput();
-            } else {
+            } else if (!(input.contains("0") || input.contains("1")
+                    || input.contains("2") || input.contains("3") || input.contains("4")
+                    || input.contains("5") || input.contains("6") || input.contains("7")
+                    || input.contains("8") || input.contains("9"))) {
                 onTextInput(input);
             }
         }
@@ -330,18 +333,16 @@ public class MainActivity extends GameActivity {
             } else if (event.getKeyCode() == KeyEvent.KEYCODE_9) {
                 onTextInput("9");
                 return false;
+            } else {
+                // Pass any other input values into native code.
+                onTextInput(String.valueOf((char)event.getUnicodeChar()));
+                return false;
             }
         } else if (event.getAction() == KeyEvent.ACTION_MULTIPLE && event.getKeyCode() == KeyEvent.KEYCODE_UNKNOWN) {
             if (!event.getCharacters().isEmpty()) {
                 onTextInput(event.getCharacters());
                 return false;
             }
-        // Pass any other input values into native code.
-        } else if (event.getAction() == KeyEvent.ACTION_UP &&
-                event.getKeyCode() != KeyEvent.KEYCODE_ENTER &&
-                event.getKeyCode() != KeyEvent.KEYCODE_BACK) {
-            onTextInput(String.valueOf((char)event.getUnicodeChar()));
-            return false;
         }
         return super.dispatchKeyEvent(event);
     }
