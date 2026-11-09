@@ -76,7 +76,7 @@ impl InvoiceRequestContent {
 
 		// Draw QR code scanner content if requested.
 		if let Some(content) = self.address_scan_content.as_mut() {
-			let mut close_scan = true;
+			let mut close_scan = false;
 			content.modal_ui(ui, cb, |result| {
 				if let Some(result) = result {
 					self.address_edit = result.text();
