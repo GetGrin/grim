@@ -13,7 +13,7 @@
 // limitations under the License.
 
 use crate::node::{Node, NodeConfig};
-use crate::tor::Tor;
+use crate::tor::{Tor, TorConfig};
 use crate::wallet::seed::WalletSeed;
 use crate::wallet::store::TxHeightStore;
 use crate::wallet::types::{
@@ -1146,10 +1146,12 @@ impl Wallet {
 		}
 		.to_string();
 		// Wait Tor service to launch.
-		while !Tor::is_service_running(&self.identifier()) {
-			return Err(Error::GenericError(
-				"Tor service is not running".to_string(),
-			));
+		if TorConfig::get_proxy().is_none() {
+			while !Tor::is_service_running(&self.identifier()) {
+				return Err(Error::GenericError(
+					"Tor service is not running".to_string(),
+				));
+			}
 		}
 		// Send request to receiver.
 		let req_res = Tor::post(body, url).await;
@@ -1890,7 +1892,7 @@ async fn handle_task(w: &Wallet, t: WalletTask) {
 					sync_wallet_data(&w, false);
 					let tx = w.retrieve_tx_by_id(None, Some(s.id));
 					let id = w.identifier();
-					if Tor::is_service_running(&id) {
+					if TorConfig::get_proxy().is_some() || Tor::is_service_running(&id) {
 						if let Some(tx) = tx.as_ref() {
 							if let Some(addr) = dest {
 								w.message_opening.store(false, Ordering::Relaxed);
@@ -1996,7 +1998,7 @@ async fn handle_task(w: &Wallet, t: WalletTask) {
 					if let Some(tx) = tx {
 						if let Some(addr) = r {
 							let id = w.identifier();
-							if Tor::is_service_running(&id) {
+							if TorConfig::get_proxy().is_some() || Tor::is_service_running(&id) {
 								w.send_creating.store(false, Ordering::Relaxed);
 								send_tor(tx, &s, addr).await;
 								return;
