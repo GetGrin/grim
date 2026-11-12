@@ -87,7 +87,6 @@ hyper-tls = "0.6.0"
 uuid = { version = "1.23.4", features = ["serde", "v4"] }
 num-bigint = "0.4.6"
 itertools = "0.15"
-openssl = { version = "0.10", features = ["vendored"] }
 
 ## tor
 sha2 = "0.10.8"
@@ -115,6 +114,7 @@ rfd = "0.17.2"
 interprocess = { version = "2.2.1", features = ["tokio"] }
 
 [target.'cfg(target_os = "android")'.dependencies]
+openssl = { version = "0.10", features = ["vendored"] }
 android_logger = "0.15.0"
 jni = "0.21.1"
 android-activity = { version = "0.6.0", features = ["game-activity"] }

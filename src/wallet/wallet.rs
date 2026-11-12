@@ -999,7 +999,10 @@ impl Wallet {
 			if let Some(port) = self.foreign_api_port() {
 				let addr = format!("127.0.0.1:{}", port);
 				let r_config = Settings::tor_config_to_read();
-				let _ = start_onion_service(sec_key, addr.as_str(), &r_config.clone());
+				let _ =
+					start_onion_service(sec_key, addr.as_str(), &r_config.clone()).map_err(|e| {
+						error!("Can not start Tor service: {:?}", e);
+					});
 			}
 		}
 	}
