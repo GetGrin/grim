@@ -13,17 +13,16 @@
 // limitations under the License.
 
 use grin_keychain::ExtKeychain;
+use grin_p2p::tor::ov3::OnionV3Address;
 use grin_util::Mutex;
 use grin_wallet_impls::{DefaultLCProvider, HTTPNodeClient};
 use grin_wallet_libwallet::{
 	Error, PaymentProof, SlateState, SlatepackAddress, TxLogEntry, TxLogEntryType, WalletInfo,
 	WalletInst,
 };
-use grin_wallet_util::OnionV3Address;
 use serde_derive::{Deserialize, Serialize};
 use std::sync::Arc;
 
-use crate::tor::Tor;
 use crate::wallet::Wallet;
 
 /// Mnemonic phrase word.
@@ -349,8 +348,8 @@ impl WalletTx {
 			// Can resend over Tor.
 			!self.data.confirmed
 				&& !self.sending_tor()
-				&& Tor::is_service_running(&wallet.identifier())
 				&& !self.broadcasting()
+				&& wallet.is_tor_listener_running()
 				&& self.receiver.is_some()
 		}
 	}

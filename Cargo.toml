@@ -42,8 +42,8 @@ grin_util = { path = "wallet/grin/util" }
 grin_wallet_impls = { path = "wallet/impls" }
 grin_wallet_api = { path = "wallet/api"}
 grin_wallet_libwallet = { path = "wallet/libwallet" }
-grin_wallet_util = { path = "wallet/util" }
 grin_wallet_controller = { path = "wallet/controller" }
+grin_wallet_config = { path = "wallet/config" }
 
 ## ui
 egui = { version = "0.33.3", default-features = false }
@@ -86,20 +86,10 @@ hyper-proxy2 = "0.1.0"
 hyper-tls = "0.6.0"
 uuid = { version = "1.23.4", features = ["serde", "v4"] }
 num-bigint = "0.4.6"
+itertools = "0.15"
 
 ## tor
-arti-client = { version = "0.43.0", features = ["pt-client", "static", "onion-service-service", "onion-service-client", "experimental-api", "bridge-client"] }
-tor-rtcompat = { version = "0.43.0", features = ["static"] }
-tor-config = "0.43.0"
-fs-mistrust = "0.14.2"
-tor-hsservice = "0.43.0"
-tor-hsrproxy = "0.43.0"
-tor-keymgr = "0.43.0"
-tor-llcrypto = "0.43.0"
-tor-hscrypto = "0.43.0"
 sha2 = "0.10.8"
-ed25519-dalek = "2"
-safelog = "0.8.2"
 
 ## stratum server
 tokio-old = { version = "0.2", features = ["full"], package = "tokio" }

@@ -12,7 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::tor::TorConfig;
+use crate::tor::TorAppConfig;
+
 use egui::os;
 use serde_derive::{Deserialize, Serialize};
 
@@ -98,7 +99,7 @@ impl TorBridge {
 		match self {
 			TorBridge::Webtunnel(path, _) => {
 				if is_android {
-					TorConfig::webtunnel_path()
+					TorAppConfig::webtunnel_path()
 				} else {
 					path.clone()
 				}
@@ -128,7 +129,7 @@ impl TorBridge {
 
 	/// Update bridge connection line.
 	pub fn update_conn_line(&mut self, l: String) {
-		*self = match TorConfig::get_bridge().unwrap() {
+		*self = match TorAppConfig::get_bridge().unwrap() {
 			TorBridge::Webtunnel(bin, _) => TorBridge::Webtunnel(bin, l.clone()),
 			TorBridge::Obfs4(bin, _) => TorBridge::Obfs4(bin, l.clone()),
 			TorBridge::Snowflake(bin, _) => TorBridge::Snowflake(bin, l.clone()),
@@ -139,13 +140,13 @@ impl TorBridge {
 	pub fn save_bridge_bin_path(bridge: &TorBridge, path: String) {
 		match bridge {
 			TorBridge::Webtunnel(_, line) => {
-				TorConfig::save_bridge(Some(TorBridge::Webtunnel(path, line.into())));
+				TorAppConfig::save_bridge(Some(TorBridge::Webtunnel(path, line.into())));
 			}
 			TorBridge::Obfs4(_, line) => {
-				TorConfig::save_bridge(Some(TorBridge::Obfs4(path, line.into())));
+				TorAppConfig::save_bridge(Some(TorBridge::Obfs4(path, line.into())));
 			}
 			TorBridge::Snowflake(_, line) => {
-				TorConfig::save_bridge(Some(TorBridge::Snowflake(path, line.into())));
+				TorAppConfig::save_bridge(Some(TorBridge::Snowflake(path, line.into())));
 			}
 		}
 	}
@@ -154,13 +155,13 @@ impl TorBridge {
 	pub fn save_bridge_conn_line(bridge: &TorBridge, line: String) {
 		match bridge {
 			TorBridge::Webtunnel(path, _) => {
-				TorConfig::save_bridge(Some(TorBridge::Webtunnel(path.into(), line)));
+				TorAppConfig::save_bridge(Some(TorBridge::Webtunnel(path.into(), line)));
 			}
 			TorBridge::Obfs4(path, _) => {
-				TorConfig::save_bridge(Some(TorBridge::Obfs4(path.into(), line)));
+				TorAppConfig::save_bridge(Some(TorBridge::Obfs4(path.into(), line)));
 			}
 			TorBridge::Snowflake(path, _) => {
-				TorConfig::save_bridge(Some(TorBridge::Snowflake(path.into(), line)));
+				TorAppConfig::save_bridge(Some(TorBridge::Snowflake(path.into(), line)));
 			}
 		}
 	}

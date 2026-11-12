@@ -36,7 +36,7 @@ impl WalletSeed {
 		let res = grin_keychain::mnemonic::to_entropy(&word_list);
 		match res {
 			Ok(s) => Ok(WalletSeed::from_bytes(&s)),
-			Err(_) => Err(Error::Mnemonic.into()),
+			Err(e) => Err(Error::Mnemonic(format!("{}", e))),
 		}
 	}
 

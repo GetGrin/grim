@@ -13,7 +13,6 @@
 // limitations under the License.
 
 use crate::node::{Node, NodeConfig};
-use crate::tor::{Tor, TorConfig};
 use crate::wallet::seed::WalletSeed;
 use crate::wallet::store::TxHeightStore;
 use crate::wallet::types::{
@@ -23,10 +22,13 @@ use crate::wallet::types::{
 use crate::wallet::{ConnectionsConfig, Mnemonic, WalletConfig};
 use crate::{AppConfig, Settings};
 
+use crate::tor::TorAppConfig;
 use chrono::Utc;
 use grin_api::{ApiServer, Router};
 use grin_chain::SyncStatus;
 use grin_keychain::{ExtKeychain, Identifier, Keychain, SwitchCommitmentType};
+use grin_p2p::tor::ov3::OnionV3Address;
+use grin_p2p::tor::{ServiceStatus, onion_service_status, start_onion_service, stop_onion_service};
 use grin_util::secp::{SecretKey, pedersen};
 use grin_util::types::ZeroingString;
 use grin_util::{Mutex, ToHex};
@@ -34,22 +36,24 @@ use grin_wallet_api::{ConfigPath, Owner};
 use grin_wallet_controller::command::parse_slatepack;
 use grin_wallet_controller::controller;
 use grin_wallet_controller::controller::ForeignAPIHandlerV2;
-use grin_wallet_impls::{DefaultLCProvider, DefaultWalletImpl, HTTPNodeClient};
+use grin_wallet_impls::{
+	DefaultLCProvider, DefaultWalletImpl, HTTPNodeClient, HttpSlateSender, TorSlateSender,
+};
+use grin_wallet_libwallet::api_impl::owner;
 use grin_wallet_libwallet::api_impl::owner::{
 	cancel_tx, retrieve_summary_info, retrieve_txs, verify_payment_proof,
 };
 use grin_wallet_libwallet::api_impl::types::update_tx_slate_state;
+use grin_wallet_libwallet::slatepack::SlatepackAddressIndex;
 use grin_wallet_libwallet::{
 	Error, InitTxArgs, IssueInvoiceTxArgs, NodeClient, OutputCommitMapping, OutputStatus,
-	PaymentProof, Slate, SlateState, SlateVersion, SlatepackAddress, StatusMessage,
-	StoredProofInfo, TxLogEntry, TxLogEntryType, VersionedSlate, WalletBackend, WalletInitStatus,
-	WalletInst, WalletLCProvider, address,
+	PaymentProof, Slate, SlateState, SlatepackAddress, StatusMessage, StoredProofInfo, TxLogEntry,
+	TxLogEntryType, WalletBackend, WalletInitStatus, WalletInst, WalletLCProvider, address,
 };
-use grin_wallet_util::OnionV3Address;
+use itertools::Itertools;
 use log::error;
 use num_bigint::BigInt;
 use parking_lot::RwLock;
-use serde_json::{Value, json};
 use std::fs::File;
 use std::io::Write;
 use std::net::{Ipv4Addr, SocketAddr, TcpListener, ToSocketAddrs};
@@ -61,7 +65,6 @@ use std::sync::{Arc, mpsc};
 use std::thread::Thread;
 use std::time::Duration;
 use std::{fs, path, thread};
-use tor_config::deps::Itertools;
 use uuid::Uuid;
 
 /// Contains wallet instance, configuration and state, handles wallet commands.
@@ -78,6 +81,8 @@ pub struct Wallet {
 
 	/// Wallet Slatepack address to receive txs at transport.
 	slatepack_address: Arc<RwLock<Option<String>>>,
+	/// Wallet Onion address.
+	onion_address: Arc<RwLock<Option<String>>>,
 
 	/// Wallet accounts.
 	accounts: Arc<RwLock<Vec<WalletAccount>>>,
@@ -159,6 +164,7 @@ impl Wallet {
 			connection: Arc::new(RwLock::new(connection)),
 			keychain_mask: Arc::new(RwLock::new(None)),
 			slatepack_address: Arc::new(RwLock::new(None)),
+			onion_address: Arc::new(RwLock::new(None)),
 			accounts: Arc::new(RwLock::new(vec![])),
 			account_time: Arc::new(Default::default()),
 			sync_thread: Arc::from(RwLock::new(None)),
@@ -385,7 +391,7 @@ impl Wallet {
 					// Set current account.
 					let wallet_inst = lc.wallet_inst()?;
 					let label = self.get_config().account.to_owned();
-					wallet_inst.set_parent_key_id_by_name(label.as_str())?;
+					wallet_inst.set_account_by_name(label.as_str())?;
 					self.account_time
 						.store(Utc::now().timestamp(), Ordering::Relaxed);
 
@@ -426,9 +432,17 @@ impl Wallet {
 	/// Retrieve wallet Slatepack address for transport.
 	fn update_slatepack_addr(&self) -> Result<(), Error> {
 		let sec_key = self.retrieve_secret_key()?;
+
 		let addr = SlatepackAddress::try_from(&sec_key)?;
 		let mut w_address = self.slatepack_address.write();
 		*w_address = Some(addr.to_string());
+
+		let mut w_onion_address = self.onion_address.write();
+		*w_onion_address = Some(
+			OnionV3Address::try_from(&addr)
+				.map_err(|_| Error::OnionV3Address("Can not convert address".to_string()))?
+				.to_string(),
+		);
 		Ok(())
 	}
 
@@ -441,8 +455,9 @@ impl Wallet {
 		let w_inst = lc.wallet_inst()?;
 		let k = w_inst.keychain(self.keychain_mask().as_ref())?;
 		let parent_key_id = w_inst.parent_key_id();
-		let sec_key = address::address_from_derivation_path(&k, &parent_key_id, 0)
-			.map_err(|e| Error::TorConfig(format!("{:?}", e)))?;
+		let sec_key =
+			address::address_from_derivation_path(&k, &parent_key_id, SlatepackAddressIndex(0))
+				.map_err(|e| Error::TorConfig(format!("{:?}", e)))?;
 		Ok(sec_key)
 	}
 
@@ -456,6 +471,16 @@ impl Wallet {
 	/// Get Slatepack address to receive txs at transport.
 	pub fn slatepack_address(&self) -> Option<String> {
 		let r_address = self.slatepack_address.read();
+		if r_address.is_some() {
+			let addr = r_address.clone();
+			return addr;
+		}
+		None
+	}
+
+	/// Get Onion address of current account.
+	pub fn onion_address(&self) -> Option<String> {
+		let r_address = self.onion_address.read();
 		if r_address.is_some() {
 			let addr = r_address.clone();
 			return addr;
@@ -570,7 +595,6 @@ impl Wallet {
 		}
 		// Close wallet at separate thread.
 		let wallet_close = self.clone();
-		let service_id = wallet_close.identifier();
 		let conn = wallet_close.connection.clone();
 		thread::spawn(move || {
 			wallet_close.closing.store(true, Ordering::Relaxed);
@@ -589,7 +613,8 @@ impl Wallet {
 				*w_api_server = None;
 			}
 			// Stop running Tor service.
-			Tor::stop_service(&service_id);
+			wallet_close.stop_tor_listener();
+
 			// Close the wallet.
 			let r_inst = wallet_close.instance.as_ref().read();
 			let instance = r_inst.clone().unwrap();
@@ -798,8 +823,7 @@ impl Wallet {
 	/// Set active account from provided label.
 	pub fn set_active_account(&self, label: &String) -> Result<(), Error> {
 		// Stop service from previous account.
-		let cur_service_id = self.identifier();
-		Tor::stop_service(&cur_service_id);
+		self.stop_tor_listener();
 
 		// Set new active account.
 		let r_inst = self.instance.as_ref().read();
@@ -969,6 +993,56 @@ impl Wallet {
 		None
 	}
 
+	/// Start Tor service above foreign listener.
+	pub fn start_tor_listener(&self) {
+		if let Ok(sec_key) = self.retrieve_secret_key() {
+			if let Some(port) = self.foreign_api_port() {
+				let addr = format!("127.0.0.1:{}", port);
+				let r_config = Settings::tor_config_to_read();
+				let _ = start_onion_service(sec_key, addr.as_str(), &r_config.clone());
+			}
+		}
+	}
+
+	/// Stop Tor service listener.
+	pub fn stop_tor_listener(&self) {
+		if let Some(onion_address) = self.onion_address() {
+			let _ = stop_onion_service(onion_address);
+		}
+	}
+
+	/// Check if Tor listener is running.
+	pub fn is_tor_listener_running(&self) -> bool {
+		if let Some(service_name) = self.onion_address() {
+			let status = onion_service_status(service_name);
+			return status == ServiceStatus::Running
+				|| status == ServiceStatus::Bootstrapped
+				|| status == ServiceStatus::Degraded
+				|| status == ServiceStatus::Recovering;
+		}
+		false
+	}
+
+	/// Check if Tor listener is starting.
+	pub fn is_tor_listener_starting(&self) -> bool {
+		if let Some(service_name) = self.onion_address() {
+			let status = onion_service_status(service_name);
+			return status == ServiceStatus::Starting;
+		}
+		false
+	}
+
+	/// Check if Tor listener failed.
+	pub fn is_tor_listener_failed(&self) -> bool {
+		if let Some(service_name) = self.onion_address() {
+			let status = onion_service_status(service_name);
+			if let ServiceStatus::Errored(_) = status {
+				return true;
+			}
+		}
+		false
+	}
+
 	/// Check if Slatepack message is opening.
 	pub fn message_opening(&self) -> bool {
 		self.message_opening.load(Ordering::Relaxed)
@@ -1007,8 +1081,12 @@ impl Wallet {
 			None => vec![],
 		};
 		let keychain_mask = self.keychain_mask();
-		let message =
-			api.create_slatepack_message(keychain_mask.as_ref(), &slate, Some(0), addrs)?;
+		let message = api.create_slatepack_message(
+			keychain_mask.as_ref(),
+			&slate,
+			Some(SlatepackAddressIndex(0)),
+			addrs,
+		)?;
 
 		// Write Slatepack message to file.
 		let slatepack_dir = self.get_config().get_slate_path(slate.id, &slate.state);
@@ -1113,7 +1191,7 @@ impl Wallet {
 	/// peer's foreign-api `finalize_tx` (used by the invoice-flow payer to push the
 	/// signed Invoice2 back to the merchant for broadcast); otherwise posts to
 	/// `receive_tx` (standard send flow).
-	async fn send_tor(
+	fn send_tor(
 		&self,
 		id: u32,
 		s: &Slate,
@@ -1121,56 +1199,13 @@ impl Wallet {
 		finalize: bool,
 	) -> Result<Slate, Error> {
 		self.on_tx_action(id, Some(WalletTxAction::SendingTor));
-
-		let tor_addr = OnionV3Address::try_from(addr).unwrap().to_http_str();
-		let url = format!("{}/v2/foreign", tor_addr);
-		let slate_send = VersionedSlate::into_version(s.clone(), SlateVersion::V4)?;
-		let body = if finalize {
-			json!({
-				"jsonrpc": "2.0",
-				"method": "finalize_tx",
-				"id": 1,
-				"params": [slate_send]
-			})
-		} else {
-			json!({
-				"jsonrpc": "2.0",
-				"method": "receive_tx",
-				"id": 1,
-				"params": [
-							slate_send,
-							null,
-							null
-						]
-			})
-		}
-		.to_string();
-		// Wait Tor service to launch.
-		if TorConfig::get_proxy().is_none() {
-			while !Tor::is_service_running(&self.identifier()) {
-				return Err(Error::GenericError(
-					"Tor service is not running".to_string(),
-				));
-			}
-		}
-		// Send request to receiver.
-		let req_res = Tor::post(body, url).await;
-		if req_res.is_none() {
-			return Err(Error::GenericError("Tor request error".to_string()));
-		}
-
-		// Parse response.
-		if let Ok(res) = serde_json::from_str::<Value>(&req_res.unwrap()) {
-			if res["error"] != json!(null) {
-				return Err(Error::GenericError("Response error".to_string()));
-			}
-			let slate_value = res["result"]["Ok"].clone();
-			if let Ok(res) = &serde_json::to_string::<Value>(&slate_value) {
-				let res = Slate::deserialize_upgrade(res);
-				return res;
-			}
-		}
-		Err(Error::GenericError("Parse error".to_string()))
+		let r_config = Settings::tor_config_to_read();
+		let sender = TorSlateSender::new(addr, r_config.clone())?;
+		let slate = tokio::runtime::Builder::new_current_thread()
+			.enable_all()
+			.build()?
+			.block_on(async { sender.send(s, finalize).await });
+		slate
 	}
 
 	/// Check if request to send funds is creating.
@@ -1188,6 +1223,7 @@ impl Wallet {
 			dest_acct_name: None,
 			amount,
 			target_slate_version: None,
+			address_index: Some(SlatepackAddressIndex(0)),
 		};
 		let r_inst = self.instance.as_ref().read();
 		let instance = r_inst.clone().unwrap();
@@ -1301,6 +1337,7 @@ impl Wallet {
 			&None,
 			Some(id),
 			None,
+			false,
 		)?;
 
 		Ok(())
@@ -1569,7 +1606,7 @@ impl Wallet {
 						tx.payment_proof = Some(StoredProofInfo {
 							receiver_address: proof.recipient_address.pub_key,
 							receiver_signature: Some(proof.recipient_sig),
-							sender_address_path: 0,
+							sender_address_path: SlatepackAddressIndex(0),
 							sender_address: proof.sender_address.pub_key,
 							sender_signature: Some(proof.sender_sig),
 						});
@@ -1589,7 +1626,7 @@ impl Wallet {
 						tx.payment_proof = Some(StoredProofInfo {
 							receiver_address: proof.recipient_address.pub_key,
 							receiver_signature: Some(proof.recipient_sig),
-							sender_address_path: 0,
+							sender_address_path: SlatepackAddressIndex(0),
 							sender_address: proof.sender_address.pub_key,
 							sender_signature: Some(proof.sender_sig),
 						});
@@ -1674,13 +1711,7 @@ fn start_sync(wallet: Wallet) -> Thread {
 			let wallet_task = wallet_thread.clone();
 			if let Ok(task) = rx.recv() {
 				thread::spawn(move || {
-					tokio::runtime::Builder::new_current_thread()
-						.enable_all()
-						.build()
-						.unwrap()
-						.block_on(async {
-							handle_task(&wallet_task, task).await;
-						});
+					handle_task(&wallet_task, task);
 				});
 			}
 			if wallet_thread.is_closing() || !wallet_thread.is_open() {
@@ -1767,13 +1798,10 @@ fn start_sync(wallet: Wallet) -> Thread {
 							Err(e) => error!("{}", e),
 						}
 						// Start unfailed Tor service if API server is running.
-						let service_id = wallet.identifier();
 						if wallet.auto_start_tor_listener()
-							&& api_server_running && !Tor::is_service_failed(&service_id)
+							&& api_server_running && !wallet.is_tor_listener_failed()
 						{
-							let r_foreign_api = wallet.foreign_api_server.read();
-							let api = r_foreign_api.as_ref().unwrap();
-							Tor::start_service(api.1, Some(&wallet), &service_id);
+							wallet.start_tor_listener();
 						}
 					}
 				}
@@ -1810,52 +1838,48 @@ fn start_sync(wallet: Wallet) -> Thread {
 }
 
 /// Handle wallet task.
-async fn handle_task(w: &Wallet, t: WalletTask) {
+fn handle_task(w: &Wallet, t: WalletTask) {
 	// Send amount over Tor.
-	let send_tor = async |tx: TxLogEntry, s: &Slate, r: &SlatepackAddress| match w
-		.send_tor(tx.id, &s, r, false)
-		.await
-	{
-		Ok(s) => match w.finalize(&s, tx.id) {
-			Ok(s) => match w.post(&s, Some(tx.id)) {
-				Ok(_) => {
-					sync_wallet_data(&w, false);
-					w.on_task_result(Some(tx), &t);
-				}
+	let send_tor =
+		|tx: TxLogEntry, s: &Slate, r: &SlatepackAddress| match w.send_tor(tx.id, &s, r, false) {
+			Ok(s) => match w.finalize(&s, tx.id) {
+				Ok(s) => match w.post(&s, Some(tx.id)) {
+					Ok(_) => {
+						sync_wallet_data(&w, false);
+						w.on_task_result(Some(tx), &t);
+					}
+					Err(e) => {
+						error!("Send Tor post error: {:?}", e);
+						w.on_tx_error(tx.id, Some(e));
+					}
+				},
 				Err(e) => {
-					error!("Send Tor post error: {:?}", e);
-					w.on_tx_error(tx.id, Some(e));
+					error!("Send Tor finalize error: {:?}", e);
+					w.task(WalletTask::Cancel(tx.id));
 				}
 			},
 			Err(e) => {
-				error!("Send Tor finalize error: {:?}", e);
-				w.task(WalletTask::Cancel(tx.id));
+				error!("Send Tor error: {:?}", e);
+				w.on_tx_error(tx.id, Some(e));
+				w.on_task_result(Some(tx), &t);
 			}
-		},
-		Err(e) => {
-			error!("Send Tor error: {:?}", e);
-			w.on_tx_error(tx.id, Some(e));
-			w.on_task_result(Some(tx), &t);
-		}
-	};
+		};
 	// Finalize tx over Tor.
-	let finalize_tor = async |tx: TxLogEntry, s: &Slate, r: &SlatepackAddress| match w
-		.send_tor(tx.id, &s, r, true)
-		.await
-	{
-		Ok(s) => {
-			w.on_tx_action(tx.id, None);
-			let _ = w.update_slate_state(&s);
-			let _ = w.create_slatepack_message(&s, None);
-			sync_wallet_data(&w, false);
-			w.on_task_result(Some(tx), &t);
-		}
-		Err(e) => {
-			error!("Finalize Tor error: {:?}", e);
-			w.on_tx_error(tx.id, Some(e));
-			w.on_task_result(Some(tx), &t);
-		}
-	};
+	let finalize_tor =
+		|tx: TxLogEntry, s: &Slate, r: &SlatepackAddress| match w.send_tor(tx.id, &s, r, true) {
+			Ok(s) => {
+				w.on_tx_action(tx.id, None);
+				let _ = w.update_slate_state(&s);
+				let _ = w.create_slatepack_message(&s, None);
+				sync_wallet_data(&w, false);
+				w.on_task_result(Some(tx), &t);
+			}
+			Err(e) => {
+				error!("Finalize Tor error: {:?}", e);
+				w.on_tx_error(tx.id, Some(e));
+				w.on_task_result(Some(tx), &t);
+			}
+		};
 	match &t {
 		WalletTask::OpenMessage(m) => {
 			if !w.is_open() || m.is_empty() {
@@ -1888,15 +1912,14 @@ async fn handle_task(w: &Wallet, t: WalletTask) {
 					return;
 				}
 				// Finalize over Tor if service is running.
-				let maybe_finalize_tor = async |s: Slate| {
+				let maybe_finalize_tor = |s: Slate| {
 					sync_wallet_data(&w, false);
 					let tx = w.retrieve_tx_by_id(None, Some(s.id));
-					let id = w.identifier();
-					if TorConfig::get_proxy().is_some() || Tor::is_service_running(&id) {
+					if TorAppConfig::get_proxy().is_some() || w.is_tor_listener_running() {
 						if let Some(tx) = tx.as_ref() {
 							if let Some(addr) = dest {
 								w.message_opening.store(false, Ordering::Relaxed);
-								finalize_tor(tx.clone(), &s, &addr).await;
+								finalize_tor(tx.clone(), &s, &addr);
 								return;
 							}
 						}
@@ -1906,7 +1929,7 @@ async fn handle_task(w: &Wallet, t: WalletTask) {
 				match s.state {
 					SlateState::Standard1 => match w.receive(&s, None) {
 						Ok(s) => {
-							maybe_finalize_tor(s.clone()).await;
+							maybe_finalize_tor(s.clone());
 							let tx = w.retrieve_tx_by_id(None, Some(s.id));
 							w.on_task_result(tx, &t);
 						}
@@ -1915,7 +1938,7 @@ async fn handle_task(w: &Wallet, t: WalletTask) {
 					SlateState::Invoice1 => match w.pay(&s, None) {
 						Ok(s) => {
 							sync_wallet_data(&w, false);
-							maybe_finalize_tor(s.clone()).await;
+							maybe_finalize_tor(s.clone());
 							let tx = w.retrieve_tx_by_id(None, Some(s.id));
 							w.on_task_result(tx, &t);
 						}
@@ -1997,10 +2020,9 @@ async fn handle_task(w: &Wallet, t: WalletTask) {
 					let tx = w.retrieve_tx_by_id(None, Some(s.id));
 					if let Some(tx) = tx {
 						if let Some(addr) = r {
-							let id = w.identifier();
-							if TorConfig::get_proxy().is_some() || Tor::is_service_running(&id) {
+							if TorAppConfig::get_proxy().is_some() || w.is_tor_listener_running() {
 								w.send_creating.store(false, Ordering::Relaxed);
-								send_tor(tx, &s, addr).await;
+								send_tor(tx, &s, addr);
 								return;
 							} else {
 								w.on_task_result(Some(tx), &t);
@@ -2016,13 +2038,13 @@ async fn handle_task(w: &Wallet, t: WalletTask) {
 		}
 		WalletTask::SendTor(tx, r) => {
 			if let Some((slate, _)) = w.get_tx_slate(tx.id) {
-				send_tor(tx.clone(), &slate, r).await;
+				send_tor(tx.clone(), &slate, r);
 			}
 		}
 		WalletTask::FinalizeTor(tx) => {
 			if let Some((slate, dest)) = w.get_tx_slate(tx.id) {
 				if let Some(dest) = dest {
-					finalize_tor(tx.clone(), &slate, &dest).await;
+					finalize_tor(tx.clone(), &slate, &dest);
 				}
 			}
 		}
@@ -2119,11 +2141,7 @@ async fn handle_task(w: &Wallet, t: WalletTask) {
 			}
 		},
 		WalletTask::StartTor => {
-			let r_foreign_api = w.foreign_api_server.read();
-			if let Some(api) = r_foreign_api.as_ref() {
-				let id = w.identifier();
-				Tor::start_service(api.1, Some(w), &id);
-			}
+			w.start_tor_listener();
 		}
 	};
 }
@@ -2173,23 +2191,29 @@ fn sync_wallet_data(wallet: &Wallet, from_node: bool) {
 				return;
 			}
 
-			// Setup accounts data.
-			if wallet.get_data().is_none() {
-				let api = Owner::new(instance, None, wallet.get_config().get_wallet_path());
-				let key_mask = wallet.keychain_mask();
-				let mut accounts = vec![];
-				for a in api.accounts(key_mask.as_ref()).unwrap_or(vec![]) {
-					// Calculate account balance.
-					if let Ok(spendable_amount) =
-						wallet.account_balance(&a.label, info.last_confirmed_height)
-					{
+			// Load accounts data.
+			{
+				let load_accounts = || -> Result<Vec<WalletAccount>, Error> {
+					let mut wallet_lock = instance.lock();
+					let lc = wallet_lock.lc_provider()?;
+					let w = lc.wallet_inst()?;
+					let mut accounts = vec![];
+					for a in owner::accounts(w, Some(wallet.get_config().min_confirmations))? {
+						let spendable_amount = if let Some(info) = a.info {
+							info.amount_currently_spendable
+						} else {
+							0
+						};
 						accounts.push(WalletAccount {
 							spendable_amount,
 							label: a.label,
 							path: a.path.to_bip_32_string(),
 						});
 					}
-				}
+					Ok(accounts)
+				};
+
+				let mut accounts = load_accounts().unwrap_or(vec![]);
 				// Set an error when accounts were not loaded for open wallet.
 				if wallet.is_open() && !wallet.is_closing() && accounts.is_empty() {
 					wallet.set_sync_error(true);
@@ -2199,15 +2223,7 @@ fn sync_wallet_data(wallet: &Wallet, from_node: bool) {
 				// Update account list.
 				let mut w_accounts = wallet.accounts.write();
 				*w_accounts = accounts;
-			} else {
-				let current_account = wallet.get_config().account;
-				let mut accounts = wallet.accounts.write();
-				for a in accounts.iter_mut() {
-					if a.label == current_account {
-						a.spendable_amount = info.amount_currently_spendable;
-					}
-				}
-			};
+			}
 
 			if wallet.info_sync_progress() == 100 || !from_node {
 				// Transactions limit setup.

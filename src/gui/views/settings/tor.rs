@@ -25,7 +25,7 @@ use crate::gui::views::types::{ContentContainer, ModalPosition};
 use crate::gui::views::{
 	CameraScanContent, FilePickContent, FilePickContentType, Modal, TextEdit, View,
 };
-use crate::tor::{TorBridge, TorConfig, TorProxy};
+use crate::tor::{TorAppConfig, TorBridge, TorProxy};
 
 /// Transport settings content.
 pub struct TorSettingsContent {
@@ -60,7 +60,7 @@ const SCAN_BRIDGE_CONN_LINE_MODAL: &'static str = "scan_bridge_conn_line_modal";
 impl Default for TorSettingsContent {
 	fn default() -> Self {
 		// Setup Tor bridge binary path edit text.
-		let bridge = TorConfig::get_bridge();
+		let bridge = TorAppConfig::get_bridge();
 		let (bin_path, conn_line) = if let Some(b) = bridge {
 			(b.binary_path(), b.connection_line())
 		} else {
@@ -102,7 +102,7 @@ impl ContentContainer for TorSettingsContent {
 					content.modal_ui(ui, cb, |res| {
 						// Save connection line after scanning.
 						let line = res.text();
-						let bridge = TorConfig::get_bridge().unwrap();
+						let bridge = TorAppConfig::get_bridge().unwrap();
 						if bridge.connection_line() != line {
 							TorBridge::save_bridge_conn_line(&bridge, line);
 							self.settings_changed = true;
@@ -128,7 +128,7 @@ impl ContentContainer for TorSettingsContent {
 		);
 		ui.add_space(10.0);
 
-		let mut proxy = TorConfig::get_proxy();
+		let mut proxy = TorAppConfig::get_proxy();
 		let current_proxy = proxy.clone();
 		ui.columns(2, |columns| {
 			columns[0].vertical_centered(|ui| {
@@ -156,11 +156,11 @@ impl ContentContainer for TorSettingsContent {
 			ui.add_space(10.0);
 			ui.columns(2, |columns| {
 				columns[0].vertical_centered(|ui| {
-					let value = TorConfig::get_socks5_proxy();
+					let value = TorAppConfig::get_socks5_proxy();
 					View::radio_value(ui, p, value, "SOCKS5".to_string());
 				});
 				columns[1].vertical_centered(|ui| {
-					let value = TorConfig::get_http_proxy();
+					let value = TorAppConfig::get_http_proxy();
 					View::radio_value(ui, p, value, "HTTP".to_string());
 				});
 			});
@@ -172,14 +172,14 @@ impl ContentContainer for TorSettingsContent {
 
 		// Check if proxy type was changed to save.
 		if current_proxy != proxy {
-			TorConfig::save_proxy(proxy.clone());
+			TorAppConfig::save_proxy(proxy.clone());
 			self.settings_changed = true;
 		}
 		if proxy.is_some() {
 			return;
 		}
 
-		let bridge = TorConfig::get_bridge();
+		let bridge = TorAppConfig::get_bridge();
 		ui.vertical_centered(|ui| {
 			ui.label(
 				RichText::new(t!("transport.bridges_desc"))
@@ -192,12 +192,12 @@ impl ContentContainer for TorSettingsContent {
 				let value = if bridge.is_some() {
 					None
 				} else {
-					let default_bridge = TorConfig::get_webtunnel();
+					let default_bridge = TorAppConfig::get_webtunnel();
 					self.bridge_bin_path_edit = default_bridge.binary_path();
 					self.bridge_conn_line_edit = default_bridge.connection_line();
 					Some(default_bridge)
 				};
-				TorConfig::save_bridge(value);
+				TorAppConfig::save_bridge(value);
 				self.settings_changed = true;
 			});
 		});
@@ -212,13 +212,13 @@ impl ContentContainer for TorSettingsContent {
 				ui.columns(2, |columns| {
 					columns[0].vertical_centered(|ui| {
 						// Show Webtunnel bridge selector.
-						let webtunnel = TorConfig::get_webtunnel();
+						let webtunnel = TorAppConfig::get_webtunnel();
 						let name = webtunnel.protocol_name().to_uppercase();
 						View::radio_value(ui, &mut bridge, webtunnel, name);
 					});
 					columns[1].vertical_centered(|ui| {
 						// Show Obfs4 bridge selector.
-						let obfs4 = TorConfig::get_obfs4();
+						let obfs4 = TorAppConfig::get_obfs4();
 						let name = obfs4.protocol_name().to_uppercase();
 						View::radio_value(ui, &mut bridge, obfs4, name);
 					});
@@ -226,7 +226,7 @@ impl ContentContainer for TorSettingsContent {
 				ui.add_space(10.0);
 				ui.vertical_centered(|ui| {
 					// Show Snowflake bridge selector.
-					let snowflake = TorConfig::get_snowflake();
+					let snowflake = TorAppConfig::get_snowflake();
 					let name = snowflake.protocol_name().to_uppercase();
 					View::radio_value(ui, &mut bridge, snowflake, name);
 				});
@@ -234,14 +234,14 @@ impl ContentContainer for TorSettingsContent {
 
 				// Check if bridge type was changed to save.
 				if current_bridge != bridge {
-					TorConfig::save_bridge(Some(bridge.clone()));
+					TorAppConfig::save_bridge(Some(bridge.clone()));
 					self.bridge_bin_path_edit = bridge.binary_path();
 					self.bridge_conn_line_edit = bridge.connection_line();
 					self.settings_changed = true;
 				}
 			}
 
-			if let Some(br) = TorConfig::get_bridge().as_ref() {
+			if let Some(br) = TorAppConfig::get_bridge().as_ref() {
 				// Show bridge connection line setup.
 				self.conn_line_ui(ui, br, cb);
 				// Show bridge binary setup for desktop.
@@ -264,18 +264,18 @@ impl TorSettingsContent {
 			let url = c.proxy_url_edit.trim().to_string();
 			c.proxy_url_error = Url::parse(url.as_str()).is_err();
 			if !c.proxy_url_error {
-				let proxy = TorConfig::get_proxy().unwrap();
+				let proxy = TorAppConfig::get_proxy().unwrap();
 				if url.contains(socks) {
-					TorConfig::save_proxy(Some(TorProxy::SOCKS5(url)));
+					TorAppConfig::save_proxy(Some(TorProxy::SOCKS5(url)));
 				} else if url.contains(http) {
-					TorConfig::save_proxy(Some(TorProxy::HTTP(url)));
+					TorAppConfig::save_proxy(Some(TorProxy::HTTP(url)));
 				} else {
 					match proxy {
 						TorProxy::SOCKS5(_) => {
-							TorConfig::save_proxy(Some(TorProxy::SOCKS5(url)));
+							TorAppConfig::save_proxy(Some(TorProxy::SOCKS5(url)));
 						}
 						TorProxy::HTTP(_) => {
-							TorConfig::save_proxy(Some(TorProxy::HTTP(url)));
+							TorAppConfig::save_proxy(Some(TorProxy::HTTP(url)));
 						}
 					}
 				}
@@ -456,7 +456,7 @@ impl TorSettingsContent {
 	/// Draw bridge connection line input [`Modal`] content.
 	fn bridge_conn_line_edit_modal_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
 		let on_save = |c: &mut TorSettingsContent| {
-			let bridge = TorConfig::get_bridge().unwrap();
+			let bridge = TorAppConfig::get_bridge().unwrap();
 			if bridge.connection_line() != c.bridge_conn_line_edit {
 				TorBridge::save_bridge_conn_line(&bridge, c.bridge_conn_line_edit.clone());
 				c.settings_changed = true;
@@ -619,7 +619,7 @@ impl TorSettingsContent {
 	/// Draw bridge binary input [`Modal`] content.
 	fn bridge_bin_edit_modal_ui(&mut self, ui: &mut egui::Ui, cb: &dyn PlatformCallbacks) {
 		let on_save = |c: &mut TorSettingsContent| {
-			let bridge = TorConfig::get_bridge().unwrap();
+			let bridge = TorAppConfig::get_bridge().unwrap();
 			let exists = fs::exists(&c.bridge_bin_path_edit).unwrap_or_default();
 			if !exists {
 				return;

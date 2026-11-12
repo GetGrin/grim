@@ -24,7 +24,7 @@ use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::wallets::wallet::transport::settings::WalletTransportSettingsContent;
 use crate::gui::views::wallets::wallet::types::WalletContentContainer;
 use crate::gui::views::{Modal, QrCodeContent, View};
-use crate::tor::{Tor, TorConfig};
+use crate::tor::TorAppConfig;
 use crate::wallet::Wallet;
 use crate::wallet::types::WalletTask;
 
@@ -93,10 +93,7 @@ impl WalletTransportContent {
 
 	/// Navigate back on navigation stack.
 	pub fn back(&mut self) {
-		if let Some(content) = self.settings_content.as_ref() {
-			if content.tor_settings_content.settings_changed {
-				Tor::restart();
-			}
+		if let Some(_) = self.settings_content.as_ref() {
 			self.settings_content = None;
 		} else if self.qr_address_content.is_some() {
 			self.qr_address_content = None;
@@ -147,21 +144,18 @@ impl WalletTransportContent {
 						Some(QrCodeContent::new(addr.clone(), false).with_max_size(320.0));
 				});
 
-				let service_id = &wallet.identifier();
 				// Draw button to enable/disable Tor listener for current wallet.
 				if wallet.foreign_api_port().is_some() {
-					if !Tor::is_service_starting(service_id) {
-						if !Tor::is_service_running(service_id) {
-							let r = CornerRadius::default();
-							View::item_button(ui, r, POWER, Some(Colors::green()), || {
-								wallet.task(WalletTask::StartTor);
-							});
-						} else {
-							let r = CornerRadius::default();
-							View::item_button(ui, r, POWER, Some(Colors::red()), || {
-								Tor::stop_service(service_id);
-							});
-						}
+					if wallet.is_tor_listener_running() || wallet.is_tor_listener_starting() {
+						let r = CornerRadius::default();
+						View::item_button(ui, r, POWER, Some(Colors::red()), || {
+							wallet.stop_tor_listener();
+						});
+					} else {
+						let r = CornerRadius::default();
+						View::item_button(ui, r, POWER, Some(Colors::green()), || {
+							wallet.task(WalletTask::StartTor);
+						});
 					}
 				}
 				// Draw button to show Tor transport settings.
@@ -179,16 +173,17 @@ impl WalletTransportContent {
 						ui.vertical(|ui| {
 							ui.add_space(3.0);
 
-							let is_running = Tor::is_service_running(service_id);
-							let has_error = Tor::is_service_failed(service_id);
-							let is_starting = Tor::is_service_starting(service_id);
-							let address_color = if is_running && !is_starting {
+							let is_running = wallet.is_tor_listener_running();
+							let has_error = wallet.is_tor_listener_failed();
+							let is_starting = wallet.is_tor_listener_starting();
+							let address_color = if is_running {
 								Colors::green()
 							} else if has_error {
 								Colors::red()
 							} else {
 								Colors::inactive_text()
 							};
+
 							// Show slatepack address text.
 							View::animate_text(ui, addr.clone(), 17.0, address_color, is_starting);
 							ui.add_space(1.0);
@@ -199,7 +194,7 @@ impl WalletTransportContent {
 								(WARNING_CIRCLE, t!("transport.conn_error"))
 							} else if is_running {
 								(PLUGS_CONNECTED, t!("transport.connected"))
-							} else if let Some(_) = TorConfig::get_proxy() {
+							} else if let Some(_) = TorAppConfig::get_proxy() {
 								(PLUGS_CONNECTED, t!("app_settings.proxy"))
 							} else {
 								(PLUGS, t!("transport.disconnected"))
@@ -210,7 +205,7 @@ impl WalletTransportContent {
 							ui.add_space(1.0);
 
 							let bridges_text = if is_starting || has_error {
-								match TorConfig::get_bridge() {
+								match TorAppConfig::get_bridge() {
 									None => {
 										format!(
 											"{} {}",

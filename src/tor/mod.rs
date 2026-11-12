@@ -13,10 +13,7 @@
 // limitations under the License.
 
 mod config;
-pub use config::TorConfig;
-
-mod tor;
-pub use tor::Tor;
+pub use config::TorAppConfig;
 
 mod types;
 pub use types::*;
