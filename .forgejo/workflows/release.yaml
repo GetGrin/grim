@@ -62,7 +62,7 @@ jobs:
       - name: Check previous release
         id: check_prev
         run: |
-          git fetch --tags
+          git fetch --tags --no-recurse-submodules
           [[ ${{ forgejo.ref_type }} == 'tag' ]] && skip=0 || skip=1
           last_tag=$(git describe --abbrev=0 --tags $(git rev-list --tags --skip=${skip} --max-count=1)) || true
           echo "last_tag=${last_tag}" >> "$FORGEJO_OUTPUT"
