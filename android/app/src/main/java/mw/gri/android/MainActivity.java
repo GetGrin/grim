@@ -282,10 +282,13 @@ public class MainActivity extends GameActivity {
             String input = String.valueOf(state.text.charAt(state.composingRegionStart));
             if (input.contains("\n")) {
                 onEnterInput();
-            } else if (!(input.contains("0") || input.contains("1")
-                    || input.contains("2") || input.contains("3") || input.contains("4")
-                    || input.contains("5") || input.contains("6") || input.contains("7")
-                    || input.contains("8") || input.contains("9"))) {
+            } else {
+                onTextInput(input);
+            }
+        } else if (state.composingRegionStart == -1 && !state.text.isEmpty()) {
+            String input = String.valueOf(state.text.charAt(state.text.length() - 1));
+            if (input.equals("0") || input.equals("1") || input.equals("2") || input.equals("3") || input.equals("4")
+                || input.equals("5") || input.equals("6") || input.equals("7") || input.equals("8") || input.equals("9")) {
                 onTextInput(input);
             }
         }
@@ -304,34 +307,34 @@ public class MainActivity extends GameActivity {
                 onEnterInput();
                 return false;
             } else if (event.getKeyCode() == KeyEvent.KEYCODE_0) {
-                onTextInput("0");
+//                onTextInput("0");
                 return false;
             } else if (event.getKeyCode() == KeyEvent.KEYCODE_1) {
-                onTextInput("1");
+//                onTextInput("1");
                 return false;
             } else if (event.getKeyCode() == KeyEvent.KEYCODE_2) {
-                onTextInput("2");
+//                onTextInput("2");
                 return false;
             } else if (event.getKeyCode() == KeyEvent.KEYCODE_3) {
-                onTextInput("3");
+//                onTextInput("3");
                 return false;
             } else if (event.getKeyCode() == KeyEvent.KEYCODE_4) {
-                onTextInput("4");
+//                onTextInput("4");
                 return false;
             } else if (event.getKeyCode() == KeyEvent.KEYCODE_5) {
-                onTextInput("5");
+//                onTextInput("5");
                 return false;
             } else if (event.getKeyCode() == KeyEvent.KEYCODE_6) {
-                onTextInput("6");
+//                onTextInput("6");
                 return false;
             } else if (event.getKeyCode() == KeyEvent.KEYCODE_7) {
-                onTextInput("7");
+//                onTextInput("7");
                 return false;
             } else if (event.getKeyCode() == KeyEvent.KEYCODE_8) {
-                onTextInput("8");
+//                onTextInput("8");
                 return false;
             } else if (event.getKeyCode() == KeyEvent.KEYCODE_9) {
-                onTextInput("9");
+//                onTextInput("9");
                 return false;
             } else {
                 // Pass any other input values into native code.
