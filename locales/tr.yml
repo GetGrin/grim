@@ -43,7 +43,7 @@ wallets:
   await_conf_amount: Onay bekleniyor
   await_fin_amount: Tamamlanma bekleniyor
   locked_amount: Kilitli
-  txs_empty: 'Koinleri al/gonder icin ekranin altinda bulunan   %{receive} / %{send} sekmeleri, cuzdan ayarlar icin %{settings} sekmesini kullanin.'
+  txs_empty: 'Koinleri al/gonder icin ekranin altinda bulunan %{message} / %{transport} sekmeleri, cuzdan ayarlar icin %{settings} sekmesini kullanin.'
   title: Cuzdanlar
   create_desc: Yeni cuzdan olustur veya var olan bakiyeli cuzdani kurtarma kelimelerinizle canlandirin.
   add: Cuzdan ekle
