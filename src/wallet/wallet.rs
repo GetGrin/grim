@@ -1010,7 +1010,9 @@ impl Wallet {
 	/// Stop Tor service listener.
 	pub fn stop_tor_listener(&self) {
 		if let Some(onion_address) = self.onion_address() {
-			let _ = stop_onion_service(onion_address);
+			let _ = stop_onion_service(onion_address).map_err(|e| {
+				error!("Can not stop Tor service: {:?}", e);
+			});
 		}
 	}
 
@@ -1802,7 +1804,8 @@ fn start_sync(wallet: Wallet) -> Thread {
 						}
 						// Start unfailed Tor service if API server is running.
 						if wallet.auto_start_tor_listener()
-							&& api_server_running && !wallet.is_tor_listener_failed()
+							&& api_server_running
+							&& !wallet.is_tor_listener_failed()
 						{
 							wallet.start_tor_listener();
 						}

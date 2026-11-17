@@ -19,6 +19,7 @@ use crate::gui::platform::PlatformCallbacks;
 use crate::gui::views::View;
 use crate::gui::views::settings::TorSettingsContent;
 use crate::gui::views::types::ContentContainer;
+use crate::tor::TorAppConfig;
 use crate::wallet::Wallet;
 use crate::wallet::types::WalletTask;
 
@@ -67,8 +68,8 @@ impl WalletTransportSettingsContent {
 		ui.vertical_centered_justified(|ui| {
 			View::button(ui, t!("close"), Colors::white_or_black(false), || {
 				if self.tor_settings_content.settings_changed {
-					if wallet.is_tor_listener_running() {
-						wallet.stop_tor_listener();
+					wallet.stop_tor_listener();
+					if TorAppConfig::get_proxy().is_none() {
 						wallet.task(WalletTask::StartTor);
 					}
 				}

@@ -105,7 +105,6 @@ nokhwa = { version = "0.10.10", default-features = false, features = ["input-msm
 nokhwa = { version = "0.10.10", default-features = false, features = ["input-avfoundation", "output-threaded"] }
 
 [target.'cfg(not(target_os = "android"))'.dependencies]
-env_logger = "0.11.3"
 winit = { version = "0.30.12" }
 wgpu = { version = "27.0.1" }
 eframe = { version = "0.33.2", features = ["wgpu"] }
