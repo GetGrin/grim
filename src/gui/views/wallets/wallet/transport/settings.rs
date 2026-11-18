@@ -68,9 +68,11 @@ impl WalletTransportSettingsContent {
 		ui.vertical_centered_justified(|ui| {
 			View::button(ui, t!("close"), Colors::white_or_black(false), || {
 				if self.tor_settings_content.settings_changed {
-					wallet.stop_tor_listener();
-					if TorAppConfig::get_proxy().is_none() {
-						wallet.task(WalletTask::StartTor);
+					if wallet.is_tor_listener_running() || wallet.is_tor_listener_starting() {
+						wallet.stop_tor_listener();
+						if TorAppConfig::get_proxy().is_none() {
+							wallet.task(WalletTask::StartTor);
+						}
 					}
 				}
 				on_close();
