@@ -10,7 +10,7 @@ jobs:
         with:
           submodules: recursive
       - name: Release build
-        run: cargo build --release
+        run: cargo build --release --workspace --features grin_p2p/tor-static
 
   windows:
     name: Windows Build
@@ -20,7 +20,7 @@ jobs:
         with:
           submodules: recursive
       - name: Release build
-        run: cargo build --release
+        run: cargo build --release --workspace --features grin_p2p/tor-static
   
   macos:
     name: MacOS Build
@@ -30,4 +30,4 @@ jobs:
         with:
           submodules: recursive
       - name: Release build
-        run: cargo build --release
+        run: cargo build --release --workspace --features grin_p2p/tor-static

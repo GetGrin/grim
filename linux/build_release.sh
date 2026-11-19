@@ -19,7 +19,7 @@ cd ..
 
 rustup target add ${arch}
 cargo install cargo-zigbuild
-cargo zigbuild --release --target ${arch}
+cargo zigbuild --release --target ${arch} --workspace --features grin_p2p/tor-static
 
 # Create AppImage with https://github.com/AppImage/appimagetool
 cp target/${arch}/release/grim linux/Grim.AppDir/AppRun

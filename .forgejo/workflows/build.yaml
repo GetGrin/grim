@@ -40,7 +40,7 @@ jobs:
           echo -e '[registries.nexus]\nindex = "sparse+${{ secrets.MAVEN_HOST }}/repository/cargo/"\n[registry]\ndefault = "nexus"\n[source.crates-io]\nreplace-with = "nexus"\n[source.nexus]\nregistry = "sparse+${{ secrets.MAVEN_HOST }}/repository/cargo/"' > ~/.cargo/config.toml
       - name: Build
         if: ${{ steps.check.outputs.test == 'true' }}
-        run: cargo build --release
+        run: cargo build --release --workspace --features grin_p2p/tor-static
       - name: Save cargo cache
         uses: actions/cache/save@v5
         with:

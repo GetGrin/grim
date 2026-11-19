@@ -146,7 +146,10 @@ impl WalletTransportContent {
 
 				// Draw button to enable/disable Tor listener for current wallet.
 				if wallet.foreign_api_port().is_some() {
-					if wallet.is_tor_listener_running() || wallet.is_tor_listener_starting() {
+					if wallet.is_tor_listener_running()
+						|| wallet.is_tor_listener_starting()
+						|| wallet.is_tor_listener_publishing()
+					{
 						let r = CornerRadius::default();
 						View::item_button(ui, r, POWER, Some(Colors::red()), || {
 							wallet.stop_tor_listener();
@@ -176,7 +179,8 @@ impl WalletTransportContent {
 							let is_running = wallet.is_tor_listener_running();
 							let has_error = wallet.is_tor_listener_failed();
 							let is_starting = wallet.is_tor_listener_starting();
-							let address_color = if is_running {
+							let is_publishing = wallet.is_tor_listener_publishing();
+							let address_color = if is_running || is_publishing {
 								Colors::green()
 							} else if has_error {
 								Colors::red()
@@ -185,10 +189,16 @@ impl WalletTransportContent {
 							};
 
 							// Show slatepack address text.
-							View::animate_text(ui, addr.clone(), 17.0, address_color, is_starting);
+							View::animate_text(
+								ui,
+								addr.clone(),
+								17.0,
+								address_color,
+								is_starting || is_publishing,
+							);
 							ui.add_space(1.0);
 
-							let (icon, text) = if is_starting {
+							let (icon, text) = if is_starting || is_publishing {
 								(DOTS_THREE_CIRCLE, t!("transport.connecting"))
 							} else if has_error {
 								(WARNING_CIRCLE, t!("transport.conn_error"))

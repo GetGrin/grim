@@ -31,7 +31,7 @@ rustup target add x86_64-apple-darwin
 rustup target add aarch64-apple-darwin
 [[ $1 == "universal" ]]; arch+=(universal2-apple-darwin)
 cargo install cargo-zigbuild
-cargo zigbuild --release --target ${arch}
+cargo zigbuild --release --target ${arch} --workspace --features grin_p2p/tor-static
 
 rm -f .intentionally-empty-file.o
 

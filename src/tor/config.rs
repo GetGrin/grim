@@ -18,6 +18,7 @@ use grin_p2p::tor::config::{
 };
 use grin_wallet_config::TorWalletConfig;
 use serde_derive::{Deserialize, Serialize};
+use std::fs;
 use std::path::PathBuf;
 
 use crate::Settings;
@@ -243,6 +244,25 @@ impl TorAppConfig {
 
 	/// Check config version to migrate if needed.
 	pub fn migrate(&mut self) {
+		// Extract webtunnel bridge binary.
+		if !fs::exists(TorAppConfig::webtunnel_path()).unwrap_or(true) {
+			let webtunnel = include_bytes!(concat!(env!("OUT_DIR"), "/tor/webtunnel"));
+			if !webtunnel.to_vec().is_empty() {
+				fs::write(TorAppConfig::webtunnel_path(), webtunnel).unwrap();
+				// Add execute permission for Unix.
+				#[cfg(unix)]
+				{
+					use std::os::unix::fs::PermissionsExt;
+					let mut perms = fs::metadata(TorAppConfig::webtunnel_path())
+						.unwrap()
+						.permissions();
+					let mode = perms.mode() | 0o100;
+					perms.set_mode(mode);
+					fs::set_permissions(TorAppConfig::webtunnel_path(), perms).unwrap_or_default();
+				}
+			}
+		}
+
 		match self.ver {
 			None => {
 				// Migrate to 1st version.

@@ -1037,6 +1037,15 @@ impl Wallet {
 		false
 	}
 
+	/// Check if Tor listener is publishing.
+	pub fn is_tor_listener_publishing(&self) -> bool {
+		if let Some(service_name) = self.onion_address() {
+			let status = onion_service_status(service_name);
+			return status == ServiceStatus::Publishing;
+		}
+		false
+	}
+
 	/// Check if Tor listener failed.
 	pub fn is_tor_listener_failed(&self) -> bool {
 		if let Some(service_name) = self.onion_address() {

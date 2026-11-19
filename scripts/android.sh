@@ -41,7 +41,7 @@ function build_lib() {
   sed -i -e 's/"cdylib","rlib"]/"rlib"]/g' Cargo.toml
   sed -i -e 's/"rlib"]/"cdylib","rlib"]/g' Cargo.toml
 
-  cargo ndk -t "${arch}" -o android/app/src/main/jniLibs build --profile release-apk
+  cargo ndk -t "${arch}" -o android/app/src/main/jniLibs build --profile release-apk --workspace --features grin_p2p/tor-static
   if [ $? -ne 0 ]; then
     success=0
   fi

@@ -206,7 +206,7 @@ jobs:
       - name: Release Linux ARM
         run: |
           rustup -q update
-          cargo zigbuild --release --target aarch64-unknown-linux-gnu
+          cargo zigbuild --release --target aarch64-unknown-linux-gnu --workspace --features grin_p2p/tor-static
       - name: Save cargo cache
         uses: actions/cache/save@v5
         with:
@@ -273,7 +273,7 @@ jobs:
       - name: Release Linux x86
         run: |
           rustup -q update
-          cargo zigbuild --release --target x86_64-unknown-linux-gnu
+          cargo zigbuild --release --target x86_64-unknown-linux-gnu --workspace --features grin_p2p/tor-static
       - name: Save cargo cache
         uses: actions/cache/save@v5
         with:
@@ -324,8 +324,8 @@ jobs:
         run: |
           rustup -q update
           export MACOSX_DEPLOYMENT_TARGET=11.0
-          cargo build --release --target x86_64-apple-darwin
-          cargo build --release --target aarch64-apple-darwin
+          cargo build --release --workspace --features grin_p2p/tor-static --target x86_64-apple-darwin
+          cargo build --release --workspace --features grin_p2p/tor-static --target aarch64-apple-darwin
           lipo -create -output grim "target/x86_64-apple-darwin/release/grim" "target/aarch64-apple-darwin/release/grim"
           mv grim macos/Grim.app/Contents/MacOS
       - name: Save cargo cache
