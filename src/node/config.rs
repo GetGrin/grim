@@ -188,7 +188,7 @@ impl NodeConfig {
 		// Generate random p2p and api ports.
 		Self::setup_default_ports(&mut config);
 
-		// Clear wallet listener url (actually it will be wallet id).
+		// Clear wallet listener url.
 		config
 			.server
 			.stratum_mining_config
@@ -438,28 +438,20 @@ impl NodeConfig {
 	}
 
 	/// Get stratum mining server wallet address to get rewards.
-	pub fn get_stratum_wallet_id() -> Option<i64> {
+	pub fn get_stratum_wallet_url() -> Option<String> {
 		let r_config = Settings::node_config_to_read();
-		let id = r_config
+		let url = r_config
 			.node
 			.clone()
 			.server
 			.stratum_mining_config
 			.unwrap()
 			.wallet_listener_url;
-		return if id.is_empty() {
-			None
-		} else {
-			if let Ok(id) = id.parse::<i64>() {
-				Some(id)
-			} else {
-				None
-			}
-		};
+		if url.is_empty() { None } else { Some(url) }
 	}
 
 	/// Save stratum mining server wallet address to get rewards.
-	pub fn save_stratum_wallet_id(id: i64) {
+	pub fn save_stratum_wallet_url(address: String) {
 		let mut w_config = Settings::node_config_to_update();
 		w_config
 			.node
@@ -467,7 +459,7 @@ impl NodeConfig {
 			.stratum_mining_config
 			.as_mut()
 			.unwrap()
-			.wallet_listener_url = id.to_string();
+			.wallet_listener_url = address;
 		w_config.save();
 	}
 

@@ -12,11 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use eframe::epaint::RectShape;
 use egui::scroll_area::ScrollBarVisibility;
-use egui::{Align, Layout, RichText, ScrollArea, StrokeKind};
+use egui::{Align, CursorIcon, Layout, RichText, ScrollArea, Sense, StrokeKind, UiBuilder};
 
 use crate::gui::Colors;
-use crate::gui::icons::{CHECK, COMPUTER_TOWER, FOLDER_OPEN, GLOBE_SIMPLE, PLUGS_CONNECTED};
+use crate::gui::icons::{COMPUTER_TOWER, GLOBE_SIMPLE, PLUGS_CONNECTED};
 use crate::gui::views::wallets::wallet::types::wallet_status_text;
 use crate::gui::views::{Modal, View};
 use crate::wallet::types::ConnectionMethod;
@@ -24,8 +25,8 @@ use crate::wallet::{Wallet, WalletList};
 
 /// Wallet list [`Modal`] content
 pub struct WalletListModal {
-	/// Selected wallet id.
-	selected_id: Option<i64>,
+	/// Selected wallet API URL.
+	selected_url: Option<String>,
 
 	/// Optional data to pass after wallet selection.
 	data: Option<String>,
@@ -36,9 +37,9 @@ pub struct WalletListModal {
 
 impl WalletListModal {
 	/// Create new content instance.
-	pub fn new(selected_id: Option<i64>, data: Option<String>, can_open: bool) -> Self {
+	pub fn new(wallet_url: Option<String>, data: Option<String>, can_open: bool) -> Self {
 		Self {
-			selected_id,
+			selected_url: wallet_url,
 			data,
 			can_open,
 		}
@@ -63,7 +64,8 @@ impl WalletListModal {
 					let data = self.data.clone();
 					for wallet in wallets.list() {
 						// Draw wallet list item.
-						self.wallet_item_ui(ui, wallet, || {
+						let current = self.selected_url == Some(wallet.get_config().api_url());
+						self.wallet_item_ui(ui, wallet, current, || {
 							Modal::close();
 							on_select(wallet.clone(), data.clone());
 						});
@@ -92,85 +94,109 @@ impl WalletListModal {
 	}
 
 	/// Draw wallet list item with provided callback on select.
-	fn wallet_item_ui(&mut self, ui: &mut egui::Ui, wallet: &Wallet, on_select: impl FnOnce()) {
+	fn wallet_item_ui(
+		&mut self,
+		ui: &mut egui::Ui,
+		wallet: &Wallet,
+		current: bool,
+		on_select: impl FnOnce(),
+	) {
 		let config = wallet.get_config();
-		let id = config.id;
 
 		// Draw round background.
 		let mut rect = ui.available_rect_before_wrap();
 		rect.set_height(78.0);
-		let rounding = View::item_rounding(0, 1, false);
-		ui.painter().rect(
-			rect,
-			rounding,
-			Colors::fill(),
-			View::hover_stroke(),
-			StrokeKind::Outside,
-		);
+		let r = View::item_rounding(0, 1, false);
+		let bg = if current {
+			Colors::fill()
+		} else {
+			Colors::fill_deep()
+		};
+		let mut bg_shape = RectShape::new(rect, r, bg, View::item_stroke(), StrokeKind::Outside);
+		let bg_idx = ui.painter().add(bg_shape.clone());
 
-		ui.allocate_ui_with_layout(rect.size(), Layout::right_to_left(Align::Center), |ui| {
-			if self.can_open {
-				// Show button to select or open closed wallet.
-				let icon = if wallet.is_open() { CHECK } else { FOLDER_OPEN };
-				View::item_button(ui, View::item_rounding(0, 1, true), icon, None, || {
-					on_select();
-				});
-			} else {
-				// Draw button to select wallet.
-				if self.selected_id.unwrap_or(0) == id {
-					View::selected_item_check(ui);
-				} else {
-					View::item_button(ui, View::item_rounding(0, 1, true), CHECK, None, || {
-						on_select();
-					});
-				}
-			}
-
-			let layout_size = ui.available_size();
-			ui.allocate_ui_with_layout(layout_size, Layout::left_to_right(Align::Center), |ui| {
-				ui.add_space(6.0);
-				ui.vertical(|ui| {
-					ui.add_space(3.0);
-					// Show wallet name text.
-					ui.with_layout(Layout::left_to_right(Align::Min), |ui| {
-						ui.add_space(1.0);
-						View::ellipsize_text(ui, config.name, 18.0, Colors::title(false));
-					});
-
-					// Show wallet connection text.
-					let connection = wallet.get_current_connection();
-					let conn_text = match connection {
-						ConnectionMethod::Integrated => {
-							format!("{} {}", COMPUTER_TOWER, t!("network.node"))
-						}
-						ConnectionMethod::External(_, url) => format!("{} {}", GLOBE_SIMPLE, url),
-					};
-					ui.label(
-						RichText::new(conn_text)
-							.size(15.0)
-							.color(Colors::text(false)),
-					);
-					ui.add_space(1.0);
-
-					// Show wallet API text or open status.
-					if self.can_open {
-						ui.label(
-							RichText::new(wallet_status_text(wallet))
-								.size(15.0)
-								.color(Colors::gray()),
-						);
-					} else {
-						let address = if let Some(port) = config.api_port {
-							format!("127.0.0.1:{}", port)
-						} else {
-							"-".to_string()
-						};
-						let api_text = format!("{} {}", PLUGS_CONNECTED, address);
-						ui.label(RichText::new(api_text).size(15.0).color(Colors::gray()));
+		let res = ui
+			.scope_builder(
+				UiBuilder::new()
+					.sense(Sense::click())
+					.layout(Layout::right_to_left(Align::Center))
+					.max_rect(rect),
+				|ui| {
+					if !self.can_open && current {
+						View::selected_item_check(ui);
 					}
-					ui.add_space(3.0);
-				});
-			});
-		});
+
+					let layout_size = ui.available_size();
+					ui.allocate_ui_with_layout(
+						layout_size,
+						Layout::left_to_right(Align::Center),
+						|ui| {
+							ui.add_space(6.0);
+							ui.vertical(|ui| {
+								ui.add_space(3.0);
+								// Show wallet name text.
+								ui.with_layout(Layout::left_to_right(Align::Min), |ui| {
+									ui.add_space(1.0);
+									View::ellipsize_text(
+										ui,
+										config.name.clone(),
+										18.0,
+										Colors::title(false),
+									);
+								});
+
+								// Show wallet connection text.
+								let connection = wallet.get_current_connection();
+								let conn_text = match connection {
+									ConnectionMethod::Integrated => {
+										format!("{} {}", COMPUTER_TOWER, t!("network.node"))
+									}
+									ConnectionMethod::External(_, url) => {
+										format!("{} {}", GLOBE_SIMPLE, url)
+									}
+								};
+								ui.label(
+									RichText::new(conn_text)
+										.size(15.0)
+										.color(Colors::text(false)),
+								);
+								ui.add_space(1.0);
+
+								// Show wallet API text or open status.
+								if self.can_open {
+									ui.label(
+										RichText::new(wallet_status_text(wallet))
+											.size(15.0)
+											.color(Colors::gray()),
+									);
+								} else {
+									let api_text =
+										format!("{} {}", PLUGS_CONNECTED, config.api_url());
+									ui.label(
+										RichText::new(api_text).size(15.0).color(Colors::gray()),
+									);
+								}
+								if current {
+									ui.add_space(3.0);
+								} else {
+									ui.add_space(5.0);
+								}
+							});
+						},
+					);
+				},
+			)
+			.response;
+		let clicked = res.clicked() || res.long_touched();
+		// Setup background and cursor.
+		if res.hovered() && !current {
+			res.on_hover_cursor(CursorIcon::PointingHand);
+			bg_shape.fill = Colors::fill();
+		}
+		ui.painter().set(bg_idx, bg_shape);
+		// Handle clicks on layout.
+		if clicked {
+			on_select();
+		}
 	}
 }

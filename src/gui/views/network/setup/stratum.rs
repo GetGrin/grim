@@ -12,9 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use egui::{Id, RichText};
-use grin_chain::SyncStatus;
-
 use crate::gui::Colors;
 use crate::gui::icons::{BARBELL, HARD_DRIVES, PLUG, POWER, TIMER};
 use crate::gui::platform::PlatformCallbacks;
@@ -23,7 +20,10 @@ use crate::gui::views::types::{ContentContainer, ModalPosition};
 use crate::gui::views::wallets::modals::WalletListModal;
 use crate::gui::views::{Modal, TextEdit, View};
 use crate::node::{Node, NodeConfig};
-use crate::wallet::{WalletConfig, WalletList};
+use crate::wallet::WalletList;
+use egui::{Id, RichText};
+use grin_chain::SyncStatus;
+use log::debug;
 
 /// Stratum server setup section content.
 pub struct StratumSetup {
@@ -67,20 +67,29 @@ impl Default for StratumSetup {
 		let (ip, port) = NodeConfig::get_stratum_address();
 		let is_port_available = NodeConfig::is_stratum_port_available(&ip, &port);
 
+		let wallets = WalletList::default();
+
 		// Setup mining rewards wallet name and identifier.
-		let mut wallet_id = NodeConfig::get_stratum_wallet_id();
-		let wallet_name = if let Some(id) = wallet_id {
-			WalletConfig::read_name_by_id(id)
+		let mut wallet_url = NodeConfig::get_stratum_wallet_url();
+		let wallet_name = if let Some(url) = &wallet_url {
+			let mut name = None;
+			for w in WalletList::default().list() {
+				if &w.get_config().api_url() == url {
+					name = Some(w.get_config().name);
+					break;
+				}
+			}
+			name
 		} else {
 			None
 		};
 		if wallet_name.is_none() {
-			wallet_id = None;
+			wallet_url = None;
 		}
 
 		Self {
-			wallets: WalletList::default(),
-			wallets_modal: WalletListModal::new(wallet_id, None, false),
+			wallets,
+			wallets_modal: WalletListModal::new(wallet_url, None, false),
 			available_ips: NodeConfig::get_ip_addrs(),
 			stratum_port_edit: port,
 			stratum_port_available_edit: is_port_available,
@@ -105,9 +114,10 @@ impl ContentContainer for StratumSetup {
 	fn modal_ui(&mut self, ui: &mut egui::Ui, modal: &Modal, cb: &dyn PlatformCallbacks) {
 		match modal.id {
 			WALLET_SELECTION_MODAL => self.wallets_modal.ui(ui, &mut self.wallets, |wallet, _| {
-				let id = wallet.get_config().id;
-				NodeConfig::save_stratum_wallet_id(id);
-				self.wallet_name = WalletConfig::read_name_by_id(id);
+				let address = wallet.get_config().api_url();
+				debug!("save_stratum_wallet_url {}", address);
+				NodeConfig::save_stratum_wallet_url(address);
+				self.wallet_name = Some(wallet.get_config().name);
 			}),
 			STRATUM_PORT_MODAL => self.port_modal(ui, modal, cb),
 			ATTEMPT_TIME_MODAL => self.attempt_modal(ui, modal, cb),
@@ -245,7 +255,9 @@ impl ContentContainer for StratumSetup {
 impl StratumSetup {
 	/// Show wallet selection [`Modal`].
 	fn show_wallets_modal(&mut self) {
-		self.wallets_modal = WalletListModal::new(NodeConfig::get_stratum_wallet_id(), None, false);
+		self.wallets = WalletList::default();
+		self.wallets_modal =
+			WalletListModal::new(NodeConfig::get_stratum_wallet_url(), None, false);
 		// Show modal.
 		Modal::new(WALLET_SELECTION_MODAL)
 			.position(ModalPosition::Center)

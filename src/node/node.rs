@@ -12,24 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use crate::node::{NodeConfig, NodeError, PeersConfig};
+
 use lazy_static::lazy_static;
-use parking_lot::RwLock;
+use log::error;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 use std::{fs, thread};
 
-use crate::node::stratum::{StratumServer, StratumStopState};
-use crate::node::{NodeConfig, NodeError, PeersConfig};
 use grin_chain::{HeaderSyncMode, SyncStatus};
 use grin_core::global;
 use grin_core::global::ChainTypes;
 use grin_p2p::Seeding;
 use grin_p2p::msg::PeerAddrs;
 use grin_servers::common::types::Error;
-use grin_servers::{Server, ServerStats, StratumServerConfig, StratumStats};
-use log::error;
+use grin_servers::{Server, ServerStats, StratumServer, StratumServerConfig, StratumStats};
+use grin_util::{RwLock, StopState};
 
 lazy_static! {
 	/// Static thread-aware state of [`Node`] to be updated from separate thread.
@@ -42,11 +42,11 @@ pub struct Node {
 	stats: Arc<RwLock<Option<ServerStats>>>,
 
 	/// [`StratumServer`] statistics information.
-	stratum_stats: Arc<grin_util::RwLock<StratumStats>>,
+	stratum_stats: Arc<RwLock<StratumStats>>,
 	/// Flag to start [`StratumServer`].
 	start_stratum_needed: AtomicBool,
 	/// State to stop [`StratumServer`] from outside.
-	stratum_stop_state: Arc<StratumStopState>,
+	stratum_stop_state: Arc<StopState>,
 
 	/// Indicator if node [`Server`] is starting.
 	starting: AtomicBool,
@@ -69,8 +69,8 @@ impl Default for Node {
 	fn default() -> Self {
 		Self {
 			stats: Arc::new(RwLock::new(None)),
-			stratum_stats: Arc::new(grin_util::RwLock::new(StratumStats::default())),
-			stratum_stop_state: Arc::new(StratumStopState::default()),
+			stratum_stats: Arc::new(RwLock::new(StratumStats::default())),
+			stratum_stop_state: Arc::new(StopState::default()),
 			starting: AtomicBool::new(false),
 			restart_needed: AtomicBool::new(false),
 			stop_needed: AtomicBool::new(false),
@@ -305,9 +305,12 @@ impl Node {
 						if stratum_start_requested {
 							let (s_ip, s_port) = NodeConfig::get_stratum_address();
 							if NodeConfig::is_stratum_port_available(&s_ip, &s_port) {
-								let stratum_config =
-									server.config.stratum_mining_config.clone().unwrap();
-								start_stratum_mining_server(&server, stratum_config);
+								if let Some(stratum_config) = NodeConfig::node_server_config()
+									.server
+									.stratum_mining_config
+								{
+									start_stratum_mining_server(&server, stratum_config);
+								}
 							}
 						}
 

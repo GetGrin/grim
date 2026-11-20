@@ -51,7 +51,7 @@ use grin_wallet_libwallet::{
 	TxLogEntryType, WalletBackend, WalletInitStatus, WalletInst, WalletLCProvider, address,
 };
 use itertools::Itertools;
-use log::error;
+use log::{debug, error};
 use num_bigint::BigInt;
 use parking_lot::RwLock;
 use std::fs::File;
@@ -2430,6 +2430,12 @@ fn start_api_server(wallet: &Wallet) -> Result<(ApiServer, u16), Error> {
 			Err(_) => false,
 		};
 	});
+	debug!(
+		"free port {} start API on {}:{}",
+		free_port.unwrap(),
+		host,
+		port
+	);
 	if free_port.is_none() {
 		let err_msg = "Can not find free wallet API port".to_string();
 		return Err(Error::GenericError(err_msg));

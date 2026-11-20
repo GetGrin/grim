@@ -123,16 +123,6 @@ impl WalletConfig {
 		None
 	}
 
-	/// Get wallet name by provided identifier.
-	pub fn read_name_by_id(id: i64) -> Option<String> {
-		let mut wallet_dir = WalletConfig::get_base_path(AppConfig::chain_type());
-		wallet_dir.push(id.to_string());
-		if let Some(cfg) = Self::load(wallet_dir) {
-			return Some(cfg.name);
-		}
-		None
-	}
-
 	/// Get default Foreign API port.
 	pub fn default_api_port() -> u16 {
 		match AppConfig::chain_type() {
@@ -141,14 +131,14 @@ impl WalletConfig {
 		}
 	}
 
-	/// Get wallet API port by provided identifier.
-	pub fn read_api_port_by_id(id: i64) -> Option<u16> {
-		let mut wallet_dir = WalletConfig::get_base_path(AppConfig::chain_type());
-		wallet_dir.push(id.to_string());
-		if let Some(cfg) = Self::load(wallet_dir) {
-			return cfg.api_port;
-		}
-		None
+	/// Get wallet's API URL.
+	pub fn api_url(&self) -> String {
+		let address = if let Some(port) = self.api_port {
+			format!("http://127.0.0.1:{}", port)
+		} else {
+			"".to_string()
+		};
+		address
 	}
 
 	/// Get wallet connection method.
