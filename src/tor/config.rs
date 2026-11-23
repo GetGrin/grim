@@ -12,11 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use grin_p2p::tor::config::{
+use grin_tor::config::{
 	BOOTSTRAP_TIMEOUT_SECS, MIN_CIRCUIT_TIMEOUT_MS, REQUEST_TIMEOUT_SECS, TorBridgeConfig,
 	TorConfig, TorOutboundProxy, TorProxyConfig,
 };
 use grin_wallet_config::TorWalletConfig;
+
 use serde_derive::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;

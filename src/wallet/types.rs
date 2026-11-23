@@ -13,13 +13,14 @@
 // limitations under the License.
 
 use grin_keychain::ExtKeychain;
-use grin_p2p::tor::ov3::OnionV3Address;
+use grin_tor::ov3::OnionV3Address;
 use grin_util::Mutex;
 use grin_wallet_impls::{DefaultLCProvider, HTTPNodeClient};
 use grin_wallet_libwallet::{
 	Error, PaymentProof, SlateState, SlatepackAddress, TxLogEntry, TxLogEntryType, WalletInfo,
 	WalletInst,
 };
+
 use serde_derive::{Deserialize, Serialize};
 use std::sync::Arc;
 

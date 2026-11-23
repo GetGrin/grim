@@ -707,7 +707,7 @@ pub fn start_stratum_mining_server(server: &Server, config: StratumServerConfig)
 	stop_state.reset();
 	let server_state = stop_state.clone();
 	thread::spawn(move || {
-		stratum_server.run_loop(proof_size, sync_state, stop_state);
+		let _ = stratum_server.run_loop(proof_size, sync_state, stop_state);
 		server_state.reset();
 		// Reset stratum stats.
 		{

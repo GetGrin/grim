@@ -198,11 +198,11 @@ impl WalletTransportContent {
 							);
 							ui.add_space(1.0);
 
-							let (icon, text) = if is_starting || is_publishing {
+							let (icon, text) = if is_starting {
 								(DOTS_THREE_CIRCLE, t!("transport.connecting"))
 							} else if has_error {
 								(WARNING_CIRCLE, t!("transport.conn_error"))
-							} else if is_running {
+							} else if is_running || is_publishing {
 								(PLUGS_CONNECTED, t!("transport.connected"))
 							} else if let Some(_) = TorAppConfig::get_proxy() {
 								(PLUGS_CONNECTED, t!("app_settings.proxy"))
